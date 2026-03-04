@@ -198,7 +198,7 @@ export const ExercisePage = () => {
               <div className="glass-card rounded-xl p-6">
                 <h3 className="text-lg font-medium text-white mb-4">Zona de Construcción</h3>
                 <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="dropZone" direction="horizontal">
+                  <Droppable droppableId="dropZone" direction="horizontal" isDropDisabled={false}>
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
