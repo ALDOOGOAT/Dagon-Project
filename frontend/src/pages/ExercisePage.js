@@ -42,6 +42,18 @@ export const ExercisePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelId]);
 
+  useEffect(() => {
+    if (exercises.length > 0) {
+      const exercise = exercises[currentExerciseIndex];
+      if (exercise.type === 'drag_drop') {
+        setAvailableWords(exercise.wordBank || []);
+        setDroppedWords([]);
+      } else {
+        setEditorCode(exercise.starterCode || '');
+      }
+    }
+  }, [currentExerciseIndex, exercises]);
+
   const handleDragEnd = (result) => {
     if (!result.destination) return;
 
