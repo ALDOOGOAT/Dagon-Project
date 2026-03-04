@@ -20,7 +20,9 @@ export const AuthProvider = ({ children }) => {
           setUser(response.data);
         } catch (error) {
           console.error('Error loading user:', error);
-          logout();
+          if (error.response?.status === 401) {
+            logout();
+          }
         }
       }
       setLoading(false);
