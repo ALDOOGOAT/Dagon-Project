@@ -63,7 +63,8 @@ export const Clawbot = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         data-testid="clawbot-fab"
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-red-600 to-red-800 rounded-full shadow-[0_0_25px_rgba(220,38,38,0.6)] hover:shadow-[0_0_35px_rgba(220,38,38,0.8)] transition-all duration-300 flex items-center justify-center z-50 group"
+        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-br from-red-600 to-red-800 rounded-full shadow-[0_0_25px_rgba(220,38,38,0.6)] hover:shadow-[0_0_35px_rgba(220,38,38,0.8)] transition-all duration-300 flex items-center justify-center group"
+        style={{ zIndex: 9999 }}
       >
         {isOpen ? (
           <X className="w-8 h-8 text-white" />
