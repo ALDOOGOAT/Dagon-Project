@@ -27,31 +27,20 @@ export const ExercisePage = () => {
   const [activeTab, setActiveTab] = useState('results');
 
   useEffect(() => {
-    loadExercises();
-  }, [levelId]);
-
-  useEffect(() => {
-    if (exercises.length > 0) {
-      const exercise = exercises[currentExerciseIndex];
-      if (exercise.type === 'drag_drop') {
-        setAvailableWords(exercise.wordBank || []);
-        setDroppedWords([]);
-      } else {
-        setEditorCode(exercise.starterCode || '');
+    const fetchExercises = async () => {
+      try {
+        const data = await apiService.getExercises(levelId);
+        setExercises(data.exercises);
+      } catch (error) {
+        toast.error('Error al cargar ejercicios');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, [currentExerciseIndex, exercises]);
-
-  const loadExercises = async () => {
-    try {
-      const data = await apiService.getExercises(levelId);
-      setExercises(data.exercises);
-    } catch (error) {
-      toast.error('Error al cargar ejercicios');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    fetchExercises();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelId]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
