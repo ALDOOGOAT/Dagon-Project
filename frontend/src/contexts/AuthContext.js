@@ -12,25 +12,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      loadUser();
-    } else {
+    const fetchUser = async () => {
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        try {
+          const response = await axios.get(`${API}/user/profile`);
+          setUser(response.data);
+        } catch (error) {
+          console.error('Error loading user:', error);
+          logout();
+        }
+      }
       setLoading(false);
-    }
+    };
+    
+    fetchUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  const loadUser = async () => {
-    try {
-      const response = await axios.get(`${API}/user/profile`);
-      setUser(response.data);
-    } catch (error) {
-      console.error('Error loading user:', error);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (email, password) => {
     try {
