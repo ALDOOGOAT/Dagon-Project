@@ -28,6 +28,7 @@ export const Clawbot = () => {
         content: '¡Hola! Soy Clawbot, tu tutor de SQL. ¿En qué puedo ayudarte hoy?'
       }]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const handleSendMessage = async () => {
