@@ -142,9 +142,12 @@ export const ExercisePage = () => {
   const [exercises, setExercises] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showHint, setShowHint] = useState(false);
   const [validating, setValidating] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Estados para la experiencia interactiva
+  const [currentPhase, setCurrentPhase] = useState('theory');
+  const [clawbotPhase, setClawbotPhase] = useState('intro');
+  const [showTheory, setShowTheory] = useState(true);
   
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
