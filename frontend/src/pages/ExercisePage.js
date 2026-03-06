@@ -241,6 +241,14 @@ export const ExercisePage = () => {
 
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="exercise-page">
+      {showReward && (
+        <RewardAnimation 
+          type="success" 
+          xpGained={lastXPGained}
+          onComplete={() => setShowReward(false)}
+        />
+      )}
+      
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center justify-between mb-6">
           <Button
