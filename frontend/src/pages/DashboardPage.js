@@ -207,7 +207,6 @@ export const DashboardPage = () => {
                 {index < levels.length - 1 && (
                   <div className="absolute left-8 -bottom-4 w-0.5 h-8 bg-gradient-to-b from-blue-500/30 to-transparent" />
                 )}
-                )}
               </div>
             ))}
           </div>
