@@ -107,8 +107,8 @@ export const Clawbot = () => {
                 <div
                   className={`max-w-[80%] p-3 rounded-lg ${
                     msg.role === 'user'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-slate-800 text-slate-200'
+                      ? 'bg-blue-600 text-white font-medium'
+                      : 'bg-slate-800 text-slate-200 border border-slate-700'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
