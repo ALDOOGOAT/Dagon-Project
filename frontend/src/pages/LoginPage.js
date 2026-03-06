@@ -40,21 +40,15 @@ export const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex" data-testid="login-page">
-      <div className="hidden lg:flex lg:w-1/2 abyss-bg items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-          <img
-            src="https://images.unsplash.com/photo-1771864808299-d380c14eecdb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjY2NjV8MHwxfHNlYXJjaHwxfHxkZWVwJTIwb2NlYW4lMjBiaW9sdW1pbmVzY2VuY2UlMjBhYnN0cmFjdHxlbnwwfHx8fDE3NzI2NjA5MzN8MA&ixlib=rb-4.1.0&q=85"
-            alt="Deep Ocean"
-            className="w-full h-full object-cover"
-          />
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 cyber-bg items-center justify-center relative overflow-hidden grid-pattern">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-red-500/10"></div>
         <div className="relative z-10 text-center space-y-8">
           <DagonMascot size="large" mood="happy" />
-          <h1 className="text-5xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h1 className="text-6xl font-bold text-white tracking-tight">
             Dagon
           </h1>
-          <p className="text-xl text-slate-300 max-w-md mx-auto" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            Sumérgete en las profundidades del conocimiento SQL
+          <p className="text-xl text-slate-400 max-w-md mx-auto font-medium">
+            Domina SQL con inteligencia artificial
           </p>
         </div>
       </div>
