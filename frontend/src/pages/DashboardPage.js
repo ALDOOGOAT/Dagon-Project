@@ -14,6 +14,7 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     loadLevels();
