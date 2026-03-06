@@ -336,28 +336,31 @@ export const ExercisePage = () => {
               </Button>
             </div>
 
-            <div className="space-y-4">
-              <div className="glass-card-apple rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Zona de Construcción</h3>
-                <DragDropContext onDragEnd={handleDragEnd}>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <div className="space-y-4">
+                <div className="glass-card-apple rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Zona de Construcción</h3>
                   <Droppable droppableId="dropZone" direction="horizontal">
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className="min-h-[100px] bg-slate-900 border-2 border-dashed border-blue-500/30 rounded-lg p-4 flex flex-wrap gap-2"
+                        data-testid="drop-zone"
+                        className="min-h-[100px] bg-slate-900 border-2 border-dashed border-blue-500/50 rounded-lg p-4 flex flex-wrap gap-2 items-center hover:border-blue-400 transition-colors"
                       >
                         {droppedWords.length === 0 && (
-                          <p className="text-slate-500 text-sm w-full text-center">Arrastra aquí</p>
+                          <p className="text-slate-500 text-sm w-full text-center">Arrastra las palabras SQL aquí para construir tu consulta</p>
                         )}
                         {droppedWords.map((word, index) => (
-                          <Draggable key={`dropped-${index}`} draggableId={`dropped-${index}`} index={index}>
-                            {(provided) => (
+                          <Draggable key={`dropped-${word}-${index}`} draggableId={`dropped-${word}-${index}`} index={index}>
+                            {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-mono"
+                                className={`bg-blue-600 text-white px-4 py-2 rounded-lg font-mono font-semibold cursor-move transition-all ${
+                                  snapshot.isDragging ? 'shadow-lg scale-105 rotate-2' : 'hover:bg-blue-700'
+                                }`}
                               >
                                 {word}
                               </div>
@@ -368,27 +371,30 @@ export const ExercisePage = () => {
                       </div>
                     )}
                   </Droppable>
-                </DragDropContext>
-              </div>
+                </div>
 
-              <div className="glass-card-apple rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Banco de Palabras</h3>
-                <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="glass-card-apple rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4">Banco de Palabras SQL</h3>
                   <Droppable droppableId="wordBank" direction="horizontal">
                     {(provided) => (
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
+                        data-testid="word-bank"
                         className="min-h-[80px] flex flex-wrap gap-2"
                       >
                         {availableWords.map((word, index) => (
-                          <Draggable key={`word-${index}`} draggableId={`word-${index}`} index={index}>
-                            {(provided) => (
+                          <Draggable key={`word-${word}-${index}`} draggableId={`word-${word}-${index}`} index={index}>
+                            {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className="bg-slate-800 text-slate-200 px-4 py-2 rounded-lg font-mono border border-slate-700"
+                                className={`bg-slate-800 text-slate-200 px-4 py-2 rounded-lg font-mono font-medium cursor-move border transition-all ${
+                                  snapshot.isDragging 
+                                    ? 'border-blue-500 shadow-lg scale-105 bg-slate-700' 
+                                    : 'border-slate-700 hover:border-blue-500/50 hover:bg-slate-700'
+                                }`}
                               >
                                 {word}
                               </div>
@@ -399,17 +405,18 @@ export const ExercisePage = () => {
                       </div>
                     )}
                   </Droppable>
-                </DragDropContext>
-              </div>
+                </div>
 
-              <Button
-                onClick={handleValidate}
-                disabled={validating || droppedWords.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3"
-              >
-                {validating ? 'Validando...' : 'Validar'}
-              </Button>
-            </div>
+                <Button
+                  onClick={handleValidate}
+                  data-testid="validate-button"
+                  disabled={validating || droppedWords.length === 0}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-4 text-lg font-bold rounded-xl shadow-lg"
+                >
+                  {validating ? '⏳ Validando...' : '✨ Validar Consulta'}
+                </Button>
+              </div>
+            </DragDropContext>
           </div>
         ) : (
           <div className="space-y-4">
