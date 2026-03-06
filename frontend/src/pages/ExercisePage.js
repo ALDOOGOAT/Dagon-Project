@@ -1,13 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
+
+const THEORY_CONTENT = {
+  "nivel-0": {
+    title: "Fundamentos de Bases de Datos",
+    content: "Una base de datos es una colección organizada de información estructurada. SQL es el lenguaje estándar para interactuar con bases de datos relacionales. La consulta más básica es SELECT, que te permite recuperar datos de una tabla."
+  },
+  "basico": {
+    title: "SELECT y Filtros con WHERE",
+    content: "SELECT te permite elegir qué columnas quieres ver de una tabla. WHERE te permite filtrar los resultados según condiciones específicas. Por ejemplo: SELECT nombre, edad FROM usuarios WHERE edad mayor que 18."
+  },
+  "medio": {
+    title: "JOINs y Relaciones",
+    content: "Los JOIN te permiten combinar datos de múltiples tablas relacionadas. INNER JOIN devuelve solo las filas que tienen coincidencias en ambas tablas. GROUP BY agrupa resultados para realizar cálculos agregados."
+  },
+  "avanzado": {
+    title: "Optimización e Índices",
+    content: "Los índices son estructuras de datos que mejoran la velocidad de las consultas. CREATE INDEX te permite crear índices en columnas específicas. Las transacciones garantizan que las operaciones se completen de forma atómica."
+  },
+  "pro": {
+    title: "Arquitectura y Escalabilidad",
+    content: "La arquitectura de bases de datos incluye replicación, sharding y clustering. Las transacciones ACID garantizan consistencia. La escalabilidad horizontal distribuye datos entre múltiples servidores."
+  }
+};
 
 export const ExercisePage = () => {
   const { levelId } = useParams();
@@ -18,6 +42,7 @@ export const ExercisePage = () => {
   const [loading, setLoading] = useState(true);
   const [showHint, setShowHint] = useState(false);
   const [validating, setValidating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
@@ -53,6 +78,31 @@ export const ExercisePage = () => {
       }
     }
   }, [currentExerciseIndex, exercises]);
+
+  const speakTheory = () => {
+    const theory = THEORY_CONTENT[levelId];
+    if (!theory) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(theory.content);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast.error('Error al reproducir audio');
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -120,7 +170,7 @@ export const ExercisePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen abyss-bg flex items-center justify-center">
+      <div className="min-h-screen cyber-bg flex items-center justify-center">
         <DagonMascot size="large" mood="happy" />
       </div>
     );
@@ -128,11 +178,11 @@ export const ExercisePage = () => {
 
   if (exercises.length === 0) {
     return (
-      <div className="min-h-screen abyss-bg flex items-center justify-center">
+      <div className="min-h-screen cyber-bg flex items-center justify-center">
         <div className="text-center">
           <DagonMascot size="large" mood="sad" />
           <p className="text-white text-xl mt-4">No hay ejercicios disponibles</p>
-          <Button onClick={() => navigate('/dashboard')} className="mt-4">
+          <Button onClick={() => navigate('/dashboard')} className="mt-4 bg-blue-600 hover:bg-blue-700">
             Volver al Dashboard
           </Button>
         </div>
@@ -142,16 +192,17 @@ export const ExercisePage = () => {
 
   const exercise = exercises[currentExerciseIndex];
   const isDragDrop = exercise.type === 'drag_drop';
+  const theory = THEORY_CONTENT[levelId];
 
   return (
-    <div className="min-h-screen abyss-bg" data-testid="exercise-page">
+    <div className="min-h-screen cyber-bg grid-pattern" data-testid="exercise-page">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center justify-between mb-6">
           <Button
             onClick={() => navigate('/dashboard')}
             data-testid="back-button"
             variant="ghost"
-            className="text-slate-400 hover:text-white"
+            className="text-slate-400 hover:text-white hover:bg-slate-800/50"
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
             Volver
@@ -161,130 +212,58 @@ export const ExercisePage = () => {
           </div>
         </div>
 
-        {isDragDrop ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-card rounded-xl p-6 space-y-6">
-              <div className="flex items-start gap-4">
-                <DagonMascot size="small" mood="happy" />
-                <div>
-                  <h2 className="text-2xl font-semibold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {exercise.title}
-                  </h2>
-                  <p className="text-slate-300" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                    {exercise.description}
-                  </p>
-                </div>
-              </div>
+        <Tabs defaultValue="theory" className="space-y-6">
+          <TabsList className="bg-slate-900/50 border border-slate-700/50">
+            <TabsTrigger value="theory" className="data-[state=active]:bg-blue-600">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Teoría
+            </TabsTrigger>
+            <TabsTrigger value="practice" className="data-[state=active]:bg-blue-600">
+              Práctica
+            </TabsTrigger>
+          </TabsList>
 
-              {showHint && (
-                <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4" data-testid="hint-box">
-                  <div className="flex items-start gap-2">
-                    <Lightbulb className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-1" />
-                    <p className="text-cyan-300 text-sm">{exercise.hint}</p>
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={() => setShowHint(!showHint)}
-                data-testid="hint-button"
-                variant="outline"
-                className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
-              >
-                {showHint ? 'Ocultar Pista' : 'Ver Pista'}
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="glass-card rounded-xl p-6">
-                <h3 className="text-lg font-medium text-white mb-4">Zona de Construcción</h3>
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="dropZone" direction="horizontal" isDropDisabled={false}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        data-testid="drop-zone"
-                        className="min-h-[80px] bg-slate-950 border-2 border-dashed border-slate-700 rounded-lg p-4 flex flex-wrap gap-2 items-center"
-                      >
-                        {droppedWords.length === 0 && (
-                          <p className="text-slate-500 text-sm w-full text-center">Arrastra las palabras aquí</p>
-                        )}
-                        {droppedWords.map((word, index) => (
-                          <Draggable key={`dropped-${index}`} draggableId={`dropped-${index}`} index={index}>
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className="bg-red-600 text-white px-4 py-2 rounded-lg font-mono text-sm cursor-move hover:bg-red-700 transition-colors"
-                              >
-                                {word}
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              </div>
-
-              <div className="glass-card rounded-xl p-6">
-                <h3 className="text-lg font-medium text-white mb-4">Banco de Palabras</h3>
-                <DragDropContext onDragEnd={handleDragEnd}>
-                  <Droppable droppableId="wordBank" direction="horizontal" isDropDisabled={false}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.droppableProps}
-                        data-testid="word-bank"
-                        className="min-h-[60px] flex flex-wrap gap-2"
-                      >
-                        {availableWords.map((word, index) => (
-                          <Draggable key={`word-${index}`} draggableId={`word-${index}`} index={index}>
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                className="bg-slate-800 text-slate-200 px-4 py-2 rounded-lg font-mono text-sm cursor-move hover:bg-slate-700 transition-colors border border-slate-700"
-                              >
-                                {word}
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </DragDropContext>
-              </div>
-
-              <Button
-                onClick={handleValidate}
-                data-testid="validate-button"
-                disabled={validating || droppedWords.length === 0}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-medium"
-              >
-                {validating ? 'Validando...' : 'Validar Consulta'}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="glass-card rounded-xl p-6">
-              <div className="flex items-start gap-4 mb-4">
+          <TabsContent value="theory" className="space-y-4">
+            <div className="glass-card rounded-xl p-8 border border-slate-700/50">
+              <div className="flex items-start gap-4 mb-6">
                 <DagonMascot size="small" mood="happy" />
                 <div className="flex-1">
-                  <h2 className="text-2xl font-semibold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {exercise.title}
-                  </h2>
-                  <p className="text-slate-300 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                    {exercise.description}
-                  </p>
+                  <h2 className="text-3xl font-bold text-white mb-4">{theory?.title}</h2>
+                  <p className="text-slate-300 text-lg leading-relaxed">{theory?.content}</p>
+                </div>
+              </div>
+              
+              <Button
+                onClick={speakTheory}
+                data-testid="speak-theory-button"
+                className={`${
+                  isSpeaking 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white font-semibold neon-glow`}
+              >
+                <Volume2 className="w-5 h-5 mr-2" />
+                {isSpeaking ? 'Detener Lectura' : 'Escuchar Teoría'}
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="practice">
+            {isDragDrop ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="glass-card rounded-xl p-6 space-y-6 border border-slate-700/50">
+                  <div className="flex items-start gap-4">
+                    <DagonMascot size="small" mood="happy" />
+                    <div>
+                      <h2 className="text-2xl font-bold text-white mb-2">
+                        {exercise.title}
+                      </h2>
+                      <p className="text-slate-300">
+                        {exercise.description}
+                      </p>
+                    </div>
+                  </div>
+
                   {showHint && (
                     <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4" data-testid="hint-box">
                       <div className="flex items-start gap-2">
@@ -293,129 +272,247 @@ export const ExercisePage = () => {
                       </div>
                     </div>
                   )}
-                </div>
-                <Button
-                  onClick={() => setShowHint(!showHint)}
-                  data-testid="hint-button"
-                  variant="outline"
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
-                >
-                  {showHint ? 'Ocultar' : 'Pista'}
-                </Button>
-              </div>
-            </div>
 
-            <div className="glass-card rounded-xl overflow-hidden">
-              <div className="bg-slate-900 px-4 py-2 flex items-center justify-between border-b border-slate-800">
-                <span className="text-slate-400 text-sm font-mono">Editor SQL</span>
-                <Button
-                  onClick={handleValidate}
-                  data-testid="validate-button"
-                  disabled={validating}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  {validating ? 'Ejecutando...' : 'Ejecutar'}
-                </Button>
-              </div>
-              <Editor
-                height="400px"
-                defaultLanguage="sql"
-                theme="vs-dark"
-                value={editorCode}
-                onChange={(value) => setEditorCode(value || '')}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2
-                }}
-              />
-            </div>
-
-            {executionResult && (
-              <div className="glass-card rounded-xl overflow-hidden">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex gap-2">
-                  <button
-                    onClick={() => setActiveTab('results')}
-                    data-testid="results-tab"
-                    className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                      activeTab === 'results'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                  <Button
+                    onClick={() => setShowHint(!showHint)}
+                    data-testid="hint-button"
+                    variant="outline"
+                    className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-blue-500"
                   >
-                    Resultados
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('explain')}
-                    data-testid="explain-tab"
-                    className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                      activeTab === 'explain'
-                        ? 'bg-slate-800 text-white'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Explain Analyze
-                  </button>
+                    {showHint ? 'Ocultar Pista' : 'Ver Pista'}
+                  </Button>
                 </div>
-                <div className="p-6">
-                  {activeTab === 'results' && (
-                    <div data-testid="results-panel">
-                      <div className={`flex items-center gap-2 mb-4 ${
-                        executionResult.success ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {executionResult.success ? (
-                          <CheckCircle className="w-5 h-5" />
-                        ) : (
-                          <XCircle className="w-5 h-5" />
+
+                <div className="space-y-4">
+                  <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-4">Zona de Construcción</h3>
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable droppableId="dropZone" direction="horizontal">
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            data-testid="drop-zone"
+                            className="min-h-[100px] bg-slate-900 border-2 border-dashed border-blue-500/30 rounded-lg p-4 flex flex-wrap gap-2 items-center hover:border-blue-500/60 transition-colors"
+                          >
+                            {droppedWords.length === 0 && (
+                              <p className="text-slate-500 text-sm w-full text-center">Arrastra las palabras aquí para construir tu consulta SQL</p>
+                            )}
+                            {droppedWords.map((word, index) => (
+                              <Draggable key={`dropped-${index}`} draggableId={`dropped-${index}`} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`bg-blue-600 text-white px-4 py-2 rounded-lg font-mono text-sm font-semibold cursor-move transition-all ${
+                                      snapshot.isDragging ? 'shadow-lg neon-glow scale-105' : 'hover:bg-blue-700'
+                                    }`}
+                                  >
+                                    {word}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
                         )}
-                        <span className="font-medium">{executionResult.message}</span>
-                      </div>
-                      {executionResult.mockData && (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-800 text-slate-300">
-                              <tr>
-                                {Object.keys(executionResult.mockData[0]).map((key) => (
-                                  <th key={key} className="px-4 py-2">{key}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody className="text-slate-200">
-                              {executionResult.mockData.map((row, i) => (
-                                <tr key={i} className="border-b border-slate-800">
-                                  {Object.values(row).map((val, j) => (
-                                    <td key={j} className="px-4 py-2">{val}</td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+
+                  <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+                    <h3 className="text-lg font-semibold text-white mb-4">Banco de Palabras SQL</h3>
+                    <DragDropContext onDragEnd={handleDragEnd}>
+                      <Droppable droppableId="wordBank" direction="horizontal">
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            data-testid="word-bank"
+                            className="min-h-[80px] flex flex-wrap gap-2"
+                          >
+                            {availableWords.map((word, index) => (
+                              <Draggable key={`word-${index}`} draggableId={`word-${index}`} index={index}>
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={`bg-slate-800 text-slate-200 px-4 py-2 rounded-lg font-mono text-sm font-medium cursor-move border transition-all ${
+                                      snapshot.isDragging 
+                                        ? 'border-blue-500 shadow-lg scale-105' 
+                                        : 'border-slate-700 hover:border-blue-500/50 hover:bg-slate-700'
+                                    }`}
+                                  >
+                                    {word}
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </DragDropContext>
+                  </div>
+
+                  <Button
+                    onClick={handleValidate}
+                    data-testid="validate-button"
+                    disabled={validating || droppedWords.length === 0}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg font-semibold neon-glow"
+                  >
+                    {validating ? 'Validando...' : 'Validar Consulta'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+                  <div className="flex items-start gap-4 mb-4">
+                    <DagonMascot size="small" mood="happy" />
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold text-white mb-2">
+                        {exercise.title}
+                      </h2>
+                      <p className="text-slate-300 mb-4">
+                        {exercise.description}
+                      </p>
+                      {showHint && (
+                        <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-lg p-4" data-testid="hint-box">
+                          <div className="flex items-start gap-2">
+                            <Lightbulb className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-1" />
+                            <p className="text-cyan-300 text-sm">{exercise.hint}</p>
+                          </div>
                         </div>
                       )}
                     </div>
-                  )}
-                  {activeTab === 'explain' && (
-                    <div data-testid="explain-panel" className="text-slate-300">
-                      <pre className="bg-slate-950 p-4 rounded font-mono text-xs overflow-x-auto">
+                    <Button
+                      onClick={() => setShowHint(!showHint)}
+                      data-testid="hint-button"
+                      variant="outline"
+                      className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:border-blue-500"
+                    >
+                      {showHint ? 'Ocultar' : 'Pista'}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="glass-card rounded-xl overflow-hidden border border-slate-700/50">
+                  <div className="bg-slate-900 px-4 py-3 flex items-center justify-between border-b border-slate-800">
+                    <span className="text-slate-400 text-sm font-mono font-semibold">Editor SQL</span>
+                    <Button
+                      onClick={handleValidate}
+                      data-testid="validate-button"
+                      disabled={validating}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold neon-glow"
+                    >
+                      {validating ? 'Ejecutando...' : 'Ejecutar'}
+                    </Button>
+                  </div>
+                  <Editor
+                    height="450px"
+                    defaultLanguage="sql"
+                    theme="vs-dark"
+                    value={editorCode}
+                    onChange={(value) => setEditorCode(value || '')}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      padding: { top: 16, bottom: 16 }
+                    }}
+                  />
+                </div>
+
+                {executionResult && (
+                  <div className="glass-card rounded-xl overflow-hidden border border-slate-700/50">
+                    <div className="bg-slate-900 px-4 py-2 border-b border-slate-800 flex gap-2">
+                      <button
+                        onClick={() => setActiveTab('results')}
+                        data-testid="results-tab"
+                        className={`px-4 py-2 text-sm font-semibold rounded transition-colors ${
+                          activeTab === 'results'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        Resultados
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('explain')}
+                        data-testid="explain-tab"
+                        className={`px-4 py-2 text-sm font-semibold rounded transition-colors ${
+                          activeTab === 'explain'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                        }`}
+                      >
+                        Explain Analyze
+                      </button>
+                    </div>
+                    <div className="p-6">
+                      {activeTab === 'results' && (
+                        <div data-testid="results-panel">
+                          <div className={`flex items-center gap-2 mb-4 ${
+                            executionResult.success ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {executionResult.success ? (
+                              <CheckCircle className="w-5 h-5" />
+                            ) : (
+                              <XCircle className="w-5 h-5" />
+                            )}
+                            <span className="font-semibold">{executionResult.message}</span>
+                          </div>
+                          {executionResult.mockData && (
+                            <div className="overflow-x-auto rounded-lg border border-slate-800">
+                              <table className="w-full text-sm">
+                                <thead className="bg-slate-900 text-slate-300">
+                                  <tr>
+                                    {Object.keys(executionResult.mockData[0]).map((key) => (
+                                      <th key={key} className="px-4 py-3 text-left font-semibold">{key}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody className="text-slate-200">
+                                  {executionResult.mockData.map((row, i) => (
+                                    <tr key={i} className="border-t border-slate-800 hover:bg-slate-900/50">
+                                      {Object.values(row).map((val, j) => (
+                                        <td key={j} className="px-4 py-3">{val}</td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {activeTab === 'explain' && (
+                        <div data-testid="explain-panel" className="text-slate-300">
+                          <pre className="bg-slate-950 p-4 rounded-lg font-mono text-xs overflow-x-auto border border-slate-800">
 {`QUERY PLAN
 ----------
 Seq Scan on usuarios  (cost=0.00..35.50 rows=2550 width=40)
 Planning Time: 0.123 ms
 Execution Time: 1.234 ms`}
-                      </pre>
-                      <p className="text-sm text-slate-400 mt-4">
-                        Costo estimado: <span className="text-cyan-400 font-mono">35.50</span>
-                      </p>
+                          </pre>
+                          <p className="text-sm text-slate-400 mt-4">
+                            Costo estimado: <span className="text-cyan-400 font-mono font-semibold">35.50</span>
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
