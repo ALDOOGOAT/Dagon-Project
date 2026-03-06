@@ -114,14 +114,14 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-8">
+        <div className="glass-card rounded-2xl p-8 border border-slate-700/50">
           <div className="flex items-center gap-4 mb-8">
             <DagonMascot size="small" mood="happy" />
             <div>
-              <h2 className="text-3xl font-semibold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h2 className="text-3xl font-bold text-white">
                 Mapa de Niveles
               </h2>
-              <p className="text-slate-400" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              <p className="text-slate-400">
                 Selecciona un nivel para comenzar
               </p>
             </div>
@@ -138,7 +138,7 @@ export const DashboardPage = () => {
                   ${
                     level.locked
                       ? 'bg-slate-900/30 border-slate-800 opacity-50 cursor-not-allowed'
-                      : 'bg-slate-900/50 border-slate-800 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(220,38,38,0.2)]'
+                      : 'glass-card border-slate-700/50 hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)]'
                   }
                 `}
               >
@@ -146,21 +146,21 @@ export const DashboardPage = () => {
                   <div className="flex items-center gap-4">
                     <div
                       className={`
-                        w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold
+                        w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold
                         ${
                           level.locked
                             ? 'bg-slate-800 text-slate-600'
-                            : 'bg-gradient-to-br from-red-600 to-red-800 text-white shadow-lg'
+                            : 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-lg neon-glow'
                         }
                       `}
                     >
                       {level.locked ? <Lock className="w-8 h-8" /> : index + 1}
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <h3 className="text-xl font-bold text-white mb-1">
                         {level.name}
                       </h3>
-                      <p className="text-slate-400" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      <p className="text-slate-400">
                         {level.description}
                       </p>
                     </div>
@@ -168,14 +168,15 @@ export const DashboardPage = () => {
                   {!level.locked && (
                     <Button
                       data-testid={`start-level-${level.id}`}
-                      className="bg-red-600 hover:bg-red-700 text-white"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold neon-glow"
                     >
                       Comenzar
                     </Button>
                   )}
                 </div>
                 {index < levels.length - 1 && (
-                  <div className="absolute left-8 -bottom-4 w-0.5 h-8 bg-gradient-to-b from-slate-700 to-transparent" />
+                  <div className="absolute left-8 -bottom-4 w-0.5 h-8 bg-gradient-to-b from-blue-500/30 to-transparent" />
+                )}
                 )}
               </div>
             ))}
