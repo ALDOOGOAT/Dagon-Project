@@ -300,7 +300,10 @@ export const ExercisePage = () => {
                     </Button>
                     
                     <Button
-                      onClick={() => document.querySelector('[value="practice"]').click()}
+                      onClick={() => {
+                        const practiceTab = document.querySelector('[value="practice"]');
+                        if (practiceTab) practiceTab.click();
+                      }}
                       className="bg-green-600 hover:bg-green-700 text-white font-semibold"
                     >
                       Comenzar Práctica →
