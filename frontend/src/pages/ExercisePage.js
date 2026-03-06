@@ -370,8 +370,8 @@ export const ExercisePage = () => {
                         {droppedWords.length === 0 && (
                           <p className="text-slate-500 text-sm w-full text-center">Arrastra las palabras SQL aquí para construir tu consulta</p>
                         )}
-                        {droppedWords.map((word, index) => (
-                          <Draggable key={`dropped-${word}-${index}`} draggableId={`dropped-${word}-${index}`} index={index}>
+                        {droppedWords.map((wordObj, index) => (
+                          <Draggable key={`dropped-${wordObj.id}`} draggableId={`dropped-${wordObj.id}`} index={index}>
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
@@ -381,7 +381,7 @@ export const ExercisePage = () => {
                                   snapshot.isDragging ? 'shadow-lg scale-105 rotate-2' : 'hover:bg-blue-700'
                                 }`}
                               >
-                                {word}
+                                {wordObj.word}
                               </div>
                             )}
                           </Draggable>
