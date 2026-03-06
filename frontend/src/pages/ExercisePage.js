@@ -402,8 +402,8 @@ export const ExercisePage = () => {
                         data-testid="word-bank"
                         className="min-h-[80px] flex flex-wrap gap-2"
                       >
-                        {availableWords.map((word, index) => (
-                          <Draggable key={`word-${word}-${index}`} draggableId={`word-${word}-${index}`} index={index}>
+                        {availableWords.map((wordObj, index) => (
+                          <Draggable key={wordObj.id} draggableId={wordObj.id} index={index}>
                             {(provided, snapshot) => (
                               <div
                                 ref={provided.innerRef}
@@ -415,7 +415,7 @@ export const ExercisePage = () => {
                                     : 'border-slate-700 hover:border-blue-500/50 hover:bg-slate-700'
                                 }`}
                               >
-                                {word}
+                                {wordObj.word}
                               </div>
                             )}
                           </Draggable>
