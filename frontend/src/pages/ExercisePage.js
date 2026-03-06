@@ -150,17 +150,17 @@ export const ExercisePage = () => {
     const { source, destination } = result;
 
     if (source.droppableId === 'wordBank' && destination.droppableId === 'dropZone') {
-      const word = availableWords[source.index];
+      const wordObj = availableWords[source.index];
       const newAvailable = availableWords.filter((_, i) => i !== source.index);
       const newDropped = [...droppedWords];
-      newDropped.splice(destination.index, 0, word);
+      newDropped.splice(destination.index, 0, wordObj);
       setAvailableWords(newAvailable);
       setDroppedWords(newDropped);
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'wordBank') {
-      const word = droppedWords[source.index];
+      const wordObj = droppedWords[source.index];
       const newDropped = droppedWords.filter((_, i) => i !== source.index);
       setDroppedWords(newDropped);
-      setAvailableWords([...availableWords, word]);
+      setAvailableWords([...availableWords, wordObj]);
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'dropZone') {
       const newDropped = Array.from(droppedWords);
       const [moved] = newDropped.splice(source.index, 1);
