@@ -62,12 +62,12 @@ export const LoginPage = () => {
             </h1>
           </div>
 
-          <div className="glass-card rounded-2xl p-8 space-y-6">
+          <div className="glass-card rounded-2xl p-8 space-y-6 border border-slate-700/50">
             <div className="text-center">
-              <h2 className="text-3xl font-semibold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h2 className="text-3xl font-bold text-white mb-2">
                 {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
               </h2>
-              <p className="text-slate-400" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              <p className="text-slate-400">
                 {isLogin ? 'Continúa tu viaje de aprendizaje' : 'Comienza tu aventura SQL'}
               </p>
             </div>
@@ -83,7 +83,7 @@ export const LoginPage = () => {
                     placeholder="Tu nombre"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="bg-slate-950 border-slate-800 focus:border-red-500 text-slate-200"
+                    className="bg-slate-900 border-slate-700 focus:border-blue-500 focus:ring-blue-500 text-slate-200"
                     required
                   />
                 </div>
@@ -98,7 +98,7 @@ export const LoginPage = () => {
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-950 border-slate-800 focus:border-red-500 text-slate-200"
+                  className="bg-slate-900 border-slate-700 focus:border-blue-500 focus:ring-blue-500 text-slate-200"
                   required
                 />
               </div>
@@ -112,7 +112,7 @@ export const LoginPage = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-slate-950 border-slate-800 focus:border-red-500 text-slate-200"
+                  className="bg-slate-900 border-slate-700 focus:border-blue-500 focus:ring-blue-500 text-slate-200"
                   required
                 />
               </div>
@@ -121,7 +121,7 @@ export const LoginPage = () => {
                 type="submit"
                 data-testid="submit-button"
                 disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition-all duration-300 shadow-[0_0_15px_rgba(220,38,38,0.4)] hover:shadow-[0_0_20px_rgba(220,38,38,0.6)]"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all duration-300 neon-glow hover:shadow-[0_0_30px_rgba(59,130,246,0.6)]"
               >
                 {loading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Registrarse')}
               </Button>
@@ -132,7 +132,7 @@ export const LoginPage = () => {
                 type="button"
                 data-testid="toggle-auth-mode"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-slate-400 hover:text-red-500 transition-colors"
+                className="text-slate-400 hover:text-blue-400 transition-colors"
               >
                 {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
               </button>
