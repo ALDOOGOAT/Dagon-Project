@@ -50,6 +50,11 @@ export const DashboardPage = () => {
     toast.success('Sesión cerrada');
   };
 
+  const handleTutorialComplete = () => {
+    setShowTutorial(false);
+    localStorage.setItem('hasSeenDashboardTutorial', 'true');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen abyss-bg flex items-center justify-center">
