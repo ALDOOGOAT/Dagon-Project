@@ -37,6 +37,7 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, updateUserXP } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,10 @@ export const ExercisePage = () => {
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
   const [activeTab, setActiveTab] = useState('results');
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchExercises = async () => {
