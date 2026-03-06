@@ -105,7 +105,12 @@ export const ExercisePage = () => {
     if (exercises.length > 0) {
       const exercise = exercises[currentExerciseIndex];
       if (exercise.type === 'drag_drop') {
-        setAvailableWords(exercise.wordBank || []);
+        // Create word objects with unique IDs to avoid special character issues
+        const wordObjects = (exercise.wordBank || []).map((word, idx) => ({
+          id: `word-${idx}`,
+          word: word
+        }));
+        setAvailableWords(wordObjects);
         setDroppedWords([]);
       } else {
         setEditorCode(exercise.starterCode || '');
