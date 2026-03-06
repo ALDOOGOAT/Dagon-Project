@@ -52,7 +52,7 @@ export const DashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen abyss-bg" data-testid="dashboard-page">
+    <div className="min-h-screen cyber-bg grid-pattern" data-testid="dashboard-page">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-start mb-8">
           <div>
