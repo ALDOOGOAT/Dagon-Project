@@ -18,9 +18,10 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     loadLevels();
-    // Show tutorial on first visit
-    const hasSeenTutorial = localStorage.getItem('hasSeenDashboardTutorial');
-    if (!hasSeenTutorial) {
+    
+    // Mostrar tutorial solo en primera visita
+    const tutorialCompleted = localStorage.getItem('dagon_tutorial_completed');
+    if (!tutorialCompleted) {
       setShowTutorial(true);
     }
   }, []);
