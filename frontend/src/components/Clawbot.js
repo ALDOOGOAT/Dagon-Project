@@ -83,15 +83,15 @@ export const Clawbot = () => {
           className="fixed bottom-24 right-6 w-96 h-[600px] glass-card rounded-2xl shadow-2xl flex flex-col border border-slate-800"
           style={{ zIndex: 9999 }}
         >
-          <div className="bg-gradient-to-r from-red-600 to-red-800 p-4 rounded-t-2xl flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 rounded-t-2xl flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
               <DagonMascot size="small" mood="happy" />
             </div>
             <div>
-              <h3 className="text-white font-semibold text-lg" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              <h3 className="text-white font-bold text-lg">
                 Clawbot
               </h3>
-              <p className="text-red-100 text-xs">Tu tutor SQL</p>
+              <p className="text-blue-100 text-xs">Tu tutor SQL inteligente</p>
             </div>
           </div>
 
