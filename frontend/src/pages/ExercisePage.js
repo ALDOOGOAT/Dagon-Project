@@ -12,24 +12,49 @@ import Editor from '@monaco-editor/react';
 
 const THEORY_CONTENT = {
   "nivel-0": {
-    title: "Fundamentos de Bases de Datos",
-    content: "Una base de datos es una colección organizada de información estructurada. SQL es el lenguaje estándar para interactuar con bases de datos relacionales. La consulta más básica es SELECT, que te permite recuperar datos de una tabla."
+    title: "🎯 Fundamentos de Bases de Datos",
+    content: "Una base de datos es una colección organizada de información estructurada. Imagina que es como un archivero digital gigante donde guardas información de manera ordenada. SQL es el lenguaje universal para hablar con estas bases de datos. La consulta más básica y fundamental es SELECT, que te permite leer y recuperar datos.",
+    concepts: [
+      { icon: "📊", title: "Base de Datos", desc: "Colección organizada de datos relacionados" },
+      { icon: "🔍", title: "SQL", desc: "Lenguaje para consultar y manipular datos" },
+      { icon: "📋", title: "Tabla", desc: "Estructura que almacena datos en filas y columnas" }
+    ]
   },
   "basico": {
-    title: "SELECT y Filtros con WHERE",
-    content: "SELECT te permite elegir qué columnas quieres ver de una tabla. WHERE te permite filtrar los resultados según condiciones específicas. Por ejemplo: SELECT nombre, edad FROM usuarios WHERE edad mayor que 18."
+    title: "🔍 SELECT y Filtros con WHERE",
+    content: "SELECT es tu herramienta principal para obtener datos. Es como decirle a la base de datos: 'muéstrame esta información'. WHERE te permite ser específico: en lugar de ver todos los datos, filtras exactamente lo que necesitas. Por ejemplo, puedes ver solo usuarios mayores de edad.",
+    concepts: [
+      { icon: "🎯", title: "SELECT", desc: "Selecciona columnas específicas de una tabla" },
+      { icon: "🔎", title: "WHERE", desc: "Filtra resultados con condiciones" },
+      { icon: "📈", title: "ORDER BY", desc: "Ordena los resultados" }
+    ]
   },
   "medio": {
-    title: "JOINs y Relaciones",
-    content: "Los JOIN te permiten combinar datos de múltiples tablas relacionadas. INNER JOIN devuelve solo las filas que tienen coincidencias en ambas tablas. GROUP BY agrupa resultados para realizar cálculos agregados."
+    title: "🔗 JOINs y Relaciones",
+    content: "Los JOIN son el superpoder de SQL. Te permiten combinar información de múltiples tablas relacionadas. Es como conectar piezas de un rompecabezas: cada tabla tiene parte de la información, y JOIN las une para darte el panorama completo. INNER JOIN solo muestra datos que existen en ambas tablas.",
+    concepts: [
+      { icon: "🔗", title: "INNER JOIN", desc: "Une tablas mostrando coincidencias" },
+      { icon: "📊", title: "GROUP BY", desc: "Agrupa datos para cálculos" },
+      { icon: "🎲", title: "Agregación", desc: "Funciones como COUNT, SUM, AVG" }
+    ]
   },
   "avanzado": {
-    title: "Optimización e Índices",
-    content: "Los índices son estructuras de datos que mejoran la velocidad de las consultas. CREATE INDEX te permite crear índices en columnas específicas. Las transacciones garantizan que las operaciones se completen de forma atómica."
+    title: "⚡ Optimización e Índices",
+    content: "Los índices son como el índice de un libro: te ayudan a encontrar información rápidamente sin leer todo. CREATE INDEX crea estos atajos de búsqueda. Las transacciones garantizan que operaciones críticas se completen totalmente o no se ejecuten, manteniendo la integridad de tus datos.",
+    concepts: [
+      { icon: "🚀", title: "Índices", desc: "Aceleran las búsquedas de datos" },
+      { icon: "🔒", title: "Transacciones", desc: "Operaciones atómicas y seguras" },
+      { icon: "📈", title: "EXPLAIN", desc: "Analiza el rendimiento de queries" }
+    ]
   },
   "pro": {
-    title: "Arquitectura y Escalabilidad",
-    content: "La arquitectura de bases de datos incluye replicación, sharding y clustering. Las transacciones ACID garantizan consistencia. La escalabilidad horizontal distribuye datos entre múltiples servidores."
+    title: "🏗️ Arquitectura y Escalabilidad",
+    content: "A nivel profesional, gestionas sistemas masivos. La replicación crea copias de tu base de datos para redundancia y velocidad. El sharding divide datos entre servidores para manejar millones de usuarios. ACID son los principios que garantizan que tus datos siempre sean confiables, incluso en sistemas distribuidos.",
+    concepts: [
+      { icon: "🌐", title: "Replicación", desc: "Copias de seguridad en tiempo real" },
+      { icon: "⚖️", title: "Sharding", desc: "División de datos entre servidores" },
+      { icon: "🏛️", title: "ACID", desc: "Atomicidad, Consistencia, Aislamiento, Durabilidad" }
+    ]
   }
 };
 
