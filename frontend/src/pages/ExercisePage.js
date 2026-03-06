@@ -14,47 +14,122 @@ import Editor from '@monaco-editor/react';
 const THEORY_CONTENT = {
   "nivel-0": {
     title: "🎯 Fundamentos de Bases de Datos",
-    content: "Una base de datos es una colección organizada de información estructurada. Imagina que es como un archivero digital gigante donde guardas información de manera ordenada. SQL es el lenguaje universal para hablar con estas bases de datos. La consulta más básica y fundamental es SELECT, que te permite leer y recuperar datos.",
+    content: "Una base de datos es como una biblioteca digital gigante donde guardamos información de manera super organizada. SQL es el lenguaje que usamos para hablar con estas bases de datos y pedirles información.",
     concepts: [
-      { icon: "📊", title: "Base de Datos", desc: "Colección organizada de datos relacionados" },
-      { icon: "🔍", title: "SQL", desc: "Lenguaje para consultar y manipular datos" },
-      { icon: "📋", title: "Tabla", desc: "Estructura que almacena datos en filas y columnas" }
+      { 
+        icon: "📊", 
+        title: "Base de Datos", 
+        desc: "Colección organizada de información",
+        detail: "Imagina un archivero con cajones perfectamente organizados. Cada cajón es una tabla con filas y columnas de datos."
+      },
+      { 
+        icon: "🔍", 
+        title: "SQL", 
+        desc: "Lenguaje para consultar datos",
+        detail: "SQL es como el idioma que hablas para pedirle a la base de datos que te muestre información específica. Es simple y poderoso."
+      },
+      { 
+        icon: "📋", 
+        title: "Tablas", 
+        desc: "Estructura de filas y columnas",
+        detail: "Las tablas son como hojas de Excel: tienen columnas (campos) y filas (registros). Cada fila es un dato completo."
+      }
     ]
   },
   "basico": {
-    title: "🔍 SELECT y Filtros con WHERE",
-    content: "SELECT es tu herramienta principal para obtener datos. Es como decirle a la base de datos: 'muéstrame esta información'. WHERE te permite ser específico: en lugar de ver todos los datos, filtras exactamente lo que necesitas. Por ejemplo, puedes ver solo usuarios mayores de edad.",
+    title: "🔍 SELECT y Filtros",
+    content: "SELECT es tu herramienta más importante. Es como un control remoto que te permite ver exactamente lo que necesitas de tu base de datos.",
     concepts: [
-      { icon: "🎯", title: "SELECT", desc: "Selecciona columnas específicas de una tabla" },
-      { icon: "🔎", title: "WHERE", desc: "Filtra resultados con condiciones" },
-      { icon: "📈", title: "ORDER BY", desc: "Ordena los resultados" }
+      { 
+        icon: "🎯", 
+        title: "SELECT", 
+        desc: "Selecciona columnas de una tabla",
+        detail: "SELECT te dice QUÉ campos quieres ver. Puedes elegir todos con * o solo los que necesitas."
+      },
+      { 
+        icon: "🔎", 
+        title: "WHERE", 
+        desc: "Filtra resultados con condiciones",
+        detail: "WHERE es como un filtro de búsqueda. Solo te muestra las filas que cumplen tu condición."
+      },
+      { 
+        icon: "📈", 
+        title: "ORDER BY", 
+        desc: "Ordena los resultados",
+        detail: "ORDER BY organiza tus resultados alfabéticamente, numéricamente, ascendente o descendente."
+      }
     ]
   },
   "medio": {
     title: "🔗 JOINs y Relaciones",
-    content: "Los JOIN son el superpoder de SQL. Te permiten combinar información de múltiples tablas relacionadas. Es como conectar piezas de un rompecabezas: cada tabla tiene parte de la información, y JOIN las une para darte el panorama completo. INNER JOIN solo muestra datos que existen en ambas tablas.",
+    content: "Los JOIN son el superpoder de SQL. Te permiten combinar información de diferentes tablas como si fueran piezas de un rompecabezas.",
     concepts: [
-      { icon: "🔗", title: "INNER JOIN", desc: "Une tablas mostrando coincidencias" },
-      { icon: "📊", title: "GROUP BY", desc: "Agrupa datos para cálculos" },
-      { icon: "🎲", title: "Agregación", desc: "Funciones como COUNT, SUM, AVG" }
+      { 
+        icon: "🔗", 
+        title: "INNER JOIN", 
+        desc: "Une tablas con coincidencias",
+        detail: "INNER JOIN conecta dos tablas y solo muestra las filas donde ambas tienen información relacionada."
+      },
+      { 
+        icon: "📊", 
+        title: "GROUP BY", 
+        desc: "Agrupa datos para cálculos",
+        detail: "GROUP BY es perfecto para hacer resúmenes: contar, sumar, promediar datos agrupados."
+      },
+      { 
+        icon: "🎲", 
+        title: "Funciones", 
+        desc: "COUNT, SUM, AVG, MAX, MIN",
+        detail: "Las funciones agregadas te dan estadísticas: cuántos hay, el total, el promedio, etc."
+      }
     ]
   },
   "avanzado": {
     title: "⚡ Optimización e Índices",
-    content: "Los índices son como el índice de un libro: te ayudan a encontrar información rápidamente sin leer todo. CREATE INDEX crea estos atajos de búsqueda. Las transacciones garantizan que operaciones críticas se completen totalmente o no se ejecuten, manteniendo la integridad de tus datos.",
+    content: "Los índices son como el índice de un libro: te ayudan a encontrar información super rápido sin tener que buscar en todas las páginas.",
     concepts: [
-      { icon: "🚀", title: "Índices", desc: "Aceleran las búsquedas de datos" },
-      { icon: "🔒", title: "Transacciones", desc: "Operaciones atómicas y seguras" },
-      { icon: "📈", title: "EXPLAIN", desc: "Analiza el rendimiento de queries" }
+      { 
+        icon: "🚀", 
+        title: "Índices", 
+        desc: "Aceleran búsquedas de datos",
+        detail: "Un índice es una estructura que hace que tus consultas vuelen. Especialmente útil en tablas grandes."
+      },
+      { 
+        icon: "🔒", 
+        title: "Transacciones", 
+        desc: "Operaciones seguras y atómicas",
+        detail: "Las transacciones garantizan que todo se ejecute correctamente o nada se ejecute. Todo o nada."
+      },
+      { 
+        icon: "📈", 
+        title: "EXPLAIN", 
+        desc: "Analiza rendimiento de queries",
+        detail: "EXPLAIN te muestra cómo la base de datos ejecuta tu consulta y dónde puedes optimizar."
+      }
     ]
   },
   "pro": {
     title: "🏗️ Arquitectura y Escalabilidad",
-    content: "A nivel profesional, gestionas sistemas masivos. La replicación crea copias de tu base de datos para redundancia y velocidad. El sharding divide datos entre servidores para manejar millones de usuarios. ACID son los principios que garantizan que tus datos siempre sean confiables, incluso en sistemas distribuidos.",
+    content: "A nivel profesional, manejas sistemas que sirven a millones de usuarios. Necesitas diseñar para escalar y mantener la consistencia.",
     concepts: [
-      { icon: "🌐", title: "Replicación", desc: "Copias de seguridad en tiempo real" },
-      { icon: "⚖️", title: "Sharding", desc: "División de datos entre servidores" },
-      { icon: "🏛️", title: "ACID", desc: "Atomicidad, Consistencia, Aislamiento, Durabilidad" }
+      { 
+        icon: "🌐", 
+        title: "Replicación", 
+        desc: "Copias en tiempo real",
+        detail: "La replicación mantiene múltiples copias sincronizadas de tus datos para alta disponibilidad."
+      },
+      { 
+        icon: "⚖️", 
+        title: "Sharding", 
+        desc: "Distribución de datos",
+        detail: "Sharding divide tu base de datos entre múltiples servidores para manejar más carga."
+      },
+      { 
+        icon: "🏛️", 
+        title: "ACID", 
+        desc: "Principios de consistencia",
+        detail: "ACID garantiza que tus datos siempre sean confiables: Atomicidad, Consistencia, Aislamiento, Durabilidad."
+      }
     ]
   }
 };
