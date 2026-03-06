@@ -75,8 +75,8 @@ export const ExercisePage = () => {
   const [showReward, setShowReward] = useState(false);
   const [lastXPGained, setLastXPGained] = useState(0);
   
-  const [droppedWords, setDroppedWords] = useState([]);
-  const [availableWords, setAvailableWords] = useState([]);
+  const [droppedWords, setDroppedWords] = useState([]); // Array of {id, word}
+  const [availableWords, setAvailableWords] = useState([]); // Array of {id, word}
   
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
