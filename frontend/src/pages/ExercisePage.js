@@ -176,9 +176,12 @@ export const ExercisePage = () => {
       const result = await apiService.validateExercise(exercise.id, query, levelId);
       
       if (result.success) {
-        toast.success(result.message);
         if (result.xp_gained > 0) {
           updateUserXP((user?.xp || 0) + result.xp_gained);
+          setLastXPGained(result.xp_gained);
+          setShowReward(true);
+        } else {
+          toast.success(result.message);
         }
         setExecutionResult({
           success: true,
