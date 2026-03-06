@@ -72,6 +72,8 @@ export const ExercisePage = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [showReward, setShowReward] = useState(false);
+  const [lastXPGained, setLastXPGained] = useState(0);
   
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
