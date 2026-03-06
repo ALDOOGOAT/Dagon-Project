@@ -105,15 +105,60 @@ export const Clawbot = () => {
                 }`}
               >
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
+                  className={`max-w-[80%] p-4 rounded-xl ${
                     msg.role === 'user'
                       ? 'bg-blue-600 text-white font-medium'
                       : 'bg-slate-800 text-slate-200 border border-slate-700'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                    {msg.content}
-                  </p>
+                  {msg.role === 'assistant' ? (
+                    <div className="space-y-3">
+                      {/* Texto formateado */}
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        {msg.content}
+                      </p>
+                      
+                      {/* Si menciona SELECT, mostrar diagrama visual */}
+                      {msg.content.toLowerCase().includes('select') && (
+                        <div className="mt-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
+                          <div className="text-xs text-slate-400 mb-2 font-mono">Ejemplo Visual:</div>
+                          <div className="font-mono text-xs">
+                            <div className="text-cyan-400">SELECT</div>
+                            <div className="ml-4 text-green-400">columnas</div>
+                            <div className="text-cyan-400">FROM</div>
+                            <div className="ml-4 text-yellow-400">tabla</div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Si menciona JOIN, mostrar diagrama */}
+                      {msg.content.toLowerCase().includes('join') && (
+                        <div className="mt-3 p-3 bg-slate-900 rounded-lg border border-slate-700">
+                          <div className="flex items-center gap-2 justify-center">
+                            <div className="w-16 h-16 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs text-blue-400 border border-blue-500/50">
+                              Tabla A
+                            </div>
+                            <div className="text-green-400 font-bold">🔗</div>
+                            <div className="w-16 h-16 bg-purple-500/20 rounded-lg flex items-center justify-center text-xs text-purple-400 border border-purple-500/50">
+                              Tabla B
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Tips adicionales con íconos */}
+                      {msg.content.toLowerCase().includes('tip') && (
+                        <div className="mt-2 flex items-start gap-2 p-2 bg-blue-900/20 rounded-lg border border-blue-500/30">
+                          <span className="text-lg">💡</span>
+                          <span className="text-xs text-blue-300">Tip destacado</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                      {msg.content}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
