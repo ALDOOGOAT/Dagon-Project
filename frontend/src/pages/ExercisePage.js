@@ -262,28 +262,67 @@ export const ExercisePage = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="theory" className="space-y-4">
-            <div className="glass-card rounded-xl p-8 border border-slate-700/50">
-              <div className="flex items-start gap-4 mb-6">
-                <DagonMascot size="small" mood="happy" />
+          <TabsContent value="theory" className="space-y-6">
+            <div className="glass-card rounded-2xl p-8 border border-slate-700/50">
+              <div className="flex items-start gap-6 mb-8">
+                <div className={`transition-transform duration-300 ${isSpeaking ? 'animate-bounce' : 'animate-float'}`}>
+                  <DagonMascot size="large" mood={isSpeaking ? "excited" : "happy"} />
+                </div>
                 <div className="flex-1">
-                  <h2 className="text-3xl font-bold text-white mb-4">{theory?.title}</h2>
-                  <p className="text-slate-300 text-lg leading-relaxed">{theory?.content}</p>
+                  <h2 className="text-4xl font-bold text-white mb-4">{theory?.title}</h2>
+                  <p className="text-slate-300 text-lg leading-relaxed mb-6">{theory?.content}</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {theory?.concepts?.map((concept, index) => (
+                      <div 
+                        key={index}
+                        className="glass-card p-4 rounded-xl border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 hover:scale-105"
+                      >
+                        <div className="text-4xl mb-2">{concept.icon}</div>
+                        <h3 className="font-bold text-white mb-1">{concept.title}</h3>
+                        <p className="text-sm text-slate-400">{concept.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <Button
+                      onClick={speakTheory}
+                      data-testid="speak-theory-button"
+                      className={`${
+                        isSpeaking 
+                          ? 'bg-red-600 hover:bg-red-700 animate-pulse' 
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white font-semibold neon-glow`}
+                    >
+                      <Volume2 className="w-5 h-5 mr-2" />
+                      {isSpeaking ? '⏹ Detener Lectura' : '🔊 Escuchar Teoría'}
+                    </Button>
+                    
+                    <Button
+                      onClick={() => document.querySelector('[value="practice"]').click()}
+                      className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+                    >
+                      Comenzar Práctica →
+                    </Button>
+                  </div>
                 </div>
               </div>
-              
-              <Button
-                onClick={speakTheory}
-                data-testid="speak-theory-button"
-                className={`${
-                  isSpeaking 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } text-white font-semibold neon-glow`}
-              >
-                <Volume2 className="w-5 h-5 mr-2" />
-                {isSpeaking ? 'Detener Lectura' : 'Escuchar Teoría'}
-              </Button>
+
+              {/* Tips adicionales */}
+              <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-6">
+                <h3 className="font-bold text-blue-400 mb-3 flex items-center gap-2">
+                  <Lightbulb className="w-5 h-5" />
+                  💡 Consejo de Dagon
+                </h3>
+                <p className="text-slate-300">
+                  {levelId === 'nivel-0' && "Empieza construyendo consultas simples. La práctica hace al maestro."}
+                  {levelId === 'basico' && "Practica diferentes condiciones con WHERE. ¡Experimenta sin miedo!"}
+                  {levelId === 'medio' && "Los JOINs pueden parecer complejos al inicio, pero pronto serán tu mejor aliado."}
+                  {levelId === 'avanzado' && "Siempre analiza el rendimiento de tus queries con EXPLAIN antes de producción."}
+                  {levelId === 'pro' && "En sistemas reales, la escalabilidad y consistencia son más importantes que la velocidad pura."}
+                </p>
+              </div>
             </div>
           </TabsContent>
 
