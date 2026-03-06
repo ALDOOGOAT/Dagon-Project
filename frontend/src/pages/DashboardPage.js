@@ -75,7 +75,11 @@ export const DashboardPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+          <div 
+            onClick={() => navigate('/profile')}
+            className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)] transition-all duration-300"
+            data-testid="xp-card"
+          >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
                 <Zap className="w-6 h-6 text-blue-400" />
@@ -87,9 +91,14 @@ export const DashboardPage = () => {
             </div>
             <Progress value={(user?.xp % 100)} className="h-2 bg-slate-800" />
             <p className="text-slate-500 text-xs mt-2">{100 - (user?.xp % 100)} XP para siguiente nivel</p>
+            <p className="text-blue-400 text-xs mt-2 font-medium">Click para ver detalles →</p>
           </div>
 
-          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+          <div 
+            onClick={() => navigate('/profile')}
+            className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-orange-500/50 hover:shadow-[0_0_25px_rgba(249,115,22,0.2)] transition-all duration-300"
+            data-testid="streak-card"
+          >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
                 <Flame className="w-6 h-6 text-orange-400" />
@@ -99,18 +108,24 @@ export const DashboardPage = () => {
                 <p className="text-3xl font-bold text-white" data-testid="user-streak">{user?.streak || 0} días</p>
               </div>
             </div>
+            <p className="text-orange-400 text-xs mt-4 font-medium">Click para ver estadísticas →</p>
           </div>
 
-          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
+          <div 
+            onClick={() => navigate('/leaderboard')}
+            className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-yellow-500/50 hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300"
+            data-testid="leaderboard-card"
+          >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-cyan-600/20 rounded-lg flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-cyan-400" />
+              <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-yellow-400" />
               </div>
               <div>
-                <p className="text-slate-400 text-sm">Ejercicios Completados</p>
-                <p className="text-3xl font-bold text-white">0</p>
+                <p className="text-slate-400 text-sm">Tu Posición</p>
+                <p className="text-3xl font-bold text-white">#-</p>
               </div>
             </div>
+            <p className="text-yellow-400 text-xs mt-4 font-medium">Click para ver ranking →</p>
           </div>
         </div>
 
