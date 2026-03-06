@@ -18,6 +18,11 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     loadLevels();
+    // Show tutorial on first visit
+    const hasSeenTutorial = localStorage.getItem('hasSeenDashboardTutorial');
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+    }
   }, []);
 
   const loadLevels = async () => {
