@@ -199,6 +199,15 @@ export const ExercisePage = () => {
   const isDragDrop = exercise.type === 'drag_drop';
   const theory = THEORY_CONTENT[levelId];
 
+  // Evitar renderizar DragDropContext antes de montar en cliente
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen cyber-bg flex items-center justify-center">
+        <DagonMascot size="large" mood="happy" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="exercise-page">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
