@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
+import { RewardAnimation } from '../components/RewardAnimation';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, VolumeX } from 'lucide-react';
