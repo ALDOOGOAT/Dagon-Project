@@ -65,6 +65,31 @@ export const DashboardPage = () => {
 
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="dashboard-page">
+      {showTutorial && (
+        <TutorialOverlay
+          steps={[
+            {
+              target: '[data-testid="xp-card"]',
+              title: '¡Puntos de Experiencia!',
+              content: 'Aquí puedes ver tus puntos XP. Gana más completando ejercicios y desafíos.',
+              placement: 'bottom'
+            },
+            {
+              target: '[data-testid="streak-card"]',
+              title: 'Mantén tu Racha',
+              content: 'Tu racha diaria te ayuda a mantener el hábito de aprender SQL todos los días.',
+              placement: 'bottom'
+            },
+            {
+              target: '[data-testid="level-card-1"]',
+              title: 'Niveles de Aprendizaje',
+              content: 'Progresa a través de diferentes niveles, cada uno con ejercicios únicos y desafiantes.',
+              placement: 'top'
+            }
+          ]}
+          onComplete={handleTutorialComplete}
+        />
+      )}
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-start mb-8">
           <div>
