@@ -3,7 +3,7 @@ import sys
 
 def test_specific_registration():
     """Test the specific registration case mentioned in the request"""
-    base_url = "https://dagon-sql.preview.emergentagent.com"
+    base_url = "https://postgres-academy-1.preview.emergentagent.com"
     
     # Test registration with specific credentials
     test_data = {
