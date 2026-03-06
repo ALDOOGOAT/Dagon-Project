@@ -143,7 +143,7 @@ export const Clawbot = () => {
                 onClick={handleSendMessage}
                 data-testid="send-message-button"
                 disabled={loading || !inputMessage.trim()}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-blue-600 hover:bg-blue-700 text-white neon-glow"
               >
                 <Send className="w-5 h-5" />
               </Button>
