@@ -53,7 +53,7 @@ export const DashboardPage = () => {
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
-    localStorage.setItem('hasSeenDashboardTutorial', 'true');
+    localStorage.setItem('dagon_tutorial_completed', 'true');
   };
 
   if (loading) {
