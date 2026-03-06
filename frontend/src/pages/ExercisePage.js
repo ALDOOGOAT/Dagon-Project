@@ -175,7 +175,7 @@ export const ExercisePage = () => {
     
     try {
       const query = exercise.type === 'drag_drop' 
-        ? droppedWords.join(' ')
+        ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
       const result = await apiService.validateExercise(exercise.id, query, levelId);
