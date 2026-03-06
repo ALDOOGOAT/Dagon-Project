@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { InteractiveTheory } from '../components/InteractiveTheory';
+import { ClawbotTeacher } from '../components/ClawbotTeacher';
 import { apiService } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, BookOpen } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
 
