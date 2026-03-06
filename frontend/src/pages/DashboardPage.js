@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
+import { TutorialOverlay } from '../components/TutorialOverlay';
 import { apiService } from '../services/apiService';
 import { Zap, Flame, Lock, Trophy, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
