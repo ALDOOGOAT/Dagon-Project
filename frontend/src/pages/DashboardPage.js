@@ -75,24 +75,24 @@ export const DashboardPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          <div className="glass-card rounded-xl p-6">
+          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center">
-                <Zap className="w-6 h-6 text-red-500" />
+              <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
+                <Zap className="w-6 h-6 text-blue-400" />
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Puntos XP</p>
                 <p className="text-3xl font-bold text-white" data-testid="user-xp">{user?.xp || 0}</p>
               </div>
             </div>
-            <Progress value={(user?.xp % 100)} className="h-2" />
+            <Progress value={(user?.xp % 100)} className="h-2 bg-slate-800" />
             <p className="text-slate-500 text-xs mt-2">{100 - (user?.xp % 100)} XP para siguiente nivel</p>
           </div>
 
-          <div className="glass-card rounded-xl p-6">
+          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-orange-600/20 rounded-full flex items-center justify-center">
-                <Flame className="w-6 h-6 text-orange-500" />
+              <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
+                <Flame className="w-6 h-6 text-orange-400" />
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Racha Actual</p>
@@ -101,10 +101,10 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          <div className="glass-card rounded-xl p-6">
+          <div className="glass-card rounded-xl p-6 border border-slate-700/50">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-cyan-600/20 rounded-full flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-cyan-500" />
+              <div className="w-12 h-12 bg-cyan-600/20 rounded-lg flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-cyan-400" />
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Ejercicios Completados</p>
