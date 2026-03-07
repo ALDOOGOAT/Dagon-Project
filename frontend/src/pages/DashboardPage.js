@@ -5,16 +5,19 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { TutorialOverlay } from '../components/TutorialOverlay';
+import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import { apiService } from '../services/apiService';
-import { Zap, Flame, Lock, Trophy, LogOut } from 'lucide-react';
+import { Zap, Flame, Lock, Trophy, LogOut, Target } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 export const DashboardPage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showQuickPractice, setShowQuickPractice] = useState(false);
 
   useEffect(() => {
     loadLevels();
