@@ -70,26 +70,49 @@ export const DashboardPage = () => {
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="dashboard-page">
       {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} />}
+      {showQuickPractice && (
+        <QuickPracticeMode
+          userLevel={user?.level || 'nivel-0'}
+          userXP={user?.xp || 0}
+          userStreak={user?.streak || 0}
+          onXPGain={(xp) => updateUserXP((user?.xp || 0) + xp)}
+          onClose={() => setShowQuickPractice(false)}
+        />
+      )}
       
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-start mb-8">
-          <div>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             <h1 className="text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
               ¡Hola, {user?.name}!
             </h1>
             <p className="text-slate-400 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Continúa tu viaje en las profundidades del SQL
             </p>
+          </motion.div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowQuickPractice(true)}
+              data-testid="quick-practice-button"
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
+            >
+              <Target className="w-4 h-4 mr-2" />
+              Práctica Rápida
+            </Button>
+            <Button
+              onClick={handleLogout}
+              data-testid="logout-button"
+              variant="ghost"
+              className="text-slate-400 hover:text-white hover:bg-slate-800/50"
+            >
+              <LogOut className="w-5 h-5 mr-2" />
+              Salir
+            </Button>
           </div>
-          <Button
-            onClick={handleLogout}
-            data-testid="logout-button"
-            variant="ghost"
-            className="text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Salir
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
