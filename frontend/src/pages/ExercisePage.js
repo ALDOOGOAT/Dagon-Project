@@ -87,16 +87,19 @@ export const ExercisePage = () => {
   }, []);
 
   useEffect(() => {
+    // 1. Al montar el componente, tocamos la puerta de tu servidor Java para pedir los ejercicios del nivel seleccionado
     const fetchExercises = async () => {
-      try {
-        const data = await apiService.getExercises(levelId);
-        setExercises(data.exercises);
-      } catch (error) {
-        toast.error('Error al cargar ejercicios');
-      } finally {
-        setLoading(false);
-      }
-    };
+          try {
+            const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`);
+            const data = await response.json();
+            
+            setExercises(data.exercises);
+          } catch (error) {
+            toast.error('Error al cargar ejercicios desde el servidor');
+          } finally {
+            setLoading(false);
+          }
+        };
     
     fetchExercises();
   }, [levelId]);

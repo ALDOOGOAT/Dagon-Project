@@ -19,22 +19,31 @@ export const DashboardPage = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQuickPractice, setShowQuickPractice] = useState(false);
 
+  // --- VARIABLES SEGURAS (FALLBACKS) ---
+  // Si user no existe o no tiene 'xp', usamos 0 por defecto.
+  const userXP = user?.xp || 0;
+  const userStreak = user?.streak || 0;
+  const xpFaltante = 100 - (userXP % 100);
+
   useEffect(() => {
     loadLevels();
     
-    // Mostrar tutorial solo en primera visita
     const tutorialCompleted = localStorage.getItem('dagon_tutorial_completed');
     if (!tutorialCompleted) {
       setShowTutorial(true);
     }
   }, []);
 
-  const loadLevels = async () => {
+const loadLevels = async () => {
     try {
-      const data = await apiService.getLevels();
+      // Le tocamos la puerta al Mesero de Niveles
+      const response = await fetch('http://localhost:8080/api/levels');
+      const data = await response.json();
+      
+      // Guardamos los niveles traducidos en la memoria de React
       setLevels(data.levels);
     } catch (error) {
-      toast.error('Error al cargar niveles');
+      toast.error('Error al cargar niveles desde el servidor');
     } finally {
       setLoading(false);
     }
@@ -54,11 +63,6 @@ export const DashboardPage = () => {
     toast.success('Sesión cerrada');
   };
 
-  const handleTutorialComplete = () => {
-    setShowTutorial(false);
-    localStorage.setItem('dagon_tutorial_completed', 'true');
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen abyss-bg flex items-center justify-center">
@@ -73,9 +77,9 @@ export const DashboardPage = () => {
       {showQuickPractice && (
         <QuickPracticeMode
           userLevel={user?.level || 'nivel-0'}
-          userXP={user?.xp || 0}
-          userStreak={user?.streak || 0}
-          onXPGain={(xp) => updateUserXP((user?.xp || 0) + xp)}
+          userXP={userXP}
+          userStreak={userStreak}
+          onXPGain={(xp) => updateUserXP(userXP + xp)}
           onClose={() => setShowQuickPractice(false)}
         />
       )}
@@ -88,7 +92,7 @@ export const DashboardPage = () => {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              ¡Hola, {user?.name}!
+              ¡Hola, {user?.nombre || 'Usuario'}!
             </h1>
             <p className="text-slate-400 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Continúa tu viaje en las profundidades del SQL
@@ -127,11 +131,11 @@ export const DashboardPage = () => {
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Puntos XP</p>
-                <p className="text-3xl font-bold text-white" data-testid="user-xp">{user?.xp || 0}</p>
+                <p className="text-3xl font-bold text-white" data-testid="user-xp">{userXP}</p>
               </div>
             </div>
-            <Progress value={(user?.xp % 100)} className="h-2 bg-slate-800" />
-            <p className="text-slate-500 text-xs mt-2">{100 - (user?.xp % 100)} XP para siguiente nivel</p>
+            <Progress value={(userXP % 100)} className="h-2 bg-slate-800" />
+            <p className="text-slate-500 text-xs mt-2">{xpFaltante} XP para siguiente nivel</p>
             <p className="text-blue-400 text-xs mt-2 font-medium">Click para ver detalles →</p>
           </div>
 
@@ -146,7 +150,7 @@ export const DashboardPage = () => {
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Racha Actual</p>
-                <p className="text-3xl font-bold text-white" data-testid="user-streak">{user?.streak || 0} días</p>
+                <p className="text-3xl font-bold text-white" data-testid="user-streak">{userStreak} días</p>
               </div>
             </div>
             <p className="text-orange-400 text-xs mt-4 font-medium">Click para ver estadísticas →</p>
@@ -177,9 +181,9 @@ export const DashboardPage = () => {
               <h2 className="text-3xl font-bold text-white">
                 Mapa de Niveles
               </h2>
-              <p className="text-slate-400">
-                Selecciona un nivel para comenzar
-              </p>
+          <p className="text-slate-400">
+            {levels.length > 0 ? 'Elige tu próxima misión para continuar' : 'Aún no hay niveles disponibles'}
+          </p>
             </div>
           </div>
 

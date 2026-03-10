@@ -32,31 +32,55 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const login = async (email, password) => {
+const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API}/auth/login`, { email, password });
-      const { token: newToken, user: userData } = response.data;
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
+      // 1. Tocamos la nueva puerta de Login que acabas de crear en Java
+      const response = await axios.post(`http://localhost:8080/api/usuarios/login`, { 
+        email: email, 
+        passwordHash: password // Traducimos "password" a "passwordHash" para tu Java
+      });
+      
+      const userData = response.data; // Tu base de datos nos devuelve tu usuario
+
+      // 2. Usamos el mismo truco del token temporal para que React te deje entrar al Dashboard
+      const fakeToken = "token-dagon-" + userData.idUsuario;
+      
+      localStorage.setItem('token', fakeToken);
+      setToken(fakeToken);
       setUser(userData);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${fakeToken}`;
+      
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Error al iniciar sesión' };
+      // Si Java responde que la contraseña está mal o el correo no existe, React muestra el error
+      return { success: false, error: error.response?.data || 'Error de conexión con el servidor' };
     }
   };
 
-  const register = async (name, email, password) => {
+const register = async (name, email, password) => {
     try {
-      const response = await axios.post(`${API}/auth/register`, { name, email, password });
-      const { token: newToken, user: userData } = response.data;
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
+      // 1. Apuntamos a tu servidor Java y traducimos las variables al español
+      const response = await axios.post(`http://localhost:8080/api/usuarios/registro`, { 
+        nombre: name, 
+        email: email, 
+        passwordHash: password 
+      });
+      
+      const userData = response.data; // Java nos devuelve tu usuario recién creado
+
+      // 2. Como aún no programamos la seguridad de Tokens (JWT) en Java, 
+      // engañamos a React con un token temporal para que te deje pasar al Dashboard.
+      const fakeToken = "token-dagon-" + userData.idUsuario;
+      
+      localStorage.setItem('token', fakeToken);
+      setToken(fakeToken);
       setUser(userData);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${fakeToken}`;
+      
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.response?.data?.detail || 'Error al registrarse' };
+      // Si Java responde con el error 400 (ej. "El correo ya existe"), lo mostramos
+      return { success: false, error: error.response?.data || 'Error al registrarse en el servidor' };
     }
   };
 
