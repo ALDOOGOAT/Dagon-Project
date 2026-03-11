@@ -181,8 +181,14 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-      const result = await apiService.validateExercise(exercise.id, query, levelId);
-      
+// --- NUEVO CABLE A JAVA ---
+      const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: query }) // Mandamos el SQL armado
+      });
+      const result = await response.json();
+      // --------------------------
       if (result.success) {
         if (result.xp_gained > 0) {
           updateUserXP((user?.xp || 0) + result.xp_gained);
@@ -250,12 +256,23 @@ export const ExercisePage = () => {
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="exercise-page">
       {showReward && (
-        <RewardAnimation 
-          type="success" 
-          xpGained={lastXPGained}
-          onComplete={() => setShowReward(false)}
-        />
-      )}
+              <RewardAnimation 
+                type="success" 
+                xpGained={lastXPGained}
+                onComplete={() => {
+                  setShowReward(false);
+                  // Revisamos si hay más misiones en este módulo
+                  if (currentExerciseIndex < exercises.length - 1) {
+                    setCurrentExerciseIndex(prev => prev + 1); // Pasamos a la siguiente misión
+                    setExecutionResult(null); // Limpiamos el mensaje de éxito anterior
+                  } else {
+                    // Si ya era la última misión, lo regresamos al Dashboard
+                    toast.success('¡Módulo completado con éxito!');
+                    navigate('/dashboard');
+                  }
+                }}
+              />
+            )}
       
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center justify-between mb-6">
