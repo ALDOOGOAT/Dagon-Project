@@ -75,31 +75,28 @@ export const ExercisePage = () => {
   const [showReward, setShowReward] = useState(false);
   const [lastXPGained, setLastXPGained] = useState(0);
   
-  const [droppedWords, setDroppedWords] = useState([]); // Array of {id, word}
-  const [availableWords, setAvailableWords] = useState([]); // Array of {id, word}
+  const [droppedWords, setDroppedWords] = useState([]);
+  const [availableWords, setAvailableWords] = useState([]);
   
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
-  const [activeTab, setActiveTab] = useState('results');
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    // 1. Al montar el componente, tocamos la puerta de tu servidor Java para pedir los ejercicios del nivel seleccionado
     const fetchExercises = async () => {
-          try {
-            const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`);
-            const data = await response.json();
-            
-            setExercises(data.exercises);
-          } catch (error) {
-            toast.error('Error al cargar ejercicios desde el servidor');
-          } finally {
-            setLoading(false);
-          }
-        };
+      try {
+        const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`);
+        const data = await response.json();
+        setExercises(data.exercises);
+      } catch (error) {
+        toast.error('Error al cargar ejercicios desde el servidor');
+      } finally {
+        setLoading(false);
+      }
+    };
     
     fetchExercises();
   }, [levelId]);
@@ -108,7 +105,6 @@ export const ExercisePage = () => {
     if (exercises.length > 0) {
       const exercise = exercises[currentExerciseIndex];
       if (exercise.type === 'drag_drop') {
-        // Create word objects with unique IDs to avoid special character issues
         const wordObjects = (exercise.wordBank || []).map((word, idx) => ({
           id: `word-${idx}`,
           word: word
@@ -181,14 +177,13 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-// --- NUEVO CABLE A JAVA ---
       const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query }) // Mandamos el SQL armado
+        body: JSON.stringify({ query: query })
       });
       const result = await response.json();
-      // --------------------------
+      
       if (result.success) {
         if (result.xp_gained > 0) {
           updateUserXP((user?.xp || 0) + result.xp_gained);
@@ -197,13 +192,11 @@ export const ExercisePage = () => {
         } else {
           toast.success(result.message);
         }
+        // Tomamos la tabla de base de datos que nos manda Java
         setExecutionResult({
           success: true,
           message: result.message,
-          mockData: [
-            { id: 1, nombre: 'Juan', edad: 25 },
-            { id: 2, nombre: 'María', edad: 30 }
-          ]
+          mockData: result.mockData || []
         });
       } else {
         toast.error(result.message);
@@ -219,7 +212,7 @@ export const ExercisePage = () => {
     }
   };
 
-  if (loading) {
+  if (loading || !isMounted) {
     return (
       <div className="min-h-screen cyber-bg flex items-center justify-center">
         <DagonMascot size="large" mood="happy" />
@@ -245,34 +238,15 @@ export const ExercisePage = () => {
   const isDragDrop = exercise.type === 'drag_drop';
   const theory = THEORY_CONTENT[levelId];
 
-  if (!isMounted) {
-    return (
-      <div className="min-h-screen cyber-bg flex items-center justify-center">
-        <DagonMascot size="large" mood="happy" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="exercise-page">
       {showReward && (
-              <RewardAnimation 
-                type="success" 
-                xpGained={lastXPGained}
-                onComplete={() => {
-                  setShowReward(false);
-                  // Revisamos si hay más misiones en este módulo
-                  if (currentExerciseIndex < exercises.length - 1) {
-                    setCurrentExerciseIndex(prev => prev + 1); // Pasamos a la siguiente misión
-                    setExecutionResult(null); // Limpiamos el mensaje de éxito anterior
-                  } else {
-                    // Si ya era la última misión, lo regresamos al Dashboard
-                    toast.success('¡Módulo completado con éxito!');
-                    navigate('/dashboard');
-                  }
-                }}
-              />
-            )}
+        <RewardAnimation 
+          type="success" 
+          xpGained={lastXPGained}
+          onComplete={() => setShowReward(false)} 
+        />
+      )}
       
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="flex items-center justify-between mb-6">
@@ -488,19 +462,79 @@ export const ExercisePage = () => {
                 }}
               />
             </div>
+          </div>
+        )}
 
-            {executionResult && (
-              <div className="glass-card-apple rounded-xl p-6">
-                <div className={`flex items-center gap-2 mb-4 ${
-                  executionResult.success ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {executionResult.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                  <span>{executionResult.message}</span>
+        {/* --- PANEL DE VICTORIA UNIVERSAL (AQUÍ ES DONDE DEBE IR) --- */}
+        {!showTheory && executionResult && (
+          <div className="glass-card-apple rounded-xl p-6 mt-6 border border-slate-700/50 shadow-2xl animate-fade-in-up">
+            
+            <div className={`flex items-center gap-3 mb-6 ${
+              executionResult.success ? 'text-green-400' : 'text-red-400'
+            }`}>
+              {executionResult.success ? <CheckCircle className="w-8 h-8" /> : <XCircle className="w-8 h-8" />}
+              <span className="text-xl font-bold">{executionResult.message}</span>
+            </div>
+
+            {executionResult.mockData && executionResult.mockData.length > 0 && (
+              <div className="mb-8">
+                {executionResult.success && (
+                  <p className="text-slate-300 mb-3 text-lg">
+                    ¡Mira tu magia en acción! Esto es lo que trajiste de la base de datos:
+                  </p>
+                )}
+                <div className="overflow-x-auto rounded-lg border border-slate-700 shadow-xl shadow-black/50">
+                  <table className="w-full text-sm text-left text-slate-300">
+                    <thead className="text-xs text-slate-400 uppercase bg-slate-900">
+                      <tr>
+                        {Object.keys(executionResult.mockData[0]).map((columna) => (
+                          <th key={columna} className="px-6 py-4 font-bold text-blue-400">{columna}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {executionResult.mockData.map((fila, index) => (
+                        <tr key={index} className="border-b border-slate-800 hover:bg-slate-800/50 transition-colors">
+                          {Object.values(fila).map((valor, i) => (
+                            <td key={i} className="px-6 py-4 font-mono">{String(valor)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+              </div>
+            )}
+
+            {executionResult.success && (
+              <div className="flex gap-4 pt-6 border-t border-slate-800/80">
+                <Button
+                  onClick={() => {
+                    if (currentExerciseIndex < exercises.length - 1) {
+                      setCurrentExerciseIndex(prev => prev + 1);
+                      setExecutionResult(null); 
+                    } else {
+                      toast.success('¡Módulo completado con éxito! Eres una leyenda.');
+                      navigate('/dashboard');
+                    }
+                  }}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-6 text-lg rounded-xl shadow-lg shadow-green-500/20 transform transition hover:-translate-y-1"
+                >
+                  {currentExerciseIndex < exercises.length - 1 ? 'Siguiente Misión 🚀' : 'Terminar Módulo 🏆'}
+                </Button>
+                
+                <Button
+                  onClick={() => navigate('/dashboard')}
+                  variant="outline"
+                  className="flex-1 border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white py-6 text-lg rounded-xl transition-colors"
+                >
+                  Salir al Menú
+                </Button>
               </div>
             )}
           </div>
         )}
+
       </div>
     </div>
   );
