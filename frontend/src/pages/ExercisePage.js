@@ -61,7 +61,8 @@ const THEORY_CONTENT = {
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
-  const { user, updateUserXP } = useAuth();
+  // ¡NUEVO: Sacamos el token aquí también!
+  const { user, token, updateUserXP } = useAuth();
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -88,7 +89,11 @@ export const ExercisePage = () => {
   useEffect(() => {
     const fetchExercises = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`);
+        const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
         const data = await response.json();
         setExercises(data.exercises);
       } catch (error) {
@@ -97,8 +102,9 @@ export const ExercisePage = () => {
         setLoading(false);
       }
     };
-    
+    //codigo del fetchExercises() ...
     fetchExercises();
+    //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [levelId]);
 
   useEffect(() => {
@@ -182,13 +188,16 @@ export const ExercisePage = () => {
       const miUsuarioId = user?.idUsuario; 
 
       const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          query: query,
-          usuarioId: miUsuarioId // ¡Aquí le mandamos el gafete al cadenero!
-        }) 
-      });
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // ¡El pasaporte para que Java nos califique!
+              },
+              body: JSON.stringify({ 
+                query: query,
+                usuarioId: miUsuarioId
+              }) 
+            });
       // --------------------------------
       const result = await response.json();
       

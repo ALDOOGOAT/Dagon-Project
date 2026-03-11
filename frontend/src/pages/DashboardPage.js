@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 export const DashboardPage = () => {
-  const { user, logout, updateUserXP } = useAuth();
+// ¡NUEVO: Sacamos el token de la mochila!
+  const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,7 +35,11 @@ export const DashboardPage = () => {
           // Si por alguna razón no hay usuario, detenemos la función
           if (!miUsuarioId) return; 
           
-          const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`);
+          const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}` // ¡Le mostramos el pasaporte al cadenero!
+                    }
+                  });
           const data = await response.json();
           
           if (data.success) {
@@ -44,14 +49,19 @@ export const DashboardPage = () => {
           console.error("Error al cargar la XP del servidor", error);
         }
       };
-
+      //... codigo del fetchRealXP() ...
       fetchRealXP();
+      //eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // El arreglo vacío significa que solo se ejecuta 1 vez al entrar al Dashboard
 
   const loadLevels = async () => {
       try {
         // Le tocamos la puerta al Mesero de Niveles
-        const response = await fetch('http://localhost:8080/api/levels');
+        const response = await fetch('http://localhost:8080/api/levels', {
+                  headers: {
+                    'Authorization': `Bearer ${token}` // ¡El pasaporte para los niveles!
+                  }
+                });
         const data = await response.json();
         
         // Guardamos los niveles traducidos en la memoria de React
@@ -64,6 +74,7 @@ export const DashboardPage = () => {
     };
     // Cargamos los niveles apenas el Dashboard se monta
   useEffect(() => {
+    //eslint-disable-next-line react-hooks/exhaustive-deps
     loadLevels();
   }, []);
 

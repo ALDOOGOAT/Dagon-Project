@@ -13,13 +13,37 @@ export const AuthProvider = ({ children }) => {
 
 useEffect(() => {
     const fetchUser = async () => {
-      // Como aún no tenemos un endpoint de "/profile", leemos el ID directamente del token falso
-      if (token && token.startsWith('token-dagon-')) {
-        const userId = token.replace('token-dagon-', '');
-        // Restauramos al usuario con su ID para que el Dashboard y los Ejercicios funcionen
-        setUser({ idUsuario: userId, nombre: 'Aventurero' }); 
+      // Si hay un token y NO es el falso de antes
+      if (token && !token.startsWith('token-dagon-')) {
+        try {
+          // Un pequeño truco de React para "abrir" el JWT y leer el ID que viene adentro
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+// ...código decodificador del token...
+
+          const payload = JSON.parse(jsonPayload);
+          const userId = payload.sub; 
+
+          // ¡NUEVO! Le mostramos el pasaporte a Java en la petición GET
+          const response = await axios.get(`http://localhost:8080/api/usuarios/${userId}/profile`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          });
+          
+          setUser(response.data); 
+          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Dejamos el pasaporte listo para el resto de peticiones
+          
+        } catch (error) {
+          console.error("Error al validar el token real", error);
+          logout();
+        }
       } else if (token) {
-        logout();
+        logout(); // Si el token es de los viejos "falsos", cerramos sesión para limpiar
       }
       setLoading(false);
     };
@@ -30,52 +54,43 @@ useEffect(() => {
 
 const login = async (email, password) => {
     try {
-      // 1. Tocamos la nueva puerta de Login que acabas de crear en Java
       const response = await axios.post(`http://localhost:8080/api/usuarios/login`, { 
         email: email, 
-        passwordHash: password // Traducimos "password" a "passwordHash" para tu Java
+        passwordHash: password 
       });
       
-      const userData = response.data; // Tu base de datos nos devuelve tu usuario
-
-      // 2. Usamos el mismo truco del token temporal para que React te deje entrar al Dashboard
-      const fakeToken = "token-dagon-" + userData.idUsuario;
+      // ¡Ahora Java nos manda el token real y el user!
+      const { token, user } = response.data;
       
-      localStorage.setItem('token', fakeToken);
-      setToken(fakeToken);
-      setUser(userData);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${fakeToken}`;
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       return { success: true };
     } catch (error) {
-      // Si Java responde que la contraseña está mal o el correo no existe, React muestra el error
       return { success: false, error: error.response?.data || 'Error de conexión con el servidor' };
     }
   };
 
-const register = async (name, email, password) => {
+  const register = async (name, email, password) => {
     try {
-      // 1. Apuntamos a tu servidor Java y traducimos las variables al español
       const response = await axios.post(`http://localhost:8080/api/usuarios/registro`, { 
         nombre: name, 
         email: email, 
         passwordHash: password 
       });
       
-      const userData = response.data; // Java nos devuelve tu usuario recién creado
-
-      // 2. Como aún no programamos la seguridad de Tokens (JWT) en Java, 
-      // engañamos a React con un token temporal para que te deje pasar al Dashboard.
-      const fakeToken = "token-dagon-" + userData.idUsuario;
+      // ¡Ahora Java nos manda el token real y el user!
+      const { token, user } = response.data;
       
-      localStorage.setItem('token', fakeToken);
-      setToken(fakeToken);
-      setUser(userData);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${fakeToken}`;
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       return { success: true };
     } catch (error) {
-      // Si Java responde con el error 400 (ej. "El correo ya existe"), lo mostramos
       return { success: false, error: error.response?.data || 'Error al registrarse en el servidor' };
     }
   };
