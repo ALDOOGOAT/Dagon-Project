@@ -11,19 +11,15 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchUser = async () => {
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        try {
-          const response = await axios.get(`${API}/user/profile`);
-          setUser(response.data);
-        } catch (error) {
-          console.error('Error loading user:', error);
-          if (error.response?.status === 401) {
-            logout();
-          }
-        }
+      // Como aún no tenemos un endpoint de "/profile", leemos el ID directamente del token falso
+      if (token && token.startsWith('token-dagon-')) {
+        const userId = token.replace('token-dagon-', '');
+        // Restauramos al usuario con su ID para que el Dashboard y los Ejercicios funcionen
+        setUser({ idUsuario: userId, nombre: 'Aventurero' }); 
+      } else if (token) {
+        logout();
       }
       setLoading(false);
     };

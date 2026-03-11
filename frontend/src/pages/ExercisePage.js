@@ -84,7 +84,7 @@ export const ExercisePage = () => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
+  
   useEffect(() => {
     const fetchExercises = async () => {
       try {
@@ -177,11 +177,19 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
+// --- CABLE A JAVA ACTUALIZADO ---
+      // ¡NUEVO! Usamos el ID dinámico del usuario en turno
+      const miUsuarioId = user?.idUsuario; 
+
       const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query })
+        body: JSON.stringify({ 
+          query: query,
+          usuarioId: miUsuarioId // ¡Aquí le mandamos el gafete al cadenero!
+        }) 
       });
+      // --------------------------------
       const result = await response.json();
       
       if (result.success) {

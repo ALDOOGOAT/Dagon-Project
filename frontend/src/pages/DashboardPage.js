@@ -26,28 +26,46 @@ export const DashboardPage = () => {
   const xpFaltante = 100 - (userXP % 100);
 
   useEffect(() => {
-    loadLevels();
-    
-    const tutorialCompleted = localStorage.getItem('dagon_tutorial_completed');
-    if (!tutorialCompleted) {
-      setShowTutorial(true);
-    }
-  }, []);
+      const fetchRealXP = async () => {
+        try {
+            // ¡NUEVO! Leemos el ID del usuario logueado en AuthContext
+          const miUsuarioId = user?.idUsuario; 
+          
+          // Si por alguna razón no hay usuario, detenemos la función
+          if (!miUsuarioId) return; 
+          
+          const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`);
+          const data = await response.json();
+          
+          if (data.success) {
+            updateUserXP(data.xp); // ¡Actualizamos la barra del Dashboard con datos de PostgreSQL!
+          }
+        } catch (error) {
+          console.error("Error al cargar la XP del servidor", error);
+        }
+      };
 
-const loadLevels = async () => {
-    try {
-      // Le tocamos la puerta al Mesero de Niveles
-      const response = await fetch('http://localhost:8080/api/levels');
-      const data = await response.json();
-      
-      // Guardamos los niveles traducidos en la memoria de React
-      setLevels(data.levels);
-    } catch (error) {
-      toast.error('Error al cargar niveles desde el servidor');
-    } finally {
-      setLoading(false);
-    }
-  };
+      fetchRealXP();
+    }, []); // El arreglo vacío significa que solo se ejecuta 1 vez al entrar al Dashboard
+
+  const loadLevels = async () => {
+      try {
+        // Le tocamos la puerta al Mesero de Niveles
+        const response = await fetch('http://localhost:8080/api/levels');
+        const data = await response.json();
+        
+        // Guardamos los niveles traducidos en la memoria de React
+        setLevels(data.levels);
+      } catch (error) {
+        toast.error('Error al cargar niveles desde el servidor');
+      } finally {
+        setLoading(false);
+      }
+    };
+    // Cargamos los niveles apenas el Dashboard se monta
+  useEffect(() => {
+    loadLevels();
+  }, []);
 
   const handleLevelClick = (level) => {
     if (level.locked) {
