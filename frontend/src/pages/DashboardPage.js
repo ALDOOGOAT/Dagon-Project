@@ -25,7 +25,16 @@ export const DashboardPage = () => {
   const userXP = user?.xp || 0;
   const userStreak = user?.streak || 0;
   const xpFaltante = 100 - (userXP % 100);
+  const [userRank, setUserRank] = useState('-'); // Estado para guardar la posición
 
+    // ¡NUEVO! Sistema de Títulos RPG basado en XP
+    const getPlayerTitle = (xp) => {
+      if (xp < 100) return 'Novato del SELECT';
+      if (xp < 300) return 'Explorador de Tablas';
+      if (xp < 600) return 'Guerrero de los JOINs';
+      if (xp < 1000) return 'Caballero de Datos';
+      return 'Maestro Arquitecto SQL';
+    };
   useEffect(() => {
       const fetchRealXP = async () => {
         try {
@@ -42,9 +51,12 @@ export const DashboardPage = () => {
                   });
           const data = await response.json();
           
-          if (data.success) {
-            updateUserXP(data.xp); // ¡Actualizamos la barra del Dashboard con datos de PostgreSQL!
-          }
+        if (data.success) {
+                  updateUserXP(data.xp); 
+                  setUserRank(data.posicion); // ¡Aquí atrapamos tu posición (Ej. "1")!
+                }else {
+                  toast.error('Error al cargar tu XP real desde el servidor');
+                }
         } catch (error) {
           console.error("Error al cargar la XP del servidor", error);
         }
@@ -115,14 +127,34 @@ export const DashboardPage = () => {
       
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex justify-between items-start mb-8">
+
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
+            className="flex-1"
           >
-            <h1 className="text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              ¡Hola, {user?.nombre || 'Usuario'}!
-            </h1>
+            <motion.h1 
+              className="text-5xl font-bold mb-2"
+              style={{ fontFamily: 'Outfit, sans-serif' }}
+              animate={{
+                backgroundPosition: ['0% center', '100% center', '0% center'],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+            >
+              <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent bg-size-200 animate-gradient">
+                ¡Hola, {user?.nombre || 'usuario'}!
+              </span>
+            </motion.h1>
+            
+            <div className="inline-block bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/50 text-blue-300 px-3 py-1 rounded-full text-sm font-bold tracking-widest uppercase mb-4 shadow-[0_0_15px_rgba(37,99,235,0.3)] backdrop-blur-sm">
+              {getPlayerTitle(userXP)}
+            </div>
+            
             <p className="text-slate-400 text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>
               Continúa tu viaje en las profundidades del SQL
             </p>
@@ -194,9 +226,10 @@ export const DashboardPage = () => {
               <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center">
                 <Trophy className="w-6 h-6 text-yellow-400" />
               </div>
-              <div>
-                <p className="text-slate-400 text-sm">Tu Posición</p>
-                <p className="text-3xl font-bold text-white">#-</p>
+                <div>
+                <p className="text-slate-400 text-sm">Tu Posición Global</p>
+                {/* ¡NUEVO! Renderiza la posición real */}
+                <p className="text-3xl font-bold text-white">#{userRank}</p>
               </div>
             </div>
             <p className="text-yellow-400 text-xs mt-4 font-medium">Click para ver ranking →</p>
