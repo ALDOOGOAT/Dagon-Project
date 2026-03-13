@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 export const DashboardPage = () => {
-// ¡NUEVO: Sacamos el token de la mochila!
+  // ¡NUEVO: Sacamos el token de la mochila!
   const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
   const [levels, setLevels] = useState([]);
@@ -21,70 +21,66 @@ export const DashboardPage = () => {
   const [showQuickPractice, setShowQuickPractice] = useState(false);
 
   // --- VARIABLES SEGURAS (FALLBACKS) ---
-  // Si user no existe o no tiene 'xp', usamos 0 por defecto.
   const userXP = user?.xp || 0;
-  const userStreak = user?.streak || 0;
   const xpFaltante = 100 - (userXP % 100);
-  const [userRank, setUserRank] = useState('-'); // Estado para guardar la posición
+  const [userRank, setUserRank] = useState('-');
+  const [userStreak, setUserStreak] = useState(0); 
 
-    // ¡NUEVO! Sistema de Títulos RPG basado en XP
-    const getPlayerTitle = (xp) => {
-      if (xp < 100) return 'Novato del SELECT';
-      if (xp < 300) return 'Explorador de Tablas';
-      if (xp < 600) return 'Guerrero de los JOINs';
-      if (xp < 1000) return 'Caballero de Datos';
-      return 'Maestro Arquitecto SQL';
-    };
+  // Sistema de Títulos RPG basado en XP
+  const getPlayerTitle = (xp) => {
+    if (xp < 100) return 'Novato del SELECT';
+    if (xp < 300) return 'Explorador de Tablas';
+    if (xp < 600) return 'Guerrero de los JOINs';
+    if (xp < 1000) return 'Caballero de Datos';
+    return 'Maestro Arquitecto SQL';
+  };
+
   useEffect(() => {
-      const fetchRealXP = async () => {
-        try {
-            // ¡NUEVO! Leemos el ID del usuario logueado en AuthContext
-          const miUsuarioId = user?.idUsuario; 
-          
-          // Si por alguna razón no hay usuario, detenemos la función
-          if (!miUsuarioId) return; 
-          
-          const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`, {
-                    headers: {
-                      'Authorization': `Bearer ${token}` // ¡Le mostramos el pasaporte al cadenero!
-                    }
-                  });
-          const data = await response.json();
-          
-        if (data.success) {
-                  updateUserXP(data.xp); 
-                  setUserRank(data.posicion); // ¡Aquí atrapamos tu posición (Ej. "1")!
-                }else {
-                  toast.error('Error al cargar tu XP real desde el servidor');
-                }
-        } catch (error) {
-          console.error("Error al cargar la XP del servidor", error);
-        }
-      };
-      //... codigo del fetchRealXP() ...
-      fetchRealXP();
-      //eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // El arreglo vacío significa que solo se ejecuta 1 vez al entrar al Dashboard
-
-  const loadLevels = async () => {
+    const fetchRealXP = async () => {
       try {
-        // Le tocamos la puerta al Mesero de Niveles
-        const response = await fetch('http://localhost:8080/api/levels', {
-                  headers: {
-                    'Authorization': `Bearer ${token}` // ¡El pasaporte para los niveles!
-                  }
-                });
+        const miUsuarioId = user?.idUsuario; 
+        
+        if (!miUsuarioId) return; 
+        
+        const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}` 
+          }
+        });
         const data = await response.json();
         
-        // Guardamos los niveles traducidos en la memoria de React
-        setLevels(data.levels);
+        if (data.success) {
+          updateUserXP(data.xp); 
+          setUserRank(data.posicion); 
+          setUserStreak(data.racha); 
+        } else {
+          toast.error('Error al cargar tu XP real desde el servidor');
+        }
       } catch (error) {
-        toast.error('Error al cargar niveles desde el servidor');
-      } finally {
-        setLoading(false);
+        console.error("Error al cargar la XP del servidor", error);
       }
     };
-    // Cargamos los niveles apenas el Dashboard se monta
+    
+    fetchRealXP();
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
+
+  const loadLevels = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/levels', {
+        headers: {
+          'Authorization': `Bearer ${token}` 
+        }
+      });
+      const data = await response.json();
+      setLevels(data.levels);
+    } catch (error) {
+      toast.error('Error al cargar niveles desde el servidor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     //eslint-disable-next-line react-hooks/exhaustive-deps
     loadLevels();
@@ -181,6 +177,7 @@ export const DashboardPage = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          {/* Tarjeta de XP */}
           <div 
             onClick={() => navigate('/profile')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)] transition-all duration-300"
@@ -200,8 +197,9 @@ export const DashboardPage = () => {
             <p className="text-blue-400 text-xs mt-2 font-medium">Click para ver detalles →</p>
           </div>
 
+          {/* Tarjeta de Racha - ¡AQUÍ ESTÁ EL CAMBIO A /streak! */}
           <div 
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/streak')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-orange-500/50 hover:shadow-[0_0_25px_rgba(249,115,22,0.2)] transition-all duration-300"
             data-testid="streak-card"
           >
@@ -217,6 +215,7 @@ export const DashboardPage = () => {
             <p className="text-orange-400 text-xs mt-4 font-medium">Click para ver estadísticas →</p>
           </div>
 
+          {/* Tarjeta de Leaderboard */}
           <div 
             onClick={() => navigate('/leaderboard')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-yellow-500/50 hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300"
@@ -228,7 +227,6 @@ export const DashboardPage = () => {
               </div>
                 <div>
                 <p className="text-slate-400 text-sm">Tu Posición Global</p>
-                {/* ¡NUEVO! Renderiza la posición real */}
                 <p className="text-3xl font-bold text-white">#{userRank}</p>
               </div>
             </div>
@@ -236,6 +234,7 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Mapa de Niveles */}
         <div className="glass-card rounded-2xl p-8 border border-slate-700/50">
           <div className="flex items-center gap-4 mb-8">
             <DagonMascot size="small" mood="happy" />

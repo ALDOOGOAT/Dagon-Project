@@ -1,164 +1,217 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { DagonMascot } from '../components/DagonMascot';
+import { ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
-import { ArrowLeft, Zap, Trophy, Target, BookOpen, Code, Award } from 'lucide-react';
+import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
+  const [stats, setStats] = useState({
+    xp: 0, ejercicios_completados: 0, consultas_totales: 0, 
+    racha: 0, mejor_racha: 0, distribucion_xp: []
+  });
+  const [loading, setLoading] = useState(true);
 
+  // Sistema de niveles (cada 100 XP es un nivel)
+  const userLevel = Math.floor(stats.xp / 100) + 1;
+  const xpCurrentLevel = stats.xp % 100;
+  
+  useEffect(() => {
+    const fetchProfileStats = async () => {
+      if (!user?.idUsuario) return;
+      try {
+        const response = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/stats`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) setStats(data);
+      } catch (error) {
+        toast.error('Error al cargar las estadísticas del perfil');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfileStats();
+  }, [user, token]);
+
+  // Lógica de validación de logros
   const achievements = [
-    { id: 1, title: 'Primera Consulta', description: 'Completaste tu primer ejercicio', icon: '🎯', unlocked: true, xp: 10 },
-    { id: 2, title: 'Racha de 3', description: 'Mantén 3 días de racha', icon: '🔥', unlocked: false, xp: 50 },
-    { id: 3, title: 'Maestro SELECT', description: 'Domina las consultas SELECT', icon: '📚', unlocked: false, xp: 100 },
-    { id: 4, title: 'Experto JOIN', description: 'Completa todos los ejercicios de JOIN', icon: '🔗', unlocked: false, xp: 200 },
-    { id: 5, title: 'SQL Ninja', description: 'Alcanza 1000 XP', icon: '⚡', unlocked: false, xp: 500 },
-    { id: 6, title: 'Perfeccionista', description: 'Completa un nivel sin errores', icon: '✨', unlocked: false, xp: 150 },
+    {
+      id: 'first_query', title: 'Primera Consulta', desc: 'Completaste tu primer ejercicio',
+      icon: <Target className="w-6 h-6 text-red-400" />, xpReward: '+10 XP',
+      unlocked: stats.ejercicios_completados >= 1, color: 'border-red-500/50 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+    },
+    {
+      id: 'streak_3', title: 'Racha de 3', desc: 'Mantén 3 días de racha',
+      icon: <Flame className="w-6 h-6 text-orange-400" />, xpReward: '+50 XP',
+      unlocked: stats.racha >= 3 || stats.mejor_racha >= 3, color: 'border-orange-500/50 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
+    },
+    {
+      id: 'master_select', title: 'Maestro SELECT', desc: 'Alcanza 100 XP totales',
+      icon: <BookOpen className="w-6 h-6 text-blue-400" />, xpReward: '+100 XP',
+      unlocked: stats.xp >= 100, color: 'border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+    }
   ];
 
-  const currentLevel = Math.floor((user?.xp || 0) / 100);
-  const xpInCurrentLevel = (user?.xp || 0) % 100;
-  const xpForNextLevel = 100;
+  // Diccionario para traducir el número de dificultad a palabras y colores
+  const getDifficultyStyles = (level) => {
+    const styles = {
+      1: { name: 'Básico', color: 'bg-green-500', text: 'text-green-400' },
+      2: { name: 'Intermedio', color: 'bg-blue-500', text: 'text-blue-400' },
+      3: { name: 'Avanzado', color: 'bg-purple-500', text: 'text-purple-400' },
+      4: { name: 'Experto', color: 'bg-orange-500', text: 'text-orange-400' },
+      5: { name: 'Maestro', color: 'bg-red-500', text: 'text-red-400' }
+    };
+    return styles[level] || { name: `Nivel ${level}`, color: 'bg-slate-500', text: 'text-slate-400' };
+  };
+
+  if (loading) {
+    return <div className="min-h-screen cyber-bg flex items-center justify-center text-blue-400">Analizando tu poder...</div>;
+  }
 
   return (
     <div className="min-h-screen cyber-bg grid-pattern" data-testid="profile-page">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-8">
-          <Button
-            onClick={() => navigate('/dashboard')}
-            variant="ghost"
-            className="text-slate-400 hover:text-white hover:bg-slate-800/50"
-          >
+      <div className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in-up">
+        
+        <div className="flex items-center mb-8">
+          <Button onClick={() => navigate('/dashboard')} variant="ghost" className="text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5 mr-2" />
             Volver
           </Button>
         </div>
 
-        <div className="glass-card rounded-2xl p-8 mb-8 border border-slate-700/50">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg neon-glow">
-                <DagonMascot size="medium" mood="happy" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* COLUMNA IZQUIERDA */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Tarjeta de Nivel Principal */}
+            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50 flex items-center gap-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl"></div>
+              <div className="w-24 h-24 bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl flex items-center justify-center border border-blue-500/50 shadow-inner relative z-10">
+                <span className="text-5xl drop-shadow-md">👾</span>
+                <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-xs font-black px-3 py-1 rounded-lg shadow-lg border border-yellow-300">
+                  Lvl {userLevel}
+                </div>
               </div>
-              <div className="absolute -bottom-3 -right-3 bg-yellow-500 text-yellow-900 font-bold px-3 py-1 rounded-lg shadow-lg">
-                Lvl {currentLevel}
+              <div className="flex-1 z-10">
+                <h1 className="text-3xl font-black text-white mb-2 tracking-wide">{user?.nombre || user?.email}</h1>
+                <div className="flex justify-between text-sm mb-2 font-bold">
+                  <span className="text-slate-400 uppercase tracking-widest text-xs">Progreso al Nivel {userLevel + 1}</span>
+                  <span className="text-blue-400">{xpCurrentLevel} / 100 XP</span>
+                </div>
+                <Progress value={xpCurrentLevel} className="h-3 bg-slate-800 border border-slate-700" />
+              </div>
+              <div className="text-right z-10">
+                <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">
+                  {stats.xp}
+                </p>
+                <p className="text-slate-500 text-xs uppercase tracking-widest font-black mt-1">XP Totales</p>
               </div>
             </div>
 
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold text-white mb-2">{user?.name}</h1>
-              <p className="text-slate-400 text-lg mb-4">{user?.email}</p>
+            {/* Grid de Estadísticas Rápidas */}
+            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50">
+              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <Target className="text-blue-400" /> Resumen de Batalla
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-emerald-500/30 transition-colors">
+                  <div className="flex items-center gap-3 text-slate-300 font-bold"><BookOpen className="text-emerald-400" /> Completados</div>
+                  <span className="text-2xl font-black text-white">{stats.ejercicios_completados}</span>
+                </div>
+                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-blue-500/30 transition-colors">
+                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Code className="text-blue-400" /> Consultas</div>
+                  <span className="text-2xl font-black text-white">{stats.consultas_totales}</span>
+                </div>
+                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-orange-500/30 transition-colors">
+                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Flame className="text-orange-500" /> Racha Actual</div>
+                  <span className="text-2xl font-black text-white">{stats.racha}</span>
+                </div>
+                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-yellow-500/30 transition-colors">
+                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Trophy className="text-yellow-500" /> Mejor Racha</div>
+                  <span className="text-2xl font-black text-white">{stats.mejor_racha}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ¡NUEVO! Distribución de XP */}
+            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50">
+              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <BarChart3 className="text-purple-400" /> Origen del Poder (Distribución XP)
+              </h2>
+              <div className="space-y-5">
+                {stats.distribucion_xp && stats.distribucion_xp.length > 0 ? (
+                  stats.distribucion_xp.map((item, index) => {
+                    const style = getDifficultyStyles(item.dificultad);
+                    // Calculamos el porcentaje basado en la XP total
+                    const percent = Math.round((item.xp_ganada / stats.xp) * 100);
+                    
+                    return (
+                      <div key={index}>
+                        <div className="flex justify-between text-sm font-bold mb-2">
+                          <span className={style.text}>{style.name}</span>
+                          <span className="text-slate-300">{item.xp_ganada} XP <span className="text-slate-600 font-normal">({percent}%)</span></span>
+                        </div>
+                        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${percent}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className={`h-full ${style.color} shadow-[0_0_10px_currentColor]`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-slate-500 text-center py-4 font-medium">Resuelve ejercicios para ver tu análisis de XP.</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* COLUMNA DERECHA: Logros */}
+          <div className="space-y-6">
+            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50 h-full">
+              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <Award className="text-yellow-400" /> Trofeos
+              </h2>
               
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">Progreso al Nivel {currentLevel + 1}</span>
-                  <span className="text-white font-bold">{xpInCurrentLevel} / {xpForNextLevel} XP</span>
-                </div>
-                <Progress value={(xpInCurrentLevel / xpForNextLevel) * 100} className="h-3 bg-slate-800" />
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400 animate-pulse">
-                {user?.xp || 0}
-              </div>
-              <p className="text-slate-400 text-sm">Puntos XP Totales</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="glass-card rounded-2xl p-6 border border-slate-700/50">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Target className="w-6 h-6 text-blue-400" />
-              Estadísticas
-            </h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="w-5 h-5 text-green-400" />
-                  <span className="text-slate-300">Ejercicios Completados</span>
-                </div>
-                <span className="text-2xl font-bold text-white">0</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Code className="w-5 h-5 text-blue-400" />
-                  <span className="text-slate-300">Consultas Ejecutadas</span>
-                </div>
-                <span className="text-2xl font-bold text-white">0</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Zap className="w-5 h-5 text-yellow-400" />
-                  <span className="text-slate-300">Racha Actual</span>
-                </div>
-                <span className="text-2xl font-bold text-white">{user?.streak || 0} días</span>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-5 h-5 text-orange-400" />
-                  <span className="text-slate-300">Mejor Racha</span>
-                </div>
-                <span className="text-2xl font-bold text-white">{user?.streak || 0} días</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card rounded-2xl p-6 border border-slate-700/50">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <Award className="w-6 h-6 text-yellow-400" />
-              Logros Desbloqueados
-            </h2>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {achievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className={`p-4 rounded-lg border transition-all duration-300 ${
-                    achievement.unlocked
-                      ? 'bg-gradient-to-r from-blue-900/50 to-transparent border-blue-500/50'
-                      : 'bg-slate-900/30 border-slate-800 opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">{achievement.icon}</div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-white flex items-center gap-2">
-                        {achievement.title}
-                        {achievement.unlocked && (
-                          <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded">
-                            Desbloqueado
-                          </span>
-                        )}
-                      </h3>
-                      <p className="text-sm text-slate-400">{achievement.description}</p>
+              <div className="space-y-4">
+                {achievements.map((achievement) => (
+                  <motion.div 
+                    whileHover={achievement.unlocked ? { scale: 1.02 } : {}}
+                    key={achievement.id}
+                    className={`relative overflow-hidden rounded-xl p-4 border-2 transition-all duration-300 ${
+                      achievement.unlocked 
+                        ? achievement.color 
+                        : 'border-slate-800 bg-slate-900/30 opacity-60 grayscale'
+                    }`}
+                  >
+                    <div className="flex gap-4 items-center">
+                      <div className={`p-3 rounded-lg ${achievement.unlocked ? 'bg-slate-900/50' : 'bg-transparent'}`}>
+                        {achievement.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="font-bold text-white text-sm">{achievement.title}</h3>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-2 font-medium">{achievement.desc}</p>
+                        <p className="text-xs font-black text-yellow-500">{achievement.xpReward}</p>
+                      </div>
                     </div>
-                    <div className="text-yellow-400 font-bold">+{achievement.xp} XP</div>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="glass-card rounded-2xl p-6 border border-slate-700/50">
-          <h2 className="text-2xl font-bold text-white mb-6">Distribución de XP por Nivel</h2>
-          <div className="space-y-4">
-            {['Nivel 0', 'Básico', 'Medio', 'Avanzado', 'Pro'].map((level, index) => (
-              <div key={index}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-slate-300 font-medium">{level}</span>
-                  <span className="text-slate-400 text-sm">0 XP</span>
-                </div>
-                <Progress value={0} className="h-2 bg-slate-800" />
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

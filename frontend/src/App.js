@@ -10,7 +10,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { Clawbot } from './components/Clawbot';
 import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
-
+import { StreakPage } from './pages/StreakPage';
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
   in: { opacity: 1, y: 0 },
@@ -93,6 +93,7 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/streak" element={<StreakPage />} />
         </Routes>
       </AnimatePresence>
       <Clawbot />
