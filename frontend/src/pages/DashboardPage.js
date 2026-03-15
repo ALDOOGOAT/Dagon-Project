@@ -6,26 +6,23 @@ import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import { TutorialOverlay } from '../components/TutorialOverlay';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
-import { apiService } from '../services/apiService';
-import { Zap, Flame, Lock, Trophy, LogOut, Target } from 'lucide-react';
+import { Zap, Flame, Lock, Trophy, LogOut, Target, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 export const DashboardPage = () => {
-  // ¡NUEVO: Sacamos el token de la mochila!
   const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
-  const [levels, setLevels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQuickPractice, setShowQuickPractice] = useState(false);
 
-  // --- VARIABLES SEGURAS (FALLBACKS) ---
+  // --- VARIABLES DE USUARIO ---
   const userXP = user?.xp || 0;
   const xpFaltante = 100 - (userXP % 100);
   const [userRank, setUserRank] = useState('-');
   const [userStreak, setUserStreak] = useState(0); 
-
+  
   // Sistema de Títulos RPG basado en XP
   const getPlayerTitle = (xp) => {
     if (xp < 100) return 'Novato del SELECT';
@@ -35,17 +32,19 @@ export const DashboardPage = () => {
     return 'Maestro Arquitecto SQL';
   };
 
+  // --- ESTADOS DE MÓDULOS (LA NUEVA LÓGICA) ---
+  const [modulos, setModulos] = useState([]);
+  const [loadingModulos, setLoadingModulos] = useState(true);
+
+  // 1. Efecto para traer la XP Real del usuario
   useEffect(() => {
     const fetchRealXP = async () => {
       try {
         const miUsuarioId = user?.idUsuario; 
-        
         if (!miUsuarioId) return; 
         
         const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`, {
-          headers: {
-            'Authorization': `Bearer ${token}` 
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         
@@ -53,8 +52,6 @@ export const DashboardPage = () => {
           updateUserXP(data.xp); 
           setUserRank(data.posicion); 
           setUserStreak(data.racha); 
-        } else {
-          toast.error('Error al cargar tu XP real desde el servidor');
         }
       } catch (error) {
         console.error("Error al cargar la XP del servidor", error);
@@ -65,33 +62,36 @@ export const DashboardPage = () => {
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  const loadLevels = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/levels', {
-        headers: {
-          'Authorization': `Bearer ${token}` 
-        }
-      });
-      const data = await response.json();
-      setLevels(data.levels);
-    } catch (error) {
-      toast.error('Error al cargar niveles desde el servidor');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 2. Efecto para traer los Módulos Dinámicos desde Java
   useEffect(() => {
-    //eslint-disable-next-line react-hooks/exhaustive-deps
-    loadLevels();
-  }, []);
+    const fetchModulos = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/modulos', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setModulos(data);
+        }
+      } catch (error) {
+        console.error("Error al cargar los módulos:", error);
+        toast.error('Error al cargar misiones');
+      } finally {
+        setLoadingModulos(false);
+      }
+    };
 
-  const handleLevelClick = (level) => {
-    if (level.locked) {
-      toast.error('Este nivel aún está bloqueado');
+    if (token) fetchModulos();
+  }, [token]);
+
+  // Manejador de clics en los módulos
+  const handleModuloClick = (mod) => {
+    if (mod.bloqueado) {
+      toast.error(`Necesitas alcanzar ${mod.xp_requerida} XP para desbloquear esta misión.`);
       return;
     }
-    navigate(`/exercise/${level.id}`);
+    // Si está desbloqueado, lo mandamos a la arena de ejercicios
+    navigate(`/exercise/${mod.id_modulo}`);
   };
 
   const handleLogout = () => {
@@ -100,10 +100,13 @@ export const DashboardPage = () => {
     toast.success('Sesión cerrada');
   };
 
-  if (loading) {
+  if (loadingModulos) {
     return (
-      <div className="min-h-screen abyss-bg flex items-center justify-center">
-        <DagonMascot size="large" mood="happy" />
+      <div className="min-h-screen cyber-bg flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <DagonMascot size="large" mood="determined" />
+          <p className="text-blue-400 font-bold tracking-widest uppercase text-sm">Cargando mapa de niveles...</p>
+        </div>
       </div>
     );
   }
@@ -122,8 +125,8 @@ export const DashboardPage = () => {
       )}
       
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Cabecera del Dashboard */}
         <div className="flex justify-between items-start mb-8">
-
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -133,14 +136,8 @@ export const DashboardPage = () => {
             <motion.h1 
               className="text-5xl font-bold mb-2"
               style={{ fontFamily: 'Outfit, sans-serif' }}
-              animate={{
-                backgroundPosition: ['0% center', '100% center', '0% center'],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: 'linear',
-              }}
+              animate={{ backgroundPosition: ['0% center', '100% center', '0% center'] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
             >
               <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-purple-500 bg-clip-text text-transparent bg-size-200 animate-gradient">
                 ¡Hola, {user?.nombre || 'usuario'}!
@@ -155,18 +152,17 @@ export const DashboardPage = () => {
               Continúa tu viaje en las profundidades del SQL
             </p>
           </motion.div>
+
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setShowQuickPractice(true)}
-              data-testid="quick-practice-button"
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold"
+              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold shadow-[0_0_15px_rgba(249,115,22,0.4)] transition-all hover:scale-105"
             >
               <Target className="w-4 h-4 mr-2" />
               Práctica Rápida
             </Button>
             <Button
               onClick={handleLogout}
-              data-testid="logout-button"
               variant="ghost"
               className="text-slate-400 hover:text-white hover:bg-slate-800/50"
             >
@@ -176,12 +172,12 @@ export const DashboardPage = () => {
           </div>
         </div>
 
+        {/* Tarjetas de Estadísticas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
-          {/* Tarjeta de XP */}
+          {/* XP */}
           <div 
             onClick={() => navigate('/profile')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)] transition-all duration-300"
-            data-testid="xp-card"
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center">
@@ -189,19 +185,17 @@ export const DashboardPage = () => {
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Puntos XP</p>
-                <p className="text-3xl font-bold text-white" data-testid="user-xp">{userXP}</p>
+                <p className="text-3xl font-bold text-white">{userXP}</p>
               </div>
             </div>
             <Progress value={(userXP % 100)} className="h-2 bg-slate-800" />
             <p className="text-slate-500 text-xs mt-2">{xpFaltante} XP para siguiente nivel</p>
-            <p className="text-blue-400 text-xs mt-2 font-medium">Click para ver detalles →</p>
           </div>
 
-          {/* Tarjeta de Racha - ¡AQUÍ ESTÁ EL CAMBIO A /streak! */}
+          {/* Racha */}
           <div 
             onClick={() => navigate('/streak')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-orange-500/50 hover:shadow-[0_0_25px_rgba(249,115,22,0.2)] transition-all duration-300"
-            data-testid="streak-card"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center">
@@ -209,17 +203,16 @@ export const DashboardPage = () => {
               </div>
               <div>
                 <p className="text-slate-400 text-sm">Racha Actual</p>
-                <p className="text-3xl font-bold text-white" data-testid="user-streak">{userStreak} días</p>
+                <p className="text-3xl font-bold text-white">{userStreak} días</p>
               </div>
             </div>
             <p className="text-orange-400 text-xs mt-4 font-medium">Click para ver estadísticas →</p>
           </div>
 
-          {/* Tarjeta de Leaderboard */}
+          {/* Leaderboard */}
           <div 
             onClick={() => navigate('/leaderboard')}
             className="glass-card rounded-xl p-6 border border-slate-700/50 cursor-pointer hover:border-yellow-500/50 hover:shadow-[0_0_25px_rgba(234,179,8,0.2)] transition-all duration-300"
-            data-testid="leaderboard-card"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center">
@@ -234,72 +227,75 @@ export const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Mapa de Niveles */}
-        <div className="glass-card rounded-2xl p-8 border border-slate-700/50">
+        {/* MAPA DE NIVELES DINÁMICO */}
+        <div className="glass-card rounded-2xl p-8 border border-slate-700/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-3xl -z-10"></div>
+          
           <div className="flex items-center gap-4 mb-8">
-            <DagonMascot size="small" mood="happy" />
+            <div className="w-12 h-12 bg-red-500/20 rounded-2xl flex items-center justify-center border border-red-500/30">
+              <DagonMascot size="small" mood="determined" />
+            </div>
             <div>
-              <h2 className="text-3xl font-bold text-white">
-                Mapa de Niveles
-              </h2>
-          <p className="text-slate-400">
-            {levels.length > 0 ? 'Elige tu próxima misión para continuar' : 'Aún no hay niveles disponibles'}
-          </p>
+              <h2 className="text-3xl font-bold text-white">Mapa de Niveles</h2>
+              <p className="text-slate-400">Elige tu próxima misión para continuar</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            {levels.map((level, index) => (
-              <div
-                key={level.id}
-                data-testid={`level-card-${level.id}`}
-                onClick={() => handleLevelClick(level)}
-                className={`
-                  relative p-6 rounded-xl border transition-all duration-300 cursor-pointer
-                  ${
-                    level.locked
-                      ? 'bg-slate-900/30 border-slate-800 opacity-50 cursor-not-allowed'
-                      : 'glass-card border-slate-700/50 hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.2)]'
-                  }
-                `}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`
-                        w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold
-                        ${
-                          level.locked
-                            ? 'bg-slate-800 text-slate-600'
-                            : 'bg-gradient-to-br from-blue-600 to-blue-800 text-white shadow-lg neon-glow'
-                        }
-                      `}
-                    >
-                      {level.locked ? <Lock className="w-8 h-8" /> : index + 1}
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-white mb-1">
-                        {level.name}
-                      </h3>
-                      <p className="text-slate-400">
-                        {level.description}
-                      </p>
-                    </div>
+          <div className="grid gap-4 relative z-10">
+            {modulos.length === 0 ? (
+              <p className="text-slate-500 italic">Aún no hay misiones configuradas.</p>
+            ) : (
+              modulos.map((mod, index) => (
+                <div 
+                  key={mod.id_modulo} 
+                  onClick={() => handleModuloClick(mod)}
+                  className={`relative p-6 rounded-2xl border transition-all duration-300 flex items-center gap-6 overflow-hidden cursor-pointer ${
+                    mod.bloqueado 
+                      ? 'bg-slate-900/40 border-slate-800 opacity-75 grayscale-[0.5] hover:bg-slate-900/60' 
+                      : 'glass-card border-slate-700/50 hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] group'
+                  }`}
+                >
+                  {/* Número del módulo */}
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-xl font-black shadow-inner z-10 flex-shrink-0 ${
+                    mod.bloqueado 
+                      ? 'bg-slate-800 text-slate-500 border border-slate-700' 
+                      : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border border-blue-400/30 shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:scale-110 transition-transform'
+                  }`}>
+                    {mod.bloqueado ? <Lock className="w-6 h-6" /> : index + 1}
                   </div>
-                  {!level.locked && (
-                    <Button
-                      data-testid={`start-level-${level.id}`}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold neon-glow"
-                    >
-                      Comenzar
-                    </Button>
+
+                  {/* Textos */}
+                  <div className="flex-1 z-10">
+                    <h3 className={`text-xl font-bold ${mod.bloqueado ? 'text-slate-400' : 'text-slate-100'}`}>
+                      {mod.titulo}
+                    </h3>
+                    <p className={`text-sm mt-1 ${mod.bloqueado ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {mod.descripcion}
+                    </p>
+                  </div>
+
+                  {/* Botón o Candado */}
+                  <div className="z-10 flex-shrink-0">
+                    {mod.bloqueado ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-[11px] font-bold text-red-400/80 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                          {mod.xp_requerida} XP Req.
+                        </span>
+                      </div>
+                    ) : (
+                      <Button className="bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]">
+                        Comenzar <Play className="w-4 h-4 fill-current" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Fondo decorativo si está desbloqueado */}
+                  {!mod.bloqueado && (
+                    <div className="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-blue-600/10 to-transparent z-0"></div>
                   )}
                 </div>
-                {index < levels.length - 1 && (
-                  <div className="absolute left-8 -bottom-4 w-0.5 h-8 bg-gradient-to-b from-blue-500/30 to-transparent" />
-                )}
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
