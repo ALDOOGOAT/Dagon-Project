@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ZsALPPcbPl8YWamFHh4o5i59vTYZZFwZsAUxwjSGXbneWIX5out57ArFZLIhLNp
+\restrict W41vyhoP3FLihIDn7ZL3WbKWodSEIpoMCQpOFOOrN3AJE4D2XzRYxJH0GWR0RSj
 
 -- Dumped from database version 18.2 (Ubuntu 18.2-1.pgdg24.04+1)
 -- Dumped by pg_dump version 18.2 (Ubuntu 18.2-1.pgdg24.04+1)
@@ -367,6 +367,42 @@ ALTER SEQUENCE lms_sandbox.aventureros_id_aventurero_seq OWNED BY lms_sandbox.av
 
 
 --
+-- Name: equipamiento; Type: TABLE; Schema: lms_sandbox; Owner: postgres
+--
+
+CREATE TABLE lms_sandbox.equipamiento (
+    id_equipo integer NOT NULL,
+    id_aventurero integer,
+    item character varying(50),
+    precio integer
+);
+
+
+ALTER TABLE lms_sandbox.equipamiento OWNER TO postgres;
+
+--
+-- Name: equipamiento_id_equipo_seq; Type: SEQUENCE; Schema: lms_sandbox; Owner: postgres
+--
+
+CREATE SEQUENCE lms_sandbox.equipamiento_id_equipo_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE lms_sandbox.equipamiento_id_equipo_seq OWNER TO postgres;
+
+--
+-- Name: equipamiento_id_equipo_seq; Type: SEQUENCE OWNED BY; Schema: lms_sandbox; Owner: postgres
+--
+
+ALTER SEQUENCE lms_sandbox.equipamiento_id_equipo_seq OWNED BY lms_sandbox.equipamiento.id_equipo;
+
+
+--
 -- Name: auditoria_logs id_log; Type: DEFAULT; Schema: lms_core; Owner: postgres
 --
 
@@ -406,6 +442,13 @@ ALTER TABLE ONLY lms_core.roles ALTER COLUMN id_rol SET DEFAULT nextval('lms_cor
 --
 
 ALTER TABLE ONLY lms_sandbox.aventureros ALTER COLUMN id_aventurero SET DEFAULT nextval('lms_sandbox.aventureros_id_aventurero_seq'::regclass);
+
+
+--
+-- Name: equipamiento id_equipo; Type: DEFAULT; Schema: lms_sandbox; Owner: postgres
+--
+
+ALTER TABLE ONLY lms_sandbox.equipamiento ALTER COLUMN id_equipo SET DEFAULT nextval('lms_sandbox.equipamiento_id_equipo_seq'::regclass);
 
 
 --
@@ -456,6 +499,16 @@ f6deb6f9-01d8-4ae1-95f7-59733eb958e7	2cbbf24f-d178-474d-80ae-c90ac3aad008	2	SELE
 fe0674fa-0066-4b55-a583-d57135562601	2cbbf24f-d178-474d-80ae-c90ac3aad008	3	SELECT nombre FROM aventureros WHERE nivel > 15 ;	t	\N	2026-03-15 02:13:03.175208
 50271ce5-5338-4b73-a432-d2b8c1b6a7c9	2cbbf24f-d178-474d-80ae-c90ac3aad008	4	SELECT * FROM aventureros WHERE clase = 'Maga Suprema' ;	t	\N	2026-03-15 02:16:12.785433
 0661bcec-3698-4b58-929e-de7967f78918	d504a92f-4c82-47ee-b9f7-a4be05df3e58	1	SELECT * FROM aventureros ;	t	\N	2026-03-15 02:36:49.511597
+742caa91-eafd-4f3c-bf2d-509dadd6af9b	2cbbf24f-d178-474d-80ae-c90ac3aad008	5	SELECT COUNT(*) FROM aventureros ;	t	\N	2026-03-15 13:34:17.499975
+b8282e7a-4367-4378-adc9-1988f9a00071	2cbbf24f-d178-474d-80ae-c90ac3aad008	1	SELECT * FROM aventureros ;	t	\N	2026-03-15 14:00:57.898284
+c58d6298-cee3-4036-bbc0-3c895dbf7f85	2cbbf24f-d178-474d-80ae-c90ac3aad008	5	SELECT COUNT(*) FROM aventureros ;	t	\N	2026-03-15 14:02:38.923378
+30229c6b-a1e1-4fee-be1e-171b3fc46ddf	2cbbf24f-d178-474d-80ae-c90ac3aad008	6	-- Escribe tu consulta SQL aquí\nselect SUM(precio) from equipamiento;	t	\N	2026-03-15 14:03:09.460219
+ff02413c-32e6-4328-8004-b0d588a48564	2cbbf24f-d178-474d-80ae-c90ac3aad008	7	SELECT MAX(nivel) FROM aventureros ;	t	\N	2026-03-15 14:03:49.569384
+f6d754f9-c47c-4caf-a474-cfbe288af741	2cbbf24f-d178-474d-80ae-c90ac3aad008	8	-- Escribe tu consulta SQL aquí\nSELECT clase, COUNT(*) FROM aventureros GROUP BY clase;\n 	t	\N	2026-03-15 14:06:40.579819
+6260249a-6f2e-4eff-8592-94ab98db1085	2cbbf24f-d178-474d-80ae-c90ac3aad008	9	-- Escribe tu consulta SQL aquí\nselect * from aventureros;	f	\N	2026-03-15 21:36:55.745746
+59fbac4e-f087-426e-88ef-db32a3921b50	2cbbf24f-d178-474d-80ae-c90ac3aad008	1	SELECT * FROM aventureros ;	t	\N	2026-03-17 07:21:43.432194
+59dffea9-89b5-4d4c-93c5-4c2863fbcda4	2cbbf24f-d178-474d-80ae-c90ac3aad008	2	SELECT nombre, clase FROM aventureros ;	t	\N	2026-03-17 07:22:20.7411
+82efe381-c40c-46c4-a28e-2611fa2f494a	2cbbf24f-d178-474d-80ae-c90ac3aad008	3	SELECT nombre FROM aventureros WHERE nivel > 15 ;	t	\N	2026-03-17 07:23:41.834972
 \.
 
 
@@ -503,6 +556,19 @@ COPY lms_sandbox.aventureros (id_aventurero, nombre, clase, nivel) FROM stdin;
 
 
 --
+-- Data for Name: equipamiento; Type: TABLE DATA; Schema: lms_sandbox; Owner: postgres
+--
+
+COPY lms_sandbox.equipamiento (id_equipo, id_aventurero, item, precio) FROM stdin;
+1	1	Espada Larga	150
+2	1	Escudo de Hierro	100
+3	2	Báculo de Fuego	300
+4	4	Hacha Doble	200
+5	5	Daga Venenosa	120
+\.
+
+
+--
 -- Name: auditoria_logs_id_log_seq; Type: SEQUENCE SET; Schema: lms_core; Owner: postgres
 --
 
@@ -542,6 +608,13 @@ SELECT pg_catalog.setval('lms_core.roles_id_rol_seq', 1, false);
 --
 
 SELECT pg_catalog.setval('lms_sandbox.aventureros_id_aventurero_seq', 5, true);
+
+
+--
+-- Name: equipamiento_id_equipo_seq; Type: SEQUENCE SET; Schema: lms_sandbox; Owner: postgres
+--
+
+SELECT pg_catalog.setval('lms_sandbox.equipamiento_id_equipo_seq', 5, true);
 
 
 --
@@ -638,6 +711,14 @@ ALTER TABLE ONLY lms_core.usuarios
 
 ALTER TABLE ONLY lms_sandbox.aventureros
     ADD CONSTRAINT aventureros_pkey PRIMARY KEY (id_aventurero);
+
+
+--
+-- Name: equipamiento equipamiento_pkey; Type: CONSTRAINT; Schema: lms_sandbox; Owner: postgres
+--
+
+ALTER TABLE ONLY lms_sandbox.equipamiento
+    ADD CONSTRAINT equipamiento_pkey PRIMARY KEY (id_equipo);
 
 
 --
@@ -810,6 +891,13 @@ GRANT SELECT ON TABLE lms_sandbox.aventureros TO app_sandbox_user;
 
 
 --
+-- Name: TABLE equipamiento; Type: ACL; Schema: lms_sandbox; Owner: postgres
+--
+
+GRANT SELECT ON TABLE lms_sandbox.equipamiento TO app_sandbox_user;
+
+
+--
 -- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: lms_sandbox; Owner: postgres
 --
 
@@ -820,5 +908,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA lms_sandbox GRANT SELECT ON
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ZsALPPcbPl8YWamFHh4o5i59vTYZZFwZsAUxwjSGXbneWIX5out57ArFZLIhLNp
+\unrestrict W41vyhoP3FLihIDn7ZL3WbKWodSEIpoMCQpOFOOrN3AJE4D2XzRYxJH0GWR0RSj
 
