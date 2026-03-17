@@ -110,12 +110,7 @@ public class EjercicioService {
     public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         Map<String, Object> respuesta = new HashMap<>();
 
-        if (!queryUsuario.trim().endsWith(";")) {
-            respuesta.put("success", false);
-            respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
-            return respuesta;
-        }
-
+        // 1. OBTENEMOS EL EJERCICIO PRIMERO (Así todo el método lo conoce)
         EjercicioPractico ejercicio = repository.findById(ejercicioId).orElse(null);
 
         if (ejercicio == null) {
@@ -124,7 +119,21 @@ public class EjercicioService {
             return respuesta;
         }
 
-        // Calculamos la XP dinámica (dificultad * 10)
+        // 2. VALIDACIÓN SINTÁCTICA RÁPIDA (El punto y coma)
+        if (!queryUsuario.trim().endsWith(";")) {
+            respuesta.put("success", false);
+            respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
+
+            // Le pasamos a React el contexto para Clawbot
+            respuesta.put("descripcion", ejercicio.getEnunciado());
+            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+            respuesta.put("queryAlumno", queryUsuario);
+            respuesta.put("errorDb", "El usuario olvidó el punto y coma al final de la instrucción SQL.");
+
+            return respuesta; // Salimos del método aquí mismo
+        }
+
+        // 3. SI TODO VA BIEN, PASAMOS A LA VALIDACIÓN PESADA
         int xpGanada = (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10;
 
         try {
@@ -150,12 +159,18 @@ public class EjercicioService {
                     respuesta.put("xp_gained", 0);
                 } else {
                     respuesta.put("message", "¡Excelente! Has dominado esta misión.");
-                    respuesta.put("xp_gained", xpGanada); // ¡Ahora entrega la XP correcta!
+                    respuesta.put("xp_gained", xpGanada);
                 }
             } else {
                 respuesta.put("success", false);
                 respuesta.put("message", "La consulta corrió sin errores, pero los datos no coinciden. Revisa tu lógica.");
                 respuesta.put("xp_gained", 0);
+
+                // ¡NUEVO! Le pasamos a React el contexto para Clawbot
+                respuesta.put("descripcion", ejercicio.getEnunciado());
+                respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                respuesta.put("queryAlumno", queryUsuario);
+                respuesta.put("errorDb", "Los datos obtenidos no son los esperados.");
             }
             respuesta.put("mockData", datosAlumno);
 
@@ -163,6 +178,12 @@ public class EjercicioService {
             respuesta.put("success", false);
             respuesta.put("message", "Error de SQL: " + e.getMessage());
             respuesta.put("xp_gained", 0);
+
+            // ¡NUEVO! Contexto completo para cuando PostgreSQL explota
+            respuesta.put("descripcion", ejercicio.getEnunciado());
+            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+            respuesta.put("queryAlumno", queryUsuario);
+            respuesta.put("errorDb", e.getMessage());
         }
         return respuesta;
     }

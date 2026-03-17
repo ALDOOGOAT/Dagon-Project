@@ -5,7 +5,7 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, VolumeX, Database, Terminal, Play, Loader, GripHorizontal } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, VolumeX, Database, Terminal, Play, Loader, GripHorizontal, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
 
@@ -40,7 +40,7 @@ const THEORY_CONTENT = {
 };
 
 export const ExercisePage = () => {
-  const { levelId } = useParams(); // ¡CORREGIDO! Ahora atrapa el levelId de App.js
+  const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
   
@@ -63,11 +63,14 @@ export const ExercisePage = () => {
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
 
+  // --- NUEVOS ESTADOS PARA CLAWBOT ---
+  const [clawbotThinking, setClawbotThinking] = useState(false);
+  const [clawbotMessage, setClawbotMessage] = useState(null);
+  const [intentosFallidos, setIntentosFallidos] = useState(0);
   useEffect(() => {
     setIsMounted(true);
   }, []);
   
-  // FETCH A TU JAVA REAL
   useEffect(() => {
     const fetchExercises = async () => {
       try {
@@ -103,6 +106,9 @@ export const ExercisePage = () => {
       } else {
         setEditorCode(exercise.starterCode || '');
       }
+      // Limpiamos la pantalla de ejecución y mensajes de Clawbot al cambiar de ejercicio
+      setExecutionResult(null);
+      setClawbotMessage(null);
     }
   }, [currentExerciseIndex, exercises]);
 
@@ -155,10 +161,44 @@ export const ExercisePage = () => {
     }
   };
 
+  // --- LA MAGIA SÓCRATICA (LLAMADA A GEMINI) ---
+  const invokeClawbot = async (errorData) => {
+    setClawbotThinking(true);
+    try {
+      const response = await fetch('http://localhost:8080/api/clawbot/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          descripcion: errorData.descripcion,
+          queryMaestra: errorData.queryMaestra,
+          queryAlumno: errorData.queryAlumno,
+          errorDb: errorData.errorDb || "Los datos no coinciden.",
+          intentos: errorData.intentos
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setClawbotMessage(data.mensaje);
+      } else {
+        setClawbotMessage("Mis circuitos fallaron intentando analizar esto. ¡Revisa tu sintaxis cuidadosamente!");
+      }
+    } catch (error) {
+      console.error("Error al invocar a Clawbot:", error);
+      setClawbotMessage("¡Bzzz! Hubo una interferencia al contactar mis servidores de análisis.");
+    } finally {
+      setClawbotThinking(false);
+    }
+  };
+
   const handleValidate = async () => {
     setValidating(true);
+    setClawbotMessage(null); // Limpiamos mensajes anteriores
     const exercise = exercises[currentExerciseIndex];
-    
+    // Incrementamos el contador de intentos fallidos solo para ejercicios de código
     try {
       const query = exercise.type === 'drag_drop' 
         ? droppedWords.map(w => w.word).join(' ')
@@ -186,6 +226,7 @@ export const ExercisePage = () => {
           setLastXPGained(result.xp_gained);
           setShowReward(true);
         } else {
+
           toast.success(result.message);
         }
         setExecutionResult({
@@ -193,12 +234,30 @@ export const ExercisePage = () => {
           message: result.message,
           mockData: result.mockData || []
         });
+        // Reset intentos fallidos cuando se completa exitosamente
+        setIntentosFallidos(0);
       } else {
         toast.error(result.message);
         setExecutionResult({
           success: false,
           message: result.message
         });
+        
+        // ¡NUEVO! INVOCAR A CLAWBOT SI HAY ERROR
+        // Le pasamos todo el contexto que nos mandó el nuevo backend de Java
+        if (result.descripcion && result.queryMaestra) {
+            // Incrementamos el contador de intentos fallidos
+            const nuevosIntentos = intentosFallidos + 1;
+            setIntentosFallidos(nuevosIntentos);
+            
+            invokeClawbot({
+                descripcion: result.descripcion,
+                queryMaestra: result.queryMaestra,
+                queryAlumno: result.queryAlumno,
+                errorDb: result.errorDb || result.message,
+                intentos: nuevosIntentos
+            });
+        }
       }
     } catch (error) {
       toast.error('Error al validar ejercicio');
@@ -296,11 +355,11 @@ export const ExercisePage = () => {
         ) : (
           /* PANTALLA DIVIDIDA DE EJERCICIO */
           <>
-            {/* PANEL IZQUIERDO: INSTRUCCIONES */}
+            {/* PANEL IZQUIERDO: INSTRUCCIONES Y MASCOTA */}
             <section className="w-1/3 min-w-[350px] max-w-[450px] border-r border-slate-800 bg-slate-900/50 p-6 flex flex-col overflow-y-auto">
               <div className="mb-6 flex items-center gap-4">
                 <div className="w-16 h-16 bg-blue-900/30 rounded-2xl flex items-center justify-center border border-blue-500/30">
-                  <DagonMascot size="medium" mood="determined" />
+                  <DagonMascot size="medium" mood={clawbotThinking ? "surprised" : executionResult?.success === false ? "sad" : "determined"} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white leading-tight">{exercise.title}</h2>
@@ -308,6 +367,7 @@ export const ExercisePage = () => {
                 </div>
               </div>
 
+              {/* INSTRUCCIONES */}
               <div className="glass-card rounded-xl p-5 border border-slate-700/50 mb-6 flex-1">
                 <h3 className="text-slate-300 font-bold mb-3 uppercase text-xs tracking-widest flex items-center gap-2">
                   <Terminal className="w-4 h-4" /> Instrucciones
@@ -315,18 +375,37 @@ export const ExercisePage = () => {
                 <p className="text-slate-300 leading-relaxed font-medium text-sm">{exercise.description}</p>
               </div>
 
-              {showHint && exercise.hint && (
-                <div className="bg-cyan-900/20 border border-cyan-700/50 rounded-xl p-4 mb-4 animate-in fade-in zoom-in duration-300">
-                  <div className="flex items-start gap-2">
-                    <Lightbulb className="w-5 h-5 text-cyan-400 shrink-0" />
-                    <p className="text-cyan-300 text-sm italic">{exercise.hint}</p>
+              {/* EL CEREBRO DE CLAWBOT (Aparece cuando hay errores o se pide pista) */}
+              {(clawbotThinking || clawbotMessage || showHint) && (
+                <div className={`bg-slate-950 border rounded-xl p-4 mb-4 animate-in fade-in zoom-in duration-300 ${
+                  clawbotMessage ? 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]' : 'border-slate-800'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <Bot className={`w-6 h-6 shrink-0 mt-1 ${clawbotMessage ? 'text-amber-400 animate-pulse' : 'text-blue-400'}`} />
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold tracking-widest uppercase mb-1 text-slate-500">
+                        {clawbotThinking ? 'Analizando tu código...' : clawbotMessage ? 'Análisis Socrático' : 'Pista de Sistema'}
+                      </p>
+                      
+                      {clawbotThinking ? (
+                         <div className="flex gap-1 mt-2">
+                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
+                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                         </div>
+                      ) : (
+                        <p className={`text-sm leading-relaxed ${clawbotMessage ? 'text-amber-100' : 'text-slate-300'}`}>
+                          {clawbotMessage || exercise.hint}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
               
-              {exercise.hint && (
-                <Button onClick={() => setShowHint(!showHint)} variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800">
-                  {showHint ? 'Ocultar Pista' : 'Pedir pista a Clawbot'}
+              {!clawbotMessage && exercise.hint && (
+                <Button onClick={() => setShowHint(!showHint)} variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 mt-auto">
+                  {showHint ? 'Ocultar Pista Básica' : 'Pedir Pista Básica'}
                 </Button>
               )}
             </section>
@@ -433,11 +512,11 @@ export const ExercisePage = () => {
                   </span>
                   <Button 
                     onClick={handleValidate}
-                    disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !editorCode)}
+                    disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !editorCode) || clawbotThinking}
                     className="bg-green-600 hover:bg-green-500 text-white font-bold h-9 px-6 text-sm shadow-[0_0_20px_rgba(22,163,74,0.3)] transition-all"
                   >
-                    {validating ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2 fill-current" />}
-                    {validating ? 'Validando...' : 'Ejecutar Consulta'}
+                    {validating || clawbotThinking ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2 fill-current" />}
+                    {validating ? 'Validando...' : clawbotThinking ? 'Analizando...' : 'Ejecutar Consulta'}
                   </Button>
                 </div>
                 
