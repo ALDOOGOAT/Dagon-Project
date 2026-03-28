@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, VolumeX, Database, Terminal, Play, Loader, GripHorizontal, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import Editor from '@monaco-editor/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const THEORY_CONTENT = {
   "1": {
@@ -39,6 +40,105 @@ const THEORY_CONTENT = {
   }
 };
 
+// COMPONENTE: EFECTO RPG DE MÁQUINA DE ESCRIBIR
+const TypewriterText = ({ text }) => {
+  const [displayedText, setDisplayedText] = useState('');
+
+  useEffect(() => {
+    setDisplayedText(''); 
+    let i = 0;
+    if (!text) return;
+    
+    const typingInterval = setInterval(() => {
+      if (i < text.length) {
+        setDisplayedText((prev) => prev + text.charAt(i));
+        i++;
+      } else {
+        clearInterval(typingInterval);
+      }
+    }, 20); 
+
+    return () => clearInterval(typingInterval);
+  }, [text]);
+
+  return <span>{displayedText}</span>;
+};
+
+// COMPONENTE: DAGON ANIMADO (FÍSICAS Y EXPRESIONES)
+const AnimatedDagon = ({ status }) => {
+  const animations = {
+    idle: {
+      y: [0, -5, 0],
+      transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+    },
+    thinking: {
+      y: [0, -10, 0],
+      scale: [1, 1.05, 1],
+      rotate: [0, -2, 2, 0],
+      transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+    },
+    error: {
+      x: [0, -10, 10, -10, 10, 0],
+      scaleY: [1, 0.8, 1.1, 0.9, 1],
+      scaleX: [1, 1.2, 0.9, 1.1, 1],
+      transition: { duration: 0.5 }
+    },
+    success: {
+      y: [0, -20, 0],
+      rotate: [0, 360],
+      scale: [1, 1.2, 1],
+      transition: { duration: 0.8, type: "spring", bounce: 0.5 }
+    }
+  };
+
+  return (
+    <div className="relative">
+      <AnimatePresence>
+        {status === 'error' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0, y: 10 }}
+            animate={{ opacity: 1, scale: 1.5, y: -15, rotate: [0, -10, 10, 0] }}
+            exit={{ opacity: 0, scale: 0 }}
+            className="absolute -top-4 -right-2 text-red-500 font-black text-2xl z-20 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+          >
+            !
+          </motion.div>
+        )}
+        {status === 'thinking' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1, y: -20 }}
+            exit={{ opacity: 0 }}
+            className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-blue-400 z-20"
+          >
+            <Loader className="w-5 h-5 animate-spin" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div animate={animations[status]} className="relative z-10">
+        <DagonMascot 
+          size="medium" 
+          mood={
+            status === 'thinking' ? "surprised" : 
+            status === 'error' ? "sad" : 
+            status === 'success' ? "excited" : "determined"
+          } 
+        />
+      </motion.div>
+
+      <motion.div 
+        animate={{
+          scale: status === 'success' ? [1, 0.5, 1] : status === 'thinking' ? [1, 0.8, 1] : 1,
+          opacity: status === 'success' ? [0.5, 0.2, 0.5] : 0.5
+        }}
+        transition={{ duration: status === 'success' ? 0.8 : 1.5, repeat: status === 'thinking' ? Infinity : 0 }}
+        className="w-12 h-3 bg-black/40 rounded-[100%] absolute -bottom-2 left-1/2 transform -translate-x-1/2 blur-[2px]"
+      />
+    </div>
+  );
+};
+
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
@@ -63,10 +163,9 @@ export const ExercisePage = () => {
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
 
-  // --- NUEVOS ESTADOS PARA CLAWBOT ---
   const [clawbotThinking, setClawbotThinking] = useState(false);
   const [clawbotMessage, setClawbotMessage] = useState(null);
-  const [intentosFallidos, setIntentosFallidos] = useState(0);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -106,7 +205,6 @@ export const ExercisePage = () => {
       } else {
         setEditorCode(exercise.starterCode || '');
       }
-      // Limpiamos la pantalla de ejecución y mensajes de Clawbot al cambiar de ejercicio
       setExecutionResult(null);
       setClawbotMessage(null);
     }
@@ -129,9 +227,7 @@ export const ExercisePage = () => {
     
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-    };
+    utterance.onerror = () => setIsSpeaking(false);
 
     window.speechSynthesis.speak(utterance);
   };
@@ -161,7 +257,6 @@ export const ExercisePage = () => {
     }
   };
 
-  // --- LA MAGIA SÓCRATICA (LLAMADA A GEMINI) ---
   const invokeClawbot = async (errorData) => {
     setClawbotThinking(true);
     try {
@@ -175,8 +270,7 @@ export const ExercisePage = () => {
           descripcion: errorData.descripcion,
           queryMaestra: errorData.queryMaestra,
           queryAlumno: errorData.queryAlumno,
-          errorDb: errorData.errorDb || "Los datos no coinciden.",
-          intentos: errorData.intentos
+          errorDb: errorData.errorDb || "Los datos no coinciden."
         })
       });
 
@@ -196,9 +290,9 @@ export const ExercisePage = () => {
 
   const handleValidate = async () => {
     setValidating(true);
-    setClawbotMessage(null); // Limpiamos mensajes anteriores
+    setClawbotMessage(null); 
     const exercise = exercises[currentExerciseIndex];
-    // Incrementamos el contador de intentos fallidos solo para ejercicios de código
+    
     try {
       const query = exercise.type === 'drag_drop' 
         ? droppedWords.map(w => w.word).join(' ')
@@ -226,7 +320,6 @@ export const ExercisePage = () => {
           setLastXPGained(result.xp_gained);
           setShowReward(true);
         } else {
-
           toast.success(result.message);
         }
         setExecutionResult({
@@ -234,8 +327,6 @@ export const ExercisePage = () => {
           message: result.message,
           mockData: result.mockData || []
         });
-        // Reset intentos fallidos cuando se completa exitosamente
-        setIntentosFallidos(0);
       } else {
         toast.error(result.message);
         setExecutionResult({
@@ -243,19 +334,12 @@ export const ExercisePage = () => {
           message: result.message
         });
         
-        // ¡NUEVO! INVOCAR A CLAWBOT SI HAY ERROR
-        // Le pasamos todo el contexto que nos mandó el nuevo backend de Java
         if (result.descripcion && result.queryMaestra) {
-            // Incrementamos el contador de intentos fallidos
-            const nuevosIntentos = intentosFallidos + 1;
-            setIntentosFallidos(nuevosIntentos);
-            
             invokeClawbot({
                 descripcion: result.descripcion,
                 queryMaestra: result.queryMaestra,
                 queryAlumno: result.queryAlumno,
-                errorDb: result.errorDb || result.message,
-                intentos: nuevosIntentos
+                errorDb: result.errorDb || result.message
             });
         }
       }
@@ -296,7 +380,6 @@ export const ExercisePage = () => {
         <RewardAnimation type="success" xpGained={lastXPGained} onComplete={() => setShowReward(false)} />
       )}
       
-      {/* BARRA SUPERIOR */}
       <header className="bg-slate-900/80 border-b border-slate-800 p-4 flex items-center justify-between backdrop-blur-md z-10 shrink-0">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
@@ -312,7 +395,6 @@ export const ExercisePage = () => {
       </header>
 
       <main className="flex-1 flex overflow-hidden">
-        {/* PANTALLA DE TEORÍA INICIAL */}
         {showTheory ? (
           <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
             <div className="glass-card-apple rounded-3xl p-12 max-w-4xl w-full">
@@ -353,64 +435,101 @@ export const ExercisePage = () => {
             </div>
           </div>
         ) : (
-          /* PANTALLA DIVIDIDA DE EJERCICIO */
           <>
-            {/* PANEL IZQUIERDO: INSTRUCCIONES Y MASCOTA */}
+            {/* PANEL IZQUIERDO */}
             <section className="w-1/3 min-w-[350px] max-w-[450px] border-r border-slate-800 bg-slate-900/50 p-6 flex flex-col overflow-y-auto">
+              
+              {/* HEADER ANIMADO CON DAGON */}
               <div className="mb-6 flex items-center gap-4">
-                <div className="w-16 h-16 bg-blue-900/30 rounded-2xl flex items-center justify-center border border-blue-500/30">
-                  <DagonMascot size="medium" mood={clawbotThinking ? "surprised" : executionResult?.success === false ? "sad" : "determined"} />
+                <div className="w-20 h-20 bg-blue-900/20 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-inner relative">
+                  <AnimatedDagon 
+                    status={
+                      clawbotThinking ? 'thinking' : 
+                      executionResult?.success === false ? 'error' : 
+                      executionResult?.success === true ? 'success' : 'idle'
+                    } 
+                  />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white leading-tight">{exercise.title}</h2>
-                  <p className="text-blue-400 text-xs font-bold tracking-wide uppercase mt-1">Misión Activa</p>
+                  <p className="text-blue-400 text-xs font-bold tracking-wide uppercase mt-1 flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                    </span>
+                    Misión Activa
+                  </p>
                 </div>
               </div>
 
-              {/* INSTRUCCIONES */}
-              <div className="glass-card rounded-xl p-5 border border-slate-700/50 mb-6 flex-1">
+              <div className="glass-card rounded-xl p-5 border border-slate-700/50 mb-6 shrink-0">
                 <h3 className="text-slate-300 font-bold mb-3 uppercase text-xs tracking-widest flex items-center gap-2">
                   <Terminal className="w-4 h-4" /> Instrucciones
                 </h3>
                 <p className="text-slate-300 leading-relaxed font-medium text-sm">{exercise.description}</p>
               </div>
 
-              {/* EL CEREBRO DE CLAWBOT (Aparece cuando hay errores o se pide pista) */}
-              {(clawbotThinking || clawbotMessage || showHint) && (
-                <div className={`bg-slate-950 border rounded-xl p-4 mb-4 animate-in fade-in zoom-in duration-300 ${
-                  clawbotMessage ? 'border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.15)]' : 'border-slate-800'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <Bot className={`w-6 h-6 shrink-0 mt-1 ${clawbotMessage ? 'text-amber-400 animate-pulse' : 'text-blue-400'}`} />
-                    <div className="flex-1">
-                      <p className="text-[10px] font-bold tracking-widest uppercase mb-1 text-slate-500">
-                        {clawbotThinking ? 'Analizando tu código...' : clawbotMessage ? 'Análisis Socrático' : 'Pista de Sistema'}
-                      </p>
+              {/* EL CEREBRO DE CLAWBOT ANIMADO */}
+              <AnimatePresence>
+                {(clawbotThinking || clawbotMessage || showHint) && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                    className={`relative shrink-0 bg-slate-950 rounded-xl p-5 mb-4 border-2 transition-all duration-500 overflow-hidden ${
+                      clawbotMessage 
+                        ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)]' 
+                        : 'border-slate-800'
+                    }`}
+                  >
+                    {clawbotThinking && (
+                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/10 to-transparent h-full w-full animate-scan" />
+                    )}
+
+                    <div className="flex items-start gap-4 relative z-10">
+                      <div className="relative">
+                        <Bot className={`w-8 h-8 shrink-0 ${clawbotMessage ? 'text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]' : 'text-blue-400'}`} />
+                        {clawbotThinking && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></span>
+                        )}
+                      </div>
                       
-                      {clawbotThinking ? (
-                         <div className="flex gap-1 mt-2">
-                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
-                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                           <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-                         </div>
-                      ) : (
-                        <p className={`text-sm leading-relaxed ${clawbotMessage ? 'text-amber-100' : 'text-slate-300'}`}>
-                          {clawbotMessage || exercise.hint}
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black tracking-widest uppercase mb-2 text-slate-500 flex items-center gap-2">
+                          {clawbotThinking ? (
+                            <><span className="text-blue-400 animate-pulse">■</span> Procesando lógica SQL...</>
+                          ) : clawbotMessage ? (
+                            <><span className="text-amber-500">⚠</span> Intervención Socrática</>
+                          ) : (
+                            <><span className="text-cyan-500">ℹ</span> Pista de Sistema</>
+                          )}
                         </p>
-                      )}
+                        
+                        {clawbotThinking ? (
+                           <div className="flex gap-1.5 mt-3">
+                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce"></div>
+                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                           </div>
+                        ) : (
+                          <p className={`text-sm leading-relaxed font-medium ${clawbotMessage ? 'text-amber-50' : 'text-slate-300'}`}>
+                            {clawbotMessage ? <TypewriterText text={clawbotMessage} /> : exercise.hint}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               {!clawbotMessage && exercise.hint && (
-                <Button onClick={() => setShowHint(!showHint)} variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 mt-auto">
+                <Button onClick={() => setShowHint(!showHint)} variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 mt-auto shrink-0">
                   {showHint ? 'Ocultar Pista Básica' : 'Pedir Pista Básica'}
                 </Button>
               )}
             </section>
 
-            {/* PANEL DERECHO: EDITOR / DRAG & DROP */}
+            {/* PANEL DERECHO */}
             <section className="flex-1 flex flex-col bg-[#0d1117] relative">
               <div className="bg-[#161b22] px-4 py-2 flex items-center justify-between border-b border-slate-800/50 shrink-0">
                 <div className="flex items-center gap-2">
@@ -504,7 +623,6 @@ export const ExercisePage = () => {
                 )}
               </div>
 
-              {/* CONSOLA DE RESULTADOS / EJECUCIÓN */}
               <div className="h-1/3 min-h-[250px] bg-[#0f141a] border-t border-slate-800 flex flex-col shrink-0">
                 <div className="bg-[#161b22] px-4 py-3 flex items-center justify-between border-b border-slate-800/50">
                   <span className="text-xs font-mono text-slate-400 tracking-wider flex items-center gap-2">
@@ -530,7 +648,6 @@ export const ExercisePage = () => {
                         <span className="font-bold">{executionResult.message}</span>
                       </div>
 
-                      {/* TABLA DE RESULTADOS */}
                       {executionResult.mockData && executionResult.mockData.length > 0 && (
                         <div className="overflow-x-auto rounded-lg border border-slate-700 shadow-xl mb-4">
                           <table className="w-full text-sm text-left text-slate-300">
@@ -554,7 +671,6 @@ export const ExercisePage = () => {
                         </div>
                       )}
 
-                      {/* BOTÓN DE SIGUIENTE MISIÓN */}
                       {executionResult.success && (
                         <Button
                           onClick={() => {
