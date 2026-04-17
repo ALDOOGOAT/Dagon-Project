@@ -1,182 +1,87 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, CheckCircle, XCircle, Lightbulb, Volume2, VolumeX, Database, Terminal, Play, Loader, GripHorizontal, Bot } from 'lucide-react';
+import { LevelTheory } from '../components/LevelTheory';
+import {
+  ArrowLeft, CheckCircle, XCircle, Database,
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import Editor from '@monaco-editor/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Editor from '@monaco-editor/react';
 
-const THEORY_CONTENT = {
-  "1": {
-    title: "🎯 Fundamentos de Bases de Datos",
-    content: "Una base de datos es como una biblioteca digital gigante donde guardamos información de manera super organizada. SQL es el lenguaje que usamos para hablar con estas bases de datos.",
-    concepts: [
-      { icon: "📊", title: "Base de Datos", desc: "Colección organizada de información" },
-      { icon: "🔍", title: "SQL", desc: "Lenguaje para consultar datos" },
-      { icon: "📋", title: "Tablas", desc: "Estructura de filas y columnas" }
-    ]
-  },
-  "2": {
-    title: "🔍 SELECT y Filtros",
-    content: "SELECT es tu herramienta más importante para obtener datos de la base de datos.",
-    concepts: [
-      { icon: "🎯", title: "SELECT", desc: "Selecciona columnas de una tabla" },
-      { icon: "🔎", title: "WHERE", desc: "Filtra resultados con condiciones" },
-      { icon: "📈", title: "ORDER BY", desc: "Ordena los resultados" }
-    ]
-  },
-  "3": {
-    title: "🔗 JOINs y Relaciones",
-    content: "Los JOIN te permiten combinar información de múltiples tablas relacionadas.",
-    concepts: [
-      { icon: "🔗", title: "INNER JOIN", desc: "Une tablas con coincidencias" },
-      { icon: "📊", title: "GROUP BY", desc: "Agrupa datos para cálculos" },
-      { icon: "🎲", title: "Funciones", desc: "COUNT, SUM, AVG, MAX, MIN" }
-    ]
-  }
-};
+const XPPop = ({ amount }) => (
+  <div className="pointer-events-none fixed inset-0 z-[9990] flex items-center justify-center">
+    <span className="font-display font-black text-5xl text-gradient-gold animate-float-up drop-shadow-[0_0_25px_rgba(250,204,21,0.6)]">
+      +{amount} XP
+    </span>
+  </div>
+);
 
-// COMPONENTE: EFECTO RPG DE MÁQUINA DE ESCRIBIR
-const TypewriterText = ({ text }) => {
-  const [displayedText, setDisplayedText] = useState('');
-
-  useEffect(() => {
-    setDisplayedText(''); 
-    let i = 0;
-    if (!text) return;
-    
-    const typingInterval = setInterval(() => {
-      if (i < text.length) {
-        setDisplayedText((prev) => prev + text.charAt(i));
-        i++;
-      } else {
-        clearInterval(typingInterval);
-      }
-    }, 20); 
-
-    return () => clearInterval(typingInterval);
-  }, [text]);
-
-  return <span>{displayedText}</span>;
-};
-
-// COMPONENTE: DAGON ANIMADO (FÍSICAS Y EXPRESIONES)
-const AnimatedDagon = ({ status }) => {
-  const animations = {
-    idle: {
-      y: [0, -5, 0],
-      transition: { duration: 3, repeat: Infinity, ease: "easeInOut" }
-    },
-    thinking: {
-      y: [0, -10, 0],
-      scale: [1, 1.05, 1],
-      rotate: [0, -2, 2, 0],
-      transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
-    },
-    error: {
-      x: [0, -10, 10, -10, 10, 0],
-      scaleY: [1, 0.8, 1.1, 0.9, 1],
-      scaleX: [1, 1.2, 0.9, 1.1, 1],
-      transition: { duration: 0.5 }
-    },
-    success: {
-      y: [0, -20, 0],
-      rotate: [0, 360],
-      scale: [1, 1.2, 1],
-      transition: { duration: 0.8, type: "spring", bounce: 0.5 }
-    }
-  };
-
-  return (
-    <div className="relative">
-      <AnimatePresence>
-        {status === 'error' && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0, y: 10 }}
-            animate={{ opacity: 1, scale: 1.5, y: -15, rotate: [0, -10, 10, 0] }}
-            exit={{ opacity: 0, scale: 0 }}
-            className="absolute -top-4 -right-2 text-red-500 font-black text-2xl z-20 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]"
-          >
-            !
-          </motion.div>
-        )}
-        {status === 'thinking' && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1, y: -20 }}
-            exit={{ opacity: 0 }}
-            className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-blue-400 z-20"
-          >
-            <Loader className="w-5 h-5 animate-spin" />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <motion.div animate={animations[status]} className="relative z-10">
-        <DagonMascot 
-          size="medium" 
-          mood={
-            status === 'thinking' ? "surprised" : 
-            status === 'error' ? "sad" : 
-            status === 'success' ? "excited" : "determined"
-          } 
+const SuccessBurst = () => (
+  <div className="pointer-events-none fixed inset-0 z-[9989] overflow-hidden">
+    {[...Array(24)].map((_, i) => {
+      const angle = (i / 24) * 360;
+      const dist = 120 + Math.random() * 60;
+      const x = Math.cos((angle * Math.PI) / 180) * dist;
+      const y = Math.sin((angle * Math.PI) / 180) * dist;
+      return (
+        <motion.span
+          key={i}
+          className="absolute left-1/2 top-1/2 w-2.5 h-2.5 rounded-full"
+          style={{ background: ['#facc15', '#22d3ee', '#10b981', '#f97316', '#a855f7'][i % 5] }}
+          initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+          animate={{ x, y, opacity: 0, scale: 0.3 }}
+          transition={{ duration: 1.3, ease: 'easeOut' }}
         />
-      </motion.div>
-
-      <motion.div 
-        animate={{
-          scale: status === 'success' ? [1, 0.5, 1] : status === 'thinking' ? [1, 0.8, 1] : 1,
-          opacity: status === 'success' ? [0.5, 0.2, 0.5] : 0.5
-        }}
-        transition={{ duration: status === 'success' ? 0.8 : 1.5, repeat: status === 'thinking' ? Infinity : 0 }}
-        className="w-12 h-3 bg-black/40 rounded-[100%] absolute -bottom-2 left-1/2 transform -translate-x-1/2 blur-[2px]"
-      />
-    </div>
-  );
-};
+      );
+    })}
+  </div>
+);
 
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
-  
+
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
-  
+
   const [showTheory, setShowTheory] = useState(true);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [showReward, setShowReward] = useState(false);
   const [lastXPGained, setLastXPGained] = useState(0);
-  
+  const [levelUpData, setLevelUpData] = useState(null);
+
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
-  
+
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
 
   const [clawbotThinking, setClawbotThinking] = useState(false);
   const [clawbotMessage, setClawbotMessage] = useState(null);
+  const [intentosFallidos, setIntentosFallidos] = useState(0);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-  
+  const [combo, setCombo] = useState(0);
+  const [shake, setShake] = useState(false);
+  const [burst, setBurst] = useState(false);
+  const [xpPop, setXpPop] = useState(null);
+
+  useEffect(() => { setIsMounted(true); }, []);
+
   useEffect(() => {
     const fetchExercises = async () => {
       try {
         const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         setExercises(data.exercises || []);
@@ -186,20 +91,14 @@ export const ExercisePage = () => {
         setLoading(false);
       }
     };
-    
-    if (token && levelId) {
-      fetchExercises();
-    }
+    if (token && levelId) fetchExercises();
   }, [levelId, token]);
 
   useEffect(() => {
     if (exercises.length > 0) {
       const exercise = exercises[currentExerciseIndex];
       if (exercise.type === 'drag_drop') {
-        const wordObjects = (exercise.wordBank || []).map((word, idx) => ({
-          id: `word-${idx}`,
-          word: word
-        }));
+        const wordObjects = (exercise.wordBank || []).map((word, idx) => ({ id: `word-${idx}`, word }));
         setAvailableWords(wordObjects);
         setDroppedWords([]);
       } else {
@@ -207,53 +106,32 @@ export const ExercisePage = () => {
       }
       setExecutionResult(null);
       setClawbotMessage(null);
+      setShowHint(false);
     }
   }, [currentExerciseIndex, exercises]);
 
-  const speakTheory = () => {
-    const theory = THEORY_CONTENT[levelId] || THEORY_CONTENT["1"];
-    if (!theory) return;
-
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    const textToSpeak = `${theory.title}. ${theory.content}`;
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
-  };
-
   const handleDragEnd = (result) => {
     if (!result.destination) return;
-
     const { source, destination } = result;
-
     if (source.droppableId === 'wordBank' && destination.droppableId === 'dropZone') {
       const wordObj = availableWords[source.index];
-      const newAvailable = availableWords.filter((_, i) => i !== source.index);
-      const newDropped = [...droppedWords];
-      newDropped.splice(destination.index, 0, wordObj);
-      setAvailableWords(newAvailable);
-      setDroppedWords(newDropped);
+      setAvailableWords(prev => prev.filter((_, i) => i !== source.index));
+      setDroppedWords(prev => {
+        const copy = [...prev];
+        copy.splice(destination.index, 0, wordObj);
+        return copy;
+      });
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'wordBank') {
       const wordObj = droppedWords[source.index];
-      const newDropped = droppedWords.filter((_, i) => i !== source.index);
-      setDroppedWords(newDropped);
-      setAvailableWords([...availableWords, wordObj]);
+      setDroppedWords(prev => prev.filter((_, i) => i !== source.index));
+      setAvailableWords(prev => [...prev, wordObj]);
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'dropZone') {
-      const newDropped = Array.from(droppedWords);
-      const [moved] = newDropped.splice(source.index, 1);
-      newDropped.splice(destination.index, 0, moved);
-      setDroppedWords(newDropped);
+      setDroppedWords(prev => {
+        const copy = [...prev];
+        const [moved] = copy.splice(source.index, 1);
+        copy.splice(destination.index, 0, moved);
+        return copy;
+      });
     }
   };
 
@@ -262,27 +140,17 @@ export const ExercisePage = () => {
     try {
       const response = await fetch('http://localhost:8080/api/clawbot/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          descripcion: errorData.descripcion,
-          queryMaestra: errorData.queryMaestra,
-          queryAlumno: errorData.queryAlumno,
-          errorDb: errorData.errorDb || "Los datos no coinciden."
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(errorData)
       });
-
       if (response.ok) {
         const data = await response.json();
         setClawbotMessage(data.mensaje);
       } else {
-        setClawbotMessage("Mis circuitos fallaron intentando analizar esto. ¡Revisa tu sintaxis cuidadosamente!");
+        setClawbotMessage("Mis circuitos fallaron. ¡Revisa tu sintaxis!");
       }
     } catch (error) {
-      console.error("Error al invocar a Clawbot:", error);
-      setClawbotMessage("¡Bzzz! Hubo una interferencia al contactar mis servidores de análisis.");
+      setClawbotMessage("¡Bzzz! Hubo interferencia al contactar mis servidores.");
     } finally {
       setClawbotThinking(false);
     }
@@ -290,57 +158,57 @@ export const ExercisePage = () => {
 
   const handleValidate = async () => {
     setValidating(true);
-    setClawbotMessage(null); 
+    setClawbotMessage(null);
     const exercise = exercises[currentExerciseIndex];
-    
     try {
-      const query = exercise.type === 'drag_drop' 
+      const query = exercise.type === 'drag_drop'
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-      const miUsuarioId = user?.idUsuario; 
-
       const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          query: query,
-          usuarioId: miUsuarioId
-        }) 
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ query, usuarioId: user?.idUsuario })
       });
-      
       const result = await response.json();
-      
+
       if (result.success) {
-        if (result.xp_gained > 0) {
-          updateUserXP((user?.xp || 0) + result.xp_gained);
-          setLastXPGained(result.xp_gained);
+        const prevXP = user?.xp || 0;
+        const gained = result.xp_gained || 0;
+        const newXP = prevXP + gained;
+        if (gained > 0) {
+          updateUserXP(newXP);
+          setLastXPGained(gained);
+          setXpPop(gained);
+          setTimeout(() => setXpPop(null), 1700);
+          const prevLvl = Math.floor(prevXP / 100) + 1;
+          const newLvl = Math.floor(newXP / 100) + 1;
+          if (newLvl > prevLvl) setLevelUpData({ newLevel: newLvl });
           setShowReward(true);
         } else {
           toast.success(result.message);
         }
-        setExecutionResult({
-          success: true,
-          message: result.message,
-          mockData: result.mockData || []
-        });
+        setExecutionResult({ success: true, message: result.message, mockData: result.mockData || [] });
+        setBurst(true);
+        setTimeout(() => setBurst(false), 1300);
+        setIntentosFallidos(0);
+        setCombo(c => c + 1);
       } else {
         toast.error(result.message);
-        setExecutionResult({
-          success: false,
-          message: result.message
-        });
-        
+        setExecutionResult({ success: false, message: result.message });
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+        setCombo(0);
         if (result.descripcion && result.queryMaestra) {
-            invokeClawbot({
-                descripcion: result.descripcion,
-                queryMaestra: result.queryMaestra,
-                queryAlumno: result.queryAlumno,
-                errorDb: result.errorDb || result.message
-            });
+          const nuevos = intentosFallidos + 1;
+          setIntentosFallidos(nuevos);
+          invokeClawbot({
+            descripcion: result.descripcion,
+            queryMaestra: result.queryMaestra,
+            queryAlumno: result.queryAlumno,
+            errorDb: result.errorDb || result.message,
+            intentos: nuevos,
+          });
         }
       }
     } catch (error) {
@@ -350,9 +218,22 @@ export const ExercisePage = () => {
     }
   };
 
+  const mascotMood = useMemo(() => {
+    if (clawbotThinking) return 'nervous';
+    if (executionResult?.success) return 'excited';
+    if (intentosFallidos >= 2) return 'nervous';
+    if (executionResult?.success === false) return 'sad';
+    return 'determined';
+  }, [clawbotThinking, executionResult, intentosFallidos]);
+
+  const exerciseProgress = useMemo(() => {
+    if (exercises.length === 0) return 0;
+    return ((currentExerciseIndex + (executionResult?.success ? 1 : 0)) / exercises.length) * 100;
+  }, [currentExerciseIndex, exercises.length, executionResult]);
+
   if (loading || !isMounted) {
     return (
-      <div className="min-h-screen cyber-bg flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <DagonMascot size="large" mood="determined" />
       </div>
     );
@@ -360,214 +241,222 @@ export const ExercisePage = () => {
 
   if (exercises.length === 0) {
     return (
-      <div className="min-h-screen cyber-bg flex flex-col items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <DagonMascot size="large" mood="sad" />
-        <p className="text-white text-xl mt-4">Este módulo aún no tiene misiones disponibles.</p>
-        <Button onClick={() => navigate('/dashboard')} className="mt-6 bg-blue-600">
-          Volver al Mapa
-        </Button>
+        <p className="text-white text-xl font-gameui">Este módulo aún no tiene misiones.</p>
+        <Button onClick={() => navigate('/dashboard')} className="bg-blue-600">Volver al mapa</Button>
       </div>
     );
   }
 
   const exercise = exercises[currentExerciseIndex];
   const isDragDrop = exercise.type === 'drag_drop';
-  const theory = THEORY_CONTENT[levelId] || THEORY_CONTENT["1"];
 
   return (
-    <div className="min-h-screen cyber-bg grid-pattern flex flex-col h-screen" data-testid="exercise-page">
+    <div className="min-h-screen flex flex-col" data-testid="exercise-page">
       {showReward && (
-        <RewardAnimation type="success" xpGained={lastXPGained} onComplete={() => setShowReward(false)} />
+        <RewardAnimation
+          type="success" xpGained={lastXPGained} isLevelUp={!!levelUpData}
+          newLevel={levelUpData?.newLevel}
+          onComplete={() => { setShowReward(false); setLevelUpData(null); }}
+        />
       )}
-      
-      <header className="bg-slate-900/80 border-b border-slate-800 p-4 flex items-center justify-between backdrop-blur-md z-10 shrink-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Abandonar Misión
-          </Button>
-          <div className="h-6 w-px bg-slate-700"></div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Database className="w-5 h-5 text-blue-500" />
-            Módulo {levelId} - Misión {currentExerciseIndex + 1}/{exercises.length}
-          </h1>
+      {burst && <SuccessBurst />}
+      {xpPop != null && <XPPop amount={xpPop} />}
+
+      {/* HEADER */}
+      <header className="bg-slate-950/80 border-b border-white/5 backdrop-blur-md z-10 shrink-0">
+        <div className="px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+            </Button>
+            <div className="h-6 w-px bg-white/10" />
+            <h1 className="font-display text-base font-black text-white flex items-center gap-2">
+              <Database className="w-4 h-4 text-cyan-400" />
+              Módulo {levelId}
+              <span className="text-cyan-300 text-sm font-gameui ml-1">
+                · Misión {currentExerciseIndex + 1}/{exercises.length}
+              </span>
+            </h1>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {exercises.map((_, i) => (
+              <span key={i} className={`h-2 rounded-full transition-all duration-300 ${
+                i < currentExerciseIndex ? 'w-6 bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]'
+                : i === currentExerciseIndex ? 'w-10 bg-gradient-to-r from-cyan-400 to-fuchsia-500'
+                : 'w-2 bg-slate-700'
+              }`} />
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-white/5">
+              <Zap className="w-4 h-4 text-yellow-300" />
+              <span className="font-display font-black text-yellow-200 text-sm">{user?.xp || 0}</span>
+            </div>
+            <AnimatePresence>
+              {combo >= 2 && (
+                <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}
+                  className="flex items-center gap-2 bg-orange-500/15 px-3 py-1.5 rounded-full border border-orange-400/40"
+                >
+                  <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+                  <span className="font-display font-black text-orange-300 text-sm">x{combo}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+        <div className="h-1 bg-slate-900">
+          <motion.div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
+            animate={{ width: `${exerciseProgress}%` }} transition={{ duration: 0.5 }} />
         </div>
       </header>
 
-      <main className="flex-1 flex overflow-hidden">
+      {/* MAIN */}
+      <main className="flex-1 overflow-y-auto scroll-fancy">
         {showTheory ? (
-          <div className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
-            <div className="glass-card-apple rounded-3xl p-12 max-w-4xl w-full">
-              <div className="flex justify-center mb-8">
-                <div onClick={speakTheory} className={`cursor-pointer ${isSpeaking ? 'animate-bounce' : 'animate-float'}`}>
-                  <DagonMascot size="large" mood={isSpeaking ? "excited" : "happy"} />
-                </div>
-              </div>
-
-              <h2 className="text-4xl font-bold text-white text-center mb-6">{theory.title}</h2>
-
-              <div className="backdrop-blur-xl bg-slate-900/50 border border-slate-700 rounded-2xl p-8 mb-6 text-center">
-                <p className="text-xl text-slate-200 leading-relaxed">{theory.content}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                {theory.concepts?.map((concept, i) => (
-                  <div key={i} className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center hover:scale-105 transition-transform">
-                    <div className="text-4xl mb-2">{concept.icon}</div>
-                    <h3 className="font-bold text-white mb-1">{concept.title}</h3>
-                    <p className="text-sm text-slate-400">{concept.desc}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <button onClick={() => setIsMuted(!isMuted)} className="bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-2xl px-6 py-3 flex items-center gap-2 transition-colors">
-                  {isMuted ? (
-                    <><VolumeX className="w-5 h-5 text-red-400" /><span className="text-slate-300">Silenciado</span></>
-                  ) : (
-                    <><Volume2 className="w-5 h-5 text-blue-400" /><span className="text-slate-300">Sonido Activo</span></>
-                  )}
-                </button>
-                <Button onClick={() => setShowTheory(false)} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold px-8 py-6 rounded-2xl text-lg shadow-[0_0_20px_rgba(37,99,235,0.4)]">
-                  Comenzar Práctica →
-                </Button>
-              </div>
-            </div>
-          </div>
+          <LevelTheory levelId={levelId} onComplete={() => setShowTheory(false)} />
         ) : (
-          <>
-            {/* PANEL IZQUIERDO */}
-            <section className="w-1/3 min-w-[350px] max-w-[450px] border-r border-slate-800 bg-slate-900/50 p-6 flex flex-col overflow-y-auto">
-              
-              {/* HEADER ANIMADO CON DAGON */}
-              <div className="mb-6 flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-900/20 rounded-2xl flex items-center justify-center border border-blue-500/20 shadow-inner relative">
-                  <AnimatedDagon 
-                    status={
-                      clawbotThinking ? 'thinking' : 
-                      executionResult?.success === false ? 'error' : 
-                      executionResult?.success === true ? 'success' : 'idle'
-                    } 
-                  />
+          <div className={`max-w-5xl mx-auto px-4 py-6 space-y-5 ${shake ? 'animate-shake-x' : ''}`}>
+
+            {/* MASCOTA + INSTRUCCIONES */}
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+              className="glass-card-apple rounded-3xl p-6 border border-white/10 relative overflow-hidden"
+            >
+              <div className="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10 flex items-start gap-5">
+                <div className="shrink-0">
+                  <div className="relative">
+                    <div className={`absolute -inset-4 rounded-full blur-xl transition-colors duration-500 ${
+                      mascotMood === 'nervous' ? 'bg-orange-500/20' :
+                      mascotMood === 'excited' ? 'bg-emerald-500/20' :
+                      mascotMood === 'sad' ? 'bg-rose-500/15' : 'bg-cyan-500/15'
+                    }`} />
+                    <DagonMascot size="medium" mood={mascotMood} />
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-black text-white leading-tight">{exercise.title}</h2>
-                  <p className="text-blue-400 text-xs font-bold tracking-wide uppercase mt-1 flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-cyan-300 text-[10px] font-bold tracking-[0.35em] uppercase">
+                      {exercise.title}
                     </span>
-                    Misión Activa
+                    {intentosFallidos > 0 && !executionResult?.success && (
+                      <span className="text-orange-300 text-[10px] font-bold tracking-widest uppercase bg-orange-500/10 border border-orange-400/30 px-2 py-0.5 rounded-full">
+                        Intento {intentosFallidos}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-100 font-gameui text-base leading-relaxed">
+                    {exercise.description}
                   </p>
+
+                  {/* Pista inline */}
+                  {exercise.hint && !clawbotMessage && (
+                    <button
+                      onClick={() => setShowHint(!showHint)}
+                      className="mt-3 text-amber-300 text-xs font-bold flex items-center gap-1 hover:text-amber-200 transition-colors"
+                    >
+                      <Lightbulb className="w-3 h-3" />
+                      {showHint ? 'Ocultar pista' : 'Necesito una pista'}
+                    </button>
+                  )}
+                  <AnimatePresence>
+                    {showHint && !clawbotMessage && (
+                      <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }} className="mt-2 text-amber-200/80 text-sm font-gameui italic"
+                      >
+                        {exercise.hint}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
 
-              <div className="glass-card rounded-xl p-5 border border-slate-700/50 mb-6 shrink-0">
-                <h3 className="text-slate-300 font-bold mb-3 uppercase text-xs tracking-widest flex items-center gap-2">
-                  <Terminal className="w-4 h-4" /> Instrucciones
-                </h3>
-                <p className="text-slate-300 leading-relaxed font-medium text-sm">{exercise.description}</p>
-              </div>
-
-              {/* EL CEREBRO DE CLAWBOT ANIMADO */}
+              {/* Clawbot message */}
               <AnimatePresence>
-                {(clawbotThinking || clawbotMessage || showHint) && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-                    className={`relative shrink-0 bg-slate-950 rounded-xl p-5 mb-4 border-2 transition-all duration-500 overflow-hidden ${
-                      clawbotMessage 
-                        ? 'border-amber-500 shadow-[0_0_30px_rgba(245,158,11,0.2)]' 
-                        : 'border-slate-800'
-                    }`}
+                {(clawbotThinking || clawbotMessage) && (
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                    className="mt-4 bg-slate-950/70 border border-amber-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(245,158,11,0.1)]"
                   >
-                    {clawbotThinking && (
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-500/10 to-transparent h-full w-full animate-scan" />
-                    )}
-
-                    <div className="flex items-start gap-4 relative z-10">
-                      <div className="relative">
-                        <Bot className={`w-8 h-8 shrink-0 ${clawbotMessage ? 'text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]' : 'text-blue-400'}`} />
-                        {clawbotThinking && (
-                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></span>
-                        )}
-                      </div>
-                      
+                    <div className="flex items-start gap-3">
+                      <Bot className="w-5 h-5 shrink-0 mt-0.5 text-amber-300" />
                       <div className="flex-1">
-                        <p className="text-[10px] font-black tracking-widest uppercase mb-2 text-slate-500 flex items-center gap-2">
-                          {clawbotThinking ? (
-                            <><span className="text-blue-400 animate-pulse">■</span> Procesando lógica SQL...</>
-                          ) : clawbotMessage ? (
-                            <><span className="text-amber-500">⚠</span> Intervención Socrática</>
-                          ) : (
-                            <><span className="text-cyan-500">ℹ</span> Pista de Sistema</>
-                          )}
+                        <p className="text-[10px] font-bold tracking-[0.3em] uppercase mb-1 text-amber-400">
+                          {clawbotThinking ? 'Clawbot está pensando...' : 'Clawbot dice:'}
                         </p>
-                        
                         {clawbotThinking ? (
-                           <div className="flex gap-1.5 mt-3">
-                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce"></div>
-                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                             <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-                           </div>
+                          <div className="flex gap-1.5">
+                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" />
+                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+                          </div>
                         ) : (
-                          <p className={`text-sm leading-relaxed font-medium ${clawbotMessage ? 'text-amber-50' : 'text-slate-300'}`}>
-                            {clawbotMessage ? <TypewriterText text={clawbotMessage} /> : exercise.hint}
-                          </p>
+                          <p className="text-amber-100 text-sm font-gameui leading-relaxed">{clawbotMessage}</p>
                         )}
                       </div>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-              
-              {!clawbotMessage && exercise.hint && (
-                <Button onClick={() => setShowHint(!showHint)} variant="outline" className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 mt-auto shrink-0">
-                  {showHint ? 'Ocultar Pista Básica' : 'Pedir Pista Básica'}
-                </Button>
-              )}
-            </section>
+            </motion.div>
 
-            {/* PANEL DERECHO */}
-            <section className="flex-1 flex flex-col bg-[#0d1117] relative">
-              <div className="bg-[#161b22] px-4 py-2 flex items-center justify-between border-b border-slate-800/50 shrink-0">
+            {/* ARENA DE CÓDIGO */}
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="glass-card-apple rounded-3xl border border-white/10 overflow-hidden relative"
+            >
+              {/* Barra superior */}
+              <div className="bg-slate-900/80 px-5 py-3 flex items-center justify-between border-b border-white/5">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-red-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-yellow-500/80"></span>
-                  <span className="w-3 h-3 rounded-full bg-green-500/80"></span>
-                  <span className="ml-2 text-xs font-mono text-slate-400 tracking-wider">
-                    {isDragDrop ? 'constructor.sql' : 'query.sql'}
+                  <span className="w-3 h-3 rounded-full bg-rose-500/70" />
+                  <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                  <span className="w-3 h-3 rounded-full bg-emerald-500/70" />
+                  <span className="ml-3 text-xs font-mono text-slate-400">
+                    {isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
                   </span>
                 </div>
+                <Button
+                  onClick={handleValidate}
+                  disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !editorCode) || clawbotThinking}
+                  className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
+                >
+                  {validating || clawbotThinking
+                    ? <Loader className="w-4 h-4 animate-spin mr-2" />
+                    : <Play className="w-4 h-4 mr-2 fill-current" />
+                  }
+                  {validating ? 'Validando...' : clawbotThinking ? 'Analizando...' : 'Ejecutar'}
+                </Button>
               </div>
 
-              <div className="flex-1 flex flex-col p-6 overflow-hidden">
+              {/* Editor / Drag-drop */}
+              <div className="p-5">
                 {isDragDrop ? (
                   <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="flex flex-col h-full gap-6">
-                      <div className="flex-1">
-                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-3">Tu Consulta SQL:</p>
+                    <div className="space-y-5">
+                      {/* Zona de armado */}
+                      <div>
+                        <p className="text-xs text-cyan-300 uppercase tracking-[0.3em] font-bold mb-2">Tu consulta:</p>
                         <Droppable droppableId="dropZone" direction="horizontal">
                           {(provided, snapshot) => (
                             <div
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                              className={`w-full min-h-[120px] bg-[#0f141a] border-2 border-dashed rounded-xl p-4 flex flex-wrap gap-2 items-start content-start transition-colors ${snapshot.isDraggingOver ? 'border-blue-400 bg-blue-900/10' : 'border-slate-700'}`}
+                              ref={provided.innerRef} {...provided.droppableProps}
+                              className={`min-h-[80px] rounded-2xl border-2 border-dashed p-4 flex flex-wrap gap-2 items-start content-start transition-all ${
+                                snapshot.isDraggingOver ? 'border-cyan-400 bg-cyan-500/5' : 'border-slate-600 bg-slate-900/40'
+                              }`}
                             >
                               {droppedWords.length === 0 && (
-                                <span className="text-slate-600 font-mono text-sm italic w-full text-center mt-8">Arrastra los bloques aquí...</span>
+                                <span className="text-slate-500 font-mono text-sm italic w-full text-center py-4">
+                                  Arrastra los bloques aquí para armar tu SQL...
+                                </span>
                               )}
-                              {droppedWords.map((wordObj, index) => (
-                                <Draggable key={`dropped-${wordObj.id}`} draggableId={`dropped-${wordObj.id}`} index={index}>
-                                  {(provided, snap) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={`bg-emerald-900/80 border border-emerald-500 text-emerald-300 px-4 py-2 rounded-lg font-mono font-bold cursor-move transition-all ${snap.isDragging ? 'shadow-lg scale-110' : 'hover:bg-emerald-800'}`}
+                              {droppedWords.map((w, i) => (
+                                <Draggable key={`d-${w.id}`} draggableId={`d-${w.id}`} index={i}>
+                                  {(prov, snap) => (
+                                    <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
+                                      className={`bg-emerald-900/80 border border-emerald-400/60 text-emerald-200 px-4 py-2 rounded-xl font-mono font-bold cursor-move transition-all ${
+                                        snap.isDragging ? 'shadow-lg scale-110 shadow-emerald-500/40' : 'hover:bg-emerald-800'
+                                      }`}
                                     >
-                                      {wordObj.word}
+                                      {w.word}
                                     </div>
                                   )}
                                 </Draggable>
@@ -577,27 +466,26 @@ export const ExercisePage = () => {
                           )}
                         </Droppable>
                       </div>
-
-                      <div className="h-[200px]">
-                        <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-3">Bloques Disponibles:</p>
+                      {/* Banco de palabras */}
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase tracking-[0.3em] font-bold mb-2">Bloques disponibles:</p>
                         <Droppable droppableId="wordBank" direction="horizontal">
                           {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                              className={`w-full h-full bg-[#161b22] border rounded-xl p-4 flex flex-wrap gap-3 items-start content-start overflow-y-auto transition-colors ${snapshot.isDraggingOver ? 'border-slate-500 bg-slate-800' : 'border-slate-800'}`}
+                            <div ref={provided.innerRef} {...provided.droppableProps}
+                              className={`min-h-[80px] rounded-2xl border p-4 flex flex-wrap gap-3 items-start content-start transition-all ${
+                                snapshot.isDraggingOver ? 'border-slate-500 bg-slate-800/60' : 'border-white/5 bg-slate-900/30'
+                              }`}
                             >
-                              {availableWords.map((wordObj, index) => (
-                                <Draggable key={wordObj.id} draggableId={wordObj.id} index={index}>
-                                  {(provided, snap) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                      className={`bg-slate-800 border border-slate-600 text-slate-300 px-4 py-2 rounded-lg font-mono font-medium cursor-move transition-all flex items-center gap-2 ${snap.isDragging ? 'shadow-xl scale-110 bg-slate-700 border-blue-500' : 'hover:bg-slate-700 hover:text-white hover:-translate-y-1'}`}
+                              {availableWords.map((w, i) => (
+                                <Draggable key={w.id} draggableId={w.id} index={i}>
+                                  {(prov, snap) => (
+                                    <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
+                                      className={`bg-slate-800 border border-slate-600 text-slate-200 px-4 py-2 rounded-xl font-mono font-medium cursor-move transition-all flex items-center gap-2 ${
+                                        snap.isDragging ? 'shadow-xl scale-110 border-cyan-400' : 'hover:bg-slate-700 hover:-translate-y-1 hover:border-cyan-400/40'
+                                      }`}
                                     >
-                                      <GripHorizontal className="w-4 h-4 text-slate-500" />
-                                      {wordObj.word}
+                                      <GripHorizontal className="w-3 h-3 text-slate-500" />
+                                      {w.word}
                                     </div>
                                   )}
                                 </Draggable>
@@ -610,89 +498,107 @@ export const ExercisePage = () => {
                     </div>
                   </DragDropContext>
                 ) : (
-                  <div className="h-full w-full rounded-xl overflow-hidden border border-slate-800">
+                  <div className="h-[280px] rounded-2xl overflow-hidden border border-white/10">
                     <Editor
                       height="100%"
                       defaultLanguage="sql"
                       theme="vs-dark"
                       value={editorCode}
                       onChange={(value) => setEditorCode(value || '')}
-                      options={{ minimap: { enabled: false }, fontSize: 16, lineNumbers: 'on', padding: { top: 16 } }}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 16,
+                        lineNumbers: 'on',
+                        padding: { top: 16 },
+                        scrollBeyondLastLine: false,
+                        wordWrap: 'on',
+                      }}
                     />
                   </div>
                 )}
               </div>
+            </motion.div>
 
-              <div className="h-1/3 min-h-[250px] bg-[#0f141a] border-t border-slate-800 flex flex-col shrink-0">
-                <div className="bg-[#161b22] px-4 py-3 flex items-center justify-between border-b border-slate-800/50">
-                  <span className="text-xs font-mono text-slate-400 tracking-wider flex items-center gap-2">
-                    <Database className="w-4 h-4" /> Resultados de Ejecución
-                  </span>
-                  <Button 
-                    onClick={handleValidate}
-                    disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !editorCode) || clawbotThinking}
-                    className="bg-green-600 hover:bg-green-500 text-white font-bold h-9 px-6 text-sm shadow-[0_0_20px_rgba(22,163,74,0.3)] transition-all"
-                  >
-                    {validating || clawbotThinking ? <Loader className="w-4 h-4 animate-spin mr-2" /> : <Play className="w-4 h-4 mr-2 fill-current" />}
-                    {validating ? 'Validando...' : clawbotThinking ? 'Analizando...' : 'Ejecutar Consulta'}
-                  </Button>
-                </div>
-                
-                <div className="flex-1 p-4 overflow-y-auto">
-                  {!executionResult ? (
-                    <p className="text-slate-600 font-mono text-sm italic">Esperando ejecución de código...</p>
-                  ) : (
-                    <div className="animate-in fade-in slide-in-from-bottom-2">
-                      <div className={`flex items-center gap-2 mb-4 ${executionResult.success ? 'text-green-400' : 'text-red-400'}`}>
-                        {executionResult.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                        <span className="font-bold">{executionResult.message}</span>
-                      </div>
+            {/* RESULTADOS */}
+            <AnimatePresence>
+              {executionResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                  className={`rounded-3xl border overflow-hidden ${
+                    executionResult.success
+                      ? 'glass-card-apple border-emerald-400/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+                      : 'glass-card-apple border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]'
+                  }`}
+                >
+                  <div className={`px-5 py-4 flex items-center gap-3 border-b ${
+                    executionResult.success ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-rose-500/20 bg-rose-500/5'
+                  }`}>
+                    {executionResult.success
+                      ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      : <XCircle className="w-5 h-5 text-rose-400" />
+                    }
+                    <span className={`font-display font-black ${executionResult.success ? 'text-emerald-200' : 'text-rose-200'}`}>
+                      {executionResult.success ? '¡Correcto!' : 'No es correcto'}
+                    </span>
+                    <span className="font-gameui text-sm text-slate-300 ml-2">{executionResult.message}</span>
+                  </div>
 
-                      {executionResult.mockData && executionResult.mockData.length > 0 && (
-                        <div className="overflow-x-auto rounded-lg border border-slate-700 shadow-xl mb-4">
-                          <table className="w-full text-sm text-left text-slate-300">
-                            <thead className="text-xs text-slate-400 uppercase bg-slate-900">
-                              <tr>
-                                {Object.keys(executionResult.mockData[0]).map((col) => (
-                                  <th key={col} className="px-6 py-3 font-bold text-blue-400">{col}</th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {executionResult.mockData.map((fila, index) => (
-                                <tr key={index} className="border-b border-slate-800/50 hover:bg-slate-800/50">
-                                  {Object.values(fila).map((valor, i) => (
-                                    <td key={i} className="px-6 py-3 font-mono">{String(valor)}</td>
-                                  ))}
-                                </tr>
+                  {/* Tabla de datos */}
+                  {executionResult.mockData && executionResult.mockData.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm text-left text-slate-300">
+                        <thead className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/60">
+                          <tr>
+                            {Object.keys(executionResult.mockData[0]).map((col) => (
+                              <th key={col} className="px-5 py-3 font-bold text-cyan-300">{col}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {executionResult.mockData.map((fila, ri) => (
+                            <motion.tr
+                              key={ri}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: ri * 0.05 }}
+                              className="border-t border-white/5 hover:bg-slate-800/30"
+                            >
+                              {Object.values(fila).map((val, ci) => (
+                                <td key={ci} className="px-5 py-3 font-mono">{String(val)}</td>
                               ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-
-                      {executionResult.success && (
-                        <Button
-                          onClick={() => {
-                            if (currentExerciseIndex < exercises.length - 1) {
-                              setCurrentExerciseIndex(prev => prev + 1);
-                              setExecutionResult(null); 
-                            } else {
-                              toast.success('¡Módulo completado!');
-                              navigate('/dashboard');
-                            }
-                          }}
-                          className="mt-2 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded-lg"
-                        >
-                          {currentExerciseIndex < exercises.length - 1 ? 'Siguiente Misión 🚀' : 'Terminar Módulo 🏆'}
-                        </Button>
-                      )}
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
-                </div>
-              </div>
-            </section>
-          </>
+
+                  {/* Siguiente misión */}
+                  {executionResult.success && (
+                    <div className="p-5">
+                      <Button
+                        onClick={() => {
+                          if (currentExerciseIndex < exercises.length - 1) {
+                            setCurrentExerciseIndex(prev => prev + 1);
+                            setExecutionResult(null);
+                          } else {
+                            toast.success('¡Módulo completado!');
+                            navigate('/dashboard');
+                          }
+                        }}
+                        className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-black py-4 rounded-2xl text-lg shadow-[0_10px_30px_rgba(59,130,246,0.4)] hover:scale-[1.01] transition-transform"
+                      >
+                        {currentExerciseIndex < exercises.length - 1
+                          ? <>Siguiente misión <ChevronRight className="w-5 h-5 ml-1 inline" /></>
+                          : 'Completar módulo 🏆'
+                        }
+                      </Button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
       </main>
     </div>

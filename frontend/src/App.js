@@ -8,6 +8,7 @@ import { ExercisePage } from './pages/ExercisePage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { Clawbot } from './components/Clawbot';
+import { AbyssBackground } from './components/AbyssBackground';
 import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
@@ -55,6 +56,7 @@ const AppRoutes = () => {
   
   return (
     <>
+      <AbyssBackground intensity={1.1} />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={

@@ -1,25 +1,60 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3 } from 'lucide-react';
+import { DagonMascot } from '../components/DagonMascot';
+import {
+  ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
+  Sparkles, Crown, Shield, Zap,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Progress } from '../components/ui/progress';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+
+const TITLES = [
+  { min: 0,    name: 'Novato del SELECT',     tier: 'bronze' },
+  { min: 100,  name: 'Explorador de Tablas',  tier: 'bronze' },
+  { min: 300,  name: 'Guerrero de los JOINs', tier: 'silver' },
+  { min: 600,  name: 'Caballero de Datos',    tier: 'silver' },
+  { min: 1000, name: 'Maestro Arquitecto SQL', tier: 'gold' },
+  { min: 2000, name: 'Señor del Abismo',      tier: 'abyss' },
+];
+const titleFor = (xp) => [...TITLES].reverse().find((t) => xp >= t.min) || TITLES[0];
+
+const tierGradient = (tier) => ({
+  bronze: 'from-amber-700 to-orange-900',
+  silver: 'from-slate-200 to-slate-500',
+  gold:   'from-yellow-300 to-amber-600',
+  abyss:  'from-fuchsia-500 via-indigo-600 to-blue-700',
+}[tier] || 'from-amber-700 to-orange-900');
+
+const tierRing = (tier) => ({
+  bronze: 'ring-tier-bronze',
+  silver: 'ring-tier-silver',
+  gold:   'ring-tier-gold',
+  abyss:  'ring-tier-abyss',
+}[tier] || 'ring-tier-bronze');
+
+const getDifficultyStyles = (level) => ({
+  1: { name: 'Básico',     color: 'bg-emerald-500', text: 'text-emerald-400', glow: 'shadow-emerald-500/40' },
+  2: { name: 'Intermedio', color: 'bg-blue-500',    text: 'text-blue-400',    glow: 'shadow-blue-500/40' },
+  3: { name: 'Avanzado',   color: 'bg-purple-500',  text: 'text-purple-400',  glow: 'shadow-purple-500/40' },
+  4: { name: 'Experto',    color: 'bg-orange-500',  text: 'text-orange-400',  glow: 'shadow-orange-500/40' },
+  5: { name: 'Maestro',    color: 'bg-rose-500',    text: 'text-rose-400',    glow: 'shadow-rose-500/40' },
+}[level] || { name: `Nivel ${level}`, color: 'bg-slate-500', text: 'text-slate-400', glow: '' });
 
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const [stats, setStats] = useState({
-    xp: 0, ejercicios_completados: 0, consultas_totales: 0, 
+    xp: 0, ejercicios_completados: 0, consultas_totales: 0,
     racha: 0, mejor_racha: 0, distribucion_xp: []
   });
   const [loading, setLoading] = useState(true);
 
-  // Sistema de niveles (cada 100 XP es un nivel)
   const userLevel = Math.floor(stats.xp / 100) + 1;
-  const xpCurrentLevel = stats.xp % 100;
-  
+  const xpInLevel = stats.xp % 100;
+  const title = titleFor(stats.xp);
+
   useEffect(() => {
     const fetchProfileStats = async () => {
       if (!user?.idUsuario) return;
@@ -38,180 +73,238 @@ export const ProfilePage = () => {
     fetchProfileStats();
   }, [user, token]);
 
-  // Lógica de validación de logros
   const achievements = [
     {
       id: 'first_query', title: 'Primera Consulta', desc: 'Completaste tu primer ejercicio',
-      icon: <Target className="w-6 h-6 text-red-400" />, xpReward: '+10 XP',
-      unlocked: stats.ejercicios_completados >= 1, color: 'border-red-500/50 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+      icon: <Target className="w-6 h-6" />, xpReward: '+10 XP',
+      unlocked: stats.ejercicios_completados >= 1,
+      gradient: 'from-rose-500/30 to-rose-600/10', border: 'border-rose-500/40',
+      iconColor: 'text-rose-400',
     },
     {
-      id: 'streak_3', title: 'Racha de 3', desc: 'Mantén 3 días de racha',
-      icon: <Flame className="w-6 h-6 text-orange-400" />, xpReward: '+50 XP',
-      unlocked: stats.racha >= 3 || stats.mejor_racha >= 3, color: 'border-orange-500/50 bg-orange-500/10 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
+      id: 'streak_3', title: 'Racha de Fuego', desc: 'Mantén 3 días de racha',
+      icon: <Flame className="w-6 h-6" />, xpReward: '+50 XP',
+      unlocked: stats.racha >= 3 || stats.mejor_racha >= 3,
+      gradient: 'from-orange-500/30 to-orange-600/10', border: 'border-orange-500/40',
+      iconColor: 'text-orange-400',
     },
     {
       id: 'master_select', title: 'Maestro SELECT', desc: 'Alcanza 100 XP totales',
-      icon: <BookOpen className="w-6 h-6 text-blue-400" />, xpReward: '+100 XP',
-      unlocked: stats.xp >= 100, color: 'border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-    }
+      icon: <BookOpen className="w-6 h-6" />, xpReward: '+100 XP',
+      unlocked: stats.xp >= 100,
+      gradient: 'from-blue-500/30 to-blue-600/10', border: 'border-blue-500/40',
+      iconColor: 'text-blue-400',
+    },
+    {
+      id: 'streak_7', title: 'Semana Imparable', desc: 'Mantén 7 días de racha',
+      icon: <Shield className="w-6 h-6" />, xpReward: '+150 XP',
+      unlocked: stats.mejor_racha >= 7,
+      gradient: 'from-fuchsia-500/30 to-fuchsia-600/10', border: 'border-fuchsia-500/40',
+      iconColor: 'text-fuchsia-400',
+    },
+    {
+      id: 'xp_500', title: 'Medio Millar', desc: 'Acumula 500 XP',
+      icon: <Crown className="w-6 h-6" />, xpReward: '+200 XP',
+      unlocked: stats.xp >= 500,
+      gradient: 'from-yellow-500/30 to-yellow-600/10', border: 'border-yellow-500/40',
+      iconColor: 'text-yellow-400',
+    },
   ];
 
-  // Diccionario para traducir el número de dificultad a palabras y colores
-  const getDifficultyStyles = (level) => {
-    const styles = {
-      1: { name: 'Básico', color: 'bg-green-500', text: 'text-green-400' },
-      2: { name: 'Intermedio', color: 'bg-blue-500', text: 'text-blue-400' },
-      3: { name: 'Avanzado', color: 'bg-purple-500', text: 'text-purple-400' },
-      4: { name: 'Experto', color: 'bg-orange-500', text: 'text-orange-400' },
-      5: { name: 'Maestro', color: 'bg-red-500', text: 'text-red-400' }
-    };
-    return styles[level] || { name: `Nivel ${level}`, color: 'bg-slate-500', text: 'text-slate-400' };
-  };
-
   if (loading) {
-    return <div className="min-h-screen cyber-bg flex items-center justify-center text-blue-400">Analizando tu poder...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <DagonMascot size="large" mood="determined" />
+          <p className="text-cyan-300 font-bold tracking-[0.4em] uppercase text-xs">Analizando tu poder...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen cyber-bg grid-pattern" data-testid="profile-page">
-      <div className="container mx-auto px-4 py-8 max-w-6xl animate-fade-in-up">
-        
+    <div className="min-h-screen" data-testid="profile-page">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+
         <div className="flex items-center mb-8">
           <Button onClick={() => navigate('/dashboard')} variant="ghost" className="text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Volver
+            <ArrowLeft className="w-5 h-5 mr-2" /> Volver
           </Button>
+          <div className="h-8 w-px bg-white/10 mx-4" />
+          <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase">Ficha de personaje</p>
         </div>
 
+        {/* HERO: avatar + stats principales */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 holo-border mb-8 relative overflow-hidden"
+        >
+          <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
+            <div className="relative">
+              <div className={`absolute -inset-3 rounded-3xl ${tierRing(title.tier)}`} />
+              <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl`}>
+                <DagonMascot size="medium" mood="excited" />
+              </div>
+              <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-3 py-1 rounded-lg border border-yellow-300 animate-badge-pulse">
+                Lvl {userLevel}
+              </div>
+            </div>
+
+            <div>
+              <h1 className="font-display text-3xl lg:text-4xl font-black text-white mb-2">
+                {user?.nombre || user?.email}
+              </h1>
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
+                  <Sparkles className="w-3 h-3 text-cyan-300" />
+                  <span className="font-gameui text-xs font-bold tracking-widest uppercase text-cyan-200">{title.name}</span>
+                </span>
+                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                  Tier <span className="text-slate-300">{title.tier}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-slate-400 text-sm font-gameui">Progreso al nivel {userLevel + 1}</span>
+                <span className="font-display font-black text-white text-sm">{xpInLevel}/100 XP</span>
+              </div>
+              <div className="relative w-full h-4 bg-slate-900/80 rounded-full border border-white/5 overflow-hidden xp-bar-shine">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpInLevel}%` }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 shadow-[0_0_20px_rgba(99,102,241,0.7)]"
+                />
+              </div>
+            </div>
+
+            <div className="text-right">
+              <p className="font-display text-6xl font-black text-gradient-gold leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]">
+                {stats.xp}
+              </p>
+              <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP totales</p>
+            </div>
+          </div>
+        </motion.div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* COLUMNA IZQUIERDA */}
           <div className="lg:col-span-2 space-y-8">
-            
-            {/* Tarjeta de Nivel Principal */}
-            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50 flex items-center gap-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl"></div>
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl flex items-center justify-center border border-blue-500/50 shadow-inner relative z-10">
-                <span className="text-5xl drop-shadow-md">👾</span>
-                <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-black text-xs font-black px-3 py-1 rounded-lg shadow-lg border border-yellow-300">
-                  Lvl {userLevel}
-                </div>
-              </div>
-              <div className="flex-1 z-10">
-                <h1 className="text-3xl font-black text-white mb-2 tracking-wide">{user?.nombre || user?.email}</h1>
-                <div className="flex justify-between text-sm mb-2 font-bold">
-                  <span className="text-slate-400 uppercase tracking-widest text-xs">Progreso al Nivel {userLevel + 1}</span>
-                  <span className="text-blue-400">{xpCurrentLevel} / 100 XP</span>
-                </div>
-                <Progress value={xpCurrentLevel} className="h-3 bg-slate-800 border border-slate-700" />
-              </div>
-              <div className="text-right z-10">
-                <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 drop-shadow-sm">
-                  {stats.xp}
-                </p>
-                <p className="text-slate-500 text-xs uppercase tracking-widest font-black mt-1">XP Totales</p>
-              </div>
-            </div>
-
-            {/* Grid de Estadísticas Rápidas */}
-            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50">
-              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <Target className="text-blue-400" /> Resumen de Batalla
+            {/* RESUMEN DE BATALLA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10"
+            >
+              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <Target className="text-cyan-400" /> Resumen de batalla
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-emerald-500/30 transition-colors">
-                  <div className="flex items-center gap-3 text-slate-300 font-bold"><BookOpen className="text-emerald-400" /> Completados</div>
-                  <span className="text-2xl font-black text-white">{stats.ejercicios_completados}</span>
-                </div>
-                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-blue-500/30 transition-colors">
-                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Code className="text-blue-400" /> Consultas</div>
-                  <span className="text-2xl font-black text-white">{stats.consultas_totales}</span>
-                </div>
-                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-orange-500/30 transition-colors">
-                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Flame className="text-orange-500" /> Racha Actual</div>
-                  <span className="text-2xl font-black text-white">{stats.racha}</span>
-                </div>
-                <div className="flex items-center justify-between p-5 bg-slate-900/60 rounded-xl border border-slate-700/50 hover:border-yellow-500/30 transition-colors">
-                  <div className="flex items-center gap-3 text-slate-300 font-bold"><Trophy className="text-yellow-500" /> Mejor Racha</div>
-                  <span className="text-2xl font-black text-white">{stats.mejor_racha}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: <BookOpen className="w-5 h-5" />, label: 'Completados', value: stats.ejercicios_completados, color: 'text-emerald-400', hover: 'hover:border-emerald-500/30' },
+                  { icon: <Code className="w-5 h-5" />, label: 'Consultas', value: stats.consultas_totales, color: 'text-blue-400', hover: 'hover:border-blue-500/30' },
+                  { icon: <Flame className="w-5 h-5" />, label: 'Racha actual', value: stats.racha, color: 'text-orange-400', hover: 'hover:border-orange-500/30' },
+                  { icon: <Trophy className="w-5 h-5" />, label: 'Mejor racha', value: stats.mejor_racha, color: 'text-yellow-400', hover: 'hover:border-yellow-500/30' },
+                ].map((s, i) => (
+                  <motion.div
+                    key={i}
+                    whileHover={{ y: -3 }}
+                    className={`flex items-center justify-between p-5 bg-slate-900/50 rounded-2xl border border-white/5 ${s.hover} transition-all`}
+                  >
+                    <div className={`flex items-center gap-3 font-display font-bold text-sm text-slate-200 ${s.color}`}>
+                      {s.icon} <span className="text-slate-300">{s.label}</span>
+                    </div>
+                    <span className="font-display text-3xl font-black text-white">{s.value}</span>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* ¡NUEVO! Distribución de XP */}
-            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50">
-              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <BarChart3 className="text-purple-400" /> Origen del Poder (Distribución XP)
+            {/* DISTRIBUCIÓN XP */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10"
+            >
+              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <BarChart3 className="text-fuchsia-400" /> Origen del poder
               </h2>
               <div className="space-y-5">
                 {stats.distribucion_xp && stats.distribucion_xp.length > 0 ? (
                   stats.distribucion_xp.map((item, index) => {
                     const style = getDifficultyStyles(item.dificultad);
-                    // Calculamos el porcentaje basado en la XP total
-                    const percent = Math.round((item.xp_ganada / stats.xp) * 100);
-                    
+                    const percent = stats.xp > 0 ? Math.round((item.xp_ganada / stats.xp) * 100) : 0;
                     return (
                       <div key={index}>
-                        <div className="flex justify-between text-sm font-bold mb-2">
-                          <span className={style.text}>{style.name}</span>
-                          <span className="text-slate-300">{item.xp_ganada} XP <span className="text-slate-600 font-normal">({percent}%)</span></span>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className={`font-display font-bold ${style.text}`}>{style.name}</span>
+                          <span className="text-slate-300 font-display font-bold">
+                            {item.xp_ganada} XP <span className="text-slate-600">({percent}%)</span>
+                          </span>
                         </div>
-                        <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
-                          <motion.div 
+                        <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                          <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percent}%` }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            className={`h-full ${style.color} shadow-[0_0_10px_currentColor]`}
+                            transition={{ duration: 1, ease: "easeOut", delay: index * 0.1 }}
+                            className={`h-full ${style.color} shadow-lg ${style.glow}`}
                           />
                         </div>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-slate-500 text-center py-4 font-medium">Resuelve ejercicios para ver tu análisis de XP.</p>
+                  <p className="text-slate-500 text-center py-4 font-gameui">Resuelve ejercicios para ver tu análisis de XP.</p>
                 )}
               </div>
-            </div>
-
+            </motion.div>
           </div>
 
-          {/* COLUMNA DERECHA: Logros */}
-          <div className="space-y-6">
-            <div className="glass-card-apple rounded-2xl p-8 border border-slate-700/50 h-full">
-              <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <Award className="text-yellow-400" /> Trofeos
+          {/* LOGROS */}
+          <div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
+              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 sticky top-8"
+            >
+              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+                <Award className="text-yellow-300" /> Trofeos
               </h2>
-              
-              <div className="space-y-4">
-                {achievements.map((achievement) => (
-                  <motion.div 
-                    whileHover={achievement.unlocked ? { scale: 1.02 } : {}}
-                    key={achievement.id}
-                    className={`relative overflow-hidden rounded-xl p-4 border-2 transition-all duration-300 ${
-                      achievement.unlocked 
-                        ? achievement.color 
-                        : 'border-slate-800 bg-slate-900/30 opacity-60 grayscale'
+
+              <div className="space-y-3">
+                {achievements.map((a) => (
+                  <motion.div
+                    key={a.id}
+                    whileHover={a.unlocked ? { scale: 1.02 } : {}}
+                    className={`relative overflow-hidden rounded-2xl p-4 border transition-all duration-300 ${
+                      a.unlocked
+                        ? `bg-gradient-to-br ${a.gradient} ${a.border} shadow-lg`
+                        : 'border-slate-800 bg-slate-900/30 opacity-50 grayscale'
                     }`}
                   >
-                    <div className="flex gap-4 items-center">
-                      <div className={`p-3 rounded-lg ${achievement.unlocked ? 'bg-slate-900/50' : 'bg-transparent'}`}>
-                        {achievement.icon}
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${a.unlocked ? 'bg-slate-900/50' : 'bg-slate-900/30'} ${a.iconColor}`}>
+                        {a.icon}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-bold text-white text-sm">{achievement.title}</h3>
-                        </div>
-                        <p className="text-xs text-slate-400 mb-2 font-medium">{achievement.desc}</p>
-                        <p className="text-xs font-black text-yellow-500">{achievement.xpReward}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-display font-black text-white text-sm">{a.title}</h3>
+                        <p className="text-xs text-slate-400 font-gameui">{a.desc}</p>
                       </div>
+                      <span className="font-display font-black text-xs text-yellow-300">{a.xpReward}</span>
                     </div>
+                    {a.unlocked && (
+                      <div className="absolute top-2 right-2">
+                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                      </div>
+                    )}
                   </motion.div>
                 ))}
               </div>
-            </div>
-          </div>
 
+              <div className="mt-6 text-center">
+                <p className="text-slate-500 text-xs font-gameui">
+                  {achievements.filter(a => a.unlocked).length}/{achievements.length} desbloqueados
+                </p>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
     </div>
