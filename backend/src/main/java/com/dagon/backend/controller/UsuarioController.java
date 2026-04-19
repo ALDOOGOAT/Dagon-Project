@@ -102,6 +102,13 @@ public class UsuarioController {
             stats.put("racha", rachaActual);
             stats.put("mejor_racha", mejorRacha);
 
+            // DEVUELVE FECHAS DE ACTIVIDAD para el calendario
+            java.util.List<String> fechasStr = new java.util.ArrayList<>();
+            for (java.sql.Date f : fechas) {
+                fechasStr.add(f.toString());
+            }
+            stats.put("fechas_actividad", fechasStr);
+
             // 5. ¡NUEVO! Distribución de XP por Dificultad
             // Agrupamos los puntos ganados dependiendo de si el ejercicio era nivel 1, 2, 3, etc.
             String sqlDistribucion = "SELECT e.dificultad, SUM(e.dificultad * 10) as xp_ganada " +

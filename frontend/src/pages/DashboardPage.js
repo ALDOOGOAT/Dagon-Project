@@ -7,7 +7,8 @@ import { TutorialOverlay } from '../components/TutorialOverlay';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
-  Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords
+  Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
+  User, Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -201,7 +202,32 @@ const title = titleFor(userXP);
             </p>
           </motion.div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => navigate('/profile')}
+              className="bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 text-slate-200 hover:text-white font-display font-black"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Mi Perfil
+            </Button>
+            {userStreak > 0 ? (
+              <Button
+                onClick={() => navigate('/streak')}
+                className="bg-gradient-to-r from-orange-600/80 to-rose-600/80 hover:from-orange-500 hover:to-rose-500 border border-orange-400/40 text-white font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+              >
+                <Flame className="w-4 h-4 mr-2 animate-pulse" />
+                {userStreak} días
+              </Button>
+            ) : (
+              <Button
+                onClick={() => navigate('/streak')}
+                variant="ghost"
+                className="text-orange-300 hover:text-orange-200 hover:bg-orange-500/10"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Ver Racha
+              </Button>
+            )}
             <Button
               onClick={() => setShowQuickPractice(true)}
               className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all"
@@ -238,6 +264,14 @@ const title = titleFor(userXP);
 
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
+                {userStreak > 0 && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-400/40">
+                    <Flame className="w-3 h-3 text-orange-300" />
+                    <span className="font-gameui text-xs font-bold tracking-widest uppercase text-orange-200">
+                      {userStreak} días
+                    </span>
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
                   <Sparkles className="w-3 h-3 text-cyan-300" />
                   <span className="font-gameui text-xs font-bold tracking-widest uppercase text-cyan-200">
@@ -267,8 +301,80 @@ const title = titleFor(userXP);
                 {userXP}
               </p>
               <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP Totales</p>
+              {userStreak > 0 && (
+                <div className="flex items-center gap-1 mt-3 justify-end">
+                  <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+                  <span className="font-display font-black text-orange-300">x{userStreak}</span>
+                </div>
+              )}
             </div>
           </div>
+        </motion.div>
+
+        {/* STATS QUICK BAR */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+        >
+          <button
+            onClick={() => navigate('/streak')}
+            className="glass-card-apple rounded-2xl p-4 border border-orange-500/30 hover:border-orange-400/60 transition-all group text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-rose-500/20 flex items-center justify-center border border-orange-400/30 group-hover:scale-110 transition-transform">
+                <Flame className="w-5 h-5 text-orange-400" />
+              </div>
+              <div>
+                <p className="font-display text-2xl font-black text-white">{userStreak || 0}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Días</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/profile')}
+            className="glass-card-apple rounded-2xl p-4 border border-cyan-500/30 hover:border-cyan-400/60 transition-all group text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-500/20 flex items-center justify-center border border-cyan-400/30 group-hover:scale-110 transition-transform">
+                <Zap className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="font-display text-2xl font-black text-white">{userXP}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">XP Total</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/leaderboard')}
+            className="glass-card-apple rounded-2xl p-4 border border-yellow-500/30 hover:border-yellow-400/60 transition-all group text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/30 to-amber-500/20 flex items-center justify-center border border-yellow-400/30 group-hover:scale-110 transition-transform">
+                <Trophy className="w-5 h-5 text-yellow-400" />
+              </div>
+              <div>
+                <p className="font-display text-2xl font-black text-white">{userRank !== '-' ? `#${userRank}` : '-'}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ranking</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/profile')}
+            className="glass-card-apple rounded-2xl p-4 border border-fuchsia-500/30 hover:border-fuchsia-400/60 transition-all group text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500/30 to-purple-500/20 flex items-center justify-center border border-fuchsia-400/30 group-hover:scale-110 transition-transform">
+                <Crown className="w-5 h-5 text-fuchsia-400" />
+              </div>
+              <div>
+                <p className="font-display text-lg font-black text-white truncate max-w-[100px]">{title.name}</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Rango</p>
+              </div>
+            </div>
+          </button>
         </motion.div>
 
         {/* SELECTOR DE CURSOS / SENDAS */}

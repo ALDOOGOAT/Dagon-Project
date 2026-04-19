@@ -96,7 +96,14 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/streak" element={<StreakPage />} />
+          <Route
+            path="/streak"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><StreakPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/graduation/:levelId"
             element={

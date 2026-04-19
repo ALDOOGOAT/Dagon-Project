@@ -57,7 +57,7 @@ export const Clawbot = () => {
     if (isOpen && messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: '¡Hola! Soy Clawbot, tu tutor de SQL. ¿En qué puedo ayudarte hoy?'
+        content: '¡Hola! Soy Dagonbot, tu tutor de SQL. ¿En qué puedo ayudarte hoy?'
       }]);
     }
   }, [isOpen, messages.length]);
@@ -136,7 +136,7 @@ export const Clawbot = () => {
             </div>
             <div className="relative z-10">
               <h3 className="text-white font-black text-xl tracking-wide flex items-center gap-2">
-                Clawbot <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                Dagonbot <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
               </h3>
               <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest">Tutor IA de Dagon</p>
             </div>

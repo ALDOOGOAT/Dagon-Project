@@ -398,7 +398,7 @@ export const ExercisePage = () => {
                       <Bot className="w-5 h-5 shrink-0 mt-0.5 text-amber-300" />
                       <div className="flex-1">
                         <p className="text-[10px] font-bold tracking-[0.3em] uppercase mb-1 text-amber-400">
-                          {clawbotThinking ? 'Clawbot está pensando...' : 'Clawbot dice:'}
+                          {clawbotThinking ? 'Dagonbot está pensando...' : 'Dagonbot dice:'}
                         </p>
                         {clawbotThinking ? (
                           <div className="flex gap-1.5">

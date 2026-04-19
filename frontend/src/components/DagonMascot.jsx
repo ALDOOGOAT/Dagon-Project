@@ -1,8 +1,9 @@
-export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true }) => {
+export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, showFire = false }) => {
   const sizeMap = {
     small: 80,
     medium: 120,
-    large: 180
+    large: 180,
+    xlarge: 220
   };
   
   const actualSize = sizeMap[size] || sizeMap.medium;
@@ -291,6 +292,44 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true }
           <circle cx="85" cy="55" r="8" fill="white" />
           <circle cx="60" cy="70" r="10" fill="white" />
         </g>
+
+        {/* Efecto de fuego para racha */}
+        {showFire && (
+          <g>
+            <animate attributeName="opacity" values="0.6;1;0.6" dur="0.6s" repeatCount="indefinite" />
+            <path d="M30 95 Q25 75 35 65 Q30 75 35 55" stroke="#ff6b35" strokeWidth="4" fill="none" opacity="0.9">
+              <animate attributeName="d" values="M30 95 Q25 75 35 65 Q30 75 35 55;M30 95 Q28 72 32 62 Q27 72 33 50;M30 95 Q25 75 35 65 Q30 75 35 55" dur="0.4s" repeatCount="indefinite" />
+            </path>
+            <path d="M45 97 Q40 80 48 70 Q43 80 50 60" stroke="#ff8c00" strokeWidth="3" fill="none" opacity="0.95">
+              <animate attributeName="d" values="M45 97 Q40 80 48 70 Q43 80 50 60;M45 97 Q42 77 46 67 Q41 77 52 55;M45 97 Q40 80 48 70 Q43 80 50 60" dur="0.35s" repeatCount="indefinite" />
+            </path>
+            <path d="M60 98 Q55 82 60 72 Q55 82 60 62" stroke="#ffa500" strokeWidth="3" fill="none">
+              <animate attributeName="d" values="M60 98 Q55 82 60 72 Q55 82 60 62;M60 98 Q57 79 60 69 Q55 79 60 58;M60 98 Q55 82 60 72 Q55 82 60 62" dur="0.3s" repeatCount="indefinite" />
+            </path>
+            <path d="M75 97 Q80 80 72 70 Q77 80 70 60" stroke="#ff8c00" strokeWidth="3" fill="none" opacity="0.95">
+              <animate attributeName="d" values="M75 97 Q80 80 72 70 Q77 80 70 60;M75 97 Q78 77 74 67 Q79 77 68 55;M75 97 Q80 80 72 70 Q77 80 70 60" dur="0.35s" repeatCount="indefinite" begin="0.1s" />
+            </path>
+            <path d="M90 95 Q95 75 85 65 Q90 75 85 55" stroke="#ff6b35" strokeWidth="4" fill="none" opacity="0.9">
+              <animate attributeName="d" values="M90 95 Q95 75 85 65 Q90 75 85 55;M90 95 Q92 72 88 62 Q93 72 87 50;M90 95 Q95 75 85 65 Q90 75 85 55" dur="0.4s" repeatCount="indefinite" begin="0.15s" />
+            </path>
+            <circle cx="38" cy="48" r="3" fill="#ffd23f" opacity="0.8">
+              <animate attributeName="cy" values="48;30;48" dur="1s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.8;0;0.8" dur="1s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="52" cy="42" r="2.5" fill="#ff6b35" opacity="0.7">
+              <animate attributeName="cy" values="42;25;42" dur="0.8s" repeatCount="indefinite" begin="0.2s" />
+              <animate attributeName="opacity" values="0.7;0;0.7" dur="0.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="68" cy="45" r="2.5" fill="#ffa500" opacity="0.7">
+              <animate attributeName="cy" values="45;28;45" dur="0.9s" repeatCount="indefinite" begin="0.1s" />
+              <animate attributeName="opacity" values="0.7;0;0.7" dur="0.9s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="82" cy="50" r="2" fill="#ffd23f" opacity="0.6">
+              <animate attributeName="cy" values="50;32;50" dur="0.85s" repeatCount="indefinite" begin="0.25s" />
+              <animate attributeName="opacity" values="0.6;0;0.6" dur="0.85s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        )}
       </svg>
     </div>
   );
