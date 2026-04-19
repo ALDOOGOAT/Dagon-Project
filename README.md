@@ -13,7 +13,37 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ## 📝 Notas de Actualización (Abril 2026)
 
-### 🎉 Nuevas Funciones Recientes
+### 🎉 Nuevas Funciones Recientes (19 Abril 2026)
+
+1. **Sistema de Racha Mejorado**
+   - Calendario mensual completo con navegación entre meses
+   - Días de racha iluminados en dorado (estilo Duolingo)
+   - Icono de llama SVG animada (StreakFlame)
+   - Partículas de fuego flotantes
+   - DagonMascot con efecto de fuego (showFire prop)
+   - Stats Quick Bar en Dashboard
+   - Botones integrados de Perfil y Racha
+
+2. **Asistente de Voz Mejorado (ClawbotTeacher)**
+   - Voces en español más naturales
+   - Mensajes variados y motivadores
+   - Configuración de rate/pitch optimizada
+   - Repetición de mensajes
+   - Panel minimizable
+
+3. **Renombrado: Clawbot → Dagonbot**
+   - Textos visibles actualizados al usuario
+   - API y endpoints sin cambios
+
+4. **Integración Perfil/Racha**
+   - Ruta /streak protegida
+   - Stats Quick Bar en Dashboard
+   - Indicador visual de racha en tarjeta de jugador
+   - Botones "Mi Perfil" y "X días" visibles
+
+---
+
+### 🎉 Funciones Anteriores (17-18 Abril 2026)
 
 1. **Pantalla de Graduación "Diploma de Dagon"**
    - Al completar el último ejercicio de un módulo, muestra una pantalla épica
