@@ -1,5 +1,7 @@
 package com.dagon.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.dagon.backend.dto.EjercicioDTO;
 import com.dagon.backend.dto.NivelDTO;
 import com.dagon.backend.model.EjercicioPractico;
@@ -21,6 +23,9 @@ public class EjercicioService {
 
     @Autowired
     private EjercicioPracticoRepository repository;
+
+    @Autowired
+    private UsuarioService usuarioService;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
         List<NivelDTO> modulos = new ArrayList<>();
@@ -44,23 +49,24 @@ public class EjercicioService {
             dto.setTitle("Misión " + contador);
             dto.setDescription(ej.getEnunciado());
 
-            // --- LA PEDAGOGÍA DINÁMICA ---
-            boolean usarDragAndDrop = false;
+            String formato = ej.getFormato();
 
-            if (moduloId == 1) {
-                usarDragAndDrop = true; // Módulo 1: Todo visual
-            } else if (moduloId == 2) {
-                // Módulo 2: Intercalado (Misión 1 y 3 = D&D, Misión 2 y 4 = Editor)
-                usarDragAndDrop = (contador == 1 || contador == 3);
-            } else {
-                // Módulo 3 en adelante: Uno visual por si acaso, el resto puro código
-                usarDragAndDrop = (contador == 2);
+            if (formato == null || formato.isEmpty()) {
+                boolean usarDragAndDrop = false;
+                if (moduloId == 1) {
+                    usarDragAndDrop = true;
+                } else if (moduloId == 2) {
+                    usarDragAndDrop = (contador == 1 || contador == 3);
+                } else {
+                    usarDragAndDrop = (contador == 2);
+                }
+                formato = usarDragAndDrop ? "drag_drop" : "editor";
             }
 
-            if (usarDragAndDrop) {
-                dto.setType("drag_drop");
-                dto.setHint("Pista: Arrastra las palabras azules. No olvides el punto y coma (;)");
+            dto.setType(formato);
 
+            if ("drag_drop".equals(formato)) {
+                dto.setHint("Pista: Arrastra las palabras azules. No olvides el punto y coma (;)");
                 String queryReal = ej.getQueryMaestra();
                 if (queryReal != null) {
                     Set<String> palabras = new HashSet<>(Arrays.asList(queryReal.replaceAll(";", " ;").split("\\s+")));
@@ -69,12 +75,44 @@ public class EjercicioService {
                     Collections.shuffle(bancoPalabras);
                     dto.setWordBank(bancoPalabras);
                 }
+            } else if ("diagram".equals(formato)) {
+                dto.setHint("Pista: Arrastra una nueva entidad, ponle nombre y conéctala arrastrando desde el punto cyan hasta el fucsia.");
+                dto.setStarterCode("");
             } else {
-                dto.setType("editor");
                 dto.setStarterCode("-- Escribe tu consulta SQL aquí\n");
                 dto.setHint("Pista: Recuerda usar la sintaxis correcta y terminar con punto y coma (;).");
             }
 
+            dtos.add(dto);
+            contador++;
+        }
+        return dtos;
+    }
+
+    public List<EjercicioDTO> obtenerEjerciciosPracticaRapida() {
+        String sql = "SELECT * FROM lms_core.ejercicios_practicos WHERE tipo_mision = 'RAPIDA' ORDER BY RANDOM() LIMIT 3";
+        List<Map<String, Object>> crudos = jdbcTemplate.queryForList(sql);
+
+        List<EjercicioDTO> dtos = new ArrayList<>();
+        int contador = 1;
+
+        for(Map<String, Object> ejMap : crudos) {
+            EjercicioDTO dto = new EjercicioDTO();
+            dto.setId((Integer) ejMap.get("id_ejercicio"));
+            dto.setTitle("Misión Relámpago " + contador);
+            dto.setDescription((String) ejMap.get("enunciado"));
+
+            dto.setType("drag_drop");
+            dto.setHint("¡El tiempo es oro! Arrastra los bloques correctos.");
+
+            String queryReal = (String) ejMap.get("query_maestra");
+            if (queryReal != null) {
+                Set<String> palabras = new HashSet<>(Arrays.asList(queryReal.replaceAll(";", " ;").split("\\s+")));
+                palabras.addAll(Arrays.asList("WHERE", "JOIN", "COUNT", "MAX", "MIN", "equipamiento", "INNER"));
+                List<String> bancoPalabras = new ArrayList<>(palabras);
+                Collections.shuffle(bancoPalabras);
+                dto.setWordBank(bancoPalabras);
+            }
             dtos.add(dto);
             contador++;
         }
@@ -110,7 +148,6 @@ public class EjercicioService {
     public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         Map<String, Object> respuesta = new HashMap<>();
 
-        // 1. OBTENEMOS EL EJERCICIO PRIMERO (Así todo el método lo conoce)
         EjercicioPractico ejercicio = repository.findById(ejercicioId).orElse(null);
 
         if (ejercicio == null) {
@@ -119,30 +156,67 @@ public class EjercicioService {
             return respuesta;
         }
 
-        // 2. VALIDACIÓN SINTÁCTICA RÁPIDA (El punto y coma)
-        if (!queryUsuario.trim().endsWith(";")) {
-            respuesta.put("success", false);
-            respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
-
-            // Le pasamos a React el contexto para Clawbot
-            respuesta.put("descripcion", ejercicio.getEnunciado());
-            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
-            respuesta.put("queryAlumno", queryUsuario);
-            respuesta.put("errorDb", "El usuario olvidó el punto y coma al final de la instrucción SQL.");
-
-            return respuesta; // Salimos del método aquí mismo
-        }
-
-        // 3. SI TODO VA BIEN, PASAMOS A LA VALIDACIÓN PESADA
         int xpGanada = (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10;
+        String formato = ejercicio.getFormato();
+        boolean esCorrecto = false;
+        List<Map<String, Object>> datosAlumno = new ArrayList<>();
 
         try {
-            List<Map<String, Object>> datosAlumno = ejecutarEnSandbox(queryUsuario);
-            List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra());
+            if ("diagram".equals(formato)) {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode root = mapper.readTree(queryUsuario);
+                JsonNode nodes = root.get("nodes");
+                JsonNode edges = root.get("edges");
 
-            boolean esCorrecto = datosAlumno.equals(datosMaestros);
+                if (nodes == null || edges == null || nodes.size() < 2 || edges.size() < 1) {
+                    respuesta.put("success", false);
+                    respuesta.put("message", "El diagrama está incompleto. Necesitas al menos 2 tablas conectadas por una relación (línea).");
+                    respuesta.put("xp_gained", 0);
+                    return respuesta;
+                }
+
+                boolean tieneClientes = false;
+                boolean tienePociones = false;
+
+                for (JsonNode node : nodes) {
+                    JsonNode data = node.get("data");
+                    if (data != null && data.has("label")) {
+                        String nombreTabla = data.get("label").asText().toLowerCase().trim();
+                        
+                        if (nombreTabla.contains("cliente") || nombreTabla.contains("usuario")) {
+                            tieneClientes = true;
+                        }
+                        if (nombreTabla.contains("pocion") || nombreTabla.contains("item") || nombreTabla.contains("producto")) {
+                            tienePociones = true;
+                        }
+                    }
+                }
+
+                if (!tieneClientes || !tienePociones) {
+                    respuesta.put("success", false);
+                    respuesta.put("message", "Arquitectura rechazada. Para 'La Tienda de Pociones' necesitas entidades clave que representen a los 'clientes' y a las 'pociones'.");
+                    respuesta.put("xp_gained", 0);
+                    return respuesta;
+                }
+
+                esCorrecto = true;
+            } else {
+                if (!queryUsuario.trim().endsWith(";")) {
+                    respuesta.put("success", false);
+                    respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
+                    respuesta.put("descripcion", ejercicio.getEnunciado());
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "El usuario olvidó el punto y coma al final de la instrucción SQL.");
+                    return respuesta;
+                }
+
+                datosAlumno = ejecutarEnSandbox(queryUsuario);
+                List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra());
+                esCorrecto = datosAlumno.equals(datosMaestros);
+            }
+
             boolean yaResuelto = false;
-
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                 String checkSql = "SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND id_ejercicio = ? AND es_correcto = true";
                 Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, usuarioId, ejercicioId);
@@ -154,8 +228,16 @@ public class EjercicioService {
 
             if (esCorrecto) {
                 respuesta.put("success", true);
-                if (yaResuelto) {
-                    respuesta.put("message", "¡Consulta perfecta! (Pero ya habías resuelto esta misión. 0 XP extra)");
+                if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+                    usuarioService.registrarPracticaDiaria(usuarioId);
+                }
+
+                String tipo = ejercicio.getTipoMision() != null ? ejercicio.getTipoMision() : "HISTORIA";
+                if ("RAPIDA".equals(tipo)) {
+                    respuesta.put("message", "¡Relámpago! +5 XP y Racha Salvada 🔥");
+                    respuesta.put("xp_gained", 5);
+                } else if (yaResuelto) {
+                    respuesta.put("message", "¡Perfecto! (Pero ya habías resuelto esta misión. 0 extra)");
                     respuesta.put("xp_gained", 0);
                 } else {
                     respuesta.put("message", "¡Excelente! Has dominado esta misión.");
@@ -165,8 +247,6 @@ public class EjercicioService {
                 respuesta.put("success", false);
                 respuesta.put("message", "La consulta corrió sin errores, pero los datos no coinciden. Revisa tu lógica.");
                 respuesta.put("xp_gained", 0);
-
-                // ¡NUEVO! Le pasamos a React el contexto para Clawbot
                 respuesta.put("descripcion", ejercicio.getEnunciado());
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
@@ -178,12 +258,14 @@ public class EjercicioService {
             respuesta.put("success", false);
             respuesta.put("message", "Error de SQL: " + e.getMessage());
             respuesta.put("xp_gained", 0);
-
-            // ¡NUEVO! Contexto completo para cuando PostgreSQL explota
             respuesta.put("descripcion", ejercicio.getEnunciado());
             respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
             respuesta.put("queryAlumno", queryUsuario);
             respuesta.put("errorDb", e.getMessage());
+        } catch (Exception e) {
+            respuesta.put("success", false);
+            respuesta.put("message", "Error al procesar la respuesta: " + e.getMessage());
+            respuesta.put("xp_gained", 0);
         }
         return respuesta;
     }

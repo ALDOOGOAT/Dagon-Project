@@ -117,6 +117,7 @@ export const TheoryCinematic = ({
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [showConcepts, setShowConcepts] = useState(false);
   const [highlightedConcept, setHighlightedConcept] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -127,18 +128,41 @@ export const TheoryCinematic = ({
   const scene = theoryData.scenes[currentScene];
 
   useEffect(() => {
+    if (isPlaying && scene && currentScene === 0) {
+      // Auto-play en mounting
+    }
+  }, []);
+
+  useEffect(() => {
     if (isPlaying && scene) {
       setHighlightedConcept(scene.highlight);
       
-      // Speech synthesis
+      // Speech synthesis with better voice loading
       if (!isMuted && window.speechSynthesis) {
         window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(scene.text);
-        utterance.lang = 'es-ES';
-        utterance.rate = 0.95;
-        utterance.pitch = 1.05;
-        speechRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
+        
+        const speakWithVoice = () => {
+          const voices = window.speechSynthesis.getVoices();
+          const voice = voices.find(v => v.lang.includes('es')) || voices[0];
+          const utterance = new SpeechSynthesisUtterance(scene.text);
+          utterance.lang = 'es-ES';
+          utterance.rate = 0.95;
+          utterance.pitch = 1.05;
+          if (voice) utterance.voice = voice;
+          speechRef.current = utterance;
+          
+          utterance.onstart = () => setIsSpeaking(true);
+          utterance.onend = () => setIsSpeaking(false);
+          utterance.onerror = () => setIsSpeaking(false);
+          
+          window.speechSynthesis.speak(utterance);
+        };
+        
+        if (window.speechSynthesis.getVoices().length > 0) {
+          speakWithVoice();
+        } else {
+          window.speechSynthesis.addEventListener('voiceschanged', speakWithVoice, { once: true });
+        }
       }
       
       // Progress bar animation

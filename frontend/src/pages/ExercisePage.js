@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { LevelTheory } from '../components/LevelTheory';
+import { MerDiagramBuilder } from '../components/MerDiagramBuilder'; // <-- IMPORTACIÓN DEL LIENZO MER
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
@@ -161,6 +162,7 @@ export const ExercisePage = () => {
     setClawbotMessage(null);
     const exercise = exercises[currentExerciseIndex];
     try {
+      // El editorCode guardará el texto SQL, o el JSON si es un diagrama
       const query = exercise.type === 'drag_drop'
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
@@ -220,11 +222,15 @@ export const ExercisePage = () => {
 
   const mascotMood = useMemo(() => {
     if (clawbotThinking) return 'nervous';
-    if (executionResult?.success) return 'excited';
+    if (executionResult?.success) {
+      if (currentExerciseIndex === exercises.length - 1) return 'celebrating';
+      return 'excited';
+    }
     if (intentosFallidos >= 2) return 'nervous';
     if (executionResult?.success === false) return 'sad';
+    if (intentosFallidos === 1) return 'disappointed';
     return 'determined';
-  }, [clawbotThinking, executionResult, intentosFallidos]);
+  }, [clawbotThinking, executionResult, intentosFallidos, currentExerciseIndex, exercises.length]);
 
   const exerciseProgress = useMemo(() => {
     if (exercises.length === 0) return 0;
@@ -233,8 +239,17 @@ export const ExercisePage = () => {
 
   if (loading || !isMounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <DagonMascot size="large" mood="determined" />
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+        <div className="relative">
+          <div className="absolute -inset-4 rounded-full bg-cyan-500/10 blur-2xl animate-pulse" />
+          <DagonMascot size="large" mood="thinking" />
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-48 h-3 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-shimmer-width" style={{ width: '60%' }} />
+          </div>
+          <p className="text-cyan-300/60 text-sm font-gameui">Cargando misión...</p>
+        </div>
       </div>
     );
   }
@@ -251,6 +266,7 @@ export const ExercisePage = () => {
 
   const exercise = exercises[currentExerciseIndex];
   const isDragDrop = exercise.type === 'drag_drop';
+  const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="exercise-page">
@@ -400,7 +416,7 @@ export const ExercisePage = () => {
               </AnimatePresence>
             </motion.div>
 
-            {/* ARENA DE CÓDIGO */}
+            {/* ARENA DE CÓDIGO O DIAGRAMA */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="glass-card-apple rounded-3xl border border-white/10 overflow-hidden relative"
             >
@@ -411,12 +427,12 @@ export const ExercisePage = () => {
                   <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500/70" />
                   <span className="ml-3 text-xs font-mono text-slate-400">
-                    {isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
+                    {isDiagram ? 'Diseña el Modelo Entidad-Relación' : isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
                   </span>
                 </div>
                 <Button
                   onClick={handleValidate}
-                  disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !editorCode) || clawbotThinking}
+                  disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
                   className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
                 >
                   {validating || clawbotThinking
@@ -427,9 +443,17 @@ export const ExercisePage = () => {
                 </Button>
               </div>
 
-              {/* Editor / Drag-drop */}
+              {/* Contenedor Principal (Diagrama / Editor / Drag-drop) */}
               <div className="p-5">
-                {isDragDrop ? (
+                {isDiagram ? (
+                  <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                    <MerDiagramBuilder 
+                      onChangeData={(graphData) => {
+                        setEditorCode(JSON.stringify(graphData)); 
+                      }} 
+                    />
+                  </div>
+                ) : isDragDrop ? (
                   <DragDropContext onDragEnd={handleDragEnd}>
                     <div className="space-y-5">
                       {/* Zona de armado */}
@@ -583,7 +607,7 @@ export const ExercisePage = () => {
                             setExecutionResult(null);
                           } else {
                             toast.success('¡Módulo completado!');
-                            navigate('/dashboard');
+                            navigate(`/graduation/${levelId}`);
                           }
                         }}
                         className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-black py-4 rounded-2xl text-lg shadow-[0_10px_30px_rgba(59,130,246,0.4)] hover:scale-[1.01] transition-transform"

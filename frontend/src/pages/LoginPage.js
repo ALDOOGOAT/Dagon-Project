@@ -28,11 +28,13 @@ export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isPageReady, setIsPageReady] = useState(false);
   const [taglineIdx, setTaglineIdx] = useState(0);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    requestAnimationFrame(() => requestAnimationFrame(() => setIsPageReady(true)));
     const id = setInterval(() => setTaglineIdx((i) => (i + 1) % TAGLINES.length), 3500);
     return () => clearInterval(id);
   }, []);
@@ -56,7 +58,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden" data-testid="login-page">
+    <div className={`min-h-screen flex relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`} data-testid="login-page">
       {/* Lado izquierdo: cinemático */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-fuchsia-600/15" />

@@ -1,206 +1,219 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket,
-  Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide, GitMerge,
+  Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide, GitMerge, Database, Shield, Zap
 } from 'lucide-react';
 
 /* ============================================================
-   CONTENIDO POR NIVEL — lenguaje para jóvenes que no saben nada
+   CONTENIDO POR NIVEL — La Senda del Arquitecto
    ============================================================ */
 
 const LEVELS = {
   "1": {
-    title: "Descubre las bases de datos",
-    subtitle: "Tu primer paso en el abismo de los datos",
+    title: "Conociendo a la Bestia",
+    subtitle: "Anatomía y Lectura de Datos",
     color: "from-cyan-500 to-blue-700",
     slides: [
       {
         type: "hero",
         emoji: <Library className="w-12 h-12" />,
-        headline: "Imagina una biblioteca mágica",
-        lead: "Una base de datos es como una biblioteca gigante donde toda la información está súper ordenada en cajas.",
+        headline: "Bienvenido al Archivero Infinito",
+        lead: "Una base de datos (como PostgreSQL) no es magia, es un archivero digital masivo y perfectamente estructurado.",
         bullets: [
-          "Cada caja guarda un tipo de cosa (personajes, pokemones, canciones...).",
-          "Dentro de cada caja hay fichas con información.",
-          "Tú, como explorador, vas a pedirle cosas a esa biblioteca.",
+          "Toda la información se organiza en 'Tablas' (como hojas de cálculo de Excel).",
+          "Las Columnas definen qué tipo de dato guardas (ej. nombre, nivel).",
+          "Las Filas son los registros reales (ej. el aventurero 'Aldo').",
         ],
       },
       {
         type: "table",
         emoji: <Grid3x3 className="w-12 h-12" />,
-        headline: "Cada caja se llama 'tabla'",
-        lead: "Una tabla tiene columnas (tipo de dato) y filas (cada elemento).",
-        tableTitle: "pokemones",
-        columns: ["id", "nombre", "tipo", "poder"],
+        headline: "Tu primera tabla: Aventureros",
+        lead: "Así se ve la información estructurada en el abismo.",
+        tableTitle: "aventureros",
+        columns: ["id_aventurero", "nombre", "clase", "nivel"],
         rows: [
-          [1, "Pikachu", "Eléctrico", 55],
-          [2, "Charmander", "Fuego", 52],
-          [3, "Bulbasaur", "Planta", 49],
+          [1, "Loya", "Caballero", 15],
+          [2, "Zoe", "Maga Suprema", 20],
+          [3, "Aldo", "Guerrero", 30],
         ],
-        caption: "Esta tabla tiene 4 columnas y 3 filas. Cada fila es un pokémon.",
+        caption: "Esta tabla tiene 4 columnas. Cada fila representa a un héroe único.",
       },
       {
         type: "chat",
         emoji: <MessageSquare className="w-12 h-12" />,
-        headline: "SQL es el idioma para hablarle",
-        lead: "SQL significa 'Structured Query Language'. Es como pedirle cosas a la biblioteca escribiendo en un idioma especial.",
+        headline: "SQL es tu voz de mando",
+        lead: "Para sacar información del archivero, usamos SQL (Structured Query Language). Es como darle órdenes a un bibliotecario.",
         chat: [
-          { from: "tu", text: "Oye base de datos, dame los nombres de todos los pokemones." },
-          { from: "db", text: "Claro, aquí tienes: Pikachu, Charmander, Bulbasaur." },
+          { from: "tu", text: "Tráeme todos los nombres de los aventureros que sean nivel 30." },
+          { from: "db", text: "Procesando... Encontré 1 registro: Aldo." },
         ],
-        code: "SELECT nombre FROM pokemones;",
+        code: "SELECT nombre FROM aventureros WHERE nivel = 30;",
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "¡Ya estás listo!",
-        lead: "En esta misión vas a aprender a hablar con la base de datos para pedirle cosas.",
+        headline: "¡Despierta a la bestia!",
+        lead: "En tu primera misión usarás SELECT, WHERE, y COUNT para extraer información vital del gremio.",
         checklist: [
-          "Sabes qué es una base de datos.",
-          "Sabes que las tablas tienen filas y columnas.",
-          "Sabes que SQL es el idioma para pedirle cosas.",
+          "SELECT: Elige qué columnas quieres ver.",
+          "WHERE: Filtra las filas como un francotirador.",
+          "ORDER BY: Acomoda tus resultados.",
         ],
       },
     ],
   },
 
   "2": {
-    title: "SELECT: pide lo que necesitas",
-    subtitle: "Tu herramienta #1 para obtener datos",
+    title: "Manipulación de Datos",
+    subtitle: "El poder (y peligro) del CRUD",
     color: "from-emerald-500 to-cyan-600",
     slides: [
       {
         type: "hero",
-        emoji: <Search className="w-12 h-12" />,
-        headline: "SELECT = 'dame esto'",
-        lead: "SELECT le dice a la base de datos qué columnas quieres ver. FROM le dice de cuál tabla.",
-        code: "SELECT nombre, poder\nFROM pokemones;",
-        codeLabel: "Estructura básica",
-      },
-      {
-        type: "highlight-columns",
-        emoji: <Grid3x3 className="w-12 h-12" />,
-        headline: "Elige las columnas que quieres",
-        lead: "Solo se muestran las columnas que pediste — las demás se quedan ocultas.",
-        tableTitle: "pokemones",
-        columns: ["id", "nombre", "tipo", "poder"],
-        rows: [
-          [1, "Pikachu", "Eléctrico", 55],
-          [2, "Charmander", "Fuego", 52],
-          [3, "Bulbasaur", "Planta", 49],
-        ],
-        highlightCols: [1, 3],
-        caption: "SELECT nombre, poder → solo vemos nombre y poder.",
+        emoji: <Database className="w-12 h-12" />,
+        headline: "Juega a ser un Dios",
+        lead: "Leer datos está bien, pero un verdadero administrador sabe crear, alterar y destruir la información. A esto se le llama CRUD (Create, Read, Update, Delete).",
+        code: "INSERT INTO aventureros (nombre, clase) \nVALUES ('Gimli', 'Guerrero');",
+        codeLabel: "Creación (Insertar)",
       },
       {
         type: "highlight-rows",
-        emoji: <Filter className="w-12 h-12" />,
-        headline: "WHERE filtra filas",
-        lead: "WHERE es como una linterna: solo deja pasar las filas que cumplen la condición.",
-        tableTitle: "pokemones",
-        columns: ["id", "nombre", "tipo", "poder"],
+        emoji: <Zap className="w-12 h-12" />,
+        headline: "UPDATE: Alterando el destino",
+        lead: "Cuando un héroe sube de nivel, debemos actualizar su registro. ¡Pero cuidado! Si olvidas usar el WHERE, modificarás a TODOS los héroes a la vez.",
+        tableTitle: "aventureros (después del UPDATE)",
+        columns: ["id", "nombre", "nivel"],
         rows: [
-          [1, "Pikachu", "Eléctrico", 55],
-          [2, "Charmander", "Fuego", 52],
-          [3, "Bulbasaur", "Planta", 49],
-          [4, "Squirtle", "Agua", 48],
+          [1, "Loya", 20],
+          [2, "Zoe", 20],
+          [3, "Aldo", 30],
         ],
-        highlightRows: [0, 2],
-        code: "SELECT * FROM pokemones\nWHERE poder > 50;",
-        caption: "Solo los pokemones con poder mayor a 50.",
+        highlightRows: [0],
+        code: "UPDATE aventureros SET nivel = 20 \nWHERE nombre = 'Loya';",
+        caption: "Solo el nivel de Loya fue alterado.",
       },
       {
         type: "highlight-rows",
-        emoji: <ArrowDownNarrowWide className="w-12 h-12" />,
-        headline: "ORDER BY ordena",
-        lead: "ORDER BY acomoda los resultados. ASC = de menor a mayor, DESC = de mayor a menor.",
-        tableTitle: "resultado",
-        columns: ["nombre", "poder"],
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "DELETE: El abismo no perdona",
+        lead: "Borrar un registro es permanente. Al igual que el UPDATE, un DELETE sin la cláusula WHERE vaciará tu tabla entera.",
+        tableTitle: "aventureros",
+        columns: ["id", "nombre", "clase"],
         rows: [
-          ["Pikachu", 55],
-          ["Charmander", 52],
-          ["Bulbasaur", 49],
-          ["Squirtle", 48],
+          [1, "Loya", "Caballero"],
+          [2, "Zoe", "Maga Suprema"],
+          [3, "Aldo", "Guerrero"],
         ],
-        caption: "ORDER BY poder DESC → los más fuertes arriba.",
-        code: "SELECT nombre, poder\nFROM pokemones\nORDER BY poder DESC;",
+        highlightRows: [1, 2],
+        code: "DELETE FROM aventureros \nWHERE nombre = 'Loya';",
+        caption: "El registro 1 ha sido borrado del sistema.",
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "¡A practicar!",
-        lead: "Ya conoces las tres herramientas más importantes de SQL:",
+        headline: "¡A ensuciarse las manos!",
+        lead: "Es hora de alterar la base de datos real del Sandbox.",
         checklist: [
-          "SELECT para elegir columnas.",
-          "WHERE para filtrar filas.",
-          "ORDER BY para ordenar el resultado.",
+          "Usa INSERT para reclutar nuevos guerreros.",
+          "Usa UPDATE + WHERE para fortalecerlos.",
+          "Usa DELETE + WHERE para eliminar a los caídos.",
         ],
       },
     ],
   },
 
   "3": {
-    title: "JOINs: une dos tablas",
-    subtitle: "Cuando la información vive en varias cajas",
+    title: "El Arquitecto y los Vínculos",
+    subtitle: "Conectando la información",
     color: "from-fuchsia-500 to-indigo-700",
     slides: [
       {
         type: "hero",
         emoji: <GitMerge className="w-12 h-12" />,
-        headline: "A veces un dato vive en dos tablas",
-        lead: "Ejemplo: la tabla pokemones guarda nombres y la tabla ataques guarda movimientos. Para saber qué ataque tiene cada pokémon hay que unirlas.",
+        headline: "El problema de tener todo en un solo lugar",
+        lead: "Si guardas los aventureros y todas las pociones que compran en una misma tabla, tendrías un desastre de datos repetidos. La solución: Dividir y Conectar.",
         bullets: [
-          "Las dos tablas comparten una pista (normalmente un id).",
-          "JOIN conecta esa pista para mezclar la información.",
+          "Las Bases de Datos Relacionales separan las Entidades (ej. una tabla de Usuarios, otra de Productos).",
+          "Luego, usan 'Llaves' para conectar una tabla con otra.",
         ],
       },
       {
         type: "two-tables",
         emoji: <Grid3x3 className="w-12 h-12" />,
-        headline: "Tabla 1: pokemones",
-        lead: "Y tabla 2: ataques. Ambas tienen la columna 'id_pokemon' en común.",
+        headline: "Llaves Primarias y Foráneas",
+        lead: "El id_aventurero (Llave Primaria) en la tabla izquierda, se usa como puente (Llave Foránea) en la tabla derecha.",
         left: {
-          title: "pokemones",
-          columns: ["id", "nombre"],
-          rows: [[1, "Pikachu"], [2, "Charmander"]],
+          title: "aventureros",
+          columns: ["id_aventurero", "nombre"],
+          rows: [[1, "Loya"], [3, "Aldo"]],
         },
         right: {
-          title: "ataques",
-          columns: ["id_pokemon", "movimiento"],
-          rows: [[1, "Impactrueno"], [2, "Ascuas"]],
+          title: "equipamiento",
+          columns: ["id_equipo", "id_aventurero", "item"],
+          rows: [[101, 1, "Escudo"], [102, 3, "Hacha"]],
         },
       },
       {
         type: "merge",
         emoji: <GitMerge className="w-12 h-12" />,
-        headline: "INNER JOIN las combina",
-        lead: "INNER JOIN trae las filas donde la pista coincide en ambas tablas.",
-        code: "SELECT p.nombre, a.movimiento\nFROM pokemones p\nINNER JOIN ataques a\n  ON p.id = a.id_pokemon;",
+        headline: "INNER JOIN: Cruzando el puente",
+        lead: "El comando JOIN sigue esa llave para mezclar visualmente los datos de ambas tablas en un solo reporte.",
+        code: "SELECT a.nombre, e.item \nFROM aventureros a \nINNER JOIN equipamiento e \n  ON a.id_aventurero = e.id_aventurero;",
         result: {
-          title: "resultado",
-          columns: ["nombre", "movimiento"],
-          rows: [["Pikachu", "Impactrueno"], ["Charmander", "Ascuas"]],
+          title: "resultado (Reporte final)",
+          columns: ["nombre", "item"],
+          rows: [["Loya", "Escudo"], ["Aldo", "Hacha"]],
         },
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "¡Listo para la acción!",
-        lead: "Los JOINs son el superpoder para trabajar con datos reales.",
+        headline: "Conviértete en el tejedor de datos",
+        lead: "En este módulo demostrarás que puedes navegar entre múltiples tablas.",
         checklist: [
-          "Sabes que las tablas se conectan con una columna común.",
-          "INNER JOIN trae coincidencias.",
-          "Ahora a probarlo en la misión.",
+          "Comprende el poder del INNER JOIN.",
+          "Combina filtros (WHERE) con tablas conectadas.",
+          "Agrupa totales matemáticos combinando JOIN y SUM().",
         ],
       },
     ],
   },
+
+  "4": {
+    title: "La Prueba de Dagon",
+    subtitle: "El reto final de arquitectura",
+    color: "from-orange-500 to-rose-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Database className="w-12 h-12" />,
+        headline: "El Lienzo en Blanco",
+        lead: "Llegaste a la cima. Ya no vas a consultar tablas hechas por alguien más. Vas a diseñar tu propia estructura desde cero.",
+        bullets: [
+          "Diseñarás el Modelo Entidad-Relación (MER).",
+          "Conectarás las tablas visualmente usando nuestro motor de arquitectura.",
+          "Extraerás los datos de tu propia creación.",
+        ],
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "Demuestra lo que vales",
+        lead: "Dagon te observa. Diseña el diagrama y sobrevive a la prueba final para obtener tu certificación de Arquitecto.",
+        checklist: [
+          "Identifica las Entidades correctas.",
+          "Asigna las llaves PK y FK.",
+          "Construye el puente perfecto.",
+        ],
+      },
+    ],
+  }
 };
 
-// Fallback genérico para niveles 4, 5+ que todavía no tengan teoría propia
 const FALLBACK = {
   title: "Nueva misión",
   subtitle: "Vamos a practicar lo aprendido",
@@ -305,6 +318,13 @@ export const LevelTheory = ({ levelId, onComplete }) => {
   const total = theory.slides.length;
   const isLast = index === total - 1;
 
+  useEffect(() => {
+    if (!isMuted) {
+      const timer = setTimeout(() => speak(), 800);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   const speak = () => {
     if (isMuted) return;
     if (isSpeaking) {
@@ -312,14 +332,54 @@ export const LevelTheory = ({ levelId, onComplete }) => {
       setIsSpeaking(false);
       return;
     }
-    const text = `${slide.headline}. ${slide.lead || ''}`;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'es-ES';
-    u.rate = 0.95;
-    u.onstart = () => setIsSpeaking(true);
-    u.onend = () => setIsSpeaking(false);
-    u.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(u);
+    
+    // prepar voices
+    const prepareVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      const spanishVoice = voices.find(v => v.lang.includes('es')) || voices[0];
+      return spanishVoice;
+    };
+    
+    let fullText = `${slide.headline}. ${slide.lead || ''}`;
+    if (slide.bullets) {
+      fullText += '. ' + slide.bullets.map(b => b).join('. ');
+    }
+    if (slide.code) {
+      fullText += `. Código: ${slide.code.replace(/\n/g, ' ')}`;
+    }
+    if (slide.caption) {
+      fullText += `. ${slide.caption}`;
+    }
+    if (slide.chat) {
+      slide.chat.forEach(c => { fullText += `. ${c.from} dice: ${c.text}`; });
+    }
+    
+    window.speechSynthesis.cancel();
+    
+    // load voices first
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        const u = new SpeechSynthesisUtterance(fullText);
+        u.lang = 'es-ES';
+        u.rate = 0.9;
+        u.pitch = 1.1;
+        u.voice = prepareVoice();
+        u.onstart = () => setIsSpeaking(true);
+        u.onend = () => setIsSpeaking(false);
+        u.onerror = () => setIsSpeaking(false);
+        window.speechSynthesis.speak(u);
+      }, { once: true });
+    } else {
+      const u = new SpeechSynthesisUtterance(fullText);
+      u.lang = 'es-ES';
+      u.rate = 0.9;
+      u.pitch = 1.1;
+      u.voice = prepareVoice();
+      u.onstart = () => setIsSpeaking(true);
+      u.onend = () => setIsSpeaking(false);
+      u.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(u);
+    }
   };
 
   const next = () => {
@@ -348,6 +408,19 @@ export const LevelTheory = ({ levelId, onComplete }) => {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={speak}
+              disabled={isMuted}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 border border-cyan-400/30 text-white hover:from-cyan-500 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label={isSpeaking ? 'Detener voz' : 'Reproducir teoría'}
+            >
+              {isSpeaking ? (
+                <span className="animate-pulse">🛑</span>
+              ) : (
+                <Volume2 className="w-4 h-4" />
+              )}
+              <span className="text-xs font-bold">{isSpeaking ? 'Detener' : 'Escuchar'}</span>
+            </button>
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-2 rounded-xl bg-slate-900/60 border border-white/10 text-slate-300 hover:text-white transition-colors"

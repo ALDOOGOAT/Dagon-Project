@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { DagonMascot } from './DagonMascot';
 import { Star, Zap, Sparkles, Crown } from 'lucide-react';
 
@@ -24,24 +24,35 @@ export const RewardAnimation = ({
   onComplete,
 }) => {
   const [show, setShow] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const confettiCount = isLevelUp ? 90 : 35;
   const confetti = useMemo(() => buildConfetti(confettiCount), [confettiCount]);
   const duration = isLevelUp ? 4500 : 2800;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    requestAnimationFrame(() => setIsVisible(true));
+  }, []);
+
+  const handleComplete = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(() => {
       setShow(false);
       if (onComplete) onComplete();
-    }, duration);
+    }, 300);
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const timer = setTimeout(handleComplete, duration);
     return () => clearTimeout(timer);
-  }, [onComplete, duration]);
+  }, [isVisible, duration, handleComplete]);
 
   if (!show) return null;
 
   const title = isLevelUp ? '¡SUBISTE DE NIVEL!' : type === 'success' ? '¡Perfecto!' : '¡Excelente!';
 
   return (
-    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
       {/* Confetti rain */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {confetti.map((c) => (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { DagonMascot } from '../components/DagonMascot';
@@ -54,6 +54,16 @@ export const ProfilePage = () => {
   const userLevel = Math.floor(stats.xp / 100) + 1;
   const xpInLevel = stats.xp % 100;
   const title = titleFor(stats.xp);
+
+  const profileMood = useMemo(() => {
+    if (loading) return 'thinking';
+    if (stats.xp >= 2000) return 'celebrating';
+    if (stats.xp >= 1000) return 'excited';
+    if (stats.ejercicios_completados >= 50) return 'excited';
+    if (stats.racha >= 3) return 'happy';
+    if (stats.racha > 0) return 'determined';
+    return 'sad';
+  }, [loading, stats]);
 
   useEffect(() => {
     const fetchProfileStats = async () => {
@@ -113,10 +123,16 @@ export const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+        <div className="relative">
+          <div className="absolute -inset-6 rounded-full bg-cyan-500/10 blur-2xl animate-pulse" />
+          <DagonMascot size="large" mood="thinking" />
+        </div>
         <div className="flex flex-col items-center gap-3">
-          <DagonMascot size="large" mood="determined" />
-          <p className="text-cyan-300 font-bold tracking-[0.4em] uppercase text-xs">Analizando tu poder...</p>
+          <div className="w-44 h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full w-2/3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-shimmer-width" />
+          </div>
+          <p className="text-cyan-300/60 text-xs font-bold tracking-[0.4em] uppercase">Analizando tu poder...</p>
         </div>
       </div>
     );
@@ -145,7 +161,7 @@ export const ProfilePage = () => {
             <div className="relative">
               <div className={`absolute -inset-3 rounded-3xl ${tierRing(title.tier)}`} />
               <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl`}>
-                <DagonMascot size="medium" mood="excited" />
+                <DagonMascot size="medium" mood={profileMood} />
               </div>
               <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-3 py-1 rounded-lg border border-yellow-300 animate-badge-pulse">
                 Lvl {userLevel}

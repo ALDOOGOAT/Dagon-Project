@@ -189,6 +189,57 @@ h1, h2, h3, h4, h5, h6 {
     animation: pulse-glow 2s ease-in-out infinite;
 }
 
+@keyframes dagon-wave {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(-3deg); }
+    75% { transform: translateY(-8px) rotate(3deg); }
+}
+
+@keyframes dagon-excited {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50% { transform: scale(1.1) translateY(-15px); }
+}
+
+@keyframes dagon-thinking {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes dagon-nervous {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg) translateY(-3px); }
+    75% { transform: rotate(5deg) translateY(-3px); }
+}
+
+.animate-dagon-wave { animation: dagon-wave 3s ease-in-out infinite; }
+.animate-dagon-excited { animation: dagon-excited 0.8s ease-in-out infinite; }
+.animate-dagon-thinking { animation: dagon-thinking 2.5s ease-in-out infinite; }
+.animate-dagon-nervous { animation: dagon-nervous 0.5s ease-in-out infinite; }
+
+@keyframes dagon-angry {
+    0%, 100% { transform: translateX(0) scale(1); }
+    10% { transform: translateX(-3px) scale(1.02); }
+    20% { transform: translateX(3px) scale(0.98); }
+    30% { transform: translateX(-2px) scale(1.01); }
+    40% { transform: translateX(2px) scale(0.99); }
+    50% { transform: translateY(-5px); }
+}
+
+@keyframes breathe-slow {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.97); }
+}
+
+@keyframes dagon-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-dagon-angry { animation: dagon-angry 0.4s ease-in-out infinite; }
+.animate-breathe-slow { animation: breathe-slow 4s ease-in-out infinite; }
+.animate-dagon-shake { animation: dagon-shake 0.5s ease-in-out infinite; }
+
 @keyframes shimmer-slide {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
@@ -426,6 +477,34 @@ h1, h2, h3, h4, h5, h6 {
     100% { transform: scale(1) rotate(0deg); opacity: 1; filter: blur(0); }
 }
 .animate-level-up { animation: level-up-flash 900ms cubic-bezier(.2,.8,.2,1) forwards; }
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 300ms ease-out forwards; }
+
+@keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+.animate-fade-out { animation: fade-out 250ms ease-in forwards; }
+
+@keyframes scale-in {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.animate-scale-in { animation: scale-in 400ms cubic-bezier(.2,.8,.2,1) forwards; }
+
+@keyframes shimmer-width {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.animate-shimmer-width {
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    background-size: 200% 100%;
+    animation: shimmer-width 1.5s ease-in-out infinite;
+}
 
 @keyframes tentacle-wave {
     0%, 100% { transform: translateY(0) rotate(0deg); }

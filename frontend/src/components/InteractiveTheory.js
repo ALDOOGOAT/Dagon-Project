@@ -26,14 +26,16 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
 
   useEffect(() => {
     if (!isMuted && slides[currentSlide]) {
-      speakSlide(slides[currentSlide]);
+      const timer = setTimeout(() => speakSlide(slides[currentSlide]), 500);
+      return () => clearTimeout(timer);
     }
   }, [currentSlide]);
 
   useEffect(() => {
     // Auto-play al montar
     if (!isMuted) {
-      speakSlide(slides[0]);
+      const timer = setTimeout(() => speakSlide(slides[0]), 800);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -42,19 +44,32 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
       window.speechSynthesis.cancel();
       
       const textToSpeak = `${slide.title}. ${slide.content}. ${slide.detail || ''}`;
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = 'es-ES';
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
       
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setCompletedSlides(prev => new Set([...prev, currentSlide]));
-      };
-      utterance.onerror = () => setIsSpeaking(false);
+      const speakWithVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        const voice = voices.find(v => v.lang.includes('es')) || voices[0];
+        
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'es-ES';
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        if (voice) utterance.voice = voice;
+        
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => {
+          setIsSpeaking(false);
+          setCompletedSlides(prev => new Set([...prev, currentSlide]));
+        };
+        utterance.onerror = () => setIsSpeaking(false);
 
-      window.speechSynthesis.speak(utterance);
+        window.speechSynthesis.speak(utterance);
+      };
+      
+      if (window.speechSynthesis.getVoices().length > 0) {
+        speakWithVoice();
+      } else {
+        window.speechSynthesis.addEventListener('voiceschanged', speakWithVoice, { once: true });
+      }
     } else {
       setTimeout(() => {
         setCompletedSlides(prev => new Set([...prev, currentSlide]));

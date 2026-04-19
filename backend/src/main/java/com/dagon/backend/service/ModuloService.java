@@ -13,36 +13,49 @@ public class ModuloService {
 
     public List<Map<String, Object>> obtenerModulosConEstado(String identificadorUsuario) {
 
-        // ¡Usamos la vista! Buscamos por email o por UUID (el que venga en el token)
+        // 1. Obtenemos la XP del usuario
         String sqlXp = "SELECT xp_total FROM lms_core.v_ranking_alumnos WHERE email = ? OR id_usuario::varchar = ?";
-
         Integer xpUsuario = 0;
         try {
             Number xpNumber = jdbcTemplate.queryForObject(sqlXp, Number.class, identificadorUsuario, identificadorUsuario);
             xpUsuario = (xpNumber != null) ? xpNumber.intValue() : 0;
         } catch (Exception e) {
-            // Si el usuario no existe en la vista (raro, pero posible si lo acaban de crear y no es activo), tiene 0 XP
             xpUsuario = 0;
         }
 
-        // Traemos todos los módulos
-        String sqlModulos = "SELECT id_modulo, titulo, descripcion, orden, xp_requerida " +
+        // 2. Traemos todos los Cursos activos
+        String sqlCursos = "SELECT id_curso, titulo FROM lms_core.cursos ORDER BY id_curso ASC";
+        List<Map<String, Object>> cursos = jdbcTemplate.queryForList(sqlCursos);
+
+        // 3. Traemos todos los Módulos
+        String sqlModulos = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida " +
                 "FROM lms_core.modulos ORDER BY orden ASC";
+        List<Map<String, Object>> todosLosModulos = jdbcTemplate.queryForList(sqlModulos);
 
-        List<Map<String, Object>> modulos = jdbcTemplate.queryForList(sqlModulos);
-        List<Map<String, Object>> resultado = new ArrayList<>();
+        // 4. Anidamos los módulos dentro de su respectivo curso evaluando candados
+        List<Map<String, Object>> resultadoEstructurado = new ArrayList<>();
 
-        // Evaluamos los candados
-        for (Map<String, Object> mod : modulos) {
-            Map<String, Object> moduloConEstado = new HashMap<>(mod);
-            Integer xpReq = (Integer) mod.get("xp_requerida");
+        for (Map<String, Object> cursoRow : cursos) {
+            Map<String, Object> cursoNode = new HashMap<>();
+            Integer idCursoActual = (Integer) cursoRow.get("id_curso");
+            cursoNode.put("id_curso", idCursoActual);
+            cursoNode.put("titulo", cursoRow.get("titulo"));
 
-            boolean bloqueado = xpUsuario < (xpReq != null ? xpReq : 0);
-            moduloConEstado.put("bloqueado", bloqueado);
+            List<Map<String, Object>> modulosDelCurso = new ArrayList<>();
 
-            resultado.add(moduloConEstado);
+            for (Map<String, Object> mod : todosLosModulos) {
+                if (mod.get("id_curso").equals(idCursoActual)) {
+                    Map<String, Object> moduloConEstado = new HashMap<>(mod);
+                    Integer xpReq = (Integer) mod.get("xp_requerida");
+                    boolean bloqueado = xpUsuario < (xpReq != null ? xpReq : 0);
+                    moduloConEstado.put("bloqueado", bloqueado);
+                    modulosDelCurso.add(moduloConEstado);
+                }
+            }
+            cursoNode.put("modulos", modulosDelCurso);
+            resultadoEstructurado.add(cursoNode);
         }
 
-        return resultado;
+        return resultadoEstructurado;
     }
 }

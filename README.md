@@ -11,12 +11,77 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 </div>
 
+## 📝 Notas de Actualización (Abril 2026)
+
+### 🎉 Nuevas Funciones Recientes
+
+1. **Pantalla de Graduación "Diploma de Dagon"**
+   - Al completar el último ejercicio de un módulo, muestra una pantalla épica
+   - Certificado digital con nombre del usuario, módulo completado, XP ganada
+   - Botón para compartir en LinkedIn
+   - Diseño visual con efectos de confeti y Dagon celebration
+   - Ruta: `/graduation/:levelId`
+
+2. **DagonMascot con Expresiones Dinámicas**
+   - `happy` - rojo normal
+   - `excited` / `celebrating` - rojo brillante + brillitos + ojos grandes
+   - `angry` - rojo sangre + ceño fruncido + glow rojo
+   - `sad` / `disappointed` - gris azulado + lágrimas
+   - `nervous` - naranja + gotas de sudor
+   - `thinking` - púrpura
+   - `afraid` - azul oscuro + pupilas visibles
+
+3. **Moods Dinámicos por Página**
+   - Dashboard: según XP y racha del usuario
+   - Profile: según progreso y ejercicios completados
+   - Exercise: según intentos fallidos y éxito
+   - Login: siempre emocionado
+
+4. **Efectos Visuales Mejorados**
+   - Pantallas de carga con shimmer animado
+   - RewardAnimation corregida (evita flash inicial)
+   - Nuevas animaciones CSS: fade-in, fade-out, scale-in
+   - Transiciones suaves entre páginas
+
+5. **Sistema de Niveles Mejorado (Backend)**
+   - Nuevo campo `type` en ejercicios (drag_drop, diagram, query)
+   - Soporte para diagrama MER
+   - Teoría interactiva por nivel
+
+---
+
+## ⚠️ Nota para Dilman (Base de Datos)
+
+**IMPORTANTE**: En la carpeta `para dilman/` encontrarás los backups de la base de datos:
+
+- **`para dilman/dagon_backup_completo.sql`** - Schema completo + datos
+- **`para dilman/dagon_roles_backup.sql`** - Solo roles y permisos
+
+### Para restaurar:
+```bash
+# Desde psql o DBeaver
+\i para dilman/dagon_backup_completo.sql
+
+# O si solo necesitas roles:
+\i para dilman/dagon_roles_backup.sql
+```
+
+El backup incluye:
+- Tablas: usuarios, cursos, modulos, ejercicios_practicos, equipamiento, aventureros
+- Vistas: v_ranking_alumnos
+- Datos de ejemplo para pruebas
+- Roles/permisos configurados
+
+**Al restaurar, los efectos visuales podrían comportarse diferente en tu PC. Si ves efectos raros, avisa para ajustar.**
+
 ## 🌊 Características Principales
 
 ### 🎓 Sistema de Aprendizaje Progresivo
-- **5 Niveles de Dificultad**: Desde "Nivel 0 - Desde Cero" hasta "Pro"
+- **3 Módulos de SQL**: Selección Básica, Funciones Agregadas, JOINs
 - **Ejercicios Interactivos**: Drag & Drop para principiantes, Monaco Editor para avanzados
 - **Sistema de XP y Rachas**: Gamificación para mantener la motivación
+- **Diploma de Graduación**: Certificado digital al completar módulos
+- **Teoría Interactiva**: Explicaciones animadas con diagramas MER
 
 ### 🤖 Clawbot - Tu Tutor IA
 - Asistente inteligente con **GPT-5.2** vía Emergent LLM Key
@@ -25,8 +90,9 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ### 🎨 Diseño "Abyss & Crimson"
 - Tema oscuro inspirado en las profundidades oceánicas
-- Mascota Dagon: pulpito rojo animado
+- Mascota Dagon: pulpito rojo con expresiones dinámicas
 - Efectos glassmorphism y glows neón
+- Animaciones suaves y transiciones mejoradas
 
 ### ⚙️ Funcionalidades Técnicas
 - **Autenticación JWT** con bcrypt

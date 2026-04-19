@@ -12,6 +12,7 @@ import { AbyssBackground } from './components/AbyssBackground';
 import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
+import { GraduationPage } from './pages/GraduationPage';
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
   in: { opacity: 1, y: 0 },
@@ -96,6 +97,14 @@ const AppRoutes = () => {
             }
           />
           <Route path="/streak" element={<StreakPage />} />
+          <Route
+            path="/graduation/:levelId"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><GraduationPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AnimatePresence>
       <Clawbot />

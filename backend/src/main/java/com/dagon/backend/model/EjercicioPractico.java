@@ -23,6 +23,12 @@ public class EjercicioPractico {
     @Column(name = "dificultad")
     private Integer dificultad;
 
+    @Column(name = "formato")
+    private String formato;
+
+    @Column(name = "tipo_mision", length = 50)
+    private String tipoMision;
+
     // --- GETTERS Y SETTERS ---
     public Integer getIdEjercicio() { return idEjercicio; }
     public void setIdEjercicio(Integer idEjercicio) { this.idEjercicio = idEjercicio; }
@@ -38,4 +44,10 @@ public class EjercicioPractico {
 
     public Integer getDificultad() { return dificultad; }
     public void setDificultad(Integer dificultad) { this.dificultad = dificultad; }
+
+    public String getFormato() { return formato; }
+    public void setFormato(String formato) { this.formato = formato; }
+
+    public String getTipoMision() { return tipoMision; }
+    public void setTipoMision(String tipoMision) { this.tipoMision = tipoMision; }
 }

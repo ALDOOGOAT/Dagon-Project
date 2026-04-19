@@ -25,20 +25,22 @@ public class UsuarioService {
         return usuarioRepository.save(nuevoUsuario);
     }
 
-    // --- FUNCION 2: LOGIN (¡NUEVO!) ---
+    // --- FUNCION 2: LOGIN ---
     public Usuario iniciarSesion(String email, String password) {
-        // 1. Buscamos si existe alguien con ese correo
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
-
-        // 2. Si existe, verificamos que la contraseña coincida
         if (usuarioOpt.isPresent()) {
             Usuario usuarioBaseDatos = usuarioOpt.get();
             if (usuarioBaseDatos.getPasswordHash().equals(password)) {
-                return usuarioBaseDatos; // ¡Contraseña correcta, lo dejamos pasar!
+                return usuarioBaseDatos;
             }
         }
-
-        // 3. Si el correo no existe o la contraseña está mal, lanzamos un error
         throw new RuntimeException("Correo o contraseña incorrectos.");
+    }
+
+    // --- FUNCION 3: REGISTRAR PRACTICA (RACHAS) ---
+    public void registrarPracticaDiaria(String usuarioId) {
+        // Por ahora solo imprimimos en consola.
+        // Más adelante pondremos el UPDATE para la BD.
+        System.out.println("✅ Práctica diaria registrada para el usuario con ID: " + usuarioId);
     }
 }
