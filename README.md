@@ -11,6 +11,31 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 </div>
 
+### 🚀 Foto de Perfil + Clawbot (20 Abril 2026)
+
+1. **Foto de Perfil**
+   - Subir imagen desde tu PC
+   - Se guarda persistentemente en el servidor
+   - Se muestra en la página de perfil
+   - Endpoint: `POST /api/usuarios/{id}/foto`
+
+2. **Clawbot con IA Local**
+   - Integración con Ollama (modelo qwen2.5-coder)
+   - Respuestas con ejemplos SQL
+   - Pistas socráticas para errores
+   - Fallback local si Ollama no responde
+
+3. **Interfaz de Chat Mejorada**
+   - Diseño moderno verde/cyan
+   - Botones de sugerencias rápidas
+   - Código SQL con highlighting
+   - Botón copiar al portapapeles
+
+4. **Drag & Drop Mejorado**
+   - Feedback visual instantáneo
+   - Animaciones suaves
+   - Mejor manejo de errores
+
 ## 📝 Notas de Actualización (Abril 2026)
 
 ### 🚀 Práctica Rápida Mejorada (19 Abril 2026)
