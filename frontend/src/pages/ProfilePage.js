@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { DagonMascot } from '../components/DagonMascot';
 import {
   ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
-  Sparkles, Crown, Shield, Zap,
+  Sparkles, Crown, Shield, Zap, Camera, Upload,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
@@ -50,6 +50,8 @@ export const ProfilePage = () => {
     racha: 0, mejor_racha: 0, distribucion_xp: []
   });
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const userLevel = Math.floor(stats.xp / 100) + 1;
   const xpInLevel = stats.xp % 100;
@@ -81,7 +83,49 @@ export const ProfilePage = () => {
       }
     };
     fetchProfileStats();
+
+    const fetchAvatar = async () => {
+      if (!user?.idUsuario) return;
+      try {
+        const res = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/foto`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.fotoUrl) {
+          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : 'http://localhost:8080' + data.fotoUrl;
+          setAvatarUrl(fullUrl);
+        }
+      } catch (e) {}
+    };
+    fetchAvatar();
   }, [user, token]);
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !user?.idUsuario) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/foto`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : 'http://localhost:8080' + data.fotoUrl;
+        setAvatarUrl(fullUrl);
+        toast.success('Foto de perfil actualizada!');
+      }
+    } catch (err) {
+      toast.error('Error al subir imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const achievements = [
     {
@@ -158,10 +202,22 @@ export const ProfilePage = () => {
           <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
-            <div className="relative">
+            <div className="relative group">
               <div className={`absolute -inset-3 rounded-3xl ${tierRing(title.tier)}`} />
-              <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl`}>
-                <DagonMascot size="medium" mood={profileMood} />
+              <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Perfil" className="w-full h-full object-cover" />
+                ) : (
+                  <DagonMascot size="medium" mood={profileMood} />
+                )}
+                <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading} />
+                  {uploading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera className="w-8 h-8 text-white" />
+                  )}
+                </label>
               </div>
               <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-3 py-1 rounded-lg border border-yellow-300 animate-badge-pulse">
                 Lvl {userLevel}

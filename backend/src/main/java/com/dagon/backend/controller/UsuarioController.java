@@ -7,8 +7,21 @@ import com.dagon.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.File;
+import java.io.IOException;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -199,5 +212,56 @@ public class UsuarioController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error al cargar el ranking: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/{id}/foto")
+    public ResponseEntity<?> subirFotoPerfil(@PathVariable String id, @RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) return ResponseEntity.badRequest().body("Archivo vacío");
+
+        try {
+            String uploadsDir = System.getProperty("user.dir") + "/uploads/";
+            File dir = new File(uploadsDir);
+            if (!dir.exists()) dir.mkdirs();
+
+            byte[] bytes = file.getBytes();
+            String ext = file.getOriginalFilename().contains(".webp") ? "webp" : 
+                        file.getOriginalFilename().contains(".png") ? "png" : "jpg";
+            String filename = "perfil_" + id.replace("-", "") + "." + ext;
+            File imgFile = new File(uploadsDir + filename);
+            Files.write(imgFile.toPath(), bytes);
+
+            String fotoUrl = "/api/usuarios/imagen/" + filename;
+            return ResponseEntity.ok(Map.of("success", true, "fotoUrl", fotoUrl));
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/foto")
+    public ResponseEntity<?> obtenerFotoPerfil(@PathVariable String id) {
+        String uploadsDir = System.getProperty("user.dir") + "/uploads/";
+        String uid = id.replace("-", "");
+        File dir = new File(uploadsDir);
+        File[] files = dir.listFiles((d, name) -> name.startsWith("perfil_" + uid));
+        
+        if (files != null && files.length > 0) {
+            Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+            return ResponseEntity.ok(Map.of("fotoUrl", "/api/usuarios/imagen/" + files[0].getName()));
+        }
+        return ResponseEntity.ok(Map.of("fotoUrl", ""));
+    }
+
+    @GetMapping("/imagen/{filename}")
+    public ResponseEntity<byte[]> servirImagen(@PathVariable String filename) throws IOException {
+        String uploadsDir = System.getProperty("user.dir") + "/uploads/";
+        Path path = Paths.get(uploadsDir + filename);
+        if (Files.exists(path)) {
+            String ct = filename.endsWith(".png") ? "image/png" : 
+                       filename.endsWith(".webp") ? "image/webp" : "image/jpeg";
+            return ResponseEntity.ok()
+                .header("Content-Type", ct)
+                .body(Files.readAllBytes(path));
+        }
+        return ResponseEntity.notFound().build();
     }
 }
