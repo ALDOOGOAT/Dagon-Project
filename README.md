@@ -13,6 +13,45 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ## 📝 Notas de Actualización (Abril 2026)
 
+### 🚀 Práctica Rápida Mejorada (19 Abril 2026)
+
+1. **Nuevo Endpoint de Niveles Completados**
+   - `GET /api/modulos/completados` - Devuelve los módulos que el usuario ha completado
+   - Implementado en `ModuloService.java` y `ModuloController.java`
+
+2. **Sistema de 5 Niveles de Dificultad**
+   - `nivel-0`: SELECT básico (7 ejercicios)
+   - `basico`: WHERE, ORDER BY (9 ejercicios)
+   - `medio`: JOIN, GROUP BY (7 ejercicios)
+   - `avanzado`: Subconsultas complejas (5 ejercicios)
+   - `experto`: CTEs y funciones (2 ejercicios)
+
+3. **Selector de Dificultad**
+   - Nueva pantalla para elegir nivel antes de practicar
+   - Muestra desafíos diarios
+   - Botón de Práctica Libre mixta
+
+4. **Lógica Retadora**
+   - Basada en XP del usuario: `nivel_disponible = floor(XP/100) + 1`
+   - No puedes ver niveles que no has alcanzado
+   - "Práctica Libre" mezcla niveles aleatorios
+   - Timer adaptativo (15-35s según dificultad)
+   - XP adaptativo por nivel
+
+5. **Drag & Drop Mejorado**
+   - Implementado con HTML5 nativo (draggable)
+   - Arrastrar y soltar palabras
+   - Click alternativo para añadir/quitar
+   - Diseño visual mejorado
+
+6. **Diseño Responsivo**
+   - Optimizado para móvil, tablet y desktop
+   - Clases CSS utilitarias responsive
+   - Botones adaptativos en Dashboard
+   - UI responsive para Práctica Rápida
+
+---
+
 ### 🎉 Nuevas Funciones Recientes (19 Abril 2026)
 
 1. **Sistema de Racha Mejorado**
