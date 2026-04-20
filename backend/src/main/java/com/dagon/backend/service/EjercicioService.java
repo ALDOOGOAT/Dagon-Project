@@ -39,15 +39,16 @@ public class EjercicioService {
     }
 
     public List<EjercicioDTO> obtenerEjerciciosPorModulo(Integer moduloId) {
-        List<EjercicioPractico> crudos = repository.findByIdModulo(moduloId);
+        List<EjercicioPractico> crudos = repository.findByIdModuloOrderByOrdenAsc(moduloId);
         List<EjercicioDTO> dtos = new ArrayList<>();
 
         int contador = 1;
         for(EjercicioPractico ej : crudos) {
             EjercicioDTO dto = new EjercicioDTO();
             dto.setId(ej.getIdEjercicio());
-            dto.setTitle("Misión " + contador);
+            dto.setTitle(ej.getTitulo() != null ? ej.getTitulo() : "Misión " + contador);
             dto.setDescription(ej.getEnunciado());
+            dto.setOrden(ej.getOrden() != null ? ej.getOrden() : contador);
 
             String formato = ej.getFormato();
 
@@ -66,11 +67,15 @@ public class EjercicioService {
             dto.setType(formato);
 
             if ("drag_drop".equals(formato)) {
-                dto.setHint("Pista: Arrastra las palabras azules. No olvides el punto y coma (;)");
+                dto.setHint("Pista: Arrastra las palabras azules al área de armado. No olvides el punto y coma (;)");
                 String queryReal = ej.getQueryMaestra();
                 if (queryReal != null) {
                     Set<String> palabras = new HashSet<>(Arrays.asList(queryReal.replaceAll(";", " ;").split("\\s+")));
+                    // Distractores contextuales según el módulo
                     palabras.addAll(Arrays.asList("WHERE", "JOIN", "ON", "COUNT", "*", "roles", "cursos", "INSERT", "equipamiento"));
+                    if (moduloId == 1) {
+                        palabras.addAll(Arrays.asList("aventureros", "DELETE", "UPDATE", "GROUP", "BY", "HAVING", "ASC", "LIMIT", "ORDER", "LIKE", "DESC", "nombre", "nivel", "clase"));
+                    }
                     List<String> bancoPalabras = new ArrayList<>(palabras);
                     Collections.shuffle(bancoPalabras);
                     dto.setWordBank(bancoPalabras);
@@ -165,38 +170,95 @@ public class EjercicioService {
             if ("diagram".equals(formato)) {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode root = mapper.readTree(queryUsuario);
-                JsonNode nodes = root.get("nodes");
-                JsonNode edges = root.get("edges");
+                JsonNode diagramNodes = root.get("nodes");
+                JsonNode diagramEdges = root.get("edges");
 
-                if (nodes == null || edges == null || nodes.size() < 2 || edges.size() < 1) {
-                    respuesta.put("success", false);
-                    respuesta.put("message", "El diagrama está incompleto. Necesitas al menos 2 tablas conectadas por una relación (línea).");
-                    respuesta.put("xp_gained", 0);
-                    return respuesta;
-                }
+                if (diagramNodes == null) diagramNodes = mapper.createArrayNode();
+                if (diagramEdges == null) diagramEdges = mapper.createArrayNode();
 
-                boolean tieneClientes = false;
-                boolean tienePociones = false;
+                // Leer reglas de validación desde configuracion_extra
+                int minEntidades = 2;
+                int minRelaciones = 1;
+                int minAtributos = 0;
+                List<List<String>> gruposRequeridos = new ArrayList<>();
+                String mensajeEntidades = "El diagrama está incompleto.";
+                String mensajeRelaciones = "Necesitas conectar las entidades con relaciones.";
 
-                for (JsonNode node : nodes) {
-                    JsonNode data = node.get("data");
-                    if (data != null && data.has("label")) {
-                        String nombreTabla = data.get("label").asText().toLowerCase().trim();
-                        
-                        if (nombreTabla.contains("cliente") || nombreTabla.contains("usuario")) {
-                            tieneClientes = true;
-                        }
-                        if (nombreTabla.contains("pocion") || nombreTabla.contains("item") || nombreTabla.contains("producto")) {
-                            tienePociones = true;
+                String configExtra = ejercicio.getConfiguracionExtra();
+                if (configExtra != null && !configExtra.trim().isEmpty()) {
+                    JsonNode config = mapper.readTree(configExtra);
+                    if (config.has("min_entidades")) minEntidades = config.get("min_entidades").asInt();
+                    if (config.has("min_relaciones")) minRelaciones = config.get("min_relaciones").asInt();
+                    if (config.has("min_atributos")) minAtributos = config.get("min_atributos").asInt();
+                    if (config.has("mensaje_error")) mensajeEntidades = config.get("mensaje_error").asText();
+                    if (config.has("mensaje_relaciones")) mensajeRelaciones = config.get("mensaje_relaciones").asText();
+                    if (config.has("entidades_requeridas")) {
+                        for (JsonNode grupo : config.get("entidades_requeridas")) {
+                            List<String> opciones = new ArrayList<>();
+                            if (grupo.isArray()) {
+                                for (JsonNode op : grupo) opciones.add(op.asText().toLowerCase());
+                            } else {
+                                opciones.add(grupo.asText().toLowerCase());
+                            }
+                            gruposRequeridos.add(opciones);
                         }
                     }
                 }
 
-                if (!tieneClientes || !tienePociones) {
+                // Validar cantidad de entidades
+                if (diagramNodes.size() < minEntidades) {
                     respuesta.put("success", false);
-                    respuesta.put("message", "Arquitectura rechazada. Para 'La Tienda de Pociones' necesitas entidades clave que representen a los 'clientes' y a las 'pociones'.");
+                    respuesta.put("message", mensajeEntidades + " Necesitas al menos " + minEntidades + " entidad(es).");
                     respuesta.put("xp_gained", 0);
                     return respuesta;
+                }
+
+                // Validar cantidad de relaciones
+                if (diagramEdges.size() < minRelaciones) {
+                    respuesta.put("success", false);
+                    respuesta.put("message", mensajeRelaciones + " Necesitas al menos " + minRelaciones + " relación(es).");
+                    respuesta.put("xp_gained", 0);
+                    return respuesta;
+                }
+
+                // Recopilar nombres de entidades y contar atributos
+                List<String> nombresEntidades = new ArrayList<>();
+                int totalAtributos = 0;
+                for (JsonNode node : diagramNodes) {
+                    JsonNode data = node.get("data");
+                    if (data != null && data.has("label")) {
+                        String nombre = data.get("label").asText().toLowerCase().trim();
+                        if (!nombre.isEmpty()) nombresEntidades.add(nombre);
+                        if (data.has("columns")) totalAtributos += data.get("columns").size();
+                    }
+                }
+
+                // Validar atributos mínimos
+                if (minAtributos > 0 && totalAtributos < minAtributos) {
+                    respuesta.put("success", false);
+                    respuesta.put("message", "Las entidades necesitan más atributos (columnas). Agrega al menos " + minAtributos + " atributo(s) en total.");
+                    respuesta.put("xp_gained", 0);
+                    return respuesta;
+                }
+
+                // Validar entidades requeridas (cada grupo = al menos una opción debe existir)
+                for (List<String> opciones : gruposRequeridos) {
+                    boolean encontrada = false;
+                    for (String opcion : opciones) {
+                        for (String nombre : nombresEntidades) {
+                            if (nombre.contains(opcion)) {
+                                encontrada = true;
+                                break;
+                            }
+                        }
+                        if (encontrada) break;
+                    }
+                    if (!encontrada) {
+                        respuesta.put("success", false);
+                        respuesta.put("message", "Tu diagrama necesita una entidad relacionada con: " + String.join(" o ", opciones) + ".");
+                        respuesta.put("xp_gained", 0);
+                        return respuesta;
+                    }
                 }
 
                 esCorrecto = true;

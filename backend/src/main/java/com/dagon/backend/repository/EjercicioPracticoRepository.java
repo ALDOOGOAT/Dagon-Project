@@ -8,5 +8,5 @@ import java.util.List;
 @Repository
 public interface EjercicioPracticoRepository extends JpaRepository<EjercicioPractico, Integer> {
     // ¡NUEVA LÍNEA! Spring Boot creará el query SQL automáticamente solo con leer el nombre.
-    List<EjercicioPractico> findByIdModulo(Integer idModulo);
+    List<EjercicioPractico> findByIdModuloOrderByOrdenAsc(Integer idModulo);
 }

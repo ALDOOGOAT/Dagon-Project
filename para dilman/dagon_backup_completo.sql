@@ -487,20 +487,33 @@ COPY lms_core.cursos (id_curso, titulo) FROM stdin;
 --
 
 COPY lms_core.ejercicios_practicos (id_ejercicio, id_modulo, enunciado, query_maestra, dificultad, configuracion_extra, titulo, orden, tipo_mision, formato) FROM stdin;
-1	1	¡Siente la dopamina! Extrae todos los datos de la tabla de aventureros usando el comodín asterisco (*).	SELECT * FROM aventureros;	1	\N	1.1 y 1.2: Tu Primer Vistazo	1	HISTORIA	drag_drop
-2	1	Usa la cláusula WHERE para un filtro exacto. Selecciona el "nombre" de los aventureros que tengan nivel exactamente igual a 5.	SELECT nombre FROM aventureros WHERE nivel = 5;	2	\N	1.3: El Francotirador	2	HISTORIA	drag_drop
-3	1	Usa LIKE y comodines (%). Encuentra a todos los aventureros cuyo nombre empiece con la letra "A".	SELECT * FROM aventureros WHERE nombre LIKE 'A%';	3	\N	1.4: El Detective	3	HISTORIA	drag_drop
-4	1	Frena la avalancha de datos. Trae a los 3 aventureros con mayor nivel ordenándolos de forma descendente.	SELECT * FROM aventureros ORDER BY nivel DESC LIMIT 3;	3	\N	1.5: Orden y Límite	4	HISTORIA	drag_drop
-5	1	¿Cuántos enemigos o aliados existen? Usa COUNT(*) para contar el total de aventureros.	SELECT COUNT(*) FROM aventureros;	2	\N	1.6: Métrica Rápida	5	HISTORIA	drag_drop
-9	2	Agrega un nuevo registro. Inserta al aventurero 'Gimli', clase 'Guerrero', nivel 10 en la tabla aventureros. Agrega "RETURNING *" al final para ver a tu creación.	INSERT INTO aventureros (nombre, clase, nivel) VALUES ('Gimli', 'Guerrero', 10) RETURNING *;	2	\N	2.1: El Nacimiento (Insertar)	1	HISTORIA	editor
-10	2	Loya ha entrenado duro. Usa UPDATE para cambiar su nivel a 20 en la tabla aventureros. Usa "RETURNING *" al final para verificar el cambio.	UPDATE aventureros SET nivel = 20 WHERE nombre = 'Loya' RETURNING *;	3	\N	2.2: El Ascenso (Modificar)	2	HISTORIA	editor
-11	2	El asesino Dan nos ha traicionado. Usa DELETE para borrarlo de la tabla aventureros. Recuerda usar WHERE y "RETURNING *" al final.	DELETE FROM aventureros WHERE nombre = 'Dan' RETURNING *;	3	\N	2.3: El Sacrificio (Eliminar)	3	HISTORIA	editor
-12	3	Haz un INNER JOIN entre aventureros (a) y equipamiento (e). Une ambas usando "id_aventurero" y muestra el "nombre" del héroe y el "item" que porta.	SELECT a.nombre, e.item FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero;	3	\N	3.1: Cruzando el Puente (INNER JOIN)	1	HISTORIA	editor
-13	3	Haz el mismo JOIN de la misión anterior, pero agrega un filtro (WHERE) para mostrar únicamente los items de la clase 'Caballero'.	SELECT a.nombre, e.item FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero WHERE a.clase = 'Caballero';	4	\N	3.2: Arsenal Específico	2	HISTORIA	editor
-14	3	Usa un LEFT JOIN desde aventureros hacia equipamiento para mostrar los nombres de TODOS los héroes, incluso si no tienen armas compradas.	SELECT a.nombre, e.item FROM aventureros a LEFT JOIN equipamiento e ON a.id_aventurero = e.id_aventurero;	4	\N	3.3: Nadie se Queda Atrás (LEFT JOIN)	3	HISTORIA	editor
-15	3	Une ambas tablas. Muestra el "nombre", usa SUM(precio) para calcular el valor total de sus armas, y usa GROUP BY para agrupar por nombre.	SELECT a.nombre, SUM(e.precio) FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero GROUP BY a.nombre;	5	\N	3.4: El Valor de un Héroe	4	HISTORIA	editor
-16	4	Demuestra tu comprensión abstracta. Diseña el diagrama Entidad-Relación. Crea al menos dos Entidades y conéctalas con una Llave Foránea.	{"diagrama": "validado"}	5	\N	Fase 1: El Lienzo del Arquitecto	1	HISTORIA	diagram
-17	4	Último reto de código. Une aventureros y equipamiento, filtra aquellos que tengan un item con precio MAYOR a 100. Muestra el nombre y el item.	SELECT a.nombre, e.item FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero WHERE e.precio > 100;	5	\N	Fase 2: Extracción Maestra	2	HISTORIA	editor
+1	1	¡Siente la dopamina! Extrae TODOS los datos de la tabla aventureros usando el comodín asterisco (*). Recuerda: SELECT * FROM nombre_tabla;	SELECT * FROM aventureros;	1	\N	1.1: Tu Primer Vistazo	1	HISTORIA	drag_drop
+2	1	No siempre necesitas verlo todo. Selecciona únicamente las columnas "nombre" y "clase" de la tabla aventureros.	SELECT nombre, clase FROM aventureros;	1	\N	1.2: Eligiendo Columnas	2	HISTORIA	drag_drop
+3	1	Hay otra tabla oculta en el gremio: equipamiento. Contiene las armas de los héroes. Usa SELECT * para revelar todo su contenido.	SELECT * FROM equipamiento;	1	\N	1.3: El Arsenal Oculto	3	HISTORIA	drag_drop
+4	1	Hora de filtrar. Usa WHERE con igualdad exacta para encontrar al aventurero de la clase 'Guerrero'. Muestra todos sus datos. Recuerda: el texto va entre comillas simples.	SELECT * FROM aventureros WHERE clase = 'Guerrero';	2	\N	1.4: Buscando al Guerrero	4	HISTORIA	drag_drop
+5	1	Busca a los más poderosos. Usa WHERE con el operador mayor que (>) para mostrar el nombre de los aventureros con nivel mayor a 20.	SELECT nombre FROM aventureros WHERE nivel > 20;	2	\N	1.5: Los Más Fuertes	5	HISTORIA	drag_drop
+6	1	Usa LIKE y el comodín porcentaje (%). Encuentra a todos los aventureros cuyo nombre empiece con la letra 'A'. El patrón es 'A%'.	SELECT * FROM aventureros WHERE nombre LIKE 'A%';	2	\N	1.6: El Detective	6	HISTORIA	drag_drop
+7	1	Los datos desordenados son inútiles. Usa ORDER BY para mostrar todos los aventureros ordenados por nivel de mayor a menor (DESC).	SELECT * FROM aventureros ORDER BY nivel DESC;	2	\N	1.7: Ordenando el Caos	7	HISTORIA	drag_drop
+8	1	Frena la avalancha. Combina ORDER BY nivel DESC con LIMIT 3 para traer únicamente a los 3 aventureros más poderosos.	SELECT * FROM aventureros ORDER BY nivel DESC LIMIT 3;	3	\N	1.8: Los Tres Más Fuertes	8	HISTORIA	drag_drop
+9	1	¿Cuántos héroes hay en total? Usa la función COUNT(*) para contar todas las filas de la tabla aventureros.	SELECT COUNT(*) FROM aventureros;	2	\N	1.9: Métrica Rápida	9	HISTORIA	drag_drop
+10	2	Recluta a un nuevo héroe. Inserta al aventurero 'Gimli', clase 'Guerrero', nivel 10 en la tabla aventureros. Agrega RETURNING * al final para ver tu creación.	INSERT INTO aventureros (nombre, clase, nivel) VALUES ('Gimli', 'Guerrero', 10) RETURNING *;	2	\N	2.1: El Nacimiento	1	HISTORIA	editor
+11	2	Otro recluta se une al gremio. Inserta a la aventurera 'Freya', clase 'Paladín', nivel 12. No olvides RETURNING * para confirmar.	INSERT INTO aventureros (nombre, clase, nivel) VALUES ('Freya', 'Paladín', 12) RETURNING *;	2	\N	2.2: Doble Reclutamiento	2	HISTORIA	editor
+12	2	Los héroes necesitan armas. Inserta en la tabla equipamiento un registro: id_aventurero = 1, item = 'Casco de Plata', precio = 80. Usa RETURNING *.	INSERT INTO equipamiento (id_aventurero, item, precio) VALUES (1, 'Casco de Plata', 80) RETURNING *;	2	\N	2.3: Equipando al Héroe	3	HISTORIA	editor
+13	2	Loya ha entrenado duro. Usa UPDATE para cambiar su nivel a 20 en la tabla aventureros. IMPORTANTE: usa WHERE para apuntar solo a Loya. Termina con RETURNING *.	UPDATE aventureros SET nivel = 20 WHERE nombre = 'Loya' RETURNING *;	3	\N	2.4: El Ascenso	4	HISTORIA	editor
+14	2	La Espada Larga ha sido mejorada. Usa UPDATE para cambiar su precio a 250 en la tabla equipamiento. Filtra con WHERE item = 'Espada Larga'. Usa RETURNING *.	UPDATE equipamiento SET precio = 250 WHERE item = 'Espada Larga' RETURNING *;	3	\N	2.5: Mejora de Equipo	5	HISTORIA	editor
+15	2	El asesino Dan nos ha traicionado. Usa DELETE para borrarlo de la tabla aventureros. SIEMPRE usa WHERE para no borrar todo. Termina con RETURNING *.	DELETE FROM aventureros WHERE nombre = 'Dan' RETURNING *;	3	\N	2.6: El Sacrificio	6	HISTORIA	editor
+16	3	Tu primera misión de arquitecto: crea UNA entidad llamada 'aventureros'. Dale al menos 2 atributos (columnas) como nombre y clase. Haz clic en '+ Entidad', ponle nombre y agrega atributos.	{"diagrama": "validado"}	2	{"min_entidades": 1, "min_relaciones": 0, "min_atributos": 2, "entidades_requeridas": [["aventurero", "aventureros", "heroes"]], "mensaje_error": "Necesitas crear la entidad 'aventureros'.", "mensaje_relaciones": ""}	3.1: Tu Primera Entidad	1	HISTORIA	diagram
+17	3	Ahora crea DOS entidades: 'aventureros' y 'equipamiento'. Conéctalas arrastrando desde el punto cyan de una hasta el punto fucsia de la otra. Esto representa la relación entre ellas.	{"diagrama": "validado"}	3	{"min_entidades": 2, "min_relaciones": 1, "min_atributos": 2, "entidades_requeridas": [["aventurero", "aventureros"], ["equipamiento", "equipo", "armas", "items"]], "mensaje_error": "Necesitas las entidades 'aventureros' y 'equipamiento'.", "mensaje_relaciones": "Conecta las entidades arrastrando desde el punto cyan al fucsia."}	3.2: Conectando el Puente	2	HISTORIA	diagram
+18	3	Diseña un mini-sistema de una Tienda: crea las entidades 'clientes' y 'productos', cada una con al menos 2 atributos. Conéctalas con una relación (un cliente compra productos).	{"diagrama": "validado"}	3	{"min_entidades": 2, "min_relaciones": 1, "min_atributos": 4, "entidades_requeridas": [["cliente", "clientes", "usuario", "usuarios", "comprador"], ["producto", "productos", "item", "items", "pocion", "pociones"]], "mensaje_error": "Necesitas entidades para los clientes y los productos.", "mensaje_relaciones": "Conecta clientes con productos para representar la relación de compra."}	3.3: La Tienda del Gremio	3	HISTORIA	diagram
+19	3	Hora de usar SQL. Haz un INNER JOIN entre aventureros (alias a) y equipamiento (alias e). Únelos por id_aventurero y muestra el nombre del héroe y el item que porta.	SELECT a.nombre, e.item FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero;	3	\N	3.4: Cruzando el Puente con SQL	4	HISTORIA	editor
+20	3	Combina JOIN con WHERE. Repite el JOIN anterior pero filtra solo los items de la clase 'Caballero'. Muestra nombre e item.	SELECT a.nombre, e.item FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero WHERE a.clase = 'Caballero';	4	\N	3.5: Arsenal del Caballero	5	HISTORIA	editor
+21	3	Usa LEFT JOIN desde aventureros hacia equipamiento para ver a TODOS los héroes, incluso los que no tienen equipo (aparecerán con NULL). Muestra nombre e item.	SELECT a.nombre, e.item FROM aventureros a LEFT JOIN equipamiento e ON a.id_aventurero = e.id_aventurero;	4	\N	3.6: Nadie se Queda Atrás	6	HISTORIA	editor
+22	3	Cuenta cuántas armas tiene cada héroe. Usa LEFT JOIN + GROUP BY a.nombre con COUNT(e.item). Muestra nombre y la cuenta.	SELECT a.nombre, COUNT(e.item) FROM aventureros a LEFT JOIN equipamiento e ON a.id_aventurero = e.id_aventurero GROUP BY a.nombre;	4	\N	3.7: Conteo de Arsenal	7	HISTORIA	editor
+23	3	Calcula el gasto total de cada héroe en equipo. Usa INNER JOIN + GROUP BY a.nombre con SUM(e.precio). Muestra nombre y suma.	SELECT a.nombre, SUM(e.precio) FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero GROUP BY a.nombre;	5	\N	3.8: El Valor de un Héroe	8	HISTORIA	editor
+24	3	Une aventureros y equipamiento con INNER JOIN. Muestra nombre, item y precio. Filtra con WHERE para ver solo items con precio mayor a 100.	SELECT a.nombre, e.item, e.precio FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero WHERE e.precio > 100;	5	\N	3.9: Extracción Selectiva	9	HISTORIA	editor
+25	4	Diseña el sistema completo de una Posada de Aventureros. Crea 3 entidades: 'huespedes', 'habitaciones' y 'reservas'. Cada una con al menos 2 atributos. Conecta huéspedes con reservas, y habitaciones con reservas.	{"diagrama": "validado"}	5	{"min_entidades": 3, "min_relaciones": 2, "min_atributos": 6, "entidades_requeridas": [["huesped", "huespedes", "cliente", "clientes"], ["habitacion", "habitaciones", "cuarto", "cuartos", "room"], ["reserva", "reservas", "reservacion", "booking"]], "mensaje_error": "La posada necesita entidades para los huéspedes, las habitaciones y las reservas.", "mensaje_relaciones": "Conecta huéspedes con reservas, y habitaciones con reservas (relación muchos a muchos)."}	Fase 1: La Posada del Arquitecto	1	HISTORIA	diagram
+26	4	Demuestra tu dominio de JOINs. Une aventureros y equipamiento, filtra los items con precio mayor a 100. Muestra nombre, item y precio ordenados por precio de mayor a menor.	SELECT a.nombre, e.item, e.precio FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero WHERE e.precio > 100 ORDER BY e.precio DESC;	5	\N	Fase 2: Consulta Maestra	2	HISTORIA	editor
+27	4	Reto final: muestra un ranking de héroes por su gasto total en equipo. Usa INNER JOIN, SUM(e.precio), GROUP BY, y ordena de mayor a menor gasto. Muestra nombre y total.	SELECT a.nombre, SUM(e.precio) AS total FROM aventureros a INNER JOIN equipamiento e ON a.id_aventurero = e.id_aventurero GROUP BY a.nombre ORDER BY total DESC;	5	\N	Fase 3: El Ranking Definitivo	3	HISTORIA	editor
 \.
 
 
@@ -509,22 +522,6 @@ COPY lms_core.ejercicios_practicos (id_ejercicio, id_modulo, enunciado, query_ma
 --
 
 COPY lms_core.intentos (id_intento, id_usuario, id_ejercicio, query_enviada, es_correcto, tiempo_ms, fecha_intento) FROM stdin;
-6cb23369-6147-4c1e-9c98-8cd0c8e584cf	2cbbf24f-d178-474d-80ae-c90ac3aad008	1	SELECT * FROM aventureros ;	t	\N	2026-04-18 23:06:23.258604
-4e019c29-676a-49d7-97ff-a76bedd17b5c	2cbbf24f-d178-474d-80ae-c90ac3aad008	2	SELECT nombre FROM aventureros WHERE nivel = 5 ;	t	\N	2026-04-18 23:08:27.922998
-d3a98ecd-dd24-4e9d-8558-6fdd342f2167	e1eeb361-e273-48f4-8558-97a61cbd1892	1	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-933453cf-e7e2-4ca5-bd0c-9070ed634dbc	e1eeb361-e273-48f4-8558-97a61cbd1892	2	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-d97ae441-e822-4d7a-a6a4-bdb5af28b1cb	e1eeb361-e273-48f4-8558-97a61cbd1892	3	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-25fb3698-c119-4e4b-8dd4-d3d3db677f31	e1eeb361-e273-48f4-8558-97a61cbd1892	4	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-a4447374-441f-4fe9-bbf9-f76838d6c962	e1eeb361-e273-48f4-8558-97a61cbd1892	5	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-9f99abda-e04f-46db-8483-1ad52df3f948	e1eeb361-e273-48f4-8558-97a61cbd1892	9	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-b639fc29-afc0-4332-b914-111fe1a37f5b	e1eeb361-e273-48f4-8558-97a61cbd1892	10	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-38ac780d-0aae-4cc9-8f59-5288360f991e	e1eeb361-e273-48f4-8558-97a61cbd1892	11	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-19cdd27c-fd91-4aba-86b6-13169e9d8a28	e1eeb361-e273-48f4-8558-97a61cbd1892	12	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-e4439ee9-c803-44d2-9949-774ffda06600	e1eeb361-e273-48f4-8558-97a61cbd1892	13	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-d67d55c1-5dd7-4015-a608-c11a97470d81	e1eeb361-e273-48f4-8558-97a61cbd1892	14	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-08316216-a376-4939-acfb-7a12b7898533	e1eeb361-e273-48f4-8558-97a61cbd1892	15	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-f17a61fc-4525-481d-8aad-b664ec2fce30	e1eeb361-e273-48f4-8558-97a61cbd1892	16	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
-e89d0a6e-6da3-4dff-8e48-a856d4d6b32f	e1eeb361-e273-48f4-8558-97a61cbd1892	17	-- Consulta de prueba completada por el sistema	t	\N	2026-04-18 23:36:14.645668
 \.
 
 
@@ -604,7 +601,7 @@ SELECT pg_catalog.setval('lms_core.cursos_id_curso_seq', 2, true);
 -- Name: ejercicios_practicos_id_ejercicio_seq; Type: SEQUENCE SET; Schema: lms_core; Owner: postgres
 --
 
-SELECT pg_catalog.setval('lms_core.ejercicios_practicos_id_ejercicio_seq', 17, true);
+SELECT pg_catalog.setval('lms_core.ejercicios_practicos_id_ejercicio_seq', 27, true);
 
 
 --
