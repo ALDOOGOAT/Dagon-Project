@@ -257,6 +257,28 @@ export const ExercisePage = () => {
     return ((currentExerciseIndex + (executionResult?.success ? 1 : 0)) / exercises.length) * 100;
   }, [currentExerciseIndex, exercises.length, executionResult]);
 
+  const handleLevelJump = (index) => {
+    const targetExercise = exercises[index];
+    if (!targetExercise) return;
+
+    // 1. Determinar si el nivel al que saltamos tiene teoría nueva
+    const subKey = getSubTopicKey(levelId, targetExercise.orden || (index + 1));
+    
+    // 2. Resetear estados
+    if (subKey && !shownSubTopics.has(subKey)) {
+      setCurrentSubTopic(subKey);
+      setShowTheory(true);
+    } else {
+      setShowTheory(false);
+    }
+
+    setExecutionResult(null);
+    setClawbotMessage(null);
+    setCurrentExerciseIndex(index);
+    setEditorCode(targetExercise.starterCode || ''); 
+    setShowHint(false);
+  };
+
   if (loading || !isMounted) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
@@ -316,14 +338,32 @@ export const ExercisePage = () => {
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5">
-            {exercises.map((_, i) => (
-              <span key={i} className={`h-2 rounded-full transition-all duration-300 ${
-                i < currentExerciseIndex ? 'w-6 bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]'
-                : i === currentExerciseIndex ? 'w-10 bg-gradient-to-r from-cyan-400 to-fuchsia-500'
-                : 'w-2 bg-slate-700'
-              }`} />
-            ))}
+          <div className="flex items-center gap-1.5 bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 overflow-x-auto max-w-[40%] scrollbar-none">
+            {exercises.map((_, i) => {
+              const isCompleted = i < currentExerciseIndex;
+              const isCurrent = i === currentExerciseIndex;
+              const isUnlocked = true; // Navegación libre para pruebas
+              
+              return (
+                <div key={i} className="flex items-center shrink-0">
+                  <button 
+                    onClick={() => isUnlocked && handleLevelJump(i)}
+                    className={`
+                      w-8 h-8 rounded-lg flex items-center justify-center font-display text-[10px] font-black transition-all duration-300
+                      ${isCurrent ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-white scale-110 shadow-[0_0_20px_rgba(34,211,238,0.5)] z-10' : 
+                        isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white' : 
+                        'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-white'}
+                    `}
+                    title={`Misión ${i + 1}`}
+                  >
+                    {isCompleted ? <CheckCircle className="w-4 h-4" /> : i + 1}
+                  </button>
+                  {i < exercises.length - 1 && (
+                    <div className={`w-3 h-0.5 rounded-full mx-0.5 ${i < currentExerciseIndex ? 'bg-emerald-500/30' : 'bg-slate-800'}`} />
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-white/5">

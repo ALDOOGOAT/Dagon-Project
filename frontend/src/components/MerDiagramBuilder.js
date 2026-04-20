@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -7,11 +7,70 @@ import {
   Position, 
   applyNodeChanges, 
   applyEdgeChanges, 
-  addEdge 
+  addEdge,
+  getBezierPath,
+  EdgeLabelRenderer,
+  BaseEdge
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
-import { Database, Plus, Trash2 } from 'lucide-react';
+import { Database, Plus, Trash2, Settings2 } from 'lucide-react';
+
+// --- ARISTA CUSTOM CON CARDINALIDAD ---
+const RelationshipEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+}) => {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetPosition,
+    targetX,
+    targetY,
+  });
+
+  const onCardinalityChange = (evt) => {
+    data.onChangeCardinality(id, evt.target.value);
+  };
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          <div className="bg-slate-900 border border-cyan-500/50 rounded-lg px-2 py-1 shadow-lg flex items-center gap-2 group">
+            <Settings2 className="w-3 h-3 text-cyan-400 group-hover:rotate-90 transition-transform" />
+            <select
+              value={data?.cardinality || '1:N'}
+              onChange={onCardinalityChange}
+              className="bg-transparent text-[10px] font-bold text-cyan-200 outline-none cursor-pointer uppercase"
+            >
+              <option value="1:1" className="bg-slate-900 text-white">1:1 (Uno a Uno)</option>
+              <option value="1:N" className="bg-slate-900 text-white">1:N (Uno a Muchos)</option>
+              <option value="M:N" className="bg-slate-900 text-white">M:N (Muchos a Muchos)</option>
+            </select>
+          </div>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+};
 
 // --- EL DISEÑO DE LA TABLA (NODO CUSTOM) ---
 const TableNode = ({ data, id, isConnectable }) => {
@@ -69,8 +128,9 @@ const TableNode = ({ data, id, isConnectable }) => {
   );
 };
 
-// Registramos el nodo custom
+// Registramos los tipos custom
 const nodeTypes = { tableNode: TableNode };
+const edgeTypes = { relationshipEdge: RelationshipEdge };
 
 // --- EL LIENZO PRINCIPAL ---
 export const MerDiagramBuilder = ({ onChangeData }) => {
@@ -98,15 +158,38 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
     });
   }, [nodes, notifyChange]);
 
-  const onConnect = useCallback((params) => {
+  const handleChangeCardinality = useCallback((edgeId, newCardinality) => {
     setEdges((eds) => {
-      // Líneas estilo neón cyberpunk
-      const newEdge = { ...params, animated: true, style: { stroke: '#22d3ee', strokeWidth: 2 } };
-      const updatedEdges = addEdge(newEdge, eds);
+      const updatedEdges = eds.map((edge) => {
+        if (edge.id === edgeId) {
+          return { ...edge, data: { ...edge.data, cardinality: newCardinality } };
+        }
+        return edge;
+      });
       notifyChange(nodes, updatedEdges);
       return updatedEdges;
     });
   }, [nodes, notifyChange]);
+
+  const onConnect = useCallback((params) => {
+    setEdges((eds) => {
+      // Líneas estilo neón cyberpunk con el nuevo tipo custom
+      const newEdge = { 
+        ...params, 
+        id: `e-${uuidv4()}`,
+        type: 'relationshipEdge',
+        animated: true, 
+        style: { stroke: '#22d3ee', strokeWidth: 2 },
+        data: { 
+          cardinality: '1:N',
+          onChangeCardinality: handleChangeCardinality
+        }
+      };
+      const updatedEdges = addEdge(newEdge, eds);
+      notifyChange(nodes, updatedEdges);
+      return updatedEdges;
+    });
+  }, [nodes, handleChangeCardinality, notifyChange]);
 
   // --- Funciones de mutación de datos de los nodos ---
   const updateNodeData = (id, newDataUpdater) => {
@@ -185,6 +268,7 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         className="cyber-flow"
       >
