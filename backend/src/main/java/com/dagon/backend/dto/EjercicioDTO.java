@@ -9,6 +9,7 @@ public class EjercicioDTO {
     private String type;
     private String starterCode;
     private String hint;
+    private Integer orden;
     // ¡NUEVO! El banco de palabras para el Drag & Drop
     private List<String> wordBank;
     // --- GETTERS Y SETTERS ---
@@ -30,7 +31,9 @@ public class EjercicioDTO {
     public String getHint() { return hint; }
     public void setHint(String hint) { this.hint = hint; }
 
-    // ¡NUEVOS GETTERS Y SETTERS!
+    public Integer getOrden() { return orden; }
+    public void setOrden(Integer orden) { this.orden = orden; }
+
     public List<String> getWordBank() { return wordBank; }
     public void setWordBank(List<String> wordBank) { this.wordBank = wordBank; }
 }

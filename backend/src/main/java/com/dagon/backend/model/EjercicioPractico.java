@@ -26,6 +26,15 @@ public class EjercicioPractico {
     @Column(name = "formato")
     private String formato;
 
+    @Column(name = "configuracion_extra", columnDefinition = "jsonb")
+    private String configuracionExtra;
+
+    @Column(name = "titulo")
+    private String titulo;
+
+    @Column(name = "orden")
+    private Integer orden;
+
     @Column(name = "tipo_mision", length = 50)
     private String tipoMision;
 
@@ -47,6 +56,15 @@ public class EjercicioPractico {
 
     public String getFormato() { return formato; }
     public void setFormato(String formato) { this.formato = formato; }
+
+    public String getConfiguracionExtra() { return configuracionExtra; }
+    public void setConfiguracionExtra(String configuracionExtra) { this.configuracionExtra = configuracionExtra; }
+
+    public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) { this.titulo = titulo; }
+
+    public Integer getOrden() { return orden; }
+    public void setOrden(Integer orden) { this.orden = orden; }
 
     public String getTipoMision() { return tipoMision; }
     public void setTipoMision(String tipoMision) { this.tipoMision = tipoMision; }

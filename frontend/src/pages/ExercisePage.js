@@ -5,8 +5,8 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
-import { LevelTheory } from '../components/LevelTheory';
-import { MerDiagramBuilder } from '../components/MerDiagramBuilder'; // <-- IMPORTACIÓN DEL LIENZO MER
+import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
+import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
@@ -56,6 +56,8 @@ export const ExercisePage = () => {
   const [validating, setValidating] = useState(false);
 
   const [showTheory, setShowTheory] = useState(true);
+  const [currentSubTopic, setCurrentSubTopic] = useState(null);
+  const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
   const [showReward, setShowReward] = useState(false);
   const [lastXPGained, setLastXPGained] = useState(0);
@@ -85,7 +87,17 @@ export const ExercisePage = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        setExercises(data.exercises || []);
+        const loaded = data.exercises || [];
+        setExercises(loaded);
+
+        // Establecer el subtema inicial basado en el primer ejercicio
+        if (loaded.length > 0) {
+          const firstOrder = loaded[0].orden || 1;
+          const initialKey = getSubTopicKey(levelId, firstOrder);
+          if (initialKey) {
+            setCurrentSubTopic(initialKey);
+          }
+        }
       } catch (error) {
         toast.error('Error al cargar ejercicios desde el servidor');
       } finally {
@@ -98,6 +110,14 @@ export const ExercisePage = () => {
   useEffect(() => {
     if (exercises.length > 0) {
       const exercise = exercises[currentExerciseIndex];
+
+      // Detectar si cambiamos de subtema y mostrar teoría intermedia
+      const subKey = getSubTopicKey(levelId, exercise.orden || (currentExerciseIndex + 1));
+      if (subKey && !shownSubTopics.has(subKey)) {
+        setCurrentSubTopic(subKey);
+        setShowTheory(true);
+      }
+
       if (exercise.type === 'drag_drop') {
         const wordObjects = (exercise.wordBank || []).map((word, idx) => ({ id: `word-${idx}`, word }));
         setAvailableWords(wordObjects);
@@ -331,7 +351,16 @@ export const ExercisePage = () => {
       {/* MAIN */}
       <main className="flex-1 overflow-y-auto scroll-fancy">
         {showTheory ? (
-          <LevelTheory levelId={levelId} onComplete={() => setShowTheory(false)} />
+          <LevelTheory
+            levelId={levelId}
+            subTopic={currentSubTopic}
+            onComplete={() => {
+              if (currentSubTopic) {
+                setShownSubTopics(prev => new Set([...prev, currentSubTopic]));
+              }
+              setShowTheory(false);
+            }}
+          />
         ) : (
           <div className={`max-w-5xl mx-auto px-4 py-6 space-y-5 ${shake ? 'animate-shake-x' : ''}`}>
 

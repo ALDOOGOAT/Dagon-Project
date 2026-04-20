@@ -4,214 +4,597 @@ import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket,
-  Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide, GitMerge, Database, Shield, Zap
+  Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide,
+  GitMerge, Database, Shield, Zap, PenLine, Trash2, Plus, Link2
 } from 'lucide-react';
 
 /* ============================================================
-   CONTENIDO POR NIVEL — La Senda del Arquitecto
+   CONTENIDO POR SUBTEMA — La Senda del Arquitecto
+   Clave: "modulo-grupo" (ej: "1-0" = módulo 1, grupo 0)
+   Cada grupo de 3 ejercicios tiene su propia teoría.
    ============================================================ */
 
-const LEVELS = {
-  "1": {
-    title: "Conociendo a la Bestia",
-    subtitle: "Anatomía y Lectura de Datos",
+const SUB_TOPICS = {
+
+  /* ──────────────────────────────────────────────
+     MÓDULO 1 — Conociendo a la Bestia
+     ────────────────────────────────────────────── */
+
+  "1-0": {
+    title: "SELECT — Tu Primer Comando",
+    subtitle: "Aprendiendo a leer datos",
     color: "from-cyan-500 to-blue-700",
     slides: [
       {
         type: "hero",
         emoji: <Library className="w-12 h-12" />,
         headline: "Bienvenido al Archivero Infinito",
-        lead: "Una base de datos (como PostgreSQL) no es magia, es un archivero digital masivo y perfectamente estructurado.",
+        lead: "Una base de datos es un archivero digital masivo y perfectamente organizado. Toda la información se guarda en tablas, como hojas de cálculo pero mucho más poderosas.",
         bullets: [
-          "Toda la información se organiza en 'Tablas' (como hojas de cálculo de Excel).",
-          "Las Columnas definen qué tipo de dato guardas (ej. nombre, nivel).",
-          "Las Filas son los registros reales (ej. el aventurero 'Aldo').",
+          "Las Tablas organizan la información en filas y columnas.",
+          "Las Columnas definen el tipo de dato (nombre, nivel, clase...).",
+          "Las Filas son los registros reales — cada aventurero es una fila.",
+          "SQL (Structured Query Language) es el idioma para hablar con la base de datos.",
         ],
       },
       {
         type: "table",
         emoji: <Grid3x3 className="w-12 h-12" />,
-        headline: "Tu primera tabla: Aventureros",
-        lead: "Así se ve la información estructurada en el abismo.",
+        headline: "Tu primera tabla: aventureros",
+        lead: "Así se ve la información estructurada. Esta tabla tiene 4 columnas y cada fila es un héroe distinto del gremio.",
         tableTitle: "aventureros",
         columns: ["id_aventurero", "nombre", "clase", "nivel"],
         rows: [
           [1, "Loya", "Caballero", 15],
           [2, "Zoe", "Maga Suprema", 20],
-          [3, "Aldo", "Guerrero", 30],
+          [3, "Jared", "Arquero", 8],
+          [4, "Aldo", "Guerrero", 30],
+          [5, "Dan", "Asesino", 25],
         ],
-        caption: "Esta tabla tiene 4 columnas. Cada fila representa a un héroe único.",
+        caption: "5 filas = 5 aventureros. 4 columnas = 4 datos por cada uno.",
       },
       {
         type: "chat",
         emoji: <MessageSquare className="w-12 h-12" />,
-        headline: "SQL es tu voz de mando",
-        lead: "Para sacar información del archivero, usamos SQL (Structured Query Language). Es como darle órdenes a un bibliotecario.",
+        headline: "SELECT: Tu voz de mando",
+        lead: "Para sacar datos de una tabla usamos el comando SELECT. Piensa en él como decirle al archivero: '¡Muéstrame esto!'",
         chat: [
-          { from: "tu", text: "Tráeme todos los nombres de los aventureros que sean nivel 30." },
-          { from: "db", text: "Procesando... Encontré 1 registro: Aldo." },
+          { from: "tu", text: "Quiero ver TODOS los datos de todos los aventureros." },
+          { from: "db", text: "Entendido. Aquí tienes las 5 filas completas de la tabla." },
         ],
-        code: "SELECT nombre FROM aventureros WHERE nivel = 30;",
+        code: "SELECT * FROM aventureros;",
+        codeLabel: "El asterisco (*) = todas las columnas",
+      },
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "Eligiendo columnas específicas",
+        lead: "No siempre necesitas todo. Puedes pedir solo las columnas que te interesan separándolas por comas.",
+        code: "SELECT nombre, clase FROM aventureros;",
+        codeLabel: "Solo nombre y clase",
+        bullets: [
+          "SELECT nombre, clase → Solo esas dos columnas aparecerán.",
+          "SELECT * → El asterisco significa 'todo', todas las columnas.",
+          "Puedes consultar cualquier tabla, no solo aventureros. Hay una tabla de equipamiento con las armas de cada héroe.",
+        ],
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "¡Despierta a la bestia!",
-        lead: "En tu primera misión usarás SELECT, WHERE, y COUNT para extraer información vital del gremio.",
+        headline: "¡Tu turno de consultar!",
+        lead: "En los próximos 3 ejercicios practicarás SELECT con las tablas del gremio. Arrastra los bloques SQL para construir tus consultas.",
         checklist: [
-          "SELECT: Elige qué columnas quieres ver.",
-          "WHERE: Filtra las filas como un francotirador.",
-          "ORDER BY: Acomoda tus resultados.",
+          "SELECT * FROM aventureros — Trae todos los héroes.",
+          "SELECT col1, col2 FROM tabla — Solo columnas específicas.",
+          "SELECT * FROM equipamiento — Explora otras tablas del gremio.",
         ],
       },
     ],
   },
 
-  "2": {
-    title: "Manipulación de Datos",
-    subtitle: "El poder (y peligro) del CRUD",
+  "1-1": {
+    title: "WHERE — El Filtro Definitivo",
+    subtitle: "Filtrando con precisión quirúrgica",
+    color: "from-indigo-500 to-purple-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "¿Por qué filtrar?",
+        lead: "SELECT * te muestra TODO. Pero en una tabla con miles de filas, necesitas encontrar justo lo que buscas. Para eso existe WHERE: un filtro que solo deja pasar las filas que cumplen tu condición.",
+        bullets: [
+          "WHERE va después de FROM y antes de ORDER BY.",
+          "Puedes usar operadores: = (igual), > (mayor), < (menor), != (diferente).",
+          "Los valores de texto siempre van entre comillas simples: 'Caballero'.",
+        ],
+      },
+      {
+        type: "chat",
+        emoji: <MessageSquare className="w-12 h-12" />,
+        headline: "WHERE con igualdad exacta",
+        lead: "El operador = busca una coincidencia exacta. Perfecto cuando sabes exactamente qué buscas:",
+        chat: [
+          { from: "tu", text: "Quiero encontrar solo al aventurero que sea de clase 'Guerrero'." },
+          { from: "db", text: "Filtrado. Solo Aldo (Guerrero, nivel 30) cumple la condición." },
+        ],
+        code: "SELECT * FROM aventureros\nWHERE clase = 'Guerrero';",
+        codeLabel: "Operador = (igualdad exacta)",
+      },
+      {
+        type: "highlight-rows",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "Comparaciones y patrones",
+        lead: "WHERE no solo busca igualdad. Puedes usar >, <, >=, <= para comparar números, y LIKE con % para buscar patrones en texto.",
+        tableTitle: "Resultado de WHERE nivel > 20",
+        columns: ["id", "nombre", "clase", "nivel"],
+        rows: [
+          [1, "Loya", "Caballero", 15],
+          [4, "Aldo", "Guerrero", 30],
+          [5, "Dan", "Asesino", 25],
+        ],
+        highlightRows: [1, 2],
+        code: "SELECT nombre FROM aventureros\nWHERE nivel > 20;",
+        caption: "Solo Aldo (30) y Dan (25) superan el nivel 20. LIKE 'A%' = empieza con A.",
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "¡Hora de filtrar como un francotirador!",
+        lead: "Los próximos 3 ejercicios irán de lo simple a lo complejo: igualdad, comparación y patrones.",
+        checklist: [
+          "WHERE clase = 'Guerrero' — Igualdad exacta (texto con comillas simples).",
+          "WHERE nivel > 20 — Comparación numérica (mayor que).",
+          "WHERE nombre LIKE 'A%' — Búsqueda por patrón con comodín.",
+        ],
+      },
+    ],
+  },
+
+  "1-2": {
+    title: "ORDER BY, LIMIT y COUNT",
+    subtitle: "Ordenar, limitar y contar",
+    color: "from-teal-500 to-emerald-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <ArrowDownNarrowWide className="w-12 h-12" />,
+        headline: "Poniendo orden en el caos",
+        lead: "Ya sabes extraer y filtrar datos. Ahora aprenderás a organizarlos. ORDER BY ordena los resultados por cualquier columna.",
+        bullets: [
+          "ORDER BY columna ASC — Orden ascendente (menor a mayor). Es el predeterminado.",
+          "ORDER BY columna DESC — Orden descendente (mayor a menor).",
+          "Siempre va al final de la consulta, después de WHERE (si hay).",
+        ],
+      },
+      {
+        type: "highlight-rows",
+        emoji: <Grid3x3 className="w-12 h-12" />,
+        headline: "LIMIT — Frena la avalancha",
+        lead: "Si una tabla tiene 10,000 filas, no quieres verlas todas. LIMIT restringe cuántas filas te devuelve.",
+        tableTitle: "Los 3 más fuertes (ORDER BY nivel DESC LIMIT 3)",
+        columns: ["id", "nombre", "clase", "nivel"],
+        rows: [
+          [4, "Aldo", "Guerrero", 30],
+          [5, "Dan", "Asesino", 25],
+          [2, "Zoe", "Maga Suprema", 20],
+        ],
+        highlightRows: [0, 1, 2],
+        code: "SELECT * FROM aventureros\nORDER BY nivel DESC\nLIMIT 3;",
+        caption: "Primero ordena de mayor a menor, luego corta en 3 resultados.",
+      },
+      {
+        type: "chat",
+        emoji: <MessageSquare className="w-12 h-12" />,
+        headline: "COUNT — ¿Cuántos hay?",
+        lead: "COUNT(*) no te muestra los datos, sino que los cuenta. Es una función de agregación — resume información en un solo número.",
+        chat: [
+          { from: "tu", text: "¿Cuántos aventureros existen en total?" },
+          { from: "db", text: "count: 5. Hay 5 registros en la tabla aventureros." },
+        ],
+        code: "SELECT COUNT(*) FROM aventureros;",
+        codeLabel: "Resultado: un solo número",
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "¡Domina el orden y el conteo!",
+        lead: "Los próximos 3 ejercicios combinarán ORDER BY, LIMIT y COUNT para que controles completamente cómo se presentan los datos.",
+        checklist: [
+          "ORDER BY columna DESC — Ordenar de mayor a menor.",
+          "LIMIT N — Trae solo N resultados.",
+          "COUNT(*) — Cuenta el total de filas.",
+        ],
+      },
+    ],
+  },
+
+  /* ──────────────────────────────────────────────
+     MÓDULO 2 — Manipulación de Datos
+     ────────────────────────────────────────────── */
+
+  "2-0": {
+    title: "INSERT — Creando Datos",
+    subtitle: "El poder de la creación",
     color: "from-emerald-500 to-cyan-600",
     slides: [
       {
         type: "hero",
+        emoji: <Plus className="w-12 h-12" />,
+        headline: "Juega a ser un Dios: Crea registros",
+        lead: "Hasta ahora solo has leído datos. Ahora aprenderás a CREAR nuevos registros con INSERT INTO. Es como reclutar un nuevo héroe al gremio.",
+        bullets: [
+          "INSERT INTO tabla (columnas) VALUES (valores) — Crea una nueva fila.",
+          "Las columnas y valores deben coincidir en orden y cantidad.",
+          "Los textos van entre comillas simples, los números van sin comillas.",
+          "RETURNING * al final te muestra el registro que acabas de crear.",
+        ],
+      },
+      {
+        type: "chat",
+        emoji: <MessageSquare className="w-12 h-12" />,
+        headline: "Tu primer INSERT",
+        lead: "Observa la anatomía de un INSERT. Cada parte tiene un propósito claro:",
+        chat: [
+          { from: "tu", text: "Quiero agregar a Gimli, un Guerrero de nivel 10." },
+          { from: "db", text: "Registro insertado correctamente. id_aventurero: 6, nombre: Gimli." },
+        ],
+        code: "INSERT INTO aventureros\n  (nombre, clase, nivel)\nVALUES\n  ('Gimli', 'Guerrero', 10)\nRETURNING *;",
+        codeLabel: "Anatomía del INSERT",
+      },
+      {
+        type: "hero",
         emoji: <Database className="w-12 h-12" />,
-        headline: "Juega a ser un Dios",
-        lead: "Leer datos está bien, pero un verdadero administrador sabe crear, alterar y destruir la información. A esto se le llama CRUD (Create, Read, Update, Delete).",
-        code: "INSERT INTO aventureros (nombre, clase) \nVALUES ('Gimli', 'Guerrero');",
-        codeLabel: "Creación (Insertar)",
+        headline: "Insertando en diferentes tablas",
+        lead: "Puedes insertar en cualquier tabla, no solo aventureros. Por ejemplo, puedes agregar equipamiento a un héroe existente.",
+        code: "INSERT INTO equipamiento\n  (id_aventurero, item, precio)\nVALUES\n  (1, 'Casco de Plata', 80)\nRETURNING *;",
+        codeLabel: "Insertando equipamiento",
+        bullets: [
+          "El id_aventurero = 1 conecta este item con Loya (el aventurero con ID 1).",
+          "Esta conexión entre tablas se llama Llave Foránea — la verás a fondo en el Módulo 3.",
+        ],
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "¡Recluta a tus guerreros!",
+        lead: "En los próximos 3 ejercicios insertarás registros en las tablas del Sandbox. Escribe el SQL en el editor.",
+        checklist: [
+          "INSERT INTO tabla (cols) VALUES (vals) — Crear registros.",
+          "Textos entre comillas simples: 'Gimli'.",
+          "Siempre termina con RETURNING * para ver tu creación.",
+        ],
+      },
+    ],
+  },
+
+  "2-1": {
+    title: "UPDATE y DELETE — Alterar y Destruir",
+    subtitle: "El poder (y peligro) de modificar datos",
+    color: "from-orange-500 to-rose-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <PenLine className="w-12 h-12" />,
+        headline: "UPDATE: Reescribiendo el destino",
+        lead: "Cuando un héroe sube de nivel o un precio cambia, usamos UPDATE para modificar registros existentes. Pero atención: un UPDATE mal hecho puede causar un desastre.",
+        bullets: [
+          "UPDATE tabla SET columna = nuevo_valor — Cambia el valor de una columna.",
+          "SIEMPRE usa WHERE para indicar QUÉ fila(s) quieres modificar.",
+          "Sin WHERE, UPDATE cambia TODAS las filas. Esto es peligroso.",
+          "RETURNING * te muestra cómo quedó el registro después del cambio.",
+        ],
       },
       {
         type: "highlight-rows",
         emoji: <Zap className="w-12 h-12" />,
-        headline: "UPDATE: Alterando el destino",
-        lead: "Cuando un héroe sube de nivel, debemos actualizar su registro. ¡Pero cuidado! Si olvidas usar el WHERE, modificarás a TODOS los héroes a la vez.",
+        headline: "UPDATE en acción",
+        lead: "Loya ha entrenado duro y sube al nivel 20. Observa cómo solo su fila cambia gracias al WHERE:",
         tableTitle: "aventureros (después del UPDATE)",
-        columns: ["id", "nombre", "nivel"],
+        columns: ["id", "nombre", "clase", "nivel"],
         rows: [
-          [1, "Loya", 20],
-          [2, "Zoe", 20],
-          [3, "Aldo", 30],
+          [1, "Loya", "Caballero", 20],
+          [2, "Zoe", "Maga Suprema", 20],
+          [4, "Aldo", "Guerrero", 30],
         ],
         highlightRows: [0],
-        code: "UPDATE aventureros SET nivel = 20 \nWHERE nombre = 'Loya';",
-        caption: "Solo el nivel de Loya fue alterado.",
+        code: "UPDATE aventureros\nSET nivel = 20\nWHERE nombre = 'Loya'\nRETURNING *;",
+        caption: "Solo la fila de Loya fue modificada. Las demás siguen intactas.",
       },
       {
         type: "highlight-rows",
-        emoji: <Shield className="w-12 h-12" />,
+        emoji: <Trash2 className="w-12 h-12" />,
         headline: "DELETE: El abismo no perdona",
-        lead: "Borrar un registro es permanente. Al igual que el UPDATE, un DELETE sin la cláusula WHERE vaciará tu tabla entera.",
-        tableTitle: "aventureros",
-        columns: ["id", "nombre", "clase"],
+        lead: "DELETE borra filas permanentemente. Al igual que UPDATE, SIEMPRE necesita WHERE. Un DELETE sin WHERE vacía la tabla entera.",
+        tableTitle: "aventureros (Dan fue eliminado)",
+        columns: ["id", "nombre", "clase", "nivel"],
         rows: [
-          [1, "Loya", "Caballero"],
-          [2, "Zoe", "Maga Suprema"],
-          [3, "Aldo", "Guerrero"],
+          [1, "Loya", "Caballero", 15],
+          [2, "Zoe", "Maga Suprema", 20],
+          [4, "Aldo", "Guerrero", 30],
         ],
-        highlightRows: [1, 2],
-        code: "DELETE FROM aventureros \nWHERE nombre = 'Loya';",
-        caption: "El registro 1 ha sido borrado del sistema.",
+        highlightRows: [],
+        code: "DELETE FROM aventureros\nWHERE nombre = 'Dan'\nRETURNING *;",
+        caption: "Dan ha sido borrado. No hay marcha atrás (en un sistema real).",
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
         headline: "¡A ensuciarse las manos!",
-        lead: "Es hora de alterar la base de datos real del Sandbox.",
+        lead: "Los próximos 3 ejercicios te harán modificar y eliminar datos reales del Sandbox. Recuerda: WHERE es tu mejor amigo.",
         checklist: [
-          "Usa INSERT para reclutar nuevos guerreros.",
-          "Usa UPDATE + WHERE para fortalecerlos.",
-          "Usa DELETE + WHERE para eliminar a los caídos.",
+          "UPDATE tabla SET col = val WHERE condición — Modificar registros.",
+          "DELETE FROM tabla WHERE condición — Eliminar registros.",
+          "NUNCA olvides WHERE — o destruirás todos los datos.",
         ],
       },
     ],
   },
 
-  "3": {
-    title: "El Arquitecto y los Vínculos",
-    subtitle: "Conectando la información",
+  /* ──────────────────────────────────────────────
+     MÓDULO 3 — El Arquitecto y los Vínculos
+     ────────────────────────────────────────────── */
+
+  "3-0": {
+    title: "Entidades, Atributos y Relaciones",
+    subtitle: "Los cimientos del diseño de bases de datos",
     color: "from-fuchsia-500 to-indigo-700",
     slides: [
       {
         type: "hero",
-        emoji: <GitMerge className="w-12 h-12" />,
-        headline: "El problema de tener todo en un solo lugar",
-        lead: "Si guardas los aventureros y todas las pociones que compran en una misma tabla, tendrías un desastre de datos repetidos. La solución: Dividir y Conectar.",
+        emoji: <Database className="w-12 h-12" />,
+        headline: "¿Qué es una Entidad?",
+        lead: "Una entidad es cualquier 'cosa' del mundo real que necesitas representar en tu base de datos. Cada entidad se convierte en una TABLA.",
         bullets: [
-          "Las Bases de Datos Relacionales separan las Entidades (ej. una tabla de Usuarios, otra de Productos).",
-          "Luego, usan 'Llaves' para conectar una tabla con otra.",
+          "Un aventurero es una entidad → se convierte en la tabla 'aventureros'.",
+          "Un arma es una entidad → se convierte en la tabla 'equipamiento'.",
+          "Cada entidad tiene Atributos (columnas): nombre, clase, nivel, precio...",
+          "Para diseñar una base de datos, primero dibujas un Diagrama Entidad-Relación (MER).",
+        ],
+      },
+      {
+        type: "table",
+        emoji: <Grid3x3 className="w-12 h-12" />,
+        headline: "De Entidad a Tabla",
+        lead: "La entidad 'Aventurero' se traduce en una tabla con sus atributos como columnas. El atributo especial 'id' es la Llave Primaria (PK): un valor único que identifica cada fila.",
+        tableTitle: "aventureros",
+        columns: ["id_aventurero (PK)", "nombre", "clase", "nivel"],
+        rows: [
+          [1, "Loya", "Caballero", 15],
+          [2, "Zoe", "Maga Suprema", 20],
+          [4, "Aldo", "Guerrero", 30],
+        ],
+        caption: "PK = Llave Primaria. Nunca se repite. Identifica cada fila de forma única.",
+      },
+      {
+        type: "hero",
+        emoji: <Link2 className="w-12 h-12" />,
+        headline: "¿Qué es una Relación?",
+        lead: "Las entidades no viven solas. Un aventurero TIENE equipamiento. Un cliente COMPRA productos. Estas conexiones se llaman Relaciones.",
+        bullets: [
+          "La Llave Foránea (FK) es el puente: una columna en una tabla que apunta al PK de otra.",
+          "En 'equipamiento', la columna id_aventurero es una FK que apunta a aventureros.",
+          "Así sabemos que la Espada Larga (FK=1) pertenece a Loya (PK=1).",
         ],
       },
       {
         type: "two-tables",
-        emoji: <Grid3x3 className="w-12 h-12" />,
-        headline: "Llaves Primarias y Foráneas",
-        lead: "El id_aventurero (Llave Primaria) en la tabla izquierda, se usa como puente (Llave Foránea) en la tabla derecha.",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "Tipos de Relaciones (Cardinalidad)",
+        lead: "Las relaciones tienen tipos según cuántos registros se conectan entre sí:",
         left: {
-          title: "aventureros",
-          columns: ["id_aventurero", "nombre"],
-          rows: [[1, "Loya"], [3, "Aldo"]],
+          title: "1:N (Uno a Muchos)",
+          columns: ["Ejemplo", "Explicación"],
+          rows: [
+            ["Aventurero → Armas", "1 héroe tiene N armas"],
+            ["Profesor → Alumnos", "1 profe tiene N alumnos"],
+            ["País → Ciudades", "1 país tiene N ciudades"],
+          ],
         },
         right: {
-          title: "equipamiento",
-          columns: ["id_equipo", "id_aventurero", "item"],
-          rows: [[101, 1, "Escudo"], [102, 3, "Hacha"]],
+          title: "M:N (Muchos a Muchos)",
+          columns: ["Ejemplo", "Explicación"],
+          rows: [
+            ["Alumnos ↔ Materias", "N alumnos cursan M materias"],
+            ["Actores ↔ Películas", "N actores en M películas"],
+            ["Doctores ↔ Pacientes", "N doctores ven M pacientes"],
+          ],
         },
       },
       {
-        type: "merge",
-        emoji: <GitMerge className="w-12 h-12" />,
-        headline: "INNER JOIN: Cruzando el puente",
-        lead: "El comando JOIN sigue esa llave para mezclar visualmente los datos de ambas tablas en un solo reporte.",
-        code: "SELECT a.nombre, e.item \nFROM aventureros a \nINNER JOIN equipamiento e \n  ON a.id_aventurero = e.id_aventurero;",
-        result: {
-          title: "resultado (Reporte final)",
-          columns: ["nombre", "item"],
-          rows: [["Loya", "Escudo"], ["Aldo", "Hacha"]],
-        },
+        type: "hero",
+        emoji: <Sparkles className="w-12 h-12" />,
+        headline: "1:1, 1:N y M:N en detalle",
+        lead: "Entender la cardinalidad es clave para diseñar bien tu base de datos:",
+        bullets: [
+          "1:1 (Uno a Uno) — Raro. Ej: una persona tiene UN pasaporte, un pasaporte pertenece a UNA persona.",
+          "1:N (Uno a Muchos) — El más común. Ej: 1 aventurero puede tener MUCHAS armas, pero cada arma pertenece a 1 solo aventurero.",
+          "M:N (Muchos a Muchos) — Necesita una tabla intermedia. Ej: muchos alumnos cursan muchas materias → tabla 'inscripciones' que conecta ambas.",
+          "La relación aventureros↔equipamiento es 1:N: Loya tiene Espada Y Escudo, pero cada arma es de 1 solo héroe.",
+        ],
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "Conviértete en el tejedor de datos",
-        lead: "En este módulo demostrarás que puedes navegar entre múltiples tablas.",
+        headline: "¡Diseña tus primeras entidades!",
+        lead: "En los próximos 3 ejercicios usarás el Lienzo de Arquitectura para crear entidades, darles atributos y conectarlas con relaciones.",
         checklist: [
-          "Comprende el poder del INNER JOIN.",
-          "Combina filtros (WHERE) con tablas conectadas.",
-          "Agrupa totales matemáticos combinando JOIN y SUM().",
+          "Clic en '+ Entidad' para crear una tabla nueva.",
+          "Escribe el nombre y agrega atributos (columnas).",
+          "Arrastra desde el punto cyan al fucsia para crear una relación.",
         ],
       },
     ],
   },
 
-  "4": {
+  "3-1": {
+    title: "JOINs — Consultando Relaciones con SQL",
+    subtitle: "De diagramas a consultas reales",
+    color: "from-violet-500 to-purple-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "Ya diseñaste las tablas. Ahora consúltalas.",
+        lead: "Sabes que aventureros y equipamiento están conectados por id_aventurero. JOIN es el comando SQL que cruza esa conexión y te muestra datos de AMBAS tablas juntas.",
+        bullets: [
+          "INNER JOIN muestra solo filas que tienen coincidencia en AMBAS tablas.",
+          "Si un héroe no tiene equipo, NO aparece en un INNER JOIN.",
+          "Siempre usamos ON para definir por qué columna se conectan las tablas.",
+        ],
+      },
+      {
+        type: "merge",
+        emoji: <Link2 className="w-12 h-12" />,
+        headline: "INNER JOIN en acción",
+        lead: "Observa cómo SQL fusiona las tablas usando la Llave Foránea como puente:",
+        code: "SELECT a.nombre, e.item\nFROM aventureros a\nINNER JOIN equipamiento e\n  ON a.id_aventurero = e.id_aventurero;",
+        result: {
+          title: "Resultado del INNER JOIN",
+          columns: ["nombre", "item"],
+          rows: [["Loya", "Espada Larga"], ["Loya", "Escudo de Hierro"], ["Zoe", "Báculo de Fuego"], ["Aldo", "Hacha Doble"], ["Dan", "Daga Venenosa"]],
+        },
+      },
+      {
+        type: "hero",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "LEFT JOIN: Nadie se queda atrás",
+        lead: "LEFT JOIN incluye TODOS los registros de la tabla izquierda (FROM), incluso los que no tienen coincidencia. Jared no tiene equipo, pero igual aparece con NULL.",
+        code: "SELECT a.nombre, e.item\nFROM aventureros a\nLEFT JOIN equipamiento e\n  ON a.id_aventurero = e.id_aventurero;",
+        codeLabel: "Jared aparece con item = NULL",
+        bullets: [
+          "El alias 'a' y 'e' son atajos para los nombres de tabla.",
+          "ON define el puente (la FK).",
+          "Puedes agregar WHERE después del JOIN para filtrar los resultados.",
+        ],
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "¡Cruza el puente con SQL!",
+        lead: "Los próximos 3 ejercicios te retarán a unir tablas usando INNER JOIN, LEFT JOIN y filtros WHERE.",
+        checklist: [
+          "INNER JOIN tabla ON condición — Une dos tablas (solo coincidencias).",
+          "LEFT JOIN — Incluye todos de la tabla izquierda.",
+          "Combina con WHERE para filtrar el resultado.",
+        ],
+      },
+    ],
+  },
+
+  "3-2": {
+    title: "Agregaciones con JOINs",
+    subtitle: "Calculando totales entre tablas",
+    color: "from-teal-500 to-cyan-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Sparkles className="w-12 h-12" />,
+        headline: "GROUP BY + Funciones de Agregación",
+        lead: "Ya sabes unir tablas. Ahora aprende a RESUMIR los datos unidos. GROUP BY agrupa filas con valores iguales y te permite calcular estadísticas por grupo.",
+        bullets: [
+          "COUNT(columna) — Cuenta cuántos valores no nulos hay.",
+          "SUM(columna) — Suma todos los valores numéricos.",
+          "GROUP BY columna — Agrupa las filas por esa columna (un resultado por grupo).",
+          "Se usa DESPUÉS del JOIN y del WHERE.",
+        ],
+      },
+      {
+        type: "merge",
+        emoji: <Grid3x3 className="w-12 h-12" />,
+        headline: "Ejemplo: ¿Cuántas armas tiene cada héroe?",
+        lead: "Combinamos LEFT JOIN (para incluir a todos, incluso sin equipo) con COUNT y GROUP BY:",
+        code: "SELECT a.nombre, COUNT(e.item)\nFROM aventureros a\nLEFT JOIN equipamiento e\n  ON a.id_aventurero = e.id_aventurero\nGROUP BY a.nombre;",
+        result: {
+          title: "Armas por héroe",
+          columns: ["nombre", "count"],
+          rows: [["Loya", "2"], ["Zoe", "1"], ["Jared", "0"], ["Aldo", "1"], ["Dan", "1"]],
+        },
+      },
+      {
+        type: "hero",
+        emoji: <Database className="w-12 h-12" />,
+        headline: "SUM: El gasto total",
+        lead: "SUM suma valores numéricos por grupo. Perfecto para calcular el gasto total en equipamiento de cada héroe.",
+        code: "SELECT a.nombre, SUM(e.precio)\nFROM aventureros a\nINNER JOIN equipamiento e\n  ON a.id_aventurero = e.id_aventurero\nGROUP BY a.nombre;",
+        codeLabel: "Gasto total por héroe",
+        bullets: [
+          "Loya gastó 250 (Espada 150 + Escudo 100).",
+          "Zoe gastó 300 (Báculo de Fuego).",
+          "Puedes agregar ORDER BY al final para ordenar los resultados.",
+        ],
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "¡Domina las agregaciones!",
+        lead: "Los próximos 3 ejercicios combinan JOINs con funciones de agregación y filtros avanzados.",
+        checklist: [
+          "COUNT(columna) con GROUP BY — Cuenta elementos por grupo.",
+          "SUM(columna) con GROUP BY — Suma valores por grupo.",
+          "WHERE + JOIN + GROUP BY + ORDER BY — La consulta completa.",
+        ],
+      },
+    ],
+  },
+
+  /* ──────────────────────────────────────────────
+     MÓDULO 4 — La Prueba de Dagon
+     ────────────────────────────────────────────── */
+
+  "4-0": {
     title: "La Prueba de Dagon",
-    subtitle: "El reto final de arquitectura",
+    subtitle: "El reto final: diseña, conecta y consulta",
     color: "from-orange-500 to-rose-700",
     slides: [
       {
         type: "hero",
         emoji: <Database className="w-12 h-12" />,
         headline: "El Lienzo en Blanco",
-        lead: "Llegaste a la cima. Ya no vas a consultar tablas hechas por alguien más. Vas a diseñar tu propia estructura desde cero.",
+        lead: "Llegaste al final. Ya sabes crear entidades, definir relaciones y consultar datos con JOINs y agregaciones. Ahora demuéstralo todo en una prueba real.",
         bullets: [
-          "Diseñarás el Modelo Entidad-Relación (MER).",
-          "Conectarás las tablas visualmente usando nuestro motor de arquitectura.",
-          "Extraerás los datos de tu propia creación.",
+          "Diseñarás un sistema completo con 3 entidades y relaciones M:N.",
+          "Recuerda: una relación Muchos a Muchos (M:N) necesita una tabla intermedia.",
+          "Ej: Huéspedes ↔ Habitaciones necesita una tabla 'reservas' como puente.",
+          "Después resolverás consultas avanzadas con JOINs, filtros y agregaciones.",
         ],
+      },
+      {
+        type: "two-tables",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "Ejemplo de relación M:N",
+        lead: "Observa cómo una tabla intermedia ('reservas') conecta dos entidades que tienen relación muchos a muchos:",
+        left: {
+          title: "huéspedes",
+          columns: ["id (PK)", "nombre"],
+          rows: [[1, "Carlos"], [2, "María"]],
+        },
+        right: {
+          title: "reservas (tabla intermedia)",
+          columns: ["id", "id_huesped (FK)", "id_habitacion (FK)"],
+          rows: [[1, 1, 101], [2, 1, 102], [3, 2, 101]],
+        },
       },
       {
         type: "ready",
         emoji: <Rocket className="w-12 h-12" />,
-        headline: "Demuestra lo que vales",
-        lead: "Dagon te observa. Diseña el diagrama y sobrevive a la prueba final para obtener tu certificación de Arquitecto.",
+        headline: "Dagon te observa. Demuestra lo que vales.",
+        lead: "Esta es tu certificación como Arquitecto. 3 retos que combinan todo lo aprendido.",
         checklist: [
-          "Identifica las Entidades correctas.",
-          "Asigna las llaves PK y FK.",
-          "Construye el puente perfecto.",
+          "Fase 1: Diseña un sistema completo con 3 entidades y sus relaciones.",
+          "Fase 2: Resuelve una consulta avanzada con JOIN + WHERE + ORDER BY.",
+          "Fase 3: Construye un ranking con JOIN + SUM + GROUP BY + ORDER BY.",
         ],
       },
     ],
-  }
+  },
+};
+
+/* Para el flujo antiguo que usa levelId directo (teoría inicial del módulo) */
+const LEVEL_KEYS = {
+  "1": "1-0",
+  "2": "2-0",
+  "3": "3-0",
+  "4": "4-0",
 };
 
 const FALLBACK = {
@@ -309,14 +692,22 @@ const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [
    COMPONENTE PRINCIPAL
    ============================================================ */
 
-export const LevelTheory = ({ levelId, onComplete }) => {
-  const theory = LEVELS[String(levelId)] || FALLBACK;
+export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
+  // subTopic es la clave directa como "1-0", "1-1", etc.
+  // levelId es el fallback para compatibilidad (módulo)
+  const theoryKey = subTopic || LEVEL_KEYS[String(levelId)] || null;
+  const theory = (theoryKey && SUB_TOPICS[theoryKey]) || FALLBACK;
+
   const [index, setIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const slide = theory.slides[index];
   const total = theory.slides.length;
   const isLast = index === total - 1;
+
+  useEffect(() => {
+    setIndex(0);
+  }, [theoryKey]);
 
   useEffect(() => {
     if (!isMuted) {
@@ -332,44 +723,21 @@ export const LevelTheory = ({ levelId, onComplete }) => {
       setIsSpeaking(false);
       return;
     }
-    
-    // prepar voices
+
     const prepareVoice = () => {
       const voices = window.speechSynthesis.getVoices();
-      const spanishVoice = voices.find(v => v.lang.includes('es')) || voices[0];
-      return spanishVoice;
+      return voices.find(v => v.lang.includes('es')) || voices[0];
     };
-    
+
     let fullText = `${slide.headline}. ${slide.lead || ''}`;
-    if (slide.bullets) {
-      fullText += '. ' + slide.bullets.map(b => b).join('. ');
-    }
-    if (slide.code) {
-      fullText += `. Código: ${slide.code.replace(/\n/g, ' ')}`;
-    }
-    if (slide.caption) {
-      fullText += `. ${slide.caption}`;
-    }
-    if (slide.chat) {
-      slide.chat.forEach(c => { fullText += `. ${c.from} dice: ${c.text}`; });
-    }
-    
+    if (slide.bullets) fullText += '. ' + slide.bullets.join('. ');
+    if (slide.code) fullText += `. Código: ${slide.code.replace(/\n/g, ' ')}`;
+    if (slide.caption) fullText += `. ${slide.caption}`;
+    if (slide.chat) slide.chat.forEach(c => { fullText += `. ${c.from} dice: ${c.text}`; });
+
     window.speechSynthesis.cancel();
-    
-    // load voices first
-    if (window.speechSynthesis.getVoices().length === 0) {
-      window.speechSynthesis.addEventListener('voiceschanged', () => {
-        const u = new SpeechSynthesisUtterance(fullText);
-        u.lang = 'es-ES';
-        u.rate = 0.9;
-        u.pitch = 1.1;
-        u.voice = prepareVoice();
-        u.onstart = () => setIsSpeaking(true);
-        u.onend = () => setIsSpeaking(false);
-        u.onerror = () => setIsSpeaking(false);
-        window.speechSynthesis.speak(u);
-      }, { once: true });
-    } else {
+
+    const doSpeak = () => {
       const u = new SpeechSynthesisUtterance(fullText);
       u.lang = 'es-ES';
       u.rate = 0.9;
@@ -379,6 +747,12 @@ export const LevelTheory = ({ levelId, onComplete }) => {
       u.onend = () => setIsSpeaking(false);
       u.onerror = () => setIsSpeaking(false);
       window.speechSynthesis.speak(u);
+    };
+
+    if (window.speechSynthesis.getVoices().length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', doSpeak, { once: true });
+    } else {
+      doSpeak();
     }
   };
 
@@ -432,7 +806,7 @@ export const LevelTheory = ({ levelId, onComplete }) => {
               onClick={onComplete}
               className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest"
             >
-              Saltar teoría →
+              Saltar teoria →
             </button>
           </div>
         </div>
@@ -461,7 +835,7 @@ export const LevelTheory = ({ levelId, onComplete }) => {
         {/* Slide */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={index}
+            key={`${theoryKey}-${index}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -502,6 +876,15 @@ export const LevelTheory = ({ levelId, onComplete }) => {
     </div>
   );
 };
+
+/* Exportamos las claves de subtemas para que ExercisePage pueda usarlas */
+export const getSubTopicKey = (moduleId, exerciseOrder) => {
+  const group = Math.floor((exerciseOrder - 1) / 3);
+  const key = `${moduleId}-${group}`;
+  return SUB_TOPICS[key] ? key : null;
+};
+
+export const hasSubTopic = (key) => !!SUB_TOPICS[key];
 
 /* ============================================================
    Render del contenido de cada slide
