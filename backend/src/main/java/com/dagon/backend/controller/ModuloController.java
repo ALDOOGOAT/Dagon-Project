@@ -19,11 +19,15 @@ public class ModuloController {
 
     @GetMapping
     public ResponseEntity<?> obtenerModulos(Authentication authentication) {
-        // El email del usuario viene automáticamente dentro de su token JWT seguro
         String emailUsuario = authentication.getName();
-
         List<Map<String, Object>> modulos = moduloService.obtenerModulosConEstado(emailUsuario);
-
         return ResponseEntity.ok(modulos);
+    }
+
+    @GetMapping("/completados")
+    public ResponseEntity<?> obtenerModulosCompletados(Authentication authentication) {
+        String emailUsuario = authentication.getName();
+        List<Integer> modulosCompletados = moduloService.obtenerModulosCompletados(emailUsuario);
+        return ResponseEntity.ok(modulosCompletados);
     }
 }

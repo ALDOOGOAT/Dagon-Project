@@ -545,3 +545,60 @@ h1, h2, h3, h4, h5, h6 {
         border-bottom-width: inherit;
     }
 }
+
+@layer utilities {
+    .quick-practice-container {
+        @apply w-full max-w-2xl lg:max-w-4xl mx-auto;
+    }
+    
+    .quick-practice-card {
+        @apply p-4 sm:p-6 lg:p-8;
+    }
+    
+    .quick-practice-title {
+        @apply text-2xl sm:text-3xl font-bold;
+    }
+    
+    .quick-practice-grid {
+        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4;
+    }
+    
+    .quick-practice-words {
+        @apply flex flex-wrap gap-2;
+    }
+    
+    .quick-practice-word {
+        @apply px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base;
+    }
+    
+    .quick-practice-dropzone {
+        @apply min-h-[60px] sm:min-h-[80px] p-3 sm:p-4;
+    }
+    
+    .quick-practice-header {
+        @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4;
+    }
+    
+    .quick-practice-stats {
+        @apply grid grid-cols-3 gap-2 sm:gap-4;
+    }
+    
+    .quick-practice-buttons {
+        @apply flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center;
+    }
+    
+    .difficulty-grid {
+        @apply grid grid-cols-1 sm:grid-cols-2 gap-3;
+    }
+    
+    @media (max-width: 640px) {
+        .glass-card-apple {
+            @apply rounded-2xl;
+            border-radius: clamp(1rem, 4vw, 1.5rem);
+        }
+        
+        .quick-practice-card {
+            padding: clamp(1rem, 3vw, 2rem);
+        }
+    }
+}

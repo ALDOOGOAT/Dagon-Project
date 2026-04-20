@@ -202,18 +202,18 @@ const title = titleFor(userXP);
             </p>
           </motion.div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               onClick={() => navigate('/profile')}
-              className="bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 text-slate-200 hover:text-white font-display font-black"
+              className="bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 text-slate-200 hover:text-white font-display font-black text-sm"
             >
               <User className="w-4 h-4 mr-2" />
-              Mi Perfil
+              <span className="hidden sm:inline">Mi Perfil</span>
             </Button>
             {userStreak > 0 ? (
               <Button
                 onClick={() => navigate('/streak')}
-                className="bg-gradient-to-r from-orange-600/80 to-rose-600/80 hover:from-orange-500 hover:to-rose-500 border border-orange-400/40 text-white font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)]"
+                className="bg-gradient-to-r from-orange-600/80 to-rose-600/80 hover:from-orange-500 hover:to-rose-500 border border-orange-400/40 text-white font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm"
               >
                 <Flame className="w-4 h-4 mr-2 animate-pulse" />
                 {userStreak} días
@@ -222,21 +222,23 @@ const title = titleFor(userXP);
               <Button
                 onClick={() => navigate('/streak')}
                 variant="ghost"
-                className="text-orange-300 hover:text-orange-200 hover:bg-orange-500/10"
+                className="text-orange-300 hover:text-orange-200 hover:bg-orange-500/10 text-sm"
               >
                 <Calendar className="w-4 h-4 mr-2" />
-                Ver Racha
+                <span className="hidden sm:inline">Racha</span>
               </Button>
             )}
             <Button
               onClick={() => setShowQuickPractice(true)}
-              className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all"
+              className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm"
             >
               <Target className="w-4 h-4 mr-2" />
-              Práctica Rápida
+              <span className="hidden sm:inline">Práctica Rápida</span>
+              <span className="sm:hidden">Práctica</span>
             </Button>
-            <Button onClick={handleLogout} variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/5">
-              <LogOut className="w-5 h-5 mr-2" /> Salir
+            <Button onClick={handleLogout} variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/5 text-sm">
+              <LogOut className="w-5 h-5 mr-2" />
+              <span className="hidden sm:inline">Salir</span>
             </Button>
           </div>
         </div>

@@ -3,7 +3,10 @@ package com.dagon.backend.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ModuloService {
@@ -57,5 +60,26 @@ public class ModuloService {
         }
 
         return resultadoEstructurado;
+    }
+
+    public List<Integer> obtenerModulosCompletados(String identificadorUsuario) {
+        String sql = "SELECT DISTINCT e.id_modulo " +
+                "FROM lms_core.intentos i " +
+                "JOIN lms_core.ejercicios_practicos e ON i.id_ejercicio = e.id_ejercicio " +
+                "JOIN lms_core.usuarios u ON i.id_usuario = u.id_usuario " +
+                "WHERE (u.email = ? OR u.id_usuario::varchar = ?) AND i.es_correcto = true " +
+                "ORDER BY e.id_modulo ASC";
+        
+        List<Map<String, Object>> resultados = jdbcTemplate.queryForList(sql, identificadorUsuario, identificadorUsuario);
+        List<Integer> modulosCompletados = new ArrayList<>();
+        
+        for (Map<String, Object> row : resultados) {
+            Object idModulo = row.get("id_modulo");
+            if (idModulo != null) {
+                modulosCompletados.add(((Number) idModulo).intValue());
+            }
+        }
+        
+        return modulosCompletados;
     }
 }
