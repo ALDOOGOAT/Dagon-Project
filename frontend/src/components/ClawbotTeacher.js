@@ -6,56 +6,54 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const MENSAJES = {
   intro: [
-    "¡Hola! Soy Dagon, tu guía en este viaje por el mundo de SQL. ¡Vamos a aprender juntos!",
-    "¡Bienvenido, aventurero! Prepárate para descubrir los secretos de las bases de datos.",
-    "¡Qué gusto verte por aquí! Soy Dagon y seré tu compañero en esta aventura."
+    "¡Salve, aventurero! Soy Dagon, tu guía en este viaje por las profundidades del SQL.",
+    "¡Has cruzado el portal! Prepárate, los secretos de las bases de datos esperan.",
+    "¡Por fin! Tu camino hacia el dominio de SQL comienza ahora."
   ],
   theory: [
-    "Es hora de aprender algo nuevo. Presta atención, esto te servirá mucho.",
-    "Vamos con la teoría. Te explico esto de forma clara y simple.",
-    "El conocimiento es poder. Escucha bien lo que te voy a contar."
+    "Te explicaré esto con un ejemplo real. Verás cómo funciona en la práctica.",
+    "Esto es clave para tu viaje. Presta atención al ejemplo.",
+    "Nuevo conocimiento acquired. Vamos a ver cómo aplicarlo."
   ],
   practice_start: [
-    "¡Ahora es tu turno! Tú puedes, estoy aquí para ayudarte.",
-    "Es momento de poner en práctica lo que sabes. ¡Tú puedes!",
-    "¡Vamos a la acción! Estaré pendiente de cada paso que des."
+    "Es hora de actuar. Escribe tu consulta y ve el resultado.",
+    "Tu turno de brillar. La base de datos espera tu comando.",
+    "El momento ha llegado. Escribe y observa la magia."
   ],
   dragging: [
-    "¡Arrastra las palabras y construye tu consulta! Piensa en el orden: qué y de dónde.",
-    "Piensa en tu consulta como una oración. ¿Qué quieres obtener? ¿De dónde?",
-    "¡Muy bien! Arrastra cada palabra a su lugar. SELECT primero, luego FROM."
+    "Construye: SELECT + la columna + FROM + la tabla. Observa el orden.",
+    "Arrastra en orden: primero qué quieres ver, luego de dónde.",
+    "El patrón es: SELECT columna FROM tabla. ¡Inténtalo!"
   ],
   typing: [
-    "Escribe tu consulta con confianza. Los errores son parte del aprendizaje.",
-    "No te preocupes si no sale perfecto. ¡Estamos aquí para aprender!",
-    "Escribe tu SQL y veamos qué pasa. ¡Tú puedes!"
+    "Escribe tu consulta. Un error solo significa que estás aprendiendo.",
+    "Siguiendo el patrón correcto, el éxito llegará.",
+    "Piensa en la estructura: SELECT columna FROM tabla."
   ],
   success: [
-    "¡Eso fue increíble! ¡Lo lograste! ¡Eres un crack!",
-    "¡Perfecto! ¡Estás aprendiendo muy rápido! ¡Me impresionas!",
-    "¡Excelente trabajo! ¡Exactamente eso! ¡Sigue así!",
-    "¡WOW! ¡Lo hiciste perfecto! ¡Eres un maestro de SQL!"
+    "¡Perfecto! Tu consulta devolvió el resultado exacto.",
+    "¡Lo lograste! Así se hace. Mira el resultado abajo.",
+    "¡Excelente! Tu dominio de SQL crece. El resultado es correcto."
   ],
   error: [
-    "No te preocupes, los errores son normales. ¡Analicemos qué pasó!",
-    "¡Tranquilo! Esto es parte del aprendizaje. ¡Intenta de nuevo!",
-    "¡No pasa nada! Los mejores también cometen errores. ¡Vamos a intentarlo otra vez!",
-    "¡Casi lo logras! Revisa con calma y verás dónde está el detalle."
+    "La base de datos respondió con un error. Revisa la sintaxis.",
+    "Casi lo logras. El mensaje de error indica qué corregir.",
+    "Un paso en falso. Lee el error y corrige esa parte."
   ],
   hint: [
-    "¿Necesitas una pista? ¡Claro! Mira esto...",
-    "¡Te ayudo un poco! Presta atención...",
-    "¡Una pista para ti! Esto te servirá..."
+    "Pista: Mira el patrón. SELECT columna FROM tabla WHERE condición.",
+    "Consejo: Copia la estructura y cambia solo los nombres.",
+    "Ayuda: El patrón es siempre el mismo. ¡Úsalo!"
   ],
   level_complete: [
-    "¡Felicidades! ¡Completaste el nivel! ¡Eres increíble!",
-    "¡Lo lograste! ¡El conocimiento es tuyo!",
-    "¡Nivel completado! ¡Eres un crack!"
+    "¡Felicidades, aventurero! Has conquistado este nivel.",
+    "¡Victoria! El conocimiento es ahora parte de ti.",
+    "¡Nivel completado! Tu próximo destino espera."
   ],
   encourage: [
-    "¡Tú puedes! Confío en ti.",
-    "¡Sigue así! ¡Vas muy bien!",
-    "¡No te rindas! ¡Estoy aquí para ayudarte!"
+    "Confía en ti. El patrón siempre funciona.",
+    "Intenta de nuevo. El éxito está garantizado.",
+    "Un intento más. Esta vez lo lograrás."
   ]
 };
 

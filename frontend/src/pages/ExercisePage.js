@@ -461,24 +461,40 @@ export const ExercisePage = () => {
               <AnimatePresence>
                 {(clawbotThinking || clawbotMessage) && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                    className="mt-4 bg-slate-950/70 border border-amber-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(245,158,11,0.1)]"
+                    className="mt-4 relative overflow-hidden rounded-2xl"
                   >
-                    <div className="flex items-start gap-3">
-                      <Bot className="w-5 h-5 shrink-0 mt-0.5 text-amber-300" />
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold tracking-[0.3em] uppercase mb-1 text-amber-400">
-                          {clawbotThinking ? 'Dagonbot está pensando...' : 'Dagonbot dice:'}
-                        </p>
-                        {clawbotThinking ? (
-                          <div className="flex gap-1.5">
-                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" />
-                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                            <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-                          </div>
-                        ) : (
-                          <p className="text-amber-100 text-sm font-gameui leading-relaxed">{clawbotMessage}</p>
-                        )}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 backdrop-blur-xl border border-white/20" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 via-purple-400/10 to-rose-400/10 animate-pulse opacity-50" />
+                    <div className="relative z-10 p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg">
+                          <Bot className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-black tracking-[0.4em] uppercase bg-gradient-to-r from-cyan-400 via-purple-400 to-rose-400 bg-clip-text text-transparent">
+                            Dagon responde
+                          </p>
+                          <p className="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">
+                            {clawbotThinking ? 'Procesando...' : 'IA Generativa'}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          {[...Array(3)].map((_, i) => (
+                            <span key={i} className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-cyan-400 to-purple-400 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
+                          ))}
+                        </div>
                       </div>
+                      {clawbotThinking ? (
+                        <div className="flex gap-1.5 py-2">
+                          <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                          <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(168,85,247,0.8)]" style={{ animationDelay: '0.15s' }} />
+                          <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
+                        </div>
+                      ) : (
+                        <div className="mt-2 p-3 rounded-xl bg-slate-900/60 border border-white/10">
+                          <p className="text-slate-100 text-sm font-gameui leading-relaxed">{clawbotMessage}</p>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
