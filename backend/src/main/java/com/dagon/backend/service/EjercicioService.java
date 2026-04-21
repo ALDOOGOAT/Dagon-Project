@@ -130,20 +130,41 @@ public class EjercicioService {
         String user = "app_sandbox_user";
         String password = "Taxi2097";
 
+        String queryProcesada = queryUsuario.trim();
+        String upperQuery = queryProcesada.toUpperCase();
+
+        // Limpiar comentarios simples al final que podrían estorbar
+        queryProcesada = queryProcesada.replaceAll("--.*$", "").trim();
+
+        // Si es INSERT, UPDATE o DELETE y no tiene RETURNING, se lo agregamos para ver resultados
+        if ((upperQuery.contains("INSERT") || upperQuery.contains("UPDATE") || upperQuery.contains("DELETE")) 
+            && !upperQuery.contains("RETURNING")) {
+            
+            // Eliminar punto y coma final de forma robusta
+            queryProcesada = queryProcesada.replaceAll(";\\s*$", "");
+            queryProcesada += " RETURNING *;";
+        }
+
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
 
             stmt.execute("SET search_path TO lms_sandbox");
-            try (ResultSet rs = stmt.executeQuery(queryUsuario)) {
-                ResultSetMetaData metaData = rs.getMetaData();
-                int columnCount = metaData.getColumnCount();
+            
+            boolean tieneResultSet = stmt.execute(queryProcesada);
+            if (tieneResultSet) {
+                try (ResultSet rs = stmt.getResultSet()) {
+                    ResultSetMetaData metaData = rs.getMetaData();
+                    int columnCount = metaData.getColumnCount();
 
-                while (rs.next()) {
-                    Map<String, Object> fila = new LinkedHashMap<>();
-                    for (int i = 1; i <= columnCount; i++) {
-                        fila.put(metaData.getColumnName(i), rs.getObject(i));
+                    while (rs.next()) {
+                        Map<String, Object> fila = new LinkedHashMap<>();
+                        for (int i = 1; i <= columnCount; i++) {
+                            // Guardamos todo como String para evitar líos de tipos (Integer vs Long)
+                            Object val = rs.getObject(i);
+                            fila.put(metaData.getColumnName(i).toLowerCase(), val != null ? val.toString() : null);
+                        }
+                        resultados.add(fila);
                     }
-                    resultados.add(fila);
                 }
             }
         }
@@ -261,6 +282,48 @@ public class EjercicioService {
                     }
                 }
 
+                // Validar relaciones y cardinalidad (opcional)
+                if (configExtra != null && !configExtra.trim().isEmpty()) {
+                    JsonNode config = mapper.readTree(configExtra);
+                    if (config.has("relaciones_requeridas")) {
+                        for (JsonNode relReq : config.get("relaciones_requeridas")) {
+                            String srcReq = relReq.get("source").asText().toLowerCase();
+                            String targetReq = relReq.get("target").asText().toLowerCase();
+                            String cardReq = relReq.has("cardinality") ? relReq.get("cardinality").asText() : null;
+                            
+                            boolean relEncontrada = false;
+                            for (JsonNode edge : diagramEdges) {
+                                String sourceId = edge.get("source").asText();
+                                String targetId = edge.get("target").asText();
+                                String cardinality = (edge.has("data") && edge.get("data").has("cardinality")) 
+                                                    ? edge.get("data").get("cardinality").asText() : "1:N";
+
+                                String sourceName = "";
+                                String targetName = "";
+                                for (JsonNode node : diagramNodes) {
+                                    if (node.get("id").asText().equals(sourceId)) sourceName = node.get("data").get("label").asText().toLowerCase();
+                                    if (node.get("id").asText().equals(targetId)) targetName = node.get("data").get("label").asText().toLowerCase();
+                                }
+
+                                if (sourceName.contains(srcReq) && targetName.contains(targetReq)) {
+                                    if (cardReq == null || cardReq.equals(cardinality)) {
+                                        relEncontrada = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!relEncontrada) {
+                                String msg = "Falta una relación entre " + srcReq + " y " + targetReq;
+                                if (cardReq != null) msg += " con cardinalidad " + cardReq;
+                                respuesta.put("success", false);
+                                respuesta.put("message", msg + ".");
+                                respuesta.put("xp_gained", 0);
+                                return respuesta;
+                            }
+                        }
+                    }
+                }
+
                 esCorrecto = true;
             } else {
                 if (!queryUsuario.trim().endsWith(";")) {
@@ -275,7 +338,16 @@ public class EjercicioService {
 
                 datosAlumno = ejecutarEnSandbox(queryUsuario);
                 List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra());
-                esCorrecto = datosAlumno.equals(datosMaestros);
+                
+                // Nueva lógica de comparación robusta para DML
+                String upperQ = queryUsuario.trim().toUpperCase();
+                boolean esDML = upperQ.contains("INSERT") || upperQ.contains("UPDATE") || upperQ.contains("DELETE");
+                
+                if (esDML) {
+                    esCorrecto = compararResultadosDML(datosAlumno, datosMaestros);
+                } else {
+                    esCorrecto = datosAlumno.equals(datosMaestros);
+                }
             }
 
             boolean yaResuelto = false;
@@ -330,5 +402,32 @@ public class EjercicioService {
             respuesta.put("xp_gained", 0);
         }
         return respuesta;
+    }
+
+    private boolean compararResultadosDML(List<Map<String, Object>> r1, List<Map<String, Object>> r2) {
+        if (r1.size() != r2.size()) return false;
+        for (int i = 0; i < r1.size(); i++) {
+            Map<String, String> m1 = new HashMap<>();
+            Map<String, String> m2 = new HashMap<>();
+            
+            // Normalizar m1: ignorar IDs y poner llaves en minúsculas
+            for (Map.Entry<String, Object> entry : r1.get(i).entrySet()) {
+                String key = entry.getKey().toLowerCase();
+                if (!key.startsWith("id_")) {
+                    m1.put(key, entry.getValue() != null ? entry.getValue().toString() : null);
+                }
+            }
+            
+            // Normalizar m2
+            for (Map.Entry<String, Object> entry : r2.get(i).entrySet()) {
+                String key = entry.getKey().toLowerCase();
+                if (!key.startsWith("id_")) {
+                    m2.put(key, entry.getValue() != null ? entry.getValue().toString() : null);
+                }
+            }
+            
+            if (!m1.equals(m2)) return false;
+        }
+        return true;
     }
 }
