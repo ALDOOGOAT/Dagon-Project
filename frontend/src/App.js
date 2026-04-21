@@ -2,6 +2,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { sounds } from './lib/SoundEngine';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ExercisePage } from './pages/ExercisePage';
@@ -121,8 +122,10 @@ const AppRoutes = () => {
 };
 
 function App() {
+  const initSounds = () => sounds.init();
+  
   return (
-    <div className="App">
+    <div className="App" onClick={initSounds} onKeyDown={initSounds}>
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
