@@ -7,6 +7,7 @@ import com.dagon.backend.dto.NivelDTO;
 import com.dagon.backend.model.EjercicioPractico;
 import com.dagon.backend.repository.EjercicioPracticoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -26,6 +27,15 @@ public class EjercicioService {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Value("${dagon.sandbox.url}")
+    private String sandboxUrl;
+
+    @Value("${dagon.sandbox.username}")
+    private String sandboxUser;
+
+    @Value("${dagon.sandbox.password}")
+    private String sandboxPassword;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
         List<NivelDTO> modulos = new ArrayList<>();
@@ -126,9 +136,9 @@ public class EjercicioService {
 
     private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario) throws java.sql.SQLException {
         List<Map<String, Object>> resultados = new ArrayList<>();
-        String url = "jdbc:postgresql://localhost:5432/dagon_db";
-        String user = "app_sandbox_user";
-        String password = "Taxi2097";
+        String url = sandboxUrl;
+        String user = sandboxUser;
+        String password = sandboxPassword;
 
         String queryProcesada = queryUsuario.trim();
         String upperQuery = queryProcesada.toUpperCase();
