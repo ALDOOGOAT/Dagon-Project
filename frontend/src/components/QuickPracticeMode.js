@@ -103,7 +103,7 @@ export const QuickPracticeMode = ({
     const fetchCompletedLevels = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('${process.env.REACT_APP_API_URL}/api/modulos/completados', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/completados`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {

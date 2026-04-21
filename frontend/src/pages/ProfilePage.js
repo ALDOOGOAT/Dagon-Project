@@ -92,7 +92,7 @@ export const ProfilePage = () => {
         });
         const data = await res.json();
         if (data.fotoUrl) {
-          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : '${process.env.REACT_APP_API_URL}' + data.fotoUrl;
+          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
           setAvatarUrl(fullUrl);
         }
       } catch (e) {}
@@ -116,7 +116,7 @@ export const ProfilePage = () => {
       });
       const data = await res.json();
       if (data.success) {
-        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : '${process.env.REACT_APP_API_URL}' + data.fotoUrl;
+        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
         setAvatarUrl(fullUrl);
         toast.success('Foto de perfil actualizada!');
       }

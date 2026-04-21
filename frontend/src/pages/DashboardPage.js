@@ -94,7 +94,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchModulos = async () => {
       try {
-        const response = await fetch('${process.env.REACT_APP_API_URL}/api/modulos', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -116,7 +116,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchTop = async () => {
       try {
-        const response = await fetch('${process.env.REACT_APP_API_URL}/api/leaderboard', {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/leaderboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {

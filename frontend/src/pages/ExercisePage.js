@@ -159,7 +159,7 @@ export const ExercisePage = () => {
   const invokeClawbot = async (errorData) => {
     setClawbotThinking(true);
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/clawbot/analyze', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clawbot/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(errorData)
