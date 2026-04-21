@@ -14,7 +14,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { v4 as uuidv4 } from 'uuid';
-import { Database, Plus, Trash2, Settings2 } from 'lucide-react';
+import { Database, Plus, Trash2, Settings2, Key, Link2 } from 'lucide-react';
 
 // --- ARISTA CUSTOM CON CARDINALIDAD ---
 const RelationshipEdge = ({
@@ -75,55 +75,64 @@ const RelationshipEdge = ({
 // --- EL DISEÑO DE LA TABLA (NODO CUSTOM) ---
 const TableNode = ({ data, id, isConnectable }) => {
   return (
-    <div className="bg-slate-900 border-2 border-blue-500/50 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] w-56 overflow-hidden font-mono text-sm transition-all hover:border-cyan-400">
+    <div className="bg-slate-900 border-2 border-blue-500/50 rounded-xl shadow-[0_0_20px_rgba(59,130,246,0.3)] w-60 overflow-hidden font-mono text-sm transition-all hover:border-cyan-400">
       
-      {/* Conector de Entrada (Target) */}
-      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-3 h-3 bg-fuchsia-500 border-2 border-slate-900" />
+      {/* Conectores de Red de Datos */}
+      <Handle type="target" position={Position.Left} isConnectable={isConnectable} className="w-3 h-3 bg-fuchsia-500 border-2 border-slate-900 -left-1.5" />
+      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-3 h-3 bg-cyan-400 border-2 border-slate-900 -right-1.5" />
       
       {/* Cabecera de la Tabla */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-800 px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-white font-black tracking-widest uppercase text-xs">
+        <div className="flex items-center gap-2 text-white font-black tracking-widest uppercase text-[10px]">
           <Database className="w-3 h-3" />
           <input 
             type="text" 
             defaultValue={data.label} 
             onChange={(e) => data.onChangeName(id, e.target.value)}
-            className="bg-transparent border-none outline-none text-white w-28 placeholder-blue-300"
-            placeholder="NOMBRE_TABLA"
+            className="bg-transparent border-none outline-none text-white w-32 placeholder-blue-300 font-bold"
+            placeholder="TABLA"
           />
         </div>
       </div>
 
-      {/* Cuerpo: Columnas */}
+      {/* Cuerpo: Columnas con Roles Inteligentes */}
       <div className="p-3 text-slate-300 space-y-2 bg-[#0d1117]">
-        <div className="flex items-center gap-2 pb-2 border-b border-slate-800">
-          <span className="w-2 h-2 rounded-full bg-yellow-400 shadow-[0_0_5px_rgba(250,204,21,0.8)]"></span>
-          <span className="text-yellow-400 font-bold text-xs">id (PK)</span>
-        </div>
-        
         {data.columns?.map((col, index) => (
-          <div key={index} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-slate-500"></span>
+          <div key={index} className="flex items-center gap-2 group/col">
+            {/* Selector de Rol (PK, FK, Normal) */}
+            <button
+              onClick={() => data.onToggleRole(id, index)}
+              className={`w-10 h-5 rounded flex items-center justify-center text-[8px] font-black transition-all border shrink-0 ${
+                col.role === 'pk' ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400' :
+                col.role === 'fk' ? 'bg-cyan-400/20 border-cyan-400/50 text-cyan-400' :
+                'bg-slate-800 border-slate-700 text-slate-500'
+              }`}
+              title="Cambiar rol (Normal / PK / FK)"
+            >
+              {col.role === 'pk' ? 'PK' : col.role === 'fk' ? 'FK' : 'COL'}
+            </button>
+
             <input 
               type="text" 
-              defaultValue={col}
+              defaultValue={col.name}
               onChange={(e) => data.onChangeColumn(id, index, e.target.value)}
-              className="bg-transparent border-none outline-none text-slate-300 text-xs w-full focus:text-cyan-300 focus:border-b focus:border-cyan-500"
-              placeholder="nombre_columna"
+              className={`bg-transparent border-none outline-none text-[11px] w-full transition-colors ${
+                col.role === 'pk' ? 'text-yellow-200 font-bold' :
+                col.role === 'fk' ? 'text-cyan-200 font-bold' :
+                'text-slate-300 focus:text-cyan-300'
+              }`}
+              placeholder="atributo_nombre"
             />
           </div>
         ))}
         
         <button 
           onClick={() => data.onAddColumn(id)}
-          className="w-full mt-2 py-1 text-xs text-slate-500 hover:text-cyan-400 hover:bg-slate-800 rounded flex items-center justify-center gap-1 transition-colors"
+          className="w-full mt-2 py-1.5 text-[10px] text-slate-500 hover:text-cyan-400 hover:bg-slate-800/50 rounded-lg flex items-center justify-center gap-1.5 transition-all border border-dashed border-slate-800 hover:border-cyan-500/30 uppercase font-bold tracking-tighter"
         >
-          <Plus className="w-3 h-3" /> atributo
+          <Plus className="w-3 h-3" /> añadir atributo
         </button>
       </div>
-
-      {/* Conector de Salida (Source) */}
-      <Handle type="source" position={Position.Right} isConnectable={isConnectable} className="w-3 h-3 bg-cyan-400 border-2 border-slate-900" />
     </div>
   );
 };
@@ -207,11 +216,23 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
 
   const handleChangeName = (id, newName) => updateNodeData(id, (data) => ({ ...data, label: newName }));
   
-  const handleAddColumn = (id) => updateNodeData(id, (data) => ({ ...data, columns: [...(data.columns || []), ''] }));
+  const handleAddColumn = (id) => updateNodeData(id, (data) => ({ 
+    ...data, 
+    columns: [...(data.columns || []), { name: '', role: 'normal' }] 
+  }));
   
   const handleChangeColumn = (id, index, newVal) => updateNodeData(id, (data) => {
     const newCols = [...data.columns];
-    newCols[index] = newVal;
+    newCols[index] = { ...newCols[index], name: newVal };
+    return { ...data, columns: newCols };
+  });
+
+  const handleToggleRole = (id, index) => updateNodeData(id, (data) => {
+    const newCols = [...data.columns];
+    const roles = ['normal', 'pk', 'fk'];
+    const currentRole = newCols[index].role || 'normal';
+    const nextRole = roles[(roles.indexOf(currentRole) + 1) % roles.length];
+    newCols[index] = { ...newCols[index], role: nextRole };
     return { ...data, columns: newCols };
   });
 
@@ -223,10 +244,11 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
       position: { x: Math.random() * 200 + 50, y: Math.random() * 200 + 50 },
       data: { 
         label: '', 
-        columns: [''],
+        columns: [{ name: 'id', role: 'pk' }],
         onChangeName: handleChangeName,
         onAddColumn: handleAddColumn,
-        onChangeColumn: handleChangeColumn
+        onChangeColumn: handleChangeColumn,
+        onToggleRole: handleToggleRole
       },
     };
     setNodes((nds) => {
