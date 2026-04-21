@@ -71,7 +71,7 @@ export const ProfilePage = () => {
     const fetchProfileStats = async () => {
       if (!user?.idUsuario) return;
       try {
-        const response = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/stats`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -87,12 +87,12 @@ export const ProfilePage = () => {
     const fetchAvatar = async () => {
       if (!user?.idUsuario) return;
       try {
-        const res = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/foto`, {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/foto`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.fotoUrl) {
-          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : 'http://localhost:8080' + data.fotoUrl;
+          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : '${process.env.REACT_APP_API_URL}' + data.fotoUrl;
           setAvatarUrl(fullUrl);
         }
       } catch (e) {}
@@ -109,14 +109,14 @@ export const ProfilePage = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/foto`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/foto`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
       const data = await res.json();
       if (data.success) {
-        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : 'http://localhost:8080' + data.fotoUrl;
+        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : '${process.env.REACT_APP_API_URL}' + data.fotoUrl;
         setAvatarUrl(fullUrl);
         toast.success('Foto de perfil actualizada!');
       }

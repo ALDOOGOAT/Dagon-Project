@@ -23,7 +23,7 @@ export const LeaderboardPage = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/leaderboard', {
+        const response = await fetch('${process.env.REACT_APP_API_URL}/api/leaderboard', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) setLeaderboardData(await response.json());

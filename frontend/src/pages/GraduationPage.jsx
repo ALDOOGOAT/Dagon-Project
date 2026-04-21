@@ -146,7 +146,7 @@ export const GraduationPage = () => {
   useEffect(() => {
     const fetchModuleData = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${levelId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();

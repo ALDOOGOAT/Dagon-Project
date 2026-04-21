@@ -148,7 +148,7 @@ export const Clawbot = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('http://localhost:8080/api/clawbot/chat', {
+      const response = await fetch('${process.env.REACT_APP_API_URL}/api/clawbot/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

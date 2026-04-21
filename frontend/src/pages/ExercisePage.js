@@ -83,7 +83,7 @@ export const ExercisePage = () => {
   useEffect(() => {
     const fetchExercises = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/exercises/${levelId}`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${levelId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -159,7 +159,7 @@ export const ExercisePage = () => {
   const invokeClawbot = async (errorData) => {
     setClawbotThinking(true);
     try {
-      const response = await fetch('http://localhost:8080/api/clawbot/analyze', {
+      const response = await fetch('${process.env.REACT_APP_API_URL}/api/clawbot/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(errorData)
@@ -187,7 +187,7 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-      const response = await fetch(`http://localhost:8080/api/exercises/${exercise.id}/validate`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${exercise.id}/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ query, usuarioId: user?.idUsuario })

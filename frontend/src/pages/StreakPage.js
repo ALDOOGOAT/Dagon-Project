@@ -124,7 +124,7 @@ export const StreakPage = () => {
     const fetchStreakStats = async () => {
       if (!user?.idUsuario) return;
       try {
-        const response = await fetch(`http://localhost:8080/api/usuarios/${user.idUsuario}/stats`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();

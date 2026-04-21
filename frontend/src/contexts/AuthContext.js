@@ -29,7 +29,7 @@ useEffect(() => {
           const userId = payload.sub; 
 
           // ¡NUEVO! Le mostramos el pasaporte a Java en la petición GET
-          const response = await axios.get(`http://localhost:8080/api/usuarios/${userId}/profile`, {
+          const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/usuarios/${userId}/profile`, {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -54,7 +54,7 @@ useEffect(() => {
 
 const login = async (email, password) => {
     try {
-      const response = await axios.post(`http://localhost:8080/api/usuarios/login`, { 
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/usuarios/login`, { 
         email: email, 
         passwordHash: password 
       });
@@ -75,7 +75,7 @@ const login = async (email, password) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await axios.post(`http://localhost:8080/api/usuarios/registro`, { 
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/usuarios/registro`, { 
         nombre: name, 
         email: email, 
         passwordHash: password 

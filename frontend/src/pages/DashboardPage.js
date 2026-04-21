@@ -75,7 +75,7 @@ const title = titleFor(userXP);
       try {
         const miUsuarioId = user?.idUsuario;
         if (!miUsuarioId) return;
-        const response = await fetch(`http://localhost:8080/api/usuarios/${miUsuarioId}/stats`, {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${miUsuarioId}/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -94,7 +94,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchModulos = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/modulos', {
+        const response = await fetch('${process.env.REACT_APP_API_URL}/api/modulos', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -116,7 +116,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchTop = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/leaderboard', {
+        const response = await fetch('${process.env.REACT_APP_API_URL}/api/leaderboard', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
