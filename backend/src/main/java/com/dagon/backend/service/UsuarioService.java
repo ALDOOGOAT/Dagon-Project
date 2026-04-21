@@ -38,9 +38,43 @@ public class UsuarioService {
     }
 
     // --- FUNCION 3: REGISTRAR PRACTICA (RACHAS) ---
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     public void registrarPracticaDiaria(String usuarioId) {
-        // Por ahora solo imprimimos en consola.
-        // Más adelante pondremos el UPDATE para la BD.
-        System.out.println("✅ Práctica diaria registrada para el usuario con ID: " + usuarioId);
+        try {
+            java.time.LocalDate hoy = java.time.LocalDate.now();
+
+            String sqlUltimaPractica = "SELECT ultima_practica FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
+            java.sql.Date ultimaPractica = jdbcTemplate.queryForObject(sqlUltimaPractica, java.sql.Date.class, usuarioId);
+
+            if (ultimaPractica == null) {
+                String updateSql = "UPDATE lms_core.usuarios SET racha_actual = 1, mejor_racha = 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
+                jdbcTemplate.update(updateSql, hoy.toString(), usuarioId);
+                return;
+            }
+
+            java.time.LocalDate ultFecha = ultimaPractica.toLocalDate();
+
+            if (ultFecha.equals(hoy)) {
+                return;
+            } else if (ultFecha.equals(hoy.minusDays(1))) {
+                String sqlUpdate = "UPDATE lms_core.usuarios SET racha_actual = racha_actual + 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
+                jdbcTemplate.update(sqlUpdate, hoy.toString(), usuarioId);
+
+                String sqlCheck = "SELECT racha_actual FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
+                int rachaActual = jdbcTemplate.queryForObject(sqlCheck, Integer.class, usuarioId);
+
+                String sqlMejor = "UPDATE lms_core.usuarios SET mejor_racha = ? WHERE id_usuario = ?::uuid AND mejor_racha < ?";
+                jdbcTemplate.update(sqlMejor, rachaActual, usuarioId, rachaActual);
+            } else {
+                String updateSql = "UPDATE lms_core.usuarios SET racha_actual = 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
+                jdbcTemplate.update(updateSql, hoy.toString(), usuarioId);
+            }
+
+            System.out.println("✅ Práctica diaria registrada para el usuario con ID: " + usuarioId);
+        } catch (Exception e) {
+            System.err.println("❌ Error al registrar práctica diaria: " + e.getMessage());
+        }
     }
 }

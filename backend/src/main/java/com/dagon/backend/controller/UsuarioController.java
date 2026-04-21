@@ -68,54 +68,19 @@ public class UsuarioController {
             String sqlCompletados = "SELECT COUNT(DISTINCT id_ejercicio) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true";
             stats.put("ejercicios_completados", jdbcTemplate.queryForObject(sqlCompletados, Integer.class, id));
 
-            // 4. Calculadora de Racha Actual y Mejor Racha Histórica
-            String sqlFechas = "SELECT DISTINCT DATE(fecha_intento) as fecha_actividad " +
-                    "FROM lms_core.intentos WHERE id_usuario = ?::uuid ORDER BY fecha_actividad DESC";
-
-            int rachaActual = 0;
-            int mejorRacha = 0;
-
-            java.util.List<java.sql.Date> fechas = jdbcTemplate.queryForList(sqlFechas, java.sql.Date.class, id);
-
-            if (!fechas.isEmpty()) {
-                java.time.LocalDate hoy = java.time.LocalDate.now();
-                java.time.LocalDate ultimaActividad = fechas.get(0).toLocalDate();
-
-                // Calcular racha actual
-                if (ultimaActividad.equals(hoy) || ultimaActividad.equals(hoy.minusDays(1))) {
-                    rachaActual = 1;
-                    java.time.LocalDate diaRevisado = ultimaActividad;
-                    for (int i = 1; i < fechas.size(); i++) {
-                        java.time.LocalDate diaAnterior = fechas.get(i).toLocalDate();
-                        if (diaRevisado.minusDays(1).equals(diaAnterior)) {
-                            rachaActual++;
-                            diaRevisado = diaAnterior;
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-                // Calcular mejor racha histórica
-                int rachaTemp = 1;
-                java.time.LocalDate diaRevisadoHist = fechas.get(0).toLocalDate();
-                for (int i = 1; i < fechas.size(); i++) {
-                    java.time.LocalDate diaAnterior = fechas.get(i).toLocalDate();
-                    if (diaRevisadoHist.minusDays(1).equals(diaAnterior)) {
-                        rachaTemp++;
-                    } else {
-                        if (rachaTemp > mejorRacha) mejorRacha = rachaTemp;
-                        rachaTemp = 1;
-                    }
-                    diaRevisadoHist = diaAnterior;
-                }
-                if (rachaTemp > mejorRacha) mejorRacha = rachaTemp;
-            }
+            // 4. Racha desde la BD
+            String sqlRacha = "SELECT racha_actual, mejor_racha FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
+            java.util.Map<String, Object> rachaData = jdbcTemplate.queryForMap(sqlRacha, id);
+            int rachaActual = ((Number) rachaData.get("racha_actual")).intValue();
+            int mejorRacha = ((Number) rachaData.get("mejor_racha")).intValue();
 
             stats.put("racha", rachaActual);
             stats.put("mejor_racha", mejorRacha);
 
-            // DEVUELVE FECHAS DE ACTIVIDAD para el calendario
+            // Fechas de actividad para el calendario
+            String sqlFechas = "SELECT DISTINCT DATE(fecha_intento) as fecha_actividad " +
+                    "FROM lms_core.intentos WHERE id_usuario = ?::uuid ORDER BY fecha_actividad DESC";
+            java.util.List<java.sql.Date> fechas = jdbcTemplate.queryForList(sqlFechas, java.sql.Date.class, id);
             java.util.List<String> fechasStr = new java.util.ArrayList<>();
             for (java.sql.Date f : fechas) {
                 fechasStr.add(f.toString());

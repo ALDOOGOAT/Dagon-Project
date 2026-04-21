@@ -134,7 +134,7 @@ public class EjercicioService {
         return dtos;
     }
 
-    private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario) throws java.sql.SQLException {
+    private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId) throws java.sql.SQLException {
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
         String user = sandboxUser;
@@ -158,7 +158,14 @@ public class EjercicioService {
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
 
-            stmt.execute("SET search_path TO lms_sandbox");
+            // Usar el esquema del usuario (multiverso) o lms_sandbox si no hay usuario
+            String searchPath;
+            if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+                searchPath = "sandbox_usuario_" + usuarioId;
+                stmt.execute("SET search_path TO \"" + searchPath + "\"");
+            } else {
+                stmt.execute("SET search_path TO lms_sandbox");
+            }
             
             boolean tieneResultSet = stmt.execute(queryProcesada);
             if (tieneResultSet) {
@@ -346,8 +353,8 @@ public class EjercicioService {
                     return respuesta;
                 }
 
-                datosAlumno = ejecutarEnSandbox(queryUsuario);
-                List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra());
+                datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId);
                 
                 // Nueva lógica de comparación robusta para DML
                 String upperQ = queryUsuario.trim().toUpperCase();
