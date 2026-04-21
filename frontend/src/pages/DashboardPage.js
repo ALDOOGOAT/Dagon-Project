@@ -5,6 +5,7 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { TutorialOverlay } from '../components/TutorialOverlay';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
+import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
@@ -132,13 +133,17 @@ const title = titleFor(userXP);
 
   const handleModuloClick = (mod) => {
     if (mod.bloqueado) {
+      sounds.playError();
       toast.error(`Necesitas ${mod.xp_requerida} XP para desbloquear esta misión.`);
+      sounds.init();
       return;
     }
+    sounds.playStep();
     navigate(`/exercise/${mod.id_modulo}`);
   };
 
   const handleLogout = () => {
+    sounds.playClick();
     logout();
     navigate('/');
     toast.success('Sesión cerrada');

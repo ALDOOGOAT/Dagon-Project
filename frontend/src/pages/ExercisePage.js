@@ -7,6 +7,7 @@ import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
+import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
@@ -78,7 +79,10 @@ export const ExercisePage = () => {
   const [burst, setBurst] = useState(false);
   const [xpPop, setXpPop] = useState(null);
 
-  useEffect(() => { setIsMounted(true); }, []);
+  useEffect(() => { 
+    setIsMounted(true); 
+    sounds.init();
+  }, []);
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -215,12 +219,14 @@ export const ExercisePage = () => {
         setTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
         setCombo(c => c + 1);
+        sounds.playSuccess();
       } else {
         toast.error(result.message);
         setExecutionResult({ success: false, message: result.message });
         setShake(true);
         setTimeout(() => setShake(false), 500);
         setCombo(0);
+        sounds.playError();
         if (result.descripcion && result.queryMaestra) {
           const nuevos = intentosFallidos + 1;
           setIntentosFallidos(nuevos);

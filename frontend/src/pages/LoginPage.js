@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Zap, Trophy, Flame, Database, Mail, Lock, User } from 'lucide-react';
+import { sounds } from '../lib/SoundEngine';
 
 const TAGLINES = [
   'Domina SQL como un explorador del abismo',
@@ -35,6 +36,7 @@ export const LoginPage = () => {
 
   useEffect(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => setIsPageReady(true)));
+    sounds.init();
     const id = setInterval(() => setTaglineIdx((i) => (i + 1) % TAGLINES.length), 3500);
     return () => clearInterval(id);
   }, []);
@@ -45,6 +47,7 @@ export const LoginPage = () => {
     try {
       const result = isLogin ? await login(email, password) : await register(name, email, password);
       if (result.success) {
+        sounds.playSuccess();
         toast.success('¡Bienvenido a las profundidades del conocimiento!');
         navigate('/dashboard');
       } else {
