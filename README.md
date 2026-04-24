@@ -13,7 +13,19 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ## 📝 Notas de Actualización (Abril 2026)
 
-### 🔊 Sistema de Audio Mejorado (24 Abril 2026)
+### 🤖 Sistema de IA - Clawbot con Qwen2.5-coder:7b (24 Abril 2026)
+
+- **Modelo**: Qwen2.5-coder:7b (Ollama local) - optimal para código SQL
+- **Respuestas extensas** con ejemplos detallados y explicaciones
+- **Fallack responses** mejorados para temas: SELECT, WHERE, JOIN, GROUP BY, ORDER BY, INSERT, UPDATE, DELETE, NULL
+- **Diseño visual mejorado** en el chatbot:
+  - Tipografía Manrope/Segoe UI
+  - Bloques SQL estilo Mac con botones de copia
+  - Esquema de colores Emerald/Cyan profesional
+  - Iconos Lucide integrados
+  - Animaciones suaves
+
+### 🔊 Sistema de Audio Mejorado
 
 - **Selección de dificultad**: Nuevo sonido de videogame al elegir nivel
 - **Timer de práctica rápida**: 
