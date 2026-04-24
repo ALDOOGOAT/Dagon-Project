@@ -453,15 +453,28 @@ public class EjercicioService {
                 String upperQ = queryUsuario.trim().toUpperCase();
                 respuesta.put("success", true);
                 respuesta.put("isWarning", true);
-                respuesta.put("message", "⚠️ Ya existe esa relación. Mostrando el contenido actual.");
+                respuesta.put("message", "⚠️ Ya existe esa relación. Mostrando su estructura actual.");
                 respuesta.put("warningType", "already_exists");
                 
-                // Intentar obtener los datos de todos modos
+                // Intentar obtener los datos y estructura de todos modos
                 try {
                     String tablaExtraida = extraerNombreTablaDDL(upperQ, queryUsuario);
                     if (tablaExtraida != null) {
-                        String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
-                        datosAlumno = ejecutarEnSandbox(consultaMostrar, usuarioId);
+                        // Primero ver si hay datos
+                        String consultaDatos = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
+                        datosAlumno = ejecutarEnSandbox(consultaDatos, usuarioId);
+                        
+                        // Si no hay datos, mostrar la estructura de la tabla
+                        if (datosAlumno.isEmpty()) {
+                            String consultaEstructura = "SELECT column_name, data_type, is_nullable "
+                                + "FROM information_schema.columns "
+                                + "WHERE table_name = '" + tablaExtraida + "' "
+                                + "ORDER BY ordinal_position;";
+                            datosAlumno = ejecutarEnSandbox(consultaEstructura, usuarioId);
+                            
+                            // Añadir flag para saber que es estructura
+                            respuesta.put("isStructure", true);
+                        }
                     }
                 } catch (Exception ignored) {
                     datosAlumno = new ArrayList<>();
