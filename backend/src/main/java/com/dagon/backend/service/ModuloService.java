@@ -16,7 +16,6 @@ public class ModuloService {
 
     public List<Map<String, Object>> obtenerModulosConEstado(String identificadorUsuario) {
 
-        // 1. Obtenemos la XP del usuario
         String sqlXp = "SELECT xp_total FROM lms_core.v_ranking_alumnos WHERE email = ? OR id_usuario::varchar = ?";
         Integer xpUsuario = 0;
         try {
@@ -26,16 +25,13 @@ public class ModuloService {
             xpUsuario = 0;
         }
 
-        // 2. Traemos todos los Cursos activos
         String sqlCursos = "SELECT id_curso, titulo FROM lms_core.cursos ORDER BY id_curso ASC";
         List<Map<String, Object>> cursos = jdbcTemplate.queryForList(sqlCursos);
 
-        // 3. Traemos todos los Módulos
         String sqlModulos = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida " +
                 "FROM lms_core.modulos ORDER BY orden ASC";
         List<Map<String, Object>> todosLosModulos = jdbcTemplate.queryForList(sqlModulos);
 
-        // 4. Anidamos los módulos dentro de su respectivo curso evaluando candados
         List<Map<String, Object>> resultadoEstructurado = new ArrayList<>();
 
         for (Map<String, Object> cursoRow : cursos) {
@@ -81,5 +77,70 @@ public class ModuloService {
         }
         
         return modulosCompletados;
+    }
+
+    public List<Map<String, Object>> obtenerCursosCompletados(String identificadorUsuario) {
+        String sql = "SELECT DISTINCT c.id_curso, c.titulo " +
+                "FROM lms_core.cursos c " +
+                "JOIN lms_core.modulos m ON c.id_curso = m.id_curso " +
+                "JOIN lms_core.ejercicios_practicos e ON m.id_modulo = e.id_modulo " +
+                "JOIN lms_core.intentos i ON e.id_ejercicio = i.id_ejercicio " +
+                "JOIN lms_core.usuarios u ON i.id_usuario = u.id_usuario " +
+                "WHERE u.email = ? OR u.id_usuario::varchar = ? " +
+                "AND i.es_correcto = true " +
+                "GROUP BY c.id_curso, c.titulo, m.id_curso " +
+                "HAVING COUNT(DISTINCT e.id_ejercicio) = (" +
+                "  SELECT COUNT(*) FROM lms_core.ejercicios_practicos e2 " +
+                "  JOIN lms_core.modulos m2 ON e2.id_modulo = m2.id_modulo " +
+                "  WHERE m2.id_curso = c.id_curso" +
+                ")";
+        
+        List<Map<String, Object>> resultados = jdbcTemplate.queryForList(sql, identificadorUsuario, identificadorUsuario);
+        return resultados;
+    }
+
+    public Map<String, Object> generarCertificado(String identificadorUsuario, Integer cursoId) {
+        String sqlUsuario = "SELECT u.nombre, u.email, u.fecha_registro FROM lms_core.usuarios u " +
+                "WHERE u.email = ? OR u.id_usuario::varchar = ?";
+        
+        Map<String, Object> usuarioData = null;
+        try {
+            usuarioData = jdbcTemplate.queryForMap(sqlUsuario, identificadorUsuario, identificadorUsuario);
+        } catch (Exception e) {
+            return null;
+        }
+        
+        String sqlCurso = "SELECT titulo FROM lms_core.cursos WHERE id_curso = ?";
+        Map<String, Object> cursoData;
+        try {
+            cursoData = jdbcTemplate.queryForMap(sqlCurso, cursoId);
+        } catch (Exception e) {
+            return null;
+        }
+        
+        String sqlTotalEjer = "SELECT COUNT(*) FROM lms_core.ejercicios_practicos e " +
+                "JOIN lms_core.modulos m ON e.id_modulo = m.id_modulo WHERE m.id_curso = ?";
+        int totalEjercicios = jdbcTemplate.queryForObject(sqlTotalEjer, Integer.class, cursoId);
+        
+        String sqlCompletados = "SELECT COUNT(DISTINCT i.id_ejercicio) FROM lms_core.intentos i " +
+                "JOIN lms_core.ejercicios_practicos e ON i.id_ejercicio = e.id_ejercicio " +
+                "JOIN lms_core.modulos m ON e.id_modulo = m.id_modulo " +
+                "JOIN lms_core.usuarios u ON i.id_usuario = u.id_usuario " +
+                "WHERE (u.email = ? OR u.id_usuario::varchar = ?) AND m.id_curso = ? AND i.es_correcto = true";
+        int ejerciciosCompletados = jdbcTemplate.queryForObject(sqlCompletados, Integer.class, identificadorUsuario, identificadorUsuario, cursoId);
+        
+        if (ejerciciosCompletados < totalEjercicios) {
+            return null;
+        }
+        
+        Map<String, Object> certificado = new HashMap<>();
+        certificado.put("nombre", usuarioData.get("nombre"));
+        certificado.put("email", usuarioData.get("email"));
+        certificado.put("curso", cursoData.get("titulo"));
+        certificado.put("fechaCompletado", new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
+        certificado.put("ejerciciosCompletados", ejerciciosCompletados);
+        certificado.put("codigoVerificacion", "DAGON-" + cursoId + "-" + System.currentTimeMillis());
+        
+        return certificado;
     }
 }

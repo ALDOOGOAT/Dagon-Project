@@ -30,4 +30,21 @@ public class ModuloController {
         List<Integer> modulosCompletados = moduloService.obtenerModulosCompletados(emailUsuario);
         return ResponseEntity.ok(modulosCompletados);
     }
+
+    @GetMapping("/cursos-completados")
+    public ResponseEntity<?> obtenerCursosCompletados(Authentication authentication) {
+        String emailUsuario = authentication.getName();
+        List<Map<String, Object>> cursosCompletados = moduloService.obtenerCursosCompletados(emailUsuario);
+        return ResponseEntity.ok(cursosCompletados);
+    }
+
+    @GetMapping("/certificado/{cursoId}")
+    public ResponseEntity<?> generarCertificado(@PathVariable Integer cursoId, Authentication authentication) {
+        String emailUsuario = authentication.getName();
+        Map<String, Object> certificado = moduloService.generarCertificado(emailUsuario, cursoId);
+        if (certificado == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Curso no completado o no encontrado"));
+        }
+        return ResponseEntity.ok(certificado);
+    }
 }

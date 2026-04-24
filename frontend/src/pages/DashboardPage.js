@@ -5,11 +5,12 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { TutorialOverlay } from '../components/TutorialOverlay';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
+import { CertificateModal, useCertificado } from '../components/CertificateModal';
 import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Calendar
+  User, Calendar, Award
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,6 +46,11 @@ export const DashboardPage = () => {
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQuickPractice, setShowQuickPractice] = useState(false);
+  const [showCertificado, setShowCertificado] = useState(false);
+  const [certificadoData, setCertificadoData] = useState(null);
+  const [certificadoCurso, setCertificadoCurso] = useState(null);
+
+  const { cursosCompletados, generarCertificado } = useCertificado(token);
 
   const userXP = user?.xp || 0;
   const xpInLevel = userXP % 100;
@@ -434,6 +440,29 @@ const title = titleFor(userXP);
                   <p className="text-slate-400 text-sm font-gameui">Conquista las misiones para graduarte de esta Senda</p>
                 </div>
               </div>
+              
+              {/* BOTÓN DE CERTIFICADO */}
+              {cursosCompletados.find(c => c.id_curso === cursoActivoId) && (
+                <motion.button
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={async () => {
+                    const cert = await generarCertificado(cursoActivoId);
+                    if (cert) {
+                      setCertificadoData(cert);
+                      setCertificadoCurso(cursoActivo.titulo);
+                      setShowCertificado(true);
+                    } else {
+                      toast.error('No has completado todos los ejercicios aún');
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 rounded-xl text-black font-bold hover:shadow-lg hover:shadow-amber-500/30 transition-all"
+                >
+                  <Award className="w-5 h-5" />
+                  Ver Certificado
+                </motion.button>
+              )}
             </div>
 
             <AnimatePresence mode="wait">
@@ -593,6 +622,15 @@ const title = titleFor(userXP);
           </aside>
         </div>
       </div>
+
+      {/* MODAL DE CERTIFICADO */}
+      <CertificateModal
+        isOpen={showCertificado}
+        onClose={() => setShowCertificado(false)}
+        certificado={certificadoData}
+        cursoId={cursoActivoId}
+        cursoNombre={certificadoCurso}
+      />
     </div>
   );
 };
