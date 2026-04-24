@@ -439,17 +439,76 @@ public class EjercicioService {
             respuesta.put("mockData", datosAlumno);
 
         } catch (java.sql.SQLException e) {
-            respuesta.put("success", false);
-            respuesta.put("message", "Error de SQL: " + e.getMessage());
-            respuesta.put("xp_gained", 0);
-            respuesta.put("descripcion", ejercicio.getEnunciado());
-            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
-            respuesta.put("queryAlumno", queryUsuario);
-            respuesta.put("errorDb", e.getMessage());
+            String sqlError = e.getMessage();
+            
+            // Detectar si es error de relación que ya existe (no es error crítico)
+            boolean yaExiste = sqlError != null && (
+                sqlError.toLowerCase().contains("relation") && sqlError.toLowerCase().contains("already exists") ||
+                sqlError.toLowerCase().contains("table") && sqlError.toLowerCase().contains("already exists") ||
+                sqlError.toLowerCase().contains("duplicate") && sqlError.toLowerCase().contains("key")
+            );
+            
+            if (yaExiste) {
+                // Es un warning, no error - intentar mostrar lo que hay en la tabla
+                String upperQ = queryUsuario.trim().toUpperCase();
+                respuesta.put("success", true);
+                respuesta.put("isWarning", true);
+                respuesta.put("message", "⚠️ Ya existe esa relación. Mostrando el contenido actual.");
+                respuesta.put("warningType", "already_exists");
+                
+                // Intentar obtener los datos de todos modos
+                try {
+                    String tablaExtraida = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    if (tablaExtraida != null) {
+                        String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
+                        datosAlumno = ejecutarEnSandbox(consultaMostrar, usuarioId);
+                    }
+                } catch (Exception ignored) {
+                    datosAlumno = new ArrayList<>();
+                }
+                
+                // Marcar como correcto para permitir avanzar
+                esCorrecto = true;
+                respuesta.put("mockData", datosAlumno);
+                respuesta.put("xp_gained", 0);
+            } else {
+                respuesta.put("success", false);
+                respuesta.put("message", "Error de SQL: " + sqlError);
+                respuesta.put("xp_gained", 0);
+                respuesta.put("descripcion", ejercicio.getEnunciado());
+                respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                respuesta.put("queryAlumno", queryUsuario);
+                respuesta.put("errorDb", sqlError);
+            }
         } catch (Exception e) {
-            respuesta.put("success", false);
-            respuesta.put("message", "Error al procesar la respuesta: " + e.getMessage());
-            respuesta.put("xp_gained", 0);
+            String errMsg = e.getMessage();
+            
+            // Detectar error de paréntesis desbalanceados
+            if (errMsg != null && errMsg.contains("Unmatched closing")) {
+                // Intentar ejecutar la query directamente y obtener resultados
+                try {
+                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    if (!datosAlumno.isEmpty()) {
+                        respuesta.put("success", true);
+                        respuesta.put("message", "¡Consulta ejecutada! Pero los datos no coinciden con lo esperado.");
+                        respuesta.put("mockData", datosAlumno);
+                        respuesta.put("xp_gained", 0);
+                        return respuesta;
+                    }
+                } catch (Exception ignored) {}
+                
+                respuesta.put("success", false);
+                respuesta.put("message", "Error de sintaxis: Revisa los paréntesis. " + errMsg);
+                respuesta.put("xp_gained", 0);
+                respuesta.put("descripcion", ejercicio.getEnunciado());
+                respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                respuesta.put("queryAlumno", queryUsuario);
+                respuesta.put("errorDb", errMsg);
+            } else {
+                respuesta.put("success", false);
+                respuesta.put("message", "Error al procesar la respuesta: " + errMsg);
+                respuesta.put("xp_gained", 0);
+            }
         }
         return respuesta;
     }
