@@ -13,12 +13,15 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ## 📝 Notas de Actualización (Abril 2026)
 
-### 🔊 Sistema de Audio (24 Abril 2026)
+### 🔊 Sistema de Audio Mejorado (24 Abril 2026)
 
+- **Selección de dificultad**: Nuevo sonido de videogame al elegir nivel
+- **Timer de práctica rápida**: 
+  - Tic-tac de reloj (playClockTicking) en lugar del loop antiguo
+  - Countdown dramático en los últimos 6 segundos
+  - Sonido de警告 cuando se acaba el tiempo
 - **Música ambiental** en Dashboard (synth suave)
 - **Música de video juego** en Práctica Rápida (sawtooth épico)
-- **Timer tick** - Tic-tac tipo quiz show en práctica rápida
-- **Countdown dramático** - Sonidos Intensificados en los últimos 6 segundos
 - **Sonidos de eventos**:
   - Éxito / Error al resolver ejercicios
   - Teoría abierta
