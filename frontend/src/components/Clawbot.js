@@ -268,11 +268,17 @@ export const Clawbot = () => {
       {isOpen && (
         <div
           data-testid="clawbot-panel"
-          className="fixed bottom-24 right-6 w-[450px] h-[720px] bg-slate-950 rounded-3xl shadow-2xl flex flex-col border border-slate-800/50 overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300"
+          className="fixed bottom-24 right-6 w-[450px] h-[720px] rounded-3xl shadow-2xl flex flex-col border overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300"
+          style={{ backgroundColor: colors.background, borderColor: colors.border }}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/10 via-transparent to-cyan-900/10 pointer-events-none" />
+          <div className="absolute inset-0 pointer-events-none" style={{ 
+            background: `linear-gradient(to bottom, ${colors.primary}20, transparent, ${colors.secondary}20)` 
+          }} />
           
-          <div className="relative z-10 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 p-4 flex items-center gap-4 border-b border-slate-800/50">
+          <div className="relative z-10 p-4 flex items-center gap-4 border-b" style={{ 
+            background: colors.surface, 
+            borderColor: colors.border 
+          }}>
             <div className="relative">
               <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-400/30">
                 <DagonMascot size="medium" mood="excited" />
@@ -290,7 +296,7 @@ export const Clawbot = () => {
             </div>
           </div>
 
-          <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-3 bg-slate-950/50" data-testid="chat-messages">
+          <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-3" style={{ backgroundColor: `${colors.background}80` }} data-testid="chat-messages">
             {messages.map((msg, index) => (
               <div
                 key={index}
@@ -350,7 +356,7 @@ export const Clawbot = () => {
             </div>
           )}
 
-          <div className="relative z-10 p-4 border-t border-slate-800/50 bg-slate-950 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+          <div className="relative z-10 p-4 border-t shadow-[0_-10px_30px_rgba(0,0,0,0.3)]" style={{ backgroundColor: colors.background, borderColor: colors.border }}>
             <div className="flex gap-3 relative">
               <Input
                 data-testid="chat-input"
@@ -358,7 +364,12 @@ export const Clawbot = () => {
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Preguntame sobre SQL..."
-                className="bg-slate-900 border-slate-700 text-slate-200 focus:border-emerald-500 pr-14 h-12 rounded-xl shadow-inner placeholder:text-slate-600 font-medium"
+                className="h-12 rounded-xl shadow-inner font-medium"
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  color: colors.text
+                }}
                 disabled={loading}
               />
               <Button

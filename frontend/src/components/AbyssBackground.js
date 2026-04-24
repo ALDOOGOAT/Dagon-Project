@@ -70,13 +70,18 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       mouseRef.current.x += (mouseRef.current.tx - mouseRef.current.x) * 0.04;
       mouseRef.current.y += (mouseRef.current.ty - mouseRef.current.y) * 0.04;
 
-      // gradient overlay
+      // gradient overlay - use theme colors
       const grad = ctx.createRadialGradient(
         canvas.width / 2, canvas.height * 0.4, 0,
         canvas.width / 2, canvas.height * 0.4, Math.max(canvas.width, canvas.height) * 0.7
       );
+      // parse tint to get base color for gradient
+      const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      const r = tintMatch ? tintMatch[1] : '30';
+      const g = tintMatch ? tintMatch[2] : '41';
+      const b = tintMatch ? tintMatch[3] : '59';
       grad.addColorStop(0, 'rgba(30, 41, 59, 0.0)');
-      grad.addColorStop(1, 'rgba(2, 6, 23, 0.4)');
+      grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 

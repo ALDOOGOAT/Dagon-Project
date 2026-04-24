@@ -2,7 +2,7 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeProvider } from './contexts/ThemeContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { sounds } from './lib/SoundEngine';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -55,11 +55,14 @@ const ProtectedRoute = ({ children }) => {
 
 const AppRoutes = () => {
   const { token } = useAuth();
+  const { colors } = useTheme();
   const location = useLocation();
+  
+  const bgTint = colors ? `rgba(${parseInt(colors.primary.slice(1,3), 16)}, ${parseInt(colors.primary.slice(3,5), 16)}, ${parseInt(colors.primary.slice(5,7), 16)}, 0.85)` : 'rgba(99,102,241,0.85)';
   
   return (
     <>
-      <AbyssBackground intensity={1.1} />
+      <AbyssBackground intensity={1.1} tint={bgTint} />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={

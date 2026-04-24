@@ -396,22 +396,22 @@ export const ExercisePage = () => {
       {xpPop != null && <XPPop amount={xpPop} />}
 
       {/* HEADER */}
-      <header className="bg-slate-950/80 border-b border-white/5 backdrop-blur-md z-10 shrink-0">
+      <header className="border-b backdrop-blur-md z-10 shrink-0" style={{ backgroundColor: `${colors.background}CC`, borderColor: colors.border }}>
         <div className="px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: colors.textMuted }} className="hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
             <div className="h-6 w-px bg-white/10" />
-            <h1 className="font-display text-base font-black text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-cyan-400" />
+            <h1 className="font-display text-base font-black flex items-center gap-2" style={{ color: colors.text }}>
+              <Database className="w-4 h-4" style={{ color: colors.primary }} />
               Módulo {levelId}
-              <span className="text-cyan-300 text-sm font-gameui ml-1">
+              <span className="text-sm font-gameui ml-1" style={{ color: colors.textMuted }}>
                 · Misión {currentExerciseIndex + 1}/{exercises.length}
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5 bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 overflow-x-auto max-w-[40%] scrollbar-none">
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto max-w-[40%] scrollbar-none" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
             {exercises.map((_, i) => {
               const isCompleted = i < currentExerciseIndex;
               const isCurrent = i === currentExerciseIndex;
@@ -439,7 +439,7 @@ export const ExercisePage = () => {
             })}
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-full border border-white/5">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
               <Zap className="w-4 h-4 text-yellow-300" />
               <span className="font-display font-black text-yellow-200 text-sm">{user?.xp || 0}</span>
             </div>
@@ -455,7 +455,7 @@ export const ExercisePage = () => {
             </AnimatePresence>
           </div>
         </div>
-        <div className="h-1 bg-slate-900">
+        <div className="h-1" style={{ backgroundColor: colors.surface }}>
           <motion.div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
             animate={{ width: `${exerciseProgress}%` }} transition={{ duration: 0.5 }} />
         </div>
@@ -624,8 +624,11 @@ export const ExercisePage = () => {
                             <div
                               ref={provided.innerRef} {...provided.droppableProps}
                               className={`min-h-[80px] rounded-2xl border-2 border-dashed p-4 flex flex-wrap gap-2 items-start content-start transition-all ${
-                                snapshot.isDraggingOver ? 'border-cyan-400 bg-cyan-500/5' : 'border-slate-600 bg-slate-900/40'
+                                snapshot.isDraggingOver ? 'border-cyan-400' : 'border-slate-600'
                               }`}
+                              style={{
+                                backgroundColor: snapshot.isDraggingOver ? `${colors.primary}1A` : `${colors.surface}66`
+                              }}
                             >
                               {droppedWords.length === 0 && (
                                 <span className="text-slate-500 font-mono text-sm italic w-full text-center py-4">
