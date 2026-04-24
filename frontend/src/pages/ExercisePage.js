@@ -17,6 +17,59 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 
+const formatAIMessage = (text) => {
+  if (!text) return null;
+  
+  let cleaned = text
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/`{3}sql\n?([\s\S]*?)`{3}/g, '\n$1\n')
+    .replace(/`([^`]+)`/g, '$1');
+
+  const parts = [];
+  const lines = cleaned.split('\n');
+  
+  lines.forEach((line, idx) => {
+    line = line.trim();
+    if (!line) return;
+    
+    if (line.match(/^(Error|error|PISTA|Pista|pista):/i)) {
+      parts.push({ type: 'error', text: line.replace(/^(Error|error|PISTA|Pista|pista):\s*/i, '') });
+    } else if (line.match(/^(Ayuda|ayuda|Help|help):/i)) {
+      parts.push({ type: 'help', text: line.replace(/^(Ayuda|ayuda|Help|help):\s*/i, '') });
+    } else if (line.match(/^(sql|SQL)/i)) {
+      parts.push({ type: 'code', text: line.replace(/^(sql|SQL)\s*/i, '') });
+    } else if (line.startsWith('## ') || line.startsWith('### ')) {
+      parts.push({ type: 'heading', text: line.replace(/^#+\s*/, '') });
+    } else if (line.match(/^SELECT|^FROM|^WHERE|^INSERT|^UPDATE|^DELETE|^JOIN|^ORDER|^GROUP/i)) {
+      parts.push({ type: 'code', text: line });
+    } else {
+      parts.push({ type: 'text', text: line });
+    }
+  });
+  
+  return parts.map((part, i) => {
+    if (part.type === 'heading') {
+      return <h4 key={i} className="mt-4 mb-2 text-lg font-bold" style={{ color: '#10b981' }}>{part.text}</h4>;
+    }
+    if (part.type === 'error') {
+      return <div key={i} className="mt-3 mb-2 px-3 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.1)', borderLeft: '3px solid #ef4444', color: '#fca5a5' }}>{part.text}</div>;
+    }
+    if (part.type === 'help') {
+      return <div key={i} className="mt-2 mb-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>{part.text}</div>;
+    }
+    if (part.type === 'code') {
+      return <code key={i} className="block my-2 px-3 py-2 rounded-lg text-sm font-mono overflow-x-auto" style={{ backgroundColor: '#0f172a', color: '#6ee7b7' }}>{part.text}</code>;
+    }
+    return <p key={i} className="mt-2 mb-1 text-sm" style={{ color: '#e2e8f0' }}>{part.text}</p>;
+  });
+};
+
 const XPPop = ({ amount }) => (
   <div className="pointer-events-none fixed inset-0 z-[9990] flex items-center justify-center">
     <span className="font-display font-black text-5xl text-gradient-gold animate-float-up drop-shadow-[0_0_25px_rgba(250,204,21,0.6)]">
@@ -510,9 +563,11 @@ export const ExercisePage = () => {
                           <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(168,85,247,0.8)]" style={{ animationDelay: '0.15s' }} />
                           <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
                         </div>
-                      ) : (
-                        <div className="mt-2 p-3 rounded-xl" style={{ backgroundColor: `${colors.surface}`, borderColor: colors.border }}>
-                          <p className="text-sm font-gameui leading-relaxed" style={{ color: colors.text }}>{clawbotMessage}</p>
+) : (
+                        <div className="mt-2 p-4 rounded-xl overflow-hidden" style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                          <div className="text-sm font-gameui leading-relaxed">
+                            {formatAIMessage(clawbotMessage)}
+                          </div>
                         </div>
                       )}
                     </div>

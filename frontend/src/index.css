@@ -64,7 +64,9 @@ h1, h2, h3, h4, h5, h6 {
         @apply border-border;
     }
     body {
-        @apply bg-slate-950 text-slate-200;
+        background-color: var(--color-background, #020617);
+        color: var(--color-text, #f8fafc);
+        min-height: 100vh;
     }
 }
 
