@@ -143,14 +143,12 @@ public class EjercicioService {
         String queryProcesada = queryUsuario.trim();
         String upperQuery = queryProcesada.toUpperCase();
 
-        // Limpiar comentarios simples al final que podrían estorbar
         queryProcesada = queryProcesada.replaceAll("--.*$", "").trim();
 
-        // Si es INSERT, UPDATE o DELETE y no tiene RETURNING, se lo agregamos para ver resultados
-        if ((upperQuery.contains("INSERT") || upperQuery.contains("UPDATE") || upperQuery.contains("DELETE")) 
-            && !upperQuery.contains("RETURNING")) {
-            
-            // Eliminar punto y coma final de forma robusta
+        boolean esDML = upperQuery.contains("INSERT") || upperQuery.contains("UPDATE") || upperQuery.contains("DELETE");
+        boolean esDDL = upperQuery.contains("CREATE") || upperQuery.contains("ALTER") || upperQuery.contains("DROP");
+
+        if (esDML && !upperQuery.contains("RETURNING")) {
             queryProcesada = queryProcesada.replaceAll(";\\s*$", "");
             queryProcesada += " RETURNING *;";
         }
@@ -158,7 +156,6 @@ public class EjercicioService {
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
 
-            // Usar el esquema del usuario (multiverso) o lms_sandbox si no hay usuario
             String searchPath;
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                 searchPath = "sandbox_usuario_" + usuarioId;
@@ -168,6 +165,17 @@ public class EjercicioService {
             }
             
             boolean tieneResultSet = stmt.execute(queryProcesada);
+            
+            if (esDDL && !tieneResultSet) {
+                String tablaExtraida = extraerNombreTablaDDL(upperQuery, queryUsuario);
+                if (tablaExtraida != null) {
+                    String consultaMostrar = "SELECT * FROM " + tablaExtraida + " LIMIT 100;";
+                    try {
+                        tieneResultSet = stmt.execute(consultaMostrar);
+                    } catch (Exception ignored) {}
+                }
+            }
+            
             if (tieneResultSet) {
                 try (ResultSet rs = stmt.getResultSet()) {
                     ResultSetMetaData metaData = rs.getMetaData();
@@ -176,7 +184,6 @@ public class EjercicioService {
                     while (rs.next()) {
                         Map<String, Object> fila = new LinkedHashMap<>();
                         for (int i = 1; i <= columnCount; i++) {
-                            // Guardamos todo como String para evitar líos de tipos (Integer vs Long)
                             Object val = rs.getObject(i);
                             fila.put(metaData.getColumnName(i).toLowerCase(), val != null ? val.toString() : null);
                         }
@@ -186,6 +193,32 @@ public class EjercicioService {
             }
         }
         return resultados;
+    }
+
+    private String extraerNombreTablaDDL(String upperQuery, String queryOriginal) {
+        String tabla = null;
+        
+        if (upperQuery.contains("CREATE TABLE")) {
+            String sinCreate = queryOriginal.replaceAll("(?i)CREATE\\s+TABLE\\s+", "").trim();
+            String[] partes = sinCreate.split("[\\(,\\s]");
+            if (partes.length > 0) {
+                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+            }
+        } else if (upperQuery.contains("ALTER TABLE")) {
+            String sinAlter = queryOriginal.replaceAll("(?i)ALTER\\s+TABLE\\s+", "").trim();
+            String[] partes = sinAlter.split("\\s+");
+            if (partes.length > 0) {
+                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+            }
+        } else if (upperQuery.contains("DROP TABLE")) {
+            String sinDrop = queryOriginal.replaceAll("(?i)DROP\\s+TABLE\\s+", "").trim();
+            String[] partes = sinDrop.split("\\s+");
+            if (partes.length > 0) {
+                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+            }
+        }
+        
+        return tabla;
     }
 
     public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
