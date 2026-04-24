@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import { sounds } from '../lib/SoundEngine';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
@@ -49,6 +50,7 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
+  const { colors } = useTheme();
 
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
@@ -509,8 +511,8 @@ export const ExercisePage = () => {
                           <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
                         </div>
                       ) : (
-                        <div className="mt-2 p-3 rounded-xl bg-slate-900/60 border border-white/10">
-                          <p className="text-slate-100 text-sm font-gameui leading-relaxed">{clawbotMessage}</p>
+                        <div className="mt-2 p-3 rounded-xl" style={{ backgroundColor: `${colors.surface}`, borderColor: colors.border }}>
+                          <p className="text-sm font-gameui leading-relaxed" style={{ color: colors.text }}>{clawbotMessage}</p>
                         </div>
                       )}
                     </div>
