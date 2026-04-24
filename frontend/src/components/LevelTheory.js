@@ -5,7 +5,9 @@ import { DagonMascot } from './DagonMascot';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket,
   Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide,
-  GitMerge, Database, Shield, Zap, PenLine, Trash2, Plus, Link2, Settings2
+  GitMerge, Database, Shield, Zap, PenLine, Trash2, Plus, Link2, Settings2,
+  Key, Lock, Eye, EyeOff, List, Hash, Percent, View, FileCode,
+  Wand2, Puzzle, Zap as ZapIcon2, Clock, Users, UserCheck, Trophy, ScrollText
 } from 'lucide-react';
 
 /* ============================================================
@@ -446,6 +448,505 @@ const SUB_TOPICS = {
       },
     ],
   },
+
+  // ============================================================
+  // SENDA DEL GUERRERO: MÓDULOS 5-20
+  // ============================================================
+
+  "5-1": {
+    title: "Los Sellos Sagrados",
+    subtitle: "Constraints básicos",
+    color: "from-amber-500 to-orange-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Lock className="w-12 h-12" />,
+        headline: "Primary Key: Tu Identificador",
+        lead: "La Primary Key (PK) es el sello que hace único a cada registro. Como el número de carnet del aventurero.",
+        bullets: [
+          "Cada tabla necesita UNA columna que sea irrepetible.",
+          "No puede haber NULL ni duplicados.",
+          "Se marca con PRIMARY KEY.",
+        ],
+        code: "CREATE TABLE aventureros (\n  id SERIAL PRIMARY KEY,\n  nombre VARCHAR(50) NOT NULL\n);",
+      },
+      {
+        type: "chat",
+        emoji: <Key className="w-12 h-12" />,
+        headline: "NOT NULL: Dato obligatorio",
+        lead: "Si una columna es NOT NULL, el sistema NO permite que esté vacía. Es como exigir el nombre.",
+        code: "CREATE TABLE guild (\n  id SERIAL PRIMARY KEY,\n  nombre VARCHAR(100) NOT NULL,\n  fundacion DATE\n);",
+      },
+    ],
+  },
+
+  "5-2": {
+    title: "DEFAULT: Valores por Defecto",
+    subtitle: "Cuando no eliges, se elige solo",
+    color: "from-amber-600 to-yellow-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Settings2 className="w-12 h-12" />,
+        headline: "El valor que aparece solo",
+        lead: "DEFAULT define qué valor poner si no lo especificas al insertar. Como el nivel 1 de un novato.",
+        code: "CREATE TABLE mascotas (\n  id SERIAL PRIMARY KEY,\n  nombre VARCHAR(50),\n  nivel INTEGER DEFAULT 1\n);",
+      },
+      {
+        type: "chat",
+        emoji: <List className="w-12 h-12" />,
+        headline: "Insertando sin nivel",
+        lead: "Si insertas sin nivel, automáticamente será 1:",
+        code: "INSERT INTO mascotas (nombre) \nVALUES ('Loya');",
+        codeLabel: "nivel será 1 por DEFAULT",
+      },
+    ],
+  },
+
+  "6-1": {
+    title: "UNIQUE: Nombres Únicos",
+    subtitle: "Sin duplicados",
+    color: "from-violet-500 to-purple-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "No puede haber dos iguales",
+        lead: "UNIQUE asegura que una columna no tenga valores repetidos. Como los nombres de los guerreros del gremio.",
+        code: "ALTER TABLE aventureros \nADD CONSTRAINT nombre_unique \nUNIQUE (nombre);",
+      },
+      {
+        type: "chat",
+        emoji: <Key className="w-12 h-12" />,
+        headline: "UNIQUE vs PRIMARY KEY",
+        lead: "UNIQUE permite NULL (muchos NULLs incluso). PRIMARY KEY es UNIQUE + NOT NULL obligatorio.",
+        bullets: [
+          "PK = Solo uno por tabla, obligatorio.",
+          "UNIQUE = Puede haber varios, permite NULL.",
+        ],
+      },
+    ],
+  },
+
+  "6-2": {
+    title: "CHECK: Validación de Datos",
+    subtitle: "Las reglas del juego",
+    color: "from-purple-500 to-fuchsia-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "Reglas que se cumplen",
+        lead: "CHECK verifica que los datos cumplan una condición. Si no la cumplen, se rechaza el insert.",
+        code: "ALTER TABLE aventureros \nADD CONSTRAINT nivel_check \nCHECK (nivel >= 1 AND nivel <= 99);",
+      },
+      {
+        type: "chat",
+        emoji: <Lock className="w-12 h-12" />,
+        headline: "Ejemplos de CHECK",
+        lead: "Pueden ser tan complejos como necesites:",
+        code: "CHECK (precio > 0),\nCHECK (fecha_fin > fecha_inicio),\nCHECK (edad >= 18);",
+      },
+    ],
+  },
+
+  "7-1": {
+    title: "SERIAL: ID Automático",
+    subtitle: "El generador de identificadores",
+    color: "from-cyan-500 to-blue-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Hash className="w-12 h-12" />,
+        headline: "No más ID manual",
+        lead: "SERIAL crea automáticamente un número que aumenta cada vez. Es como la fila del banco: te dan el siguiente número.",
+        code: "CREATE TABLE heroes (\n  id SERIAL PRIMARY KEY,\n  nombre VARCHAR(50)\n);",
+      },
+      {
+        type: "chat",
+        emoji: <List className="w-12 h-12" />,
+        headline: "Cómo funciona internamente",
+        lead: "SERIAL crea una secuencia que hace nextval automáticamente.",
+        code: "INSERT INTO heroes (nombre) \nVALUES ('Loya');",
+        codeLabel: "El ID se genera solo: 1, 2, 3...",
+      },
+    ],
+  },
+
+  "7-2": {
+    title: "Secuencias: El Mecanismo",
+    subtitle: "Entendiendo los GENERATORs",
+    color: "from-blue-500 to-indigo-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Hash className="w-12 h-12" />,
+        headline: "Las secuencias son el motor",
+        lead: "Una secuencia es un objeto que genera números en orden. SERIAL usa una secuencia internamente.",
+        code: "SELECT nextval('seq_numeros');",
+        codeLabel: "Devuelve el siguiente número",
+      },
+      {
+        type: "chat",
+        emoji: <ZapIcon2 className="w-12 h-12" />,
+        headline: "Control de secuencias",
+        lead: "Puedes ver, reiniciar y modificar secuencias:",
+        code: "-- Ver siguiente valor\nSELECT nextval('seq');\n\n-- Reiniciar\nSELECT setval('seq', 100);",
+      },
+    ],
+  },
+
+  "8-1": {
+    title: "BETWEEN: El Rango",
+    subtitle: "Entre dos valores",
+    color: "from-teal-500 to-emerald-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "Dentro del rango",
+        lead: "BETWEEN busca valores entre dos límites, incluyendo ambos. Es como筛选 10 a 20.",
+        code: "SELECT * FROM aventureros \nWHERE nivel BETWEEN 10 AND 20;",
+        codeLabel: "Nivel 10, 11, 12... hasta 20",
+      },
+    ],
+  },
+
+  "8-2": {
+    title: "IN: La Lista",
+    subtitle: "Uno de varios",
+    color: "from-emerald-500 to-green-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <List className="w-12 h-12" />,
+        headline: "Selecciona de una lista",
+        lead: "IN verifica si el valor está en una lista. Es como preguntar: '¿eres Guerrero o Mago?'",
+        code: "SELECT * FROM aventureros \nWHERE clase IN ('Guerrero', 'Mago');",
+      },
+      {
+        type: "chat",
+        emoji: <Percent className="w-12 h-12" />,
+        headline: "IN vs muchos OR",
+        lead: "IN es más limpio que encadenar ORs:",
+        code: "-- Con OR (largo)\nWHERE clase = 'Guerrero' OR clase = 'Mago'\n\n-- Con IN (elegante)\nWHERE clase IN ('Guerrero', 'Mago')",
+      },
+    ],
+  },
+
+  "8-3": {
+    title: "IS NULL: El Vacío",
+    subtitle: "Encontrando lo que no existe",
+    color: "from-slate-500 to-gray-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <EyeOff className="w-12 h-12" />,
+        headline: "NULL no es vacío, es 'sin valor'",
+        lead: "NULL significa 'no tiene ningún valor conocido'. No es 0, no es texto vacío, es... nada.",
+        code: "SELECT * FROM aventureros \nWHERE nivel IS NULL;",
+      },
+      {
+        type: "chat",
+        emoji: <Eye className="w-12 h-12" />,
+        headline: "IS NOT NULL",
+        lead: "Para encontrar los que SÍ tienen valor:",
+        code: "SELECT * FROM aventureros \nWHERE nivel IS NOT NULL;",
+      },
+    ],
+  },
+
+  "9-1": {
+    title: "VISTAS: Ventanas Mágicas",
+    subtitle: "Consultas guardadas",
+    color: "from-rose-500 to-pink-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <View className="w-12 h-12" />,
+        headline: "Una vista es una consulta guardada",
+        lead: "Crea una 'ventana' que muestra datos complejos sin tener que escribir la consulta cada vez.",
+        code: "CREATE VIEW guerreros_view AS\nSELECT nombre, nivel \nFROM aventureros \nWHERE clase = 'Guerrero';",
+      },
+      {
+        type: "chat",
+        emoji: <Eye className="w-12 h-12" />,
+        headline: "Usar la vista",
+        lead: "Ahora puedes consultar la vista como si fuera una tabla:",
+        code: "SELECT * FROM guerreros_view;",
+      },
+    ],
+  },
+
+  "9-2": {
+    title: "VISTAS con JOIN",
+    subtitle: "Atajos complejos",
+    color: "from-pink-500 to-rose-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "Views que unen tablas",
+        lead: "Crea vistas que combinen información de varias tablas. El usuario solo ve el resultado.",
+        code: "CREATE VIEW heroes_armados AS\nSELECT a.nombre, e.item, e.precio\nFROM aventureros a\nJOIN equipamiento e \n  ON a.id = e.id_aventurero;",
+      },
+    ],
+  },
+
+  "10-1": {
+    title: "Los Planos del Gremio",
+    subtitle: "information_schema",
+    color: "from-indigo-500 to-blue-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <FileCode className="w-12 h-12" />,
+        headline: "Metadatos: datos sobre datos",
+        lead: "information_schema guarda 'planos' de tu base de datos: qué tablas hay, qué columnas, qué permisos.",
+        code: "SELECT table_name \nFROM information_schema.tables \nWHERE table_schema = 'public';",
+      },
+      {
+        type: "chat",
+        emoji: <List className="w-12 h-12" />,
+        headline: "Ver columnas de una tabla",
+        lead: "Descubre qué columnas tiene cualquier tabla:",
+        code: "SELECT column_name, data_type\nFROM information_schema.columns\nWHERE table_name = 'aventureros';",
+      },
+    ],
+  },
+
+  "11-1": {
+    title: "LIKE: Búsqueda Inteligente",
+    subtitle: "Buscar por patrón",
+    color: "from-yellow-500 to-amber-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "El comodín %",
+        lead: "% significa 'cualquier cosa'. LIKE '%algo' busca lo que termina en 'algo'.",
+        code: "-- Nombres que empiezan con 'L'\nSELECT * FROM aventureros \nWHERE nombre LIKE 'L%';",
+      },
+      {
+        type: "chat",
+        emoji: <Sparkles className="w-12 h-12" />,
+        headline: "Más comodines",
+        lead: "_ significa 'un carácter cualquiera':",
+        code: "-- Nombre con segunda letra 'o'\nSELECT * FROM aventureros \nWHERE nombre LIKE '_o%';",
+      },
+    ],
+  },
+
+  "12-1": {
+    title: "Funciones: Hechizos Reutilizables",
+    subtitle: "Código que devuelve resultados",
+    color: "from-orange-500 to-red-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Wand2 className="w-12 h-12" />,
+        headline: "Las funciones son hechizos",
+        lead: "Una función recibe datos, hace cálculos y devuelve UN resultado. Como un oráculo: le preguntas y te responde.",
+        code: "CREATE FUNCTION sumar(a INT, b INT)\nRETURNS INT AS $$\n  SELECT a + b;\n$$ LANGUAGE SQL;",
+      },
+      {
+        type: "chat",
+        emoji: <ZapIcon2 className="w-12 h-12" />,
+        headline: "Usar la función",
+        lead: "Llama a la función como si fuera un comando:",
+        code: "SELECT sumar(5, 3);",
+        codeLabel: "Devuelve: 8",
+      },
+    ],
+  },
+
+  "12-2": {
+    title: "Funciones con Condiciones",
+    subtitle: "IF y CASE en funciones",
+    color: "from-red-500 to-orange-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "Lógica en funciones",
+        lead: "Usa CASE para decisiones:",
+        code: "CREATE FUNCTION verificar_nivel(n INT)\nRETURNS TEXT AS $$\n  SELECT CASE \n    WHEN n > 20 THEN 'Veterano'\n    ELSE 'Novato'\n  END;\n$$ LANGUAGE SQL;",
+      },
+    ],
+  },
+
+  "13-1": {
+    title: "Functions vs Procedures",
+    subtitle: "¿Cuál usar?",
+    color: "from-violet-500 to-purple-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Puzzle className="w-12 h-12" />,
+        headline: "Functions devuelven, Procedures ejecutan",
+        lead: "Functions: para cálculos y retornar valores.\nProcedures: para acciones múltiples.",
+        bullets: [
+          "Function: SELECT mi_funcion()",
+          "Procedure: CALL mi_procedure()",
+          "Function: en queries SQL",
+          "Procedure: en transacciones",
+        ],
+      },
+    ],
+  },
+
+  "14-1": {
+    title: "Triggers: Gatillos Mágicos",
+    subtitle: "Código que se ejecuta solo",
+    color: "from-fuchsia-500 to-pink-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <ZapIcon2 className="w-12 h-12" />,
+        headline: "Automagia pura",
+        lead: "Un trigger se dispara SOLO cuando pasa algo específico: INSERT, UPDATE o DELETE.",
+        code: "CREATE FUNCTION fn_saludo()\nRETURNS TRIGGER AS $$\nBEGIN\n  RAISE NOTICE 'Nuevo: %', NEW.nombre;\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
+      },
+      {
+        type: "chat",
+        emoji: <Lock className="w-12 h-12" />,
+        headline: "Activar el trigger",
+        lead: "Ahora conecta la función a la tabla:",
+        code: "CREATE TRIGGER trg_saludo\nAFTER INSERT ON aventureros\nFOR EACH ROW\nEXECUTE FUNCTION fn_saludo();",
+      },
+    ],
+  },
+
+  "15-1": {
+    title: "Transacciones: Viaje en el Tiempo",
+    subtitle: "COMMIT y ROLLBACK",
+    color: "from-cyan-500 to-teal-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Clock className="w-12 h-12" />,
+        headline: "BEGIN: Inicia el viaje",
+        lead: "Una transacción agrupa operaciones. Si algo falla, puedes volver atrás con ROLLBACK.",
+        code: "BEGIN;\nINSERT INTO aventureros ...;\nUPDATE equipamiento ...;\nCOMMIT; -- Guardar cambios",
+      },
+      {
+        type: "chat",
+        emoji: <ArrowLeft className="w-12 h-12" />,
+        headline: "ROLLBACK: Volver al pasado",
+        lead: "Si algo sale mal, deshaz TODO:",
+        code: "BEGIN;\nINSERT INTO ...;\n-- ¡Ups, algo mal!\nROLLBACK; -- Todo se deshace",
+      },
+    ],
+  },
+
+  "16-1": {
+    title: "FOR UPDATE: Cerrojo de Fila",
+    subtitle: "Bloqueando datos",
+    color: "from-slate-500 to-zinc-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Lock className="w-12 h-12" />,
+        headline: "Bloquea mientras operas",
+        lead: "FOR UPDATE bloquea las filas seleccionadas para que nadie más pueda modificarlas hasta que hagas COMMIT.",
+        code: "BEGIN;\nSELECT * FROM habitaciones\nWHERE numero = 101\nFOR UPDATE;",
+        codeLabel: "La habitación 101 queda bloqueada",
+      },
+    ],
+  },
+
+  "17-1": {
+    title: "Álgebra Relacional",
+    subtitle: "Operaciones de conjuntos",
+    color: "from-blue-500 to-violet-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Sparkles className="w-12 h-12" />,
+        headline: "UNION: Juntar mundos",
+        lead: "UNION combina resultados de dos consultas, sin duplicados.",
+        code: "SELECT nombre FROM aventureros\nUNION\nSELECT item FROM equipamiento;",
+      },
+      {
+        type: "chat",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "INTERSECT y EXCEPT",
+        lead: "INTERSECT: lo que está en ambos.\nEXCEPT: lo que está en el primero pero no en el segundo.",
+        code: "-- INTERSECT: nombres que también son items\nSELECT nombre FROM aventureros\nINTERSECT\nSELECT item FROM equipamiento;",
+      },
+    ],
+  },
+
+  "18-1": {
+    title: "Roles del Gremio",
+    subtitle: "GRANT y REVOKE",
+    color: "from-emerald-500 to-green-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Users className="w-12 h-12" />,
+        headline: "Quién puede qué",
+        lead: "Los roles definen qué puede hacer cada usuario. GRANT da permisos, REVOKE los quita.",
+        code: "-- Dar permiso de lectura\nGRANT SELECT ON aventureros\nTO app_sandbox_user;",
+      },
+      {
+        type: "chat",
+        emoji: <UserCheck className="w-12 h-12" />,
+        headline: "Verificar tu rol actual",
+        lead: "Consulta quién eres en la sesión:",
+        code: "SELECT current_user;",
+        codeLabel: "Muestra el usuario de conexión",
+      },
+    ],
+  },
+
+  "19-1": {
+    title: "Tu Universo Personal",
+    subtitle: "Row Level Security",
+    color: "from-indigo-500 to-violet-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "Cada usuario tiene su mundo",
+        lead: "Tu esquema 'sandbox_usuario_[tu_id]' es tu universo personal. Nadie más puede ver tus datos.",
+        code: "SELECT current_setting('search_path');",
+        codeLabel: "Muestra tu esquema actual",
+      },
+      {
+        type: "chat",
+        emoji: <Database className="w-12 h-12" />,
+        headline: "El multiverso de Dagon",
+        lead: "Cuando te registras, Dagon clona automáticamente tu propio esquema. ¡Tus cambios no afectan a otros!",
+      },
+    ],
+  },
+
+  "20-1": {
+    title: "Proyecto Final",
+    subtitle: "Integrando todo",
+    color: "from-rose-500 to-amber-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Trophy className="w-12 h-12" />,
+        headline: "El Guerrero Completo",
+        lead: "Has recorrido los Sellos Sagrados, los Hechizos, los Gatillos y el Viaje Temporal. Es hora de integrarlo todo.",
+        bullets: [
+          "Constraints: Datos con reglas.",
+          "Funciones: Lógica reutilizable.",
+          "Triggers: Automatización.",
+          "Transacciones: Seguridad.",
+        ],
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "Tu misión final",
+        lead: "Crea el sistema del bestiario con todo lo aprendido. Tablas, funciones, vistas, triggers y transacciones.",
+      },
+    ],
+  },
 };
 
 const LEVEL_KEYS = {
@@ -453,6 +954,22 @@ const LEVEL_KEYS = {
   "2": "2-1",
   "3": "3-1",
   "4": "4-1",
+  "5": "5-1",
+  "6": "6-1",
+  "7": "7-1",
+  "8": "8-1",
+  "9": "9-1",
+  "10": "10-1",
+  "11": "11-1",
+  "12": "12-1",
+  "13": "13-1",
+  "14": "14-1",
+  "15": "15-1",
+  "16": "16-1",
+  "17": "17-1",
+  "18": "18-1",
+  "19": "19-1",
+  "20": "20-1",
 };
 
 const FALLBACK = {
