@@ -86,6 +86,12 @@ export const ProfilePage = () => {
 
     const fetchAvatar = async () => {
       if (!user?.idUsuario) return;
+      
+      const cachedAvatar = localStorage.getItem('userAvatar');
+      if (cachedAvatar) {
+        setAvatarUrl(cachedAvatar);
+      }
+      
       try {
         const res = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/foto`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -94,6 +100,9 @@ export const ProfilePage = () => {
         if (data.fotoUrl) {
           const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
           setAvatarUrl(fullUrl);
+          localStorage.setItem('userAvatar', fullUrl);
+        } else {
+          localStorage.removeItem('userAvatar');
         }
       } catch (e) {}
     };
@@ -118,6 +127,7 @@ export const ProfilePage = () => {
       if (data.success) {
         const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
         setAvatarUrl(fullUrl);
+        localStorage.setItem('userAvatar', fullUrl);
         toast.success('Foto de perfil actualizada!');
       }
     } catch (err) {
