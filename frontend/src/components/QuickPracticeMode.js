@@ -188,16 +188,19 @@ export const QuickPracticeMode = ({
       interval = setInterval(() => {
         setTimer(t => t - 1);
         
-        if (t <= 5 && t > 0) {
+        if (t <= 6 && t > 0) {
           sounds.playCountdown(t);
-        } else if (t === 10) {
-          sounds.playTensionTick();
+        } else if (t > 10) {
+          sounds.startTimerLoop(1000);
         }
       }, 1000);
     } else if (timer === 0 && isRunning) {
       handleTimeout();
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      sounds.stopTimerLoop();
+    };
   }, [isRunning, timer]);
 
   useEffect(() => {

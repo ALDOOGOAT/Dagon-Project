@@ -53,11 +53,15 @@ export const DashboardPage = () => {
 
   useEffect(() => {
     if (showQuickPractice) {
-      sounds.startBackgroundMusic();
+      sounds.startGameMusic();
     } else {
-      sounds.stopBackgroundMusic();
+      sounds.stopGameMusic();
+      sounds.startBackgroundMusic();
     }
-    return () => sounds.stopBackgroundMusic();
+    return () => {
+      sounds.stopGameMusic();
+      sounds.stopBackgroundMusic();
+    };
   }, [showQuickPractice]);
 
   const { cursosCompletados, generarCertificado } = useCertificado(token);
