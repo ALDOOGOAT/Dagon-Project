@@ -222,6 +222,15 @@ export const ExercisePage = () => {
         setIntentosFallidos(0);
         setCombo(c => c + 1);
         sounds.playSuccess();
+      } else if (result.isWarning) {
+        toast.warning(result.message);
+        setExecutionResult({ 
+          success: true, 
+          message: result.message, 
+          mockData: result.mockData,
+          isWarning: true 
+        });
+        sounds.playMagic();
       } else {
         toast.error(result.message);
         setExecutionResult({ success: false, message: result.message });
@@ -637,26 +646,40 @@ export const ExercisePage = () => {
               </div>
             </motion.div>
 
-            {/* RESULTADOS */}
+{/* RESULTADOS */}
             <AnimatePresence>
               {executionResult && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                   className={`rounded-3xl border overflow-hidden ${
-                    executionResult.success
-                      ? 'glass-card-apple border-emerald-400/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
-                      : 'glass-card-apple border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]'
+                    executionResult.isWarning
+                      ? 'glass-card-apple border-amber-400/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
+                      : executionResult.success
+                        ? 'glass-card-apple border-emerald-400/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
+                        : 'glass-card-apple border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]'
                   }`}
                 >
                   <div className={`px-5 py-4 flex items-center gap-3 border-b ${
-                    executionResult.success ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-rose-500/20 bg-rose-500/5'
+                    executionResult.isWarning 
+                      ? 'border-amber-500/30 bg-amber-500/10'
+                      : executionResult.success 
+                        ? 'border-emerald-500/20 bg-emerald-500/5' 
+                        : 'border-rose-500/20 bg-rose-500/5'
                   }`}>
-                    {executionResult.success
-                      ? <CheckCircle className="w-5 h-5 text-emerald-400" />
-                      : <XCircle className="w-5 h-5 text-rose-400" />
+                    {executionResult.isWarning
+                      ? <span className="text-2xl">⚠️</span>
+                      : executionResult.success
+                        ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                        : <XCircle className="w-5 h-5 text-rose-400" />
                     }
-                    <span className={`font-display font-black ${executionResult.success ? 'text-emerald-200' : 'text-rose-200'}`}>
-                      {executionResult.success ? '¡Correcto!' : 'No es correcto'}
+                    <span className={`font-display font-black ${
+                      executionResult.isWarning 
+                        ? 'text-amber-200' 
+                        : executionResult.success 
+                          ? 'text-emerald-200' 
+                          : 'text-rose-200'
+                    }`}>
+                      {executionResult.isWarning ? '⚠️ Advertencia' : executionResult.success ? '¡Correcto!' : 'No es correcto'}
                     </span>
                     <span className="font-gameui text-sm text-slate-300 ml-2">{executionResult.message}</span>
                   </div>
@@ -692,7 +715,7 @@ export const ExercisePage = () => {
                   )}
 
                   {/* Siguiente misión */}
-                  {executionResult.success && (
+                  {(executionResult.success || executionResult.isWarning) && (
                     <div className="p-5">
                       <Button
                         onClick={() => {
