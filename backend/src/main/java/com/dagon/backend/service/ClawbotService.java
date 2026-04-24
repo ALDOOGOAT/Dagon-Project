@@ -9,6 +9,9 @@ import java.util.*;
 @Service
 public class ClawbotService {
 
+    @Value("${groq.api.key:}")
+    private String groqApiKey;
+
     @Value("${gemini.api.key:}")
     private String geminiApiKey;
 
@@ -53,6 +56,15 @@ public class ClawbotService {
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         try {
+            String respuesta = callGroqAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
+            if (respuesta != null && !respuesta.isEmpty() && !respuesta.contains("ERROR_DE_API")) {
+                return formatearRespuestaAnalisis(respuesta);
+            }
+        } catch (Exception e) {
+            System.err.println("Groq analysis error: " + e.getMessage());
+        }
+
+        try {
             String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
             if (respuesta != null && !respuesta.isEmpty() && !respuesta.contains("ERROR_DE_API")) {
                 return formatearRespuestaAnalisis(respuesta);
@@ -77,6 +89,15 @@ public class ClawbotService {
         mensajeUsuario = limpiarHtml(mensajeUsuario);
 
         try {
+            String respuesta = callGroqChat(mensajeUsuario, historial);
+            if (respuesta != null && !respuesta.isEmpty() && !respuesta.contains("ERROR_DE_API")) {
+                return formatearRespuestaChat(respuesta);
+            }
+        } catch (Exception e) {
+            System.err.println("Groq chat error: " + e.getMessage());
+        }
+
+        try {
             String respuesta = callGeminiChat(mensajeUsuario, historial);
             if (respuesta != null && !respuesta.isEmpty() && !respuesta.contains("ERROR_DE_API")) {
                 return formatearRespuestaChat(respuesta);
@@ -95,6 +116,90 @@ public class ClawbotService {
         }
 
         return helpForQuestion(mensajeUsuario.toLowerCase());
+    }
+
+    private String callGroqChat(String mensaje, List<Map<String, String>> historial) {
+        if (groqApiKey == null || groqApiKey.isEmpty()) {
+            return "ERROR_DE_API";
+        }
+        try {
+            String url = "https://api.groq.com/openai/v1/chat/completions";
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT_CHAT));
+            messages.add(Map.of("role", "user", "content", mensaje));
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", "llama-3.1-8b-instant");
+            body.put("messages", messages);
+            body.put("temperature", 0.7);
+            body.put("max_tokens", 200);
+
+            HttpHeaders h = new HttpHeaders();
+            h.setContentType(MediaType.APPLICATION_JSON);
+            h.set("Authorization", "Bearer " + groqApiKey);
+            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
+
+            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
+            Map<String, Object> resp = r.getBody();
+
+            if (resp != null && resp.containsKey("choices")) {
+                List<?> choices = (List<?>) resp.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<?, ?> choice = (Map<?, ?>) choices.get(0);
+                    Map<?, ?> msg = (Map<?, ?>) choice.get("message");
+                    return msg.get("content").toString();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Groq API error: " + e.getMessage());
+        }
+        return "ERROR_DE_API";
+    }
+
+    private String callGroqAnalysis(String desc, String queryM, String queryA, String error, int intentos) {
+        if (groqApiKey == null || groqApiKey.isEmpty()) {
+            return "ERROR_DE_API";
+        }
+        try {
+            String url = "https://api.groq.com/openai/v1/chat/completions";
+
+            String prompt = SYSTEM_PROMPT_ANALYSIS + "\n\nMISION: " + desc + 
+                "\nCONSULTA CORRECTA: " + queryM + 
+                "\nTU CONSULTA: " + queryA + 
+                "\nERROR: " + (error != null ? error : "Sin error") + 
+                "\nINTENTOS: " + intentos;
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT_ANALYSIS));
+            messages.add(Map.of("role", "user", "content", prompt));
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", "llama-3.1-8b-instant");
+            body.put("messages", messages);
+            body.put("temperature", 0.3);
+            body.put("max_tokens", 300);
+
+            HttpHeaders h = new HttpHeaders();
+            h.setContentType(MediaType.APPLICATION_JSON);
+            h.set("Authorization", "Bearer " + groqApiKey);
+            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
+
+            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
+            Map<String, Object> resp = r.getBody();
+
+            if (resp != null && resp.containsKey("choices")) {
+                List<?> choices = (List<?>) resp.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<?, ?> choice = (Map<?, ?>) choices.get(0);
+                    Map<?, ?> msg = (Map<?, ?>) choice.get("message");
+                    return msg.get("content").toString();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Groq analysis error: " + e.getMessage());
+        }
+        return "ERROR_DE_API";
     }
 
     private String callGeminiChat(String mensaje, List<Map<String, String>> historial) {
