@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { TutorialOverlay } from '../components/TutorialOverlay';
@@ -43,6 +44,7 @@ const tierGradient = (tier) => ({
 export const DashboardPage = () => {
   const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
+  const { colors } = useTheme();
 
   const [showTutorial, setShowTutorial] = useState(false);
   const [showQuickPractice, setShowQuickPractice] = useState(false);
@@ -320,7 +322,7 @@ const title = titleFor(userXP);
                   {xpInLevel}<span className="text-slate-500">/100 XP</span>
                 </span>
               </div>
-              <div className="relative w-full h-4 bg-slate-900/80 rounded-full border border-white/5 overflow-hidden xp-bar-shine">
+              <div className="relative w-full h-4 rounded-full border overflow-hidden xp-bar-shine" style={{ backgroundColor: `${colors.surface}CC`, borderColor: colors.border }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${xpInLevel}%` }}

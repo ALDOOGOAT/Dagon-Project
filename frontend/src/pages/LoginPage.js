@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -32,6 +33,7 @@ export const LoginPage = () => {
   const [isPageReady, setIsPageReady] = useState(false);
   const [taglineIdx, setTaglineIdx] = useState(0);
   const { login, register } = useAuth();
+  const { colors } = useTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -183,7 +185,12 @@ export const LoginPage = () => {
                       placeholder="Tu nombre"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="bg-slate-900/70 border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/40 text-slate-100 h-12 rounded-xl"
+                      className="h-12 rounded-xl"
+                      style={{
+                        backgroundColor: `${colors.surface}b3`,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
                       required
                     />
                   </motion.div>
@@ -201,7 +208,12 @@ export const LoginPage = () => {
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-900/70 border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/40 text-slate-100 h-12 rounded-xl"
+                  className="h-12 rounded-xl"
+                      style={{
+                        backgroundColor: `${colors.surface}b3`,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
                   required
                 />
               </div>
@@ -217,7 +229,12 @@ export const LoginPage = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="bg-slate-900/70 border-slate-700 focus:border-cyan-500 focus:ring-cyan-500/40 text-slate-100 h-12 rounded-xl"
+                  className="h-12 rounded-xl"
+                      style={{
+                        backgroundColor: `${colors.surface}b3`,
+                        borderColor: colors.border,
+                        color: colors.text
+                      }}
                   required
                 />
               </div>

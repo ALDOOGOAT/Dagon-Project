@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/ui/button';
 import { ArrowLeft, Trophy, Medal, Zap, Target, Crown, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -17,6 +18,7 @@ const leagueFor = (xp) => {
 export const LeaderboardPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const { colors } = useTheme();
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -177,11 +179,14 @@ export const LeaderboardPage = () => {
                     initial={{ opacity: 0, x: -16 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`relative flex items-center px-4 py-3 rounded-2xl border transition-all overflow-hidden ${
+className={`relative flex items-center px-4 py-3 rounded-2xl border transition-all overflow-hidden ${
                       me
-                        ? 'bg-blue-500/10 border-blue-400/40 shadow-[inset_0_0_25px_rgba(59,130,246,0.15)]'
-                        : 'bg-slate-900/40 border-white/5 hover:border-cyan-400/30 hover:bg-slate-900/70'
+                        ? 'bg-blue-500/10 border-blue-400/40 shadow-[inset_0_0_25px_rgba(59,130,blue,0.15)]'
+                        : 'border-white/5 hover:border-cyan-400/30'
                     }`}
+                    style={{
+                      backgroundColor: me ? undefined : `${colors.surface}66`
+                    }}
                   >
                     {/* XP fill backdrop */}
                     <div
