@@ -34,20 +34,17 @@ public class ClawbotService {
         "15. El formato es importante - haz respuestas bonitas.";
 
     private static final String SYSTEM_PROMPT_ANALYSIS = 
-        "Eres Dagon, mentor de SQL. Da pistas CLARAS y EDUCATIVAS. " +
-        "REGLAS: " +
-        "1. Analiza el error vs la consulta correcta. " +
-        "2. Explica el error en MAXIMO 2 oraciones cortas. " +
-        "3. Da UNA pista simple y directa (no preguntes). " +
-        "4. Muestra ejemplo de correccion si ayuda. " +
-        "5. NUNCA uses HTML, puramente texto. " +
-        "6. Siempre en espanol formal. " +
-        "7. Usa lenguaje natural y claro. " +
-        "8. Evita tecnicismos complicate. " +
-        "Formato limpio: " +
-        "Error: [explicacion breve] " +
-        "Pista: [consejo simple] " +
-        "Ayuda: [ejemplo opcional si es necesario]";
+        "Eres Dagon, maestro de SQL del juego. " +
+        "Tu trabajo es analizar consultas incorrectas y DAR PISTAS educativas. " +
+        "REGLAS: 1. Analiza la consulta del estudiante vs la correcta. " +
+        "2. Identifica el error y EXPLICA por que falla. " +
+        "3. Da una pista DIRECTA. " +
+        "4. Muestra un ejemplo pequeno de correccion. " +
+        "5. NUNCA uses HTML. " +
+        "6. Siempre en espanol. " +
+        "7. Se claro y educativo. " +
+        "8. Explica el concepto atras del error. " +
+        "Formato: ERROR: [explicacion] PISTA: [pista] EJEMPLO: [codigo]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         try {
@@ -165,23 +162,23 @@ public class ClawbotService {
         return respuesta.trim();
     }
 
-private String buildFallbackResponse(String desc, String queryM, String error, int intentos) {
+    private String buildFallbackResponse(String desc, String queryM, String error, int intentos) {
         String[] encouragements = {
-            "Casi lo tienes. Analiza tu consulta.",
-            "Vas bien. Revisa el error.",
-            "No te rindas. Cada error te acerca.",
-            "Sigue. SQL es practica."
+            "Casi lo tiens! Revisa tu consulta con calma.",
+            "Vas muy bien! El error te ayuda a aprender.",
+            "No te rindas! Cada error te acerca a la respuesta.",
+            "Sigue intentando! SQL es practica."
         };
 
         String[] hints = {
-            "Falta una palabra clave? SELECT, FROM, WHERE...",
-            "Verifica que las columnas existan.",
-            "Para JOINs, usa ON para conectar.",
-            "Para GROUP BY, columnas en SELECT o funciones.",
-            "Texto va entre comillas simples.",
-            "Para NULL, usa IS NULL no = NULL.",
-            "ORDER BY va al final.",
-            "Revisa comas y parentesis."
+            "Revisa si falta alguna palabra clave",
+            "Verifica que los nombres de columnas existan",
+            "Para JOINs, usa ON para la condicion",
+            "Para GROUP BY, columnas deben estar en SELECT o ser funciones",
+            "Para texto, usa comillas simples",
+            "Para null, usa IS NULL no = NULL",
+            "ORDER BY va al final",
+            "Verifica las comas entre columnas"
         };
 
         String encouragement = encouragements[intentos % encouragements.length];
@@ -189,39 +186,6 @@ private String buildFallbackResponse(String desc, String queryM, String error, i
 
         return "## " + encouragement + "\n\n" + hint + "\n\nsql\nSELECT columna FROM tabla WHERE condicion;";
     }
-
-    private String helpForQuestion(String question) {
-        if (question.contains("join")) {
-            return "## JOIN\n\nUne datos de dos tablas.\n\nsql\nSELECT u.nombre, p.total\nFROM usuarios u\nINNER JOIN pedidos p ON u.id = p.usuario_id;\n\n*ON conecta las tablas por su ID comun.*";
-        }
-        if (question.contains("where")) {
-            return "## WHERE\n\nFiltra resultados.\n\nsql\nSELECT * FROM usuarios WHERE activo = true;\nsql\nSELECT * FROM productos WHERE precio > 100;";
-        }
-        if (question.contains("select")) {
-            return "## SELECT\n\nElige columnas a mostrar.\n\nsql\nSELECT nombre, email FROM usuarios;\nsql\nSELECT * FROM usuarios;";
-        }
-        if (question.contains("null")) {
-            return "## NULL\n\nAusencia de valor.\n\nsql\nSELECT * FROM usuarios WHERE telefono IS NULL;\nsql\nSELECT * FROM usuarios WHERE telefono IS NOT NULL;";
-        }
-        if (question.contains("group")) {
-            return "## GROUP BY\n\nAgrupa resultados.\n\nsql\nSELECT categoria, COUNT(*) total\nFROM productos\nGROUP BY categoria;";
-        }
-        if (question.contains("order")) {
-            return "## ORDER BY\n\nOrdena resultados.\n\nsql\nSELECT nombre, precio FROM productos ORDER BY precio DESC;";
-        }
-        if (question.contains("insert")) {
-            return "## INSERT\n\nAgrega datos.\n\nsql\nINSERT INTO usuarios (nombre, email)\nVALUES ('Juan', 'juan@email.com');";
-        }
-        if (question.contains("update")) {
-            return "## UPDATE\n\nModifica datos.\n\nsql\nUPDATE usuarios SET nivel = 10 WHERE id = 1;";
-        }
-        if (question.contains("delete")) {
-            return "## DELETE\n\nBorra datos.\n\nsql\nDELETE FROM usuarios WHERE id = 1;\n\n*Siempre usa WHERE!";
-        }
-
-        return "## Soy Clawbot\n\nPuedo ayudarte con SELECT, WHERE, JOIN, GROUP BY, ORDER BY, INSERT, UPDATE, DELETE, NULL.\n\nPregunta lo que necesites!";
-    }
-}
 
     private String helpForQuestion(String question) {
         if (question.contains("join")) {

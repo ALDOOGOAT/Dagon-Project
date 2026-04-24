@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { X, Send, Code, Sparkles, BookOpen, Database, HelpCircle, Copy, Check, ChevronRight, FileCode, Lightbulb, AlertCircle } from 'lucide-react';
 import { DagonMascot } from './DagonMascot';
 
@@ -15,7 +14,6 @@ export const Clawbot = () => {
   const messagesEndRef = useRef(null);
   
   const { token } = useAuth(); 
-  const { colors } = useTheme(); 
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -299,15 +297,9 @@ export const Clawbot = () => {
                 <div
                   className={`max-w-[92%] p-4 rounded-2xl shadow-lg ${
                     msg.role === 'user'
-                      ? 'text-white font-medium rounded-br-md'
-                      : 'text-slate-200 border rounded-bl-md'
+                      ? 'bg-gradient-to-br from-emerald-600 to-cyan-600 text-white font-medium rounded-br-md'
+                      : 'bg-slate-900/80 text-slate-200 border border-slate-800/80 rounded-bl-md'
                   }`}
-                  style={{
-                    background: msg.role === 'user' 
-                      ? `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`
-                      : `${colors.surface}`,
-                    borderColor: `${colors.border}40`
-                  }}
                 >
                   <div className="text-[14px] whitespace-pre-wrap leading-relaxed font-['Manrope','Segoe_UI',sans-serif]" style={{ fontFamily: 'Manrope, Segoe UI, system-ui, sans-serif' }}>
                     {renderFormattedText(msg.content, index)}
