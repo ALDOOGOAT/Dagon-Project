@@ -8,13 +8,89 @@ import { useAuth } from '../contexts/AuthContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import { sounds } from '../lib/SoundEngine';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, Copy, Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
+
+const formatAIMessage = (text) => {
+  if (!text) return null;
+  
+  const sqlBlockRegex = /```sql\n([\s\S]*?)```/g;
+  const parts = text.split(sqlBlockRegex);
+  
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      const codeContent = part.trim();
+      return (
+        <div key={i} className="my-3 rounded-xl overflow-hidden border border-cyan-500/20 shadow-lg bg-slate-900/90">
+          <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 py-2 flex items-center justify-between border-b border-cyan-500/20">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <span className="text-xs font-semibold text-cyan-400">SQL</span>
+            </div>
+          </div>
+          <pre className="bg-slate-950/95 p-4 overflow-x-auto text-[13px] font-mono leading-6">
+            <code className="text-emerald-300" dangerouslySetInnerHTML={{ 
+              __html: codeContent
+                .replace(/\b(SELECT|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|ON|AND|OR|IS|NULL|ORDER|BY|ASC|DESC|GROUP|HAVING|LIMIT|OFFSET|AS|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|DISTINCT|COUNT|SUM|AVG|MAX|MIN|COALESCE)\b/g, 
+                  '<span class="text-cyan-400 font-semibold">$1</span>')
+                .replace(/('(?:[^'\\]|\\')*')/g, '<span class="text-yellow-300">$1</span>')
+                .replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
+            }} />
+          </pre>
+        </div>
+      );
+    }
+    
+    const lines = part.split('\n');
+    return lines.map((line, lineIdx) => {
+      line = line.trim();
+      if (!line) return <br key={`${i}-${lineIdx}`} />;
+      
+      if (line.startsWith('## ')) {
+        return (
+          <h4 key={`${i}-h-${lineIdx}`} className="mt-4 mb-2 text-base font-bold text-emerald-400 flex items-center gap-2">
+            <ChevronRight className="w-4 h-4" />
+            {line.replace('## ', '')}
+          </h4>
+        );
+      }
+      
+      if (line.startsWith('Error:') || line.startsWith('error:')) {
+        return (
+          <div key={`${i}-err-${lineIdx}`} className="mt-3 mb-2 px-3 py-2 bg-red-500/10 border-l-2 border-red-400 rounded-r text-red-200 text-sm font-medium">
+            {line}
+          </div>
+        );
+      }
+      
+      if (line.startsWith('Pista:') || line.startsWith('pista:')) {
+        return (
+          <div key={`${i}-pst-${lineIdx}`} className="mt-2 mb-2 px-3 py-2 bg-amber-500/10 border-l-2 border-amber-400 rounded-r text-amber-200 text-sm font-medium">
+            {line}
+          </div>
+        );
+      }
+      
+      if (line.startsWith('Ayuda:') || line.startsWith('ayuda:')) {
+        return (
+          <div key={`${i}-ay-${lineIdx}`} className="mt-2 mb-2 px-3 py-2 bg-cyan-500/10 border-l-2 border-cyan-400 rounded-r text-cyan-200 text-sm">
+            {line}
+          </div>
+        );
+      }
+      
+      return line ? (
+        <p key={`${i}-p-${lineIdx}`} className="mt-1 mb-1 text-slate-200 text-sm leading-relaxed">{line}</p>
+      ) : <br key={lineIdx} />;
+    });
+  });
+};
 
 const XPPop = ({ amount }) => (
   <div className="pointer-events-none fixed inset-0 z-[9990] flex items-center justify-center">
@@ -49,6 +125,7 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
+  const { colors } = useTheme();
 
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
@@ -509,8 +586,10 @@ export const ExercisePage = () => {
                           <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
                         </div>
                       ) : (
-                        <div className="mt-2 p-3 rounded-xl bg-slate-900/60 border border-white/10">
-                          <p className="text-slate-100 text-sm font-gameui leading-relaxed">{clawbotMessage}</p>
+                        <div className="mt-2 p-4 rounded-xl" style={{ backgroundColor: `${colors.surface}80`, borderColor: `${colors.border}40` }}>
+                          <div className="text-sm font-gameui leading-relaxed" style={{ color: colors.text }}>
+                            {formatAIMessage(clawbotMessage)}
+                          </div>
                         </div>
                       )}
                     </div>
