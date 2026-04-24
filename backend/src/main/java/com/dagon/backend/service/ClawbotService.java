@@ -30,26 +30,26 @@ public class ClawbotService {
         SQL_EXAMPLES.put("left join", "SELECT * FROM tabla1 LEFT JOIN tabla2 ON tabla1.campo = tabla2.campo;");
     }
 
-    private static final String SYSTEM_PROMPT_CHAT = "Eres Clawbot, el asistente amigable de SQL para el juego Dagon. " +
-        "REGLAS: 1. NUNCA uses HTML, solo texto plano y codigo SQL. " +
-        "2. Siempre responde en espanol. " +
-        "3. Maximo 3 oraciones por respuesta. " +
-        "4. Usa 1-2 emojis maximo. " +
-        "5. Si te preguntan sobre SQL, da ejemplos simples. " +
+    private static final String SYSTEM_PROMPT_CHAT = "Eres Clawbot, asistente amigable de SQL para el juego Dagon. " +
+        "REGLAS: 1. NUNCA uses HTML. 2. Responde en espanol. " +
+        "3. Maximo 2 oraciones cortas. " +
+        "4. Usa 1 emoji maximo. " +
+        "5. Da ejemplos SQL simples entre backticks. " +
         "6. Si no sabes, di que no sabes. " +
-        "7. Nunca des la respuesta completa. " +
-        "8. Usa el metodo socratico: haz preguntas." +
-        "9. Se breve y directo.";
+        "7. NUNCA des la respuesta completa a ejercicios. " +
+        "8. Usa metodo socratico: haz 1 pregunta para guiar. " +
+        "9. Se muy breve y directo.";
 
-    private static final String SYSTEM_PROMPT_ANALYSIS = "Eres Dagon, el maestro de SQL del juego. " +
-        "Tu trabajo es analizar consultas SQL incorrectas y dar pistas. " +
-        "REGLAS: 1. Analiza la consulta del estudiante vs la correcta. " +
-        "2. Identifica 1-2 errores especificos. " +
-        "3. Da una pista directa, NO preguntes. " +
-        "4. NUNCA uses HTML, solo texto y codigo SQL. " +
-        "5. Siempre en espanol. " +
+    private static final String SYSTEM_PROMPT_ANALYSIS = "Eres Dagon, maestro de SQL. " +
+        "Tu trabajo es analizar consultas incorrectas y DAR PISTAS. " +
+        "REGLAS: 1. Analiza query vs correcta. " +
+        "2. Identifica 1 error especifico. " +
+        "3. Da UNA pista directa (no pregunta). " +
+        "4. NUNCA uses HTML. 5. Espanol. " +
         "6. Maximo 2 oraciones. " +
-        "Formato: ERROR: [explicacion] PISTA: [pista] EJEMPLO: [codigo si es relevante]";
+        "7. Si es error sintaxis,INDICA cual. " +
+        "8. Si es logico (WHERE/JOIN/etc), explica que falta. " +
+        "Formato: ERROR: [breve] PISTA: [directa] CORRECCION: [sql parcial]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         try {
@@ -318,9 +318,9 @@ public class ClawbotService {
 
     private String buildFallbackResponse(String desc, String queryM, String error, int intentos) {
         String[] encouragements = {
-            "Casi lo tienes!",
-            "Vas muy bien! Sigue intentando.",
-            "No te rindas! Los errores son aprendizaje.",
+            "Casi lo tienes! 💪",
+            "Vas bien! Sigue",
+            "No te rindas! Cada error te acerca a la respuesta",
             "Sigue intentando!"
         };
 
@@ -330,7 +330,7 @@ public class ClawbotService {
         String hint = hints[intentos % hints.length];
         String example = getExampleForQuery(queryM);
 
-        return encouragement + " " + hint + " Ejemplo: " + example;
+        return encouragement + " " + hint + " Ejemplo: `" + example + "`";
     }
 
     private String[] getHintsForQuery(String queryM, String error) {
@@ -396,24 +396,33 @@ public class ClawbotService {
 
     private String helpForQuestion(String question) {
         if (question.contains("join")) {
-            return "Los JOINs conectan tablas. El campo comun va en ON: " + SQL_EXAMPLES.get("join");
+            return "Los JOINs conectan tablas. El campo comun va en ON: `SELECT * FROM t1 JOIN t2 ON t1.id = t2.id`";
         }
         if (question.contains("where")) {
-            return "WHERE filtra resultados. Usa =, <>, LIKE, IN, IS NULL: " + SQL_EXAMPLES.get("where");
+            return "WHERE filtra. Usa: `SELECT * FROM t WHERE campo = 'valor'` o `WHERE edad > 18`";
         }
         if (question.contains("select")) {
-            return "SELECT elige columnas. Usa * para todas o especifica: " + SQL_EXAMPLES.get("select");
+            return "SELECT elige columnas: `SELECT nombre, email FROM usuarios`";
         }
         if (question.contains("null")) {
-            return "CUIDADO con NULL: usa IS NULL o IS NOT NULL: " + SQL_EXAMPLES.get("null");
+            return "CUIDADO! NULL usa IS: `WHERE campo IS NULL` (no = NULL)";
         }
         if (question.contains("group")) {
-            return "GROUP BY agrupa. Las columnas en SELECT deben estar en GROUP BY o ser funciones: " + SQL_EXAMPLES.get("group by");
+            return "GROUP BY agrupa: `SELECT tipo, COUNT(*) FROM productos GROUP BY tipo`";
         }
         if (question.contains("order")) {
-            return "ORDER BY ordena resultados. Usa ASC o DESC: " + SQL_EXAMPLES.get("order by");
+            return "ORDER BY ordena: `ORDER BY precio ASC` o `ORDER BY nombre DESC`";
+        }
+        if (question.contains("insert")) {
+            return "INSERT agrega: `INSERT INTO tabla (col1, col2) VALUES ('a', 'b')`";
+        }
+        if (question.contains("update")) {
+            return "UPDATE cambia: `UPDATE usuarios SET nombre = 'nuevo' WHERE id = 1`";
+        }
+        if (question.contains("delete")) {
+            return "DELETE borra: `DELETE FROM tabla WHERE id = 1` (cuidado!)";
         }
 
-        return "Soy Clawbot, tu tutor SQL! Puedo ayudarte con SELECT, WHERE, JOINs, GROUP BY, ORDER BY, DML. Que tema te interesa?";
+        return "Soy Clawbot! Ayudo con SELECT, WHERE, JOIN, GROUP BY, ORDER BY, INSERT, UPDATE, DELETE. Pregunta lo que necesites!";
     }
 }
