@@ -49,6 +49,20 @@ export const DashboardPage = () => {
   const [showCertificado, setShowCertificado] = useState(false);
   const [certificadoData, setCertificadoData] = useState(null);
   const [certificadoCurso, setCertificadoCurso] = useState(null);
+  const [userAvatar, setUserAvatar] = useState(null);
+
+  useEffect(() => {
+    if (showQuickPractice) {
+      sounds.startGameMusic();
+    } else {
+      sounds.stopGameMusic();
+      sounds.startBackgroundMusic();
+    }
+    return () => {
+      sounds.stopGameMusic();
+      sounds.stopBackgroundMusic();
+    };
+  }, [showQuickPractice]);
 
   const { cursosCompletados, generarCertificado } = useCertificado(token);
 
@@ -71,6 +85,13 @@ const title = titleFor(userXP);
 
   const [userRank, setUserRank] = useState('-');
   const [topPlayers, setTopPlayers] = useState([]);
+
+  useEffect(() => {
+    const cachedAvatar = localStorage.getItem('userAvatar');
+    if (cachedAvatar) {
+      setUserAvatar(cachedAvatar);
+    }
+  }, []);
 
   // Estructura de Cursos y Selección
   const [cursos, setCursos] = useState([]);

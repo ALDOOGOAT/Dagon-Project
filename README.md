@@ -13,6 +13,20 @@ Una plataforma educativa moderna e interactiva para aprender SQL y administraci�
 
 ## 📝 Notas de Actualización (Abril 2026)
 
+### 🔊 Sistema de Audio (24 Abril 2026)
+
+- **Música ambiental** en Dashboard (synth suave)
+- **Música de video juego** en Práctica Rápida (sawtooth épico)
+- **Timer tick** - Tic-tac tipo quiz show en práctica rápida
+- **Countdown dramático** - Sonidos Intensificados en los últimos 6 segundos
+- **Sonidos de eventos**:
+  - Éxito / Error al resolver ejercicios
+  - Teoría abierta
+  - Nivel completado
+  - Nuevo día de racha
+
+---
+
 ### 🎉 Nuevas Funciones Recientes (19 Abril 2026)
 
 1. **Sistema de Racha Mejorado**

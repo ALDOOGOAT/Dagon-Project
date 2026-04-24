@@ -82,6 +82,8 @@ export const ExercisePage = () => {
   useEffect(() => { 
     setIsMounted(true); 
     sounds.init();
+    sounds.startBackgroundMusic();
+    return () => sounds.stopBackgroundMusic();
   }, []);
 
   useEffect(() => {
@@ -274,6 +276,7 @@ export const ExercisePage = () => {
     if (subKey && !shownSubTopics.has(subKey)) {
       setCurrentSubTopic(subKey);
       setShowTheory(true);
+      sounds.playTheoryOpen();
     } else {
       setShowTheory(false);
     }
