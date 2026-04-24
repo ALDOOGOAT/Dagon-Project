@@ -51,6 +51,15 @@ export const DashboardPage = () => {
   const [certificadoCurso, setCertificadoCurso] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
 
+  useEffect(() => {
+    if (showQuickPractice) {
+      sounds.startBackgroundMusic();
+    } else {
+      sounds.stopBackgroundMusic();
+    }
+    return () => sounds.stopBackgroundMusic();
+  }, [showQuickPractice]);
+
   const { cursosCompletados, generarCertificado } = useCertificado(token);
 
   const userXP = user?.xp || 0;

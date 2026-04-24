@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
@@ -9,6 +9,7 @@ import {
   ArrowUp, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { sounds } from '../lib/SoundEngine';
 
 const QUERY_TEMPLATES = {
   'nivel-0': [
@@ -166,6 +167,8 @@ export const QuickPracticeMode = ({
     setTimer(Math.max(15, 35 - template.difficulty * 3));
     setIsRunning(true);
     setShowResult(false);
+    
+    sounds.playMagic();
   }, [getAvailableLevels, getRandomQueryFromLevels]);
 
   const handleDifficultySelect = (difficulty) => {
@@ -184,6 +187,12 @@ export const QuickPracticeMode = ({
     if (isRunning && timer > 0) {
       interval = setInterval(() => {
         setTimer(t => t - 1);
+        
+        if (t <= 5 && t > 0) {
+          sounds.playCountdown(t);
+        } else if (t === 10) {
+          sounds.playTensionTick();
+        }
       }, 1000);
     } else if (timer === 0 && isRunning) {
       handleTimeout();
@@ -255,6 +264,7 @@ export const QuickPracticeMode = ({
       setScore(prev => prev + totalXP);
       setLastResult({ success: true, xp: totalXP, timeBonus, comboBonus, difficulty: query.difficulty });
       onXPGain(totalXP);
+      sounds.playSuccess();
       
       setDailyProgress(prev => ({
         ...prev,
@@ -263,6 +273,7 @@ export const QuickPracticeMode = ({
     } else {
       setCombo(0);
       setLastResult({ success: false, correctAnswer: query.answer });
+      sounds.playError();
     }
     
     setShowResult(true);
@@ -274,6 +285,7 @@ export const QuickPracticeMode = ({
     setQuestionsAnswered(prev => prev + 1);
     setLastResult({ success: false, timeout: true, correctAnswer: query.answer });
     setShowResult(true);
+    sounds.playTimeWarning();
   };
 
   const startChallenge = (challenge) => {

@@ -3,6 +3,9 @@ class SoundEngine {
     this.audioContext = null;
     this.enabled = true;
     this.initialized = false;
+    this.bgMusicNodes = null;
+    this.tensionInterval = null;
+    this.tensionSpeed = 1000;
   }
 
   init() {
@@ -126,6 +129,130 @@ class SoundEngine {
 
   playType() {
     this.playTone(440, 0.02, 'sine', 0.05);
+  }
+
+  startBackgroundMusic() {
+    if (!this.enabled || !this.audioContext || this.bgMusicNodes) return;
+    
+    console.log('🎵 Starting background music');
+    
+    const masterGain = this.audioContext.createGain();
+    masterGain.gain.setValueAtTime(0.08, this.audioContext.currentTime);
+    masterGain.connect(this.audioContext.destination);
+    
+    const osc1 = this.audioContext.createOscillator();
+    const osc2 = this.audioContext.createOscillator();
+    const osc3 = this.audioContext.createOscillator();
+    const lfo = this.audioContext.createOscillator();
+    const lfoGain = this.audioContext.createGain();
+    
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(110, this.audioContext.currentTime);
+    
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(165, this.audioContext.currentTime);
+    
+    osc3.type = 'triangle';
+    osc3.frequency.setValueAtTime(220, this.audioContext.currentTime);
+    
+    lfo.type = 'sine';
+    lfo.frequency.setValueAtTime(0.5, this.audioContext.currentTime);
+    lfoGain.gain.setValueAtTime(10, this.audioContext.currentTime);
+    
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc1.frequency);
+    lfoGain.connect(osc2.frequency);
+    
+    osc1.connect(masterGain);
+    osc2.connect(masterGain);
+    osc3.connect(masterGain);
+    
+    osc1.start();
+    osc2.start();
+    osc3.start();
+    lfo.start();
+    
+    this.bgMusicNodes = { osc1, osc2, osc3, lfo, masterGain };
+  }
+
+  stopBackgroundMusic() {
+    if (!this.bgMusicNodes) return;
+    
+    console.log('🎵 Stopping background music');
+    
+    const { osc1, osc2, osc3, lfo, masterGain } = this.bgMusicNodes;
+    masterGain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.5);
+    
+    setTimeout(() => {
+      osc1.stop();
+      osc2.stop();
+      osc3.stop();
+      lfo.stop();
+    }, 500);
+    
+    this.bgMusicNodes = null;
+  }
+
+  startTensionTimer(callback) {
+    if (!this.enabled || !this.audioContext) return;
+    
+    console.log('⏱️ Starting tension timer');
+    
+    this.tensionSpeed = 1000;
+    this.playTensionTick();
+    
+    this.tensionInterval = setInterval(() => {
+      this.tensionSpeed = Math.max(200, this.tensionSpeed - 50);
+      this.playTensionTick();
+      if (callback) callback(this.tensionSpeed);
+    }, this.tensionSpeed);
+  }
+
+  stopTensionTimer() {
+    if (this.tensionInterval) {
+      clearInterval(this.tensionInterval);
+      this.tensionInterval = null;
+      console.log('⏱️ Stopped tension timer');
+    }
+  }
+
+  playTensionTick() {
+    this.playTone(220, 0.08, 'square', 0.1);
+    setTimeout(() => this.playTone(330, 0.04, 'sine', 0.05), 30);
+  }
+
+  playCountdown(seconds) {
+    if (seconds <= 3) {
+      this.playTone(440 * (4 - seconds), 0.15, 'sine', 0.2);
+    } else {
+      this.playTone(220, 0.1, 'triangle', 0.1);
+    }
+  }
+
+  playStreakNewDay() {
+    console.log('🔥 New streak day!');
+    
+    const notes = [
+      { freq: 392, delay: 0 },
+      { freq: 523.25, delay: 100 },
+      { freq: 659.25, delay: 200 },
+      { freq: 783.99, delay: 300 },
+      { freq: 1046.50, delay: 450 },
+    ];
+    
+    notes.forEach(({ freq, delay }) => {
+      setTimeout(() => {
+        this.playTone(freq, 0.3, 'sine', 0.15);
+      }, delay);
+    });
+  }
+
+  playTimeWarning() {
+    console.log('⚠️ Time warning!');
+    
+    [440, 520, 440, 520].forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.15, 'sawtooth', 0.12), i * 150);
+    });
   }
 }
 
