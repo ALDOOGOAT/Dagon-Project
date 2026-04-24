@@ -174,6 +174,7 @@ export const QuickPracticeMode = ({
   const handleDifficultySelect = (difficulty) => {
     setSelectedDifficulty(difficulty);
     setShowDifficultySelect(false);
+    sounds.playSelect();
     startChallenge({ 
       id: 'custom', 
       title: LEVEL_NAMES[difficulty]?.name || 'Práctica', 
@@ -191,7 +192,7 @@ export const QuickPracticeMode = ({
         if (t <= 6 && t > 0) {
           sounds.playCountdown(t);
         } else if (t > 10) {
-          sounds.startTimerLoop(1000);
+          sounds.playClockTicking();
         }
       }, 1000);
     } else if (timer === 0 && isRunning) {

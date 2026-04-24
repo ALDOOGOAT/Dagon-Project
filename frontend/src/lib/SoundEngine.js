@@ -334,6 +334,21 @@ class SoundEngine {
     }
   }
 
+  playClockTick() {
+    this.playTone(1200, 0.05, 'square', 0.06);
+  }
+
+  playClockTicking() {
+    this.playTone(800, 0.08, 'square', 0.08);
+    setTimeout(() => this.playTone(600, 0.08, 'square', 0.06), 80);
+  }
+
+  playSelect() {
+    console.log('🎯 playSelect');
+    this.playTone(660, 0.08, 'sine', 0.12);
+    setTimeout(() => this.playTone(880, 0.12, 'sine', 0.15), 60);
+  }
+
   playStreakNewDay() {
     console.log('🔥 New streak day!');
     
