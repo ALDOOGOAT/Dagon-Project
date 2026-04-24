@@ -453,17 +453,6 @@ public class EjercicioService {
                 String upperQ = queryUsuario.trim().toUpperCase();
                 respuesta.put("success", true);
                 respuesta.put("isWarning", true);
-<<<<<<< HEAD
-                respuesta.put("message", "⚠️ Ya existe esa relación. Mostrando el contenido actual.");
-                respuesta.put("warningType", "already_exists");
-                
-                // Intentar obtener los datos de todos modos
-                try {
-                    String tablaExtraida = extraerNombreTablaDDL(upperQ, queryUsuario);
-                    if (tablaExtraida != null) {
-                        String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
-                        datosAlumno = ejecutarEnSandbox(consultaMostrar, usuarioId);
-=======
                 respuesta.put("message", "⚠️ Ya existe esa relación. Mostrando su estructura actual.");
                 respuesta.put("warningType", "already_exists");
                 
@@ -486,7 +475,6 @@ public class EjercicioService {
                             // Añadir flag para saber que es estructura
                             respuesta.put("isStructure", true);
                         }
->>>>>>> main
                     }
                 } catch (Exception ignored) {
                     datosAlumno = new ArrayList<>();
