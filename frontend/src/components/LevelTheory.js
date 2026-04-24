@@ -609,6 +609,19 @@ const SUB_TOPICS = {
         code: "SELECT * FROM aventureros \nWHERE nivel BETWEEN 10 AND 20;",
         codeLabel: "Nivel 10, 11, 12... hasta 20",
       },
+      {
+        type: "chat",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "BETWEEN funciona en fechas también",
+        lead: "Perfecto para rangos de fechas:",
+        code: "SELECT * FROM pedidos \nWHERE fecha BETWEEN '2024-01-01' AND '2024-12-31';",
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "Practica: Encuentra el rango",
+        lead: "Usa BETWEEN para buscar heroes con nivel entre 5 y 15.",
+      },
     ],
   },
 
@@ -656,16 +669,71 @@ const SUB_TOPICS = {
     ],
   },
 
-  "9-1": {
-    title: "VISTAS: Ventanas Mágicas",
+"9-1": {
+    title: "LIKE: El Padrón",
+    subtitle: "Buscar patrones",
+    color: "from-amber-500 to-red-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "Buscar como el viento",
+        lead: "LIKE busca patrones en texto. % es 'cualquier cosa', _ es 'un caracter'.",
+        code: "SELECT * FROM aventureros \nWHERE nombre LIKE 'A%';",
+        codeLabel: "Todo que empieza con A",
+      },
+      {
+        type: "chat",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "Comodines: % y _",
+        lead: "% = muchos caracteres, _ = solo uno",
+        code: "-- Empieza con 'Guerrero'\nLIKE 'Guerrero%'\n\n-- Termina con 'ero'\nLIKE '%ero'\n\n-- Contiene 'espada' en cualquier parte\nLIKE '%espada%'\n\n-- Segunda letra 'a'\nLIKE '_a%'",
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "Busca en la oscuridad",
+        lead: "Encuentra todos los nombres que contengan 'dark' anywhere.",
+      },
+    ],
+  },
+
+  "9-2": {
+    title: "ILIKE: Mayúsculas",
+    subtitle: "Sin importar mayúsculas",
+    color: "from-orange-500 to-amber-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "Da igual mayúsculas",
+        lead: "ILIKE es como LIKE pero ignora mayúsculas y minúsculas. Para búsquedas flexibles.",
+        code: "SELECT * FROM aventureros \nWHERE nombre ILIKE '%dragon%';",
+        codeLabel: "Encuentra Dragon, DRAGON, dragOn, etc.",
+      },
+      {
+        type: "ready",
+        emoji: <Rocket className="w-12 h-12" />,
+        headline: "Practica sin caso",
+        lead: "Usa ILIKE para buscar 'ARQUITECTO' sin importar cómo esté escrito.",
+      },
+    ],
+  },
+
+  // ============================================================
+  // VISTAS (Views) - Ahora con teoría propia
+  // ============================================================
+
+  "10-1": {
+    title: "VISTAS: Tablas Virtuales",
     subtitle: "Consultas guardadas",
-    color: "from-rose-500 to-pink-600",
+    color: "from-pink-500 to-rose-600",
     slides: [
       {
         type: "hero",
         emoji: <View className="w-12 h-12" />,
-        headline: "Una vista es una consulta guardada",
-        lead: "Crea una 'ventana' que muestra datos complejos sin tener que escribir la consulta cada vez.",
+        headline: "Una pregunta guardada",
+        lead: "Una VIEW es como una fotografía de una consulta. Guardas la query y simplemente la ejecutas depois.",
         code: "CREATE VIEW guerreros_view AS\nSELECT nombre, nivel \nFROM aventureros \nWHERE clase = 'Guerrero';",
       },
       {
@@ -674,21 +742,6 @@ const SUB_TOPICS = {
         headline: "Usar la vista",
         lead: "Ahora puedes consultar la vista como si fuera una tabla:",
         code: "SELECT * FROM guerreros_view;",
-      },
-    ],
-  },
-
-  "9-2": {
-    title: "VISTAS con JOIN",
-    subtitle: "Atajos complejos",
-    color: "from-pink-500 to-rose-600",
-    slides: [
-      {
-        type: "hero",
-        emoji: <GitMerge className="w-12 h-12" />,
-        headline: "Views que unen tablas",
-        lead: "Crea vistas que combinen información de varias tablas. El usuario solo ve el resultado.",
-        code: "CREATE VIEW heroes_armados AS\nSELECT a.nombre, e.item, e.precio\nFROM aventureros a\nJOIN equipamiento e \n  ON a.id = e.id_aventurero;",
       },
     ],
   },
