@@ -684,9 +684,12 @@ export const ExercisePage = () => {
                     <span className="font-gameui text-sm text-slate-300 ml-2">{executionResult.message}</span>
                   </div>
 
-                  {/* Tabla de datos */}
+                  {/* Tabla de datos o estructura */}
                   {executionResult.mockData && executionResult.mockData.length > 0 && (
                     <div className="overflow-x-auto">
+                      <div className="text-xs text-amber-400 mb-2 px-5 pt-3">
+                        {executionResult.isStructure ? '📋 Estructura de la tabla' : '📊 Datos результаdos'}
+                      </div>
                       <table className="w-full text-sm text-left text-slate-300">
                         <thead className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/60">
                           <tr>
