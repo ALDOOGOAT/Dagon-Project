@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import {
   ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
@@ -45,6 +46,7 @@ const getDifficultyStyles = (level) => ({
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const { palette, changePalette, palettes } = useTheme();
   const [stats, setStats] = useState({
     xp: 0, ejercicios_completados: 0, consultas_totales: 0,
     racha: 0, mejor_racha: 0, distribucion_xp: []
@@ -203,6 +205,48 @@ export const ProfilePage = () => {
           <div className="h-8 w-px bg-white/10 mx-4" />
           <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase">Ficha de personaje</p>
         </div>
+
+        {/* PERSONALIZACIÓN DE TEMA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card-apple rounded-3xl p-6 border border-white/10 mb-8"
+        >
+          <h3 className="text-white font-display text-xl font-black mb-4 flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-cyan-400" />
+            Personalización
+          </h3>
+          <p className="text-slate-400 text-sm mb-4">Elige el tema de color que más te guste</p>
+          
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {Object.entries(palettes).map(([key, theme]) => (
+              <button
+                key={key}
+                onClick={() => changePalette(key)}
+                className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
+                  palette === key 
+                    ? 'border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105' 
+                    : 'border-transparent hover:border-white/30 hover:scale-105'
+                }`}
+              >
+                <div className="flex flex-col gap-1">
+                  <div 
+                    className="w-full h-8 rounded-lg"
+                    style={{ 
+                      background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 100%)` 
+                    }}
+                  />
+                  <span className="text-xs text-slate-300 font-medium truncate">{theme.name}</span>
+                </div>
+                {palette === key && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full flex items-center justify-center">
+                    <Sparkles className="w-2 h-2 text-black" />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </motion.div>
 
         {/* HERO: avatar + stats principales */}
         <motion.div
