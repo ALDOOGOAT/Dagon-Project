@@ -18,9 +18,6 @@ public class ClawbotService {
     private String geminiApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
-    
-    private int chatAttemptCount = 0;
-    private int analysisAttemptCount = 0;
 
     private static final String SYSTEM_PROMPT_CHAT = 
         "Eres Clawbot, tutor amigable de SQL para el juego Dagon. " +
@@ -56,10 +53,8 @@ public class ClawbotService {
         "Formato: ERROR: [explicacion] PISTA: [pregunta socratica] EJEMPLO: [codigo]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
-        analysisAttemptCount++;
-        boolean useGemini = (analysisAttemptCount % 2 == 1);
-        
-        if (useGemini) {
+        // Siempre intentar Gemini primero (más completo)
+        if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
             try {
                 String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
                 if (respuesta != null && !respuesta.isEmpty()) {
@@ -70,7 +65,7 @@ public class ClawbotService {
             }
         }
 
-        // Intentar Ollama si está disponible (local), si no usar fallback
+        // Si Gemini no está disponible, intentar Ollama local
         try {
             String respuesta = callOllamaAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
             if (respuesta != null && !respuesta.isEmpty()) {
@@ -84,10 +79,8 @@ public class ClawbotService {
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
-        chatAttemptCount++;
-        boolean useGemini = (chatAttemptCount % 2 == 1);
-        
-        if (useGemini) {
+        // Siempre intentar Gemini primero
+        if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
             try {
                 String respuesta = callGeminiChat(mensajeUsuario);
                 if (respuesta != null && !respuesta.isEmpty()) {
@@ -98,14 +91,14 @@ public class ClawbotService {
             }
         }
 
-        // En Railway no hay Ollama, directas responses pre-cargadas
+        // Intentar Ollama local si está disponible
         try {
             String respuesta = callOllamaChat(mensajeUsuario);
             if (respuesta != null && !respuesta.isEmpty()) {
                 return formatearRespuestaChat(respuesta);
             }
         } catch (Exception e) {
-            // Ollama no disponible en Railway, seguir al fallback
+            // Ollama no disponible
         }
 
         return helpForQuestion(mensajeUsuario.toLowerCase());
