@@ -143,32 +143,207 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
 
 const SUB_TOPICS = {
   "1-1": {
-    title: "El Archivo del Gremio",
-    subtitle: "Tu primera mirada a los datos",
+    title: "El Conjunto Universo",
+    subtitle: "El Gran Salón contiene TODOS",
     color: "from-cyan-500 to-blue-700",
     slides: [
       {
         type: "hero",
         emoji: <Library className="w-12 h-12" />,
-        headline: "¡Bienvenido al Gremio, Recluta!",
-        lead: "Imagina que el gremio tiene un libro gigante donde anota todo. Ese libro es nuestra 'Base de Datos'.",
+        headline: "1.1: El Conjunto Universo",
+        lead: "Imagina el Gran Salón del Gremio donde están TODOS los aventureros. Ese es el Conjunto Universo.",
         bullets: [
-          "Las Tablas son las páginas del libro.",
-          "Las Columnas son las preguntas (¿Cómo te llamas?).",
-          "Las Filas son las respuestas (Loya, nivel 15).",
+          "SELECT * significa: muéstrame TODO del conjunto",
+          "El asterisco (*) es el comodín para TODO",
+          "Una tabla = un conjunto de elementos",
         ],
+      },
+      {
+        type: "venn",
+        headline: "Visualiza el Universo",
+        lead: "El círculo grande representa la tabla completa. SELECT * = todo el círculo.",
+        sets: [{ label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"] }],
+        code: "SELECT * FROM usuarios;",
+        codeLabel: "Todo el conjunto",
       },
       {
         type: "chat",
         emoji: <MessageSquare className="w-12 h-12" />,
-        headline: "SELECT: El grito de mando",
-        lead: "Si quieres ver algo del libro, usas SELECT. Es como decir: '¡Oye libro, muéstrame esto!'.",
+        headline: "El comando SELECT",
+        lead: "Para ver el conjunto completo, usamos SELECT *",
         chat: [
-          { from: "tu", text: "Quiero ver TODO de todos los aventureros." },
-          { from: "db", text: "¡Claro! Aquí tienes la lista completa." },
+          { from: "tu", text: "Dagon, quiero ver todos los del Gremio" },
+          { from: "dagon", text: "SELECT * te muestra el universo completo" },
         ],
-        code: "SELECT * FROM aventureros;",
-        codeLabel: "El asterisco (*) significa 'TODO'",
+        code: "SELECT * FROM usuarios;",
+        codeLabel: "El asterisco = TODO",
+      },
+    ],
+  },
+  "1-2": {
+    title: "El Subconjunto - WHERE",
+    subtitle: "Solo los que cumplen una regla",
+    color: "from-blue-500 to-indigo-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "1.2: El Subconjunto",
+        lead: "De todos los del Gran Salón, los MAGOS dan un paso al frente. Acabas de crear un SUBCONJUNTO.",
+        bullets: [
+          "WHERE significa 'donde cumplan esta regla'",
+          "Solo pasan los que cumplen la condición",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "El Subconjunto",
+        lead: "El círculo pequeño son los Magos dentro del Grande",
+        sets: [
+          { label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"] },
+          { label: "MAGOS", color: "purple", highlight: ["B", "D"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase = 'Mago';",
+        codeLabel: "WHERE crea el subconjunto",
+      },
+    ],
+  },
+  "1-3": {
+    title: "La Intersección - AND",
+    subtitle: "Debe cumplir TODAS las condiciones",
+    color: "from-indigo-500 to-purple-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "1.3: La Intersección (AND)",
+        lead: "Deben estar en el círculo de GUERREROS Y tener nivel > 10. Solo los de en medio de ambos círculos.",
+        bullets: [
+          "AND significa: debe cumplir la Primera Y la Segunda",
+          "Solo los que están en la intersección de ambos conjuntos",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "La Intersección",
+        lead: "Solo los que cumplen AMBAS condiciones",
+        sets: [
+          { label: "GUERREROS", color: "red", elements: ["A", "B", "C"] },
+          { label: "NIVEL>10", color: "blue", highlight: ["B", "C", "D"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase = 'Guerrero' AND nivel > 10;",
+        codeLabel: "Intersección = ambos círculos",
+      },
+    ],
+  },
+  "1-4": {
+    title: "La Unión - OR",
+    subtitle: "Cumple CUALQUIERA de las condiciones",
+    color: "from-purple-500 to-pink-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "1.4: La Unión Lógica (OR)",
+        lead: "Cualquiera que sea Mago O Arquero entra al grupo. Es la UNIÓN de ambos círculos.",
+        bullets: [
+          "OR significa: cumple la primera O la segunda",
+          "Incluye todos los de ambos conjuntos",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "La Unión",
+        lead: "Es la suma de ambos círculos",
+        sets: [
+          { label: "MAGOS", color: "purple", elements: ["A", "B"] },
+          { label: "ARQUEROS", color: "orange", elements: ["C", "D"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase = 'Mago' OR clase = 'Arquero';",
+        codeLabel: "Unión = círculo gran que contiene a ambos",
+      },
+    ],
+  },
+  "1-5": {
+    title: "La Diferencia - NOT/!=",
+    subtitle: "Excluye los que NO cumplen",
+    color: "from-pink-500 to-rose-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Shield className="w-12 h-12" />,
+        headline: "1.5: La Diferencia (NOT/!=)",
+        lead: "Excluye a los Paladines del grupo. != significa NO ES",
+        bullets: [
+          "!= o <> significa 'diferente de'",
+          "Es el conjunto TOTAL menos los excluidos",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "La Diferencia",
+        lead: "Todo el universo EXCEPTO los excluidos",
+        sets: [
+          { label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"], exclude: ["B", "D"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase != 'Paladin';",
+        codeLabel: "!= excluye del conjunto",
+      },
+    ],
+  },
+  "1-6": {
+    title: "Intersección Múltiple - Múltiples AND",
+    subtitle: "Múltiples condiciones a la vez",
+    color: "from-rose-500 to-orange-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Zap className="w-12 h-12" />,
+        headline: "1.6: Múltiples AND",
+        lead: "Guerreros Y nivel > 15 Y activos. Puedes encadenar TODAS las condiciones que necesites.",
+        bullets: [
+          "Cada AND es otra condición que debo cumplir",
+          "Cuantas más condiciones, más pequeño el subconjunto",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "Intersección Múltiple",
+        lead: "Tres círculos criando una triple intersección",
+        sets: [
+          { label: "Guer.", color: "red", elements: ["A", "B", "C", "X"] },
+          { label: ">15", color: "blue", elements: ["B", "X", "Y"] },
+          { label: "Activos", color: "green", elements: ["B", "C", "Y"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase = 'Guerrero' AND nivel > 15 AND activo = true;",
+        codeLabel: "Tres condiciones = triple intersección",
+      },
+    ],
+  },
+  "1-7": {
+    title: "Unión Múltiple - IN",
+    subtitle: "IN simplifica muchos OR",
+    color: "from-orange-500 to-amber-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <List className="w-12 h-12" />,
+        headline: "1.7: La Lista - IN",
+        lead: "Que sean Mago, Arquero o Guerrero. IN es una forma corta de escribir muchos OR.",
+        bullets: [
+          "IN (lista) = OR1 OR OR2 OR OR3...",
+          "IN es más limpio que escribir muchos OR",
+        ],
+      },
+      {
+        type: "venn",
+        headline: "IN = Unión de valores específicos",
+        lead: "Selecciona los valores exactos de una lista",
+        sets: [
+          { label: "IN(Mago,Arquero,Guerrero)", color: "orange", elements: ["A", "B", "C"] },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase IN ('Mago', 'Arquero', 'Guerrero');",
+        codeLabel: "IN = lista de valores permitidos",
       },
     ],
   },
