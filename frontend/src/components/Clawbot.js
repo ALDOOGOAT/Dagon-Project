@@ -47,6 +47,8 @@ export const Clawbot = () => {
   const cleanText = (text) => {
     if (!text) return '';
     return text
+      .replace(/<span[^>]*>/g, '')
+      .replace(/<\/span>/g, '')
       .replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/g, ' ')
       .replace(/&lt;/g, '<')
@@ -56,10 +58,9 @@ export const Clawbot = () => {
       .replace(/___END_SQL___/g, '___END_SQL___')
       .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/```\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
-      .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/```([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/[*]{2,}/g, '')
-      .replace(/#+\s*/g, '## ')
+      .replace(/##\s*/g, '## ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   };
