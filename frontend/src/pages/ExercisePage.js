@@ -44,25 +44,24 @@ const formatAIMessage = (text) => {
     
     if (line.match(/^(ERROR|Error|error):/i)) {
       parts.push({ type: 'error', text: line.replace(/^(ERROR|Error|error):\s*/i, '') });
+    } else if (line.match(/^(QUE_DEBE_USAR|Que debe usar|QUE DEBE USAR):/i)) {
+      parts.push({ type: 'concepto', text: line.replace(/^(QUE_DEBE_USAR|Que debe usar|QUE DEBE USAR):\s*/i, '') });
+    } else if (line.match(/^(QUE_LE_FALTA|Que le falta|QUE LE FALTA):/i)) {
+      parts.push({ type: 'ayuda', text: line.replace(/^(QUE_LE_FALTA|Que le falta|QUE LE FALTA):\s*/i, '') });
     } else if (line.match(/^(CONCEPTO|Concepto|concepto):/i)) {
       parts.push({ type: 'concepto', text: line.replace(/^(CONCEPTO|Concepto|concepto):\s*/i, '') });
     } else if (line.match(/^(AYUDA|Ayuda|ayuda):/i)) {
       parts.push({ type: 'ayuda', text: line.replace(/^(AYUDA|Ayuda|ayuda):\s*/i, '') });
-    } else if (line.match(/^(PISTA|Pista|pista):/i)) {
+} else if (line.match(/^(PISTA|Pista|pista):/i)) {
       parts.push({ type: 'pista', text: line.replace(/^(PISTA|Pista|pista):\s*/i, '') });
-    } else if (line.match(/^(PORQUE|Porque|porque|PORQUE):/i)) {
-      parts.push({ type: 'porque', text: line.replace(/^(PORQUE|Porque|porque|PORQUE):\s*/i, '') });
     } else if (line.match(/^(sql|SQL)/i)) {
       parts.push({ type: 'code', text: line.replace(/^(sql|SQL)\s*/i, '') });
     } else if (line.startsWith('## ') || line.startsWith('### ')) {
       parts.push({ type: 'heading', text: line.replace(/^#+\s*/, '') });
-    } else if (line.match(/^SELECT|^FROM|^WHERE|^INSERT|^UPDATE|^DELETE|^JOIN|^ORDER|^GROUP/i)) {
+    } else if (line.match(/^CREATE|^SELECT|^FROM|^WHERE|^INSERT|^UPDATE|^DELETE|^JOIN/i)) {
       parts.push({ type: 'code', text: line });
     } else if (line.includes('|') && line.match(/\|/)) {
       parts.push({ type: 'table', text: line });
-    } else {
-      parts.push({ type: 'text', text: line });
-    }
   });
   
   return parts.map((part, i) => {

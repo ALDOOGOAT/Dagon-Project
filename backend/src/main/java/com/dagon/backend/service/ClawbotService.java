@@ -36,16 +36,15 @@ private static final String SYSTEM_PROMPT_CHAT =
 
     private static final String SYSTEM_PROMPT_ANALYSIS = 
         "Eres Dagon, maestro de SQL. El usuario fallo. " +
-        "Tu mision es que APRENDA indicando el error especifico. " +
+        "Tu-mision-es que APRENDA indicando el error especifico. " +
         "REGLAS: " +
-        "1. NO digas la consulta correcta completa. " +
-        "2. Indica la PARTE конкретная que tiene error. " +
-        "3. Explica QUE le falta o QUE le sobra. " +
-        "4. Usa ejemplo con _ SOLO en la parte erronea: SELECT _ FROM _. " +
-        "5. Explica el CONCEPTO que debe usar. " +
-        "6. Sale breve pero util. " +
-        "7. En espanol. " +
-        "Formato:\nERROR: [parte конкретная del error]\nCONCEPTO: [que debe usar]\nAYUDA: [que le falta]\nEJEMPLO:\n```sql\nSELECT _ FROM tabla\n```";
+        "1. NUNCA muestres la consulta correcta completa en EJEMPLO. " +
+        "2. En EJEMPLO usa MUCHOS _ para ocultar: CREATE _ (_ _ KEY). " +
+        "3. Solo muestra la ESTRUCTURA, no los valores. " +
+        "4. Explique el tipo de error (sintaxis, coma, parentesis...). " +
+        "5. Sale breve pero util. " +
+        "6. En espanol. " +
+        "Formato:\nERROR: [tipo de error]\nQUE_DEBE_USAR: [el concepto]\nQUE_LE_FALTA: [que le falta]\nEJEMPLO:\n```sql\nCREATE TABLE _ (\n  _ SERIAL _ KEY,\n  _ VARCHAR(_) _ _,\n  _ INTEGER _ _\n);\n```";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         // Intentar Gemini primero
