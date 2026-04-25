@@ -47,9 +47,13 @@ export const Clawbot = () => {
   const cleanText = (text) => {
     if (!text) return '';
     return text
+      .replace(/<[^>]*>/g, '')
+      .replace(/<\/[^>]*>/g, '')
+      .replace(/font-weight:[^;]*;/g, '')
+      .replace(/font-semibold/g, '')
+      .replace(/font-bold/g, '')
       .replace(/<span[^>]*>/g, '')
       .replace(/<\/span>/g, '')
-      .replace(/<[^>]*>/g, '')
       .replace(/&nbsp;/g, ' ')
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
@@ -192,7 +196,14 @@ export const Clawbot = () => {
 
   const syntaxHighlight = (sql) => {
     if (!sql) return '';
-    let highlighted = sql
+    let cleanSql = sql
+      .replace(/<[^>]*>/g, '')
+      .replace(/font-[^;]+;/g, '')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
+    
+    let highlighted = cleanSql
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
