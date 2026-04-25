@@ -46,7 +46,7 @@ const getDifficultyStyles = (level) => ({
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const { palette, changePalette, palettes } = useTheme();
+  const { palette, changePalette, palettes, colors } = useTheme();
   const [stats, setStats] = useState({
     xp: 0, ejercicios_completados: 0, consultas_totales: 0,
     racha: 0, mejor_racha: 0, distribucion_xp: []

@@ -147,6 +147,26 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--color-text', colors.text);
   root.style.setProperty('--color-text-muted', colors.textMuted);
   root.style.setProperty('--color-border', colors.border);
+  
+  root.style.setProperty('--background', colors.background);
+  root.style.setProperty('--foreground', colors.text);
+  root.style.setProperty('--primary', colors.primary);
+  root.style.setProperty('--primary-foreground', '#ffffff');
+  root.style.setProperty('--secondary', colors.secondary);
+  root.style.setProperty('--secondary-foreground', colors.text);
+  root.style.setProperty('--muted', colors.surfaceAlt);
+  root.style.setProperty('--muted-foreground', colors.textMuted);
+  root.style.setProperty('--accent', colors.accent);
+  root.style.setProperty('--accent-foreground', colors.text);
+  root.style.setProperty('--destructive', '#dc2626');
+  root.style.setProperty('--destructive-foreground', '#ffffff');
+  root.style.setProperty('--border', colors.border);
+  root.style.setProperty('--input', colors.border);
+  root.style.setProperty('--ring', colors.primary);
+  root.style.setProperty('--card', colors.surface);
+  root.style.setProperty('--card-foreground', colors.text);
+  root.style.setProperty('--popover', colors.surface);
+  root.style.setProperty('--popover-foreground', colors.text);
 };
 
 export default ThemeContext;

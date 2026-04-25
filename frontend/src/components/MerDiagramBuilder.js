@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import { 
   ReactFlow, 
   Background, 
@@ -143,6 +144,7 @@ const edgeTypes = { relationshipEdge: RelationshipEdge };
 
 // --- EL LIENZO PRINCIPAL ---
 export const MerDiagramBuilder = ({ onChangeData }) => {
+  const { colors } = useTheme();
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 
@@ -294,8 +296,8 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
         fitView
         className="cyber-flow"
       >
-        <Background color="#1e293b" gap={20} size={1} />
-        <Controls className="bg-slate-900 border-slate-700 fill-blue-400" />
+        <Background color={colors.surface} gap={20} size={1} />
+        <Controls style={{ backgroundColor: colors.surface, borderColor: colors.border }} className="fill-blue-400" />
       </ReactFlow>
     </div>
   );

@@ -417,18 +417,25 @@ const title = titleFor(userXP);
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {cursos.map(curso => (
                 <button 
-                  key={curso.id_curso}
+key={curso.id_curso}
                   onClick={() => setCursoActivoId(curso.id_curso)}
                   className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
                       cursoActivoId === curso.id_curso 
-                        ? 'bg-blue-900/40 border-blue-400/80 shadow-[0_0_20px_rgba(59,130,246,0.3)]' 
-                        : 'bg-slate-900/50 border-white/10 hover:border-slate-500'
+                        ? 'border-blue-400/80 shadow-[0_0_20px_rgba(59,130,blue,0.3)]' 
+                        : 'border-white/10 hover:border-slate-500'
                   }`}
+                  style={{
+                    backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}20` : `${colors.surface}80`,
+                    borderColor: cursoActivoId === curso.id_curso ? colors.primary : colors.border
+                  }}
                 >
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                            cursoActivoId === curso.id_curso ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-500'
-                        }`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors`}
+                          style={{
+                            backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}33` : colors.surface,
+                            color: cursoActivoId === curso.id_curso ? colors.primary : colors.textMuted
+                          }}
+                        >
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
                         </div>
                         <div className="text-left">

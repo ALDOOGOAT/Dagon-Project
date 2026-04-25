@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DagonMascot } from './DagonMascot';
+import { useTheme } from '../contexts/ThemeContext';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { 
@@ -75,6 +76,7 @@ export const QuickPracticeMode = ({
   onXPGain = () => {},
   onClose = () => {} 
 }) => {
+  const { colors } = useTheme();
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [query, setQuery] = useState(null);
   const [droppedWords, setDroppedWords] = useState([]);

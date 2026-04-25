@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { ArrowLeft, Flame, Trophy, Sparkles, Target, ChevronLeft, ChevronRight, Zap, PartyPopper, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
@@ -116,6 +117,7 @@ const StreakFlame = ({ size = 'md', className = '' }) => {
 export const StreakPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const { colors } = useTheme();
   const [stats, setStats] = useState({ racha: 0, mejor_racha: 0, fechas_actividad: [] });
   const [loading, setLoading] = useState(true);
   const [mesActual, setMesActual] = useState(new Date());
@@ -205,7 +207,7 @@ export const StreakPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: colors.background }}>
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
