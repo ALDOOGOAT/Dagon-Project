@@ -23,27 +23,28 @@ public class ClawbotService {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String SYSTEM_PROMPT_CHAT = 
-        "Eres Clawbot, tutor ESTRICTO de SQL para el juego Dagon. " +
-        "Tu objetivo es ensenar SQL haciendo que el usuario DESCUBRA la respuesta. " +
-        "REGLAS: 1. NUNCA des la respuesta completa - haz preguntas que guien al descubrimiento. " +
-        "2. Si preguntan sobre un tema, explica el concepto Y da 1 ejemplo basico. " +
-        "3. Usa preguntas guiding como '¿Qué Passaria si...?' o '¿Que passaria si...?' " +
-        "4. NUNCA html, solo texto y bloques SQL con triple backtick. " +
-        "5. Responde en espanol, Maximo 3 parrafos. " +
-        "6. Cuando muestres codigo, explica solo las partes clave. " +
-        "7. Usa ## para encabezados cortos.";
+        "Eres Clawbot, tutor de SQL. " +
+        "Tu misi├⌐n es ENSE├R Preguntando, NO dando respuestas. " +
+        "REGLAS: " +
+        "1. Cuando pergunten algo, explica el concepto con 1 pregunta. " + 
+        "2. Da solo 1 ejemplo b├ąsico, NO muchos. " +
+        "3. Haz preguntas: '┬┤Qu├ę pasar├şa si...?' o '┬┤Para qu├ę sirve X?' " +
+        "4. NUNCA des la soluci├│n completa. " +
+        "5. M├ąximo 3 lineas. " +
+        "6. En espa├▒ol. " +
+        "7. Sin HTML, usa ` ` `sql para c├│digo.";
         "15. El formato es importante - haz respuestas bonitas.";
 
     private static final String SYSTEM_PROMPT_ANALYSIS = 
-        "Eres Dagon, maestro ESTRICTO de SQL. " +
-        "Tu trabajo es analizar consultas incorrectas y DAR PISTAS sin dar la respuesta. " +
-        "REGLAS: 1. NUNCA des la respuesta completa. " +
-        "2. Haz una pregunta que guíe al estudiante a descubrir el error. " +
-        "3. Da una pista pequeña - no la solución. " +
-        "4. Muestra un ejemplo genérico, NO la consulta correcta. " +
-        "5. Sé breve - maximo 2 parrafos. " +
-        "6. Siempre en espanol. " +
-        "Formato: PISTA: [pregunta guia] EJEMPLO: [codigo ejemplo]";
+        "Eres Dagon, maestro de SQL. El usuario falló un ejercicio. " +
+        "Tu misi├│n es que DESCUBRA su error Ăşic├ąndolo con PREGUNTAS. " +
+        "REGLAS: " +
+        "1. NUNCA digas la respuesta. " +
+        "2. NUNCA muestres la consulta correcta. " +
+        "3. Haz UNA pregunta que revele el error: '┬┤Qu├ę falta aqu├ş?' o '┬┤Qu├ę est├ą mal en X?' " +
+        "4. S├ę breve - maximo 2 lineas. " +
+        "5. En espanol. " +
+        "Formato solo: PISTA: [1 pregunta guia]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         // Intentar Gemini primero
@@ -300,8 +301,9 @@ public class ClawbotService {
             Map<String, Object> body = new HashMap<>();
             body.put("model", "llama-3.1-8b-instant");
             body.put("messages", messages);
-            body.put("temperature", 0.7);
-            body.put("max_tokens", 800);
+            body.put("temperature", 0.3);
+            body.put("max_tokens", 150);
+            body.put("top_p", 0.8);
 
             HttpHeaders h = new HttpHeaders();
             h.setContentType(MediaType.APPLICATION_JSON);
@@ -327,20 +329,31 @@ public class ClawbotService {
 
     private String formatearRespuestaChat(String respuesta) {
         if (respuesta == null) return "";
+        respuesta = respuesta.replaceAll("<[^>]+>", "");
         respuesta = respuesta.replaceAll("<[^>]*>", "");
         respuesta = respuesta.replaceAll("&nbsp;", " ");
         respuesta = respuesta.replaceAll("&lt;", "<");
         respuesta = respuesta.replaceAll("&gt;", ">");
         respuesta = respuesta.replaceAll("&amp;", "&");
+        respuesta = respuesta.replaceAll("font-weight:[^;]*;", "");
+        respuesta = respuesta.replaceAll("font-size:[^;]*;", "");
+        respuesta = respuesta.replaceAll("color:[^;]*;", "");
+        respuesta = respuesta.replaceAll("font-semibold", "");
+        respuesta = respuesta.replaceAll("font-bold", "");
         return respuesta.trim();
     }
 
     private String formatearRespuestaAnalisis(String respuesta) {
         if (respuesta == null) return "";
+        respuesta = respuesta.replaceAll("<[^>]+>", "");
         respuesta = respuesta.replaceAll("<[^>]*>", "");
         respuesta = respuesta.replaceAll("&nbsp;", " ");
         respuesta = respuesta.replaceAll("&lt;", "<");
         respuesta = respuesta.replaceAll("&gt;", ">");
+        respuesta = respuesta.replaceAll("font-weight:[^;]*;", "");
+        respuesta = respuesta.replaceAll("font-size:[^;]*;", "");
+        respuesta = respuesta.replaceAll("font-semibold", "");
+        respuesta = respuesta.replaceAll("font-bold", "");
         return respuesta.trim();
     }
 
