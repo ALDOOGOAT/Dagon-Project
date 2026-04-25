@@ -23,83 +23,76 @@ DELETE FROM lms_core.ejercicios_practicos WHERE id_modulo = 1;
 -- ============================================================================
 
 -- Nivel 1.1: El Conjunto Universo
-INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, descripcion, tipo, esquema, tabla1, query_base, query_validacion, xp, hint) VALUES
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 1, '1.1: El Conjunto Universo', 
-'ElGran salón contiene TODOS los aventureros. SELECT * = ver TODO', 
-'editor', 'lms_sandbox', 'usuarios', 
+'El Gran salón contiene TODOS los aventureros. SELECT * = ver TODO',
 'SELECT * FROM usuarios', 
-'SELECT COUNT(*) >= 1', 10,
-'"Imagina el Gran Salón del Gremio donde están TODOS. SELECT * significa TODO"');
+' SELECT * FROM usuarios');
 
 -- Nivel 1.2: El Subconjunto (WHERE básico)
-INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, descripcion, tipo, esquema, tabla1, query_base, query_validacion, xp, hint) VALUES
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 2, '1.2: El Subconjunto - Filtrado',
-'"De todos los del Gran Salón, los Magos dan un paso al frente. WHERE crea un Subconjunto"',
-'editor', 'lms_sandbox', 'usuarios',
-'SELECT * FROM usuarios WHERE clase = ''Mago''',
-'SELECT COUNT(*) >= 1', 10,
-'WHERE filtra: solo los que cumplen la condición');
+'De todos los del Gran Salón, los Magos dan un paso al frente. WHERE crea un Subconjunto',
+'SELECT * FROM usuarios WHERE clase = ''Mago'' ',
+' SELECT * FROM usuarios WHERE clase = ''Mago'' ');
 
 -- Nivel 1.3: La Intersección (AND)
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 3, '1.3: La Intersección - AND',
-'"Deben estar en el círculo de GUERREROS Y tener nivel > 10. Solo los de en medio"',
-'editor', 'lms_sandbox', 'usuarios',
+'Deben estar en el círculo de GUERREROS Y tener nivel > 10. Solo los de en medio',
 'SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 10',
-'SELECT COUNT(*) >= 1', 10,
-'AND = cumple AMBAS condiciones');
+' SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 10');
 
 -- Nivel 1.4: La Unión Lógica (OR)  
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 4, '1.4: La Unión - OR',
-'"Cualquiera que sea Mago O Arquero entra al grupo"',
-'editor', 'lms_sandbox', 'usuarios',
-'SELECT * FROM usuarios WHERE clase = ''Mago'' OR clase = ''Arquero''',
-'SELECT COUNT(*) >= 1', 10,
-'OR = cumple CUALQUIERA de las condiciones');
+'Cualquiera que sea Mago O Arquero entra al grupo',
+'SELECT * FROM usuarios WHERE clase = ''Mago'' OR clase = ''Arquero'' ',
+' SELECT * FROM usuarios WHERE clase = ''Mago'' OR clase = ''Arquero'' ');
 
 -- Nivel 1.5: La Diferencia/Exclusión (NOT !=)
-INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, descripcion, tipo, esquema, tabla1, query_base, query_validacion, xp, hint) VALUES
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 5, '1.5: La Diferencia - NOT/!=',
-'"Excluye a los Paladines del grupo. != significa NO ES"',
-'editor', 'lms_sandbox', 'usuarios',
-'SELECT * FROM usuarios WHERE clase != ''Paladin''',
-'SELECT COUNT(*) >= 1', 10,
-'!= o <> significa diferente/no igual');
+'Excluye a los Paladines del grupo. != significa NO ES',
+'SELECT * FROM usuarios WHERE clase != ''Paladin'' ',
+' SELECT * FROM usuarios WHERE clase != ''Paladin'' ');
 
--- Nivel 1.6: Intersección Múltiple (AND multiple)
+-- Nivel 1.6: Múltiples Interscciones ( múltiples AND)
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 6, '1.6: Múltiples Interscciones',
-'"Guerreros con nivel > 15 Y que estén activos"',
-'editor', 'lms_sandbox', 'usuarios',
+'Guerreros Y nivel > 15 Y activos. Múltiples condiciones a la vez',
 'SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 15 AND activo = true',
-'SELECT COUNT(*) >= 1', 10,
-'Puedes encadenar muchos AND');
+' SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 15 AND activo = true');
 
--- Nivel 1.7: Unión con differentes valores (OR multiple)
+-- Nivel 1.7: Múltiples Unions - IN ( lista)
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 7, '1.7: Múltiples Unions - IN',
-'"Que sean Mago, Arquero o Guerrero. IN simplifica muchos OR"',
-'editor', 'lms_sandbox', 'usuarios',
+'Que sean Mago, Arquero o Guerrero. IN simplifica muchos OR',
 'SELECT * FROM usuarios WHERE clase IN (''Mago'', ''Arquero'', ''Guerrero'')',
-'SELECT COUNT(*) >= 1', 10,
-'IN (a,b,c) = a OR b OR c');
+' SELECT * FROM usuarios WHERE clase IN (''Mago'', ''Arquero'', ''Guerrero'')');
 
--- Práctica intercalada: Drag & Drop
+-- ============================================================================
+-- 4. PRÁCTICAS DEL MÓDULO 1 (Ejercicios extra para practicar)
+-- ============================================================================
+
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
 (1, 101, 'Práctica: Arma tu Intersección',
-'Arrastra las palabras para crear un AND deintersección',
-'drag_drop', 'lms_sandbox', 'usuarios',
-'SELECT * FROM usuarios WHERE clase = ''Mago'' AND nivel > 5',
-'SELECT * FROM usuarios WHERE clase = ''Mago'' AND nivel > 5', 15, NULL);
+'Encuentra los Guerreros con nivel mayor a 10',
+'SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 10',
+' SELECT * FROM usuarios WHERE clase = ''Guerrero'' AND nivel > 10');
+
+INSERT INTO lms_core.ejercicios_practicos (id_modulo, orden, titulo, enunciado, query_maestra, dificultad) VALUES
+(1, 102, 'Práctica: La Unión Multiple',
+'Muestra los usuarios que sean Magos o tengan nivel mayor a 20',
+'SELECT * FROM usuarios WHERE clase = ''Mago'' OR nivel > 20',
+' SELECT * FROM usuarios WHERE clase = ''Mago'' OR nivel > 20');
 
 -- ============================================================================
--- 4. VERIFICAR LOS CAMBIOS
+-- 5. VERIFICAR
 -- ============================================================================
 
--- Ver módulos
-SELECT id_modulo, titulo FROM lms_core.modulos WHERE id_modulo IN (1,2);
+SELECT id_modulo, titulo FROM lms_core.modulos WHERE id_modulo = 1;
 
--- Contar ejercicios por módulo
-SELECT id_modulo, COUNT(*) as total FROM lms_core.ejercicios_practicos 
-GROUP BY id_modulo ORDER BY id_modulo;
+SELECT id_modulo, COUNT(*) as total FROM lms_core.ejercicios_practicos GROUP BY id_modulo ORDER BY id_modulo;
 
--- Ver ejercicios del Módulo 1
-SELECT orden, titulo, LEFT(descripcion, 60) as desc_corta, tipo 
-FROM lms_core.ejercicios_practicos 
-WHERE id_modulo = 1 ORDER BY orden;
+SELECT orden, titulo, LEFT(enunciado, 60) as enunciado_corto, dificultad FROM lms_core.ejercicios_practicos WHERE id_modulo = 1 ORDER BY orden;
