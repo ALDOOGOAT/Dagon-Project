@@ -48,9 +48,6 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         "CONCEPTO: [explica teóricamente cómo funciona la cláusula]\n" +
         "PISTA: [da una pequeña pista conceptual sin código]\n" +
         "EJEMPLO:\n" +
-        "```sql\n" +
-        "SELECT ____ FROM tabla_falsa WHERE id = ____;\n" +
-        "```" +
         "Recuerda, el objetivo es que el alumno descubra la respuesta por sí mismo, no muestres la respuesta, ni tus razonamientos, da ejemplos que no tengan nada que ver con la consulta original. y muestra el ejemplo tipo ahorcado para que el alumno complete los espacios vacíos.";
 
 
