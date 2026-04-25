@@ -13,6 +13,88 @@ import {
 
 const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
 
+const CodeBox = ({ code, label }) => (
+  <div className="rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
+    <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
+      <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
+      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+      <span className="ml-2 text-[10px] font-mono text-slate-400 tracking-widest">
+        {label || 'query.sql'}
+      </span>
+    </div>
+    <pre className="bg-slate-950 p-4 overflow-x-auto text-sm font-mono text-emerald-300 leading-relaxed">
+      <code>{code}</code>
+    </pre>
+  </div>
+);
+
+const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [] }) => (
+  <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-950/80 max-w-md mx-auto shadow-xl">
+    <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
+      <Grid3x3 className="w-3 h-3 text-cyan-300" />
+      <span className="text-[10px] font-mono text-slate-400 tracking-widest uppercase">{title}</span>
+    </div>
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="bg-slate-900/70">
+          {columns?.map((c, i) => (
+            <th
+              key={i}
+              className={`px-3 py-2 text-left text-[11px] font-bold uppercase tracking-widest transition-colors ${
+                highlightCols.includes(i) ? 'text-cyan-300 bg-cyan-500/10' : 'text-slate-500'
+              }`}
+            >
+              {c}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows?.map((row, ri) => {
+          const dim = highlightRows.length > 0 && !highlightRows.includes(ri);
+          return (
+            <motion.tr
+              key={ri}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: dim ? 0.25 : 1, x: 0 }}
+              transition={{ delay: ri * 0.1 }}
+              className={`border-t border-white/5 ${
+                highlightRows.includes(ri) ? 'bg-emerald-500/10' : ''
+              }`}
+            >
+              {row.map((v, ci) => (
+                <td
+                  key={ci}
+                  className={`px-3 py-2 font-mono text-slate-200 ${
+                    highlightCols.includes(ci) ? 'text-cyan-200 bg-cyan-500/5 font-bold' : ''
+                  }`}
+                >
+                  {String(v)}
+                </td>
+              ))}
+            </motion.tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
+
+const SlideHeader = ({ slide, isSpeaking, onSpeak }) => (
+  <div className="flex items-start gap-5 mb-6">
+    <div className={`shrink-0 w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-300 ${isSpeaking ? 'animate-bounce' : ''}`}>
+      {slide.emoji}
+    </div>
+    <div className="flex-1 min-w-0">
+      <h2 className="font-display text-3xl lg:text-4xl font-black text-white leading-tight mb-3">
+        {slide.headline}
+      </h2>
+      {slide.lead && <p className="text-slate-300 text-lg leading-relaxed font-gameui">{slide.lead}</p>}
+    </div>
+  </div>
+);
+
 const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
   <>
     <SlideHeader slide={slide} isSpeaking={isSpeaking} onSpeak={onSpeak} />
@@ -28,13 +110,6 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
     )}
     {slide.code && <div className="mb-5"><CodeBox code={slide.code} label={slide.codeLabel} /></div>}
     {slide.result && <div className="mb-5"><DataTable {...slide.result} /></div>}
-    {slide.type === 'interactive-venn' && (
-      <div className="mb-5">
-        <Suspense fallback={<div className="animate-pulse bg-slate-800 rounded-2xl h-96" />}>
-          <VennDiagramSQL operation={slide.operation || 'universe'} />
-        </Suspense>
-      </div>
-    )}
     {slide.type === 'venn' && (
       <div className="mb-5">
         <VennStatic sets={slide.sets} headline={slide.headline} lead={slide.lead} />
