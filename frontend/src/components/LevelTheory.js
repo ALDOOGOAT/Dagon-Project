@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import VennStatic from './VennStatic';
 import {
-  ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket,
+  ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket, MinusCircle,
   Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide,
   GitMerge, Database, Shield, Zap, PenLine, Trash2, Plus, Link2, Settings2,
   Key, Lock, Eye, EyeOff, List, Hash, Percent, View, FileCode,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
+const VennRelationalAlgebra = lazy(() => import('./VennRelationalAlgebra'));
 
 const CodeBox = ({ code, label }) => (
   <div className="rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
@@ -115,6 +116,13 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
         <VennStatic sets={slide.sets} headline={slide.headline} lead={slide.lead} />
       </div>
     )}
+    {slide.type === 'relational-venn' && (
+      <div className="mb-5">
+        <Suspense fallback={<div className="animate-pulse bg-slate-800 rounded-2xl h-96" />}>
+          <VennRelationalAlgebra operation={slide.operation || 'union'} />
+        </Suspense>
+      </div>
+    )}
     {(slide.type === 'table' || slide.type === 'highlight-rows') && (
       <div className="mb-4">
         <DataTable 
@@ -163,6 +171,10 @@ const SUB_TOPICS = {
         ],
       },
       {
+        type: "interactive-venn",
+        operation: "universe",
+      },
+      {
         type: "venn",
         headline: "Visualiza el Universo",
         lead: "El círculo grande representa la tabla completa. SELECT * = todo el círculo.",
@@ -200,6 +212,10 @@ const SUB_TOPICS = {
         ],
       },
       {
+        type: "interactive-venn",
+        operation: "a",
+      },
+      {
         type: "venn",
         headline: "El Subconjunto",
         lead: "El círculo pequeño son los Magos dentro del Grande",
@@ -226,6 +242,10 @@ const SUB_TOPICS = {
           "AND significa: debe cumplir la Primera Y la Segunda",
           "Solo los que están en la intersección de ambos conjuntos",
         ],
+      },
+      {
+        type: "interactive-venn",
+        operation: "intersect",
       },
       {
         type: "venn",
@@ -256,6 +276,10 @@ const SUB_TOPICS = {
         ],
       },
       {
+        type: "interactive-venn",
+        operation: "union",
+      },
+      {
         type: "venn",
         headline: "La Unión",
         lead: "Es la suma de ambos círculos",
@@ -282,6 +306,10 @@ const SUB_TOPICS = {
           "!= o <> significa 'diferente de'",
           "Es el conjunto TOTAL menos los excluidos",
         ],
+      },
+      {
+        type: "interactive-venn",
+        operation: "difference",
       },
       {
         type: "venn",
@@ -311,6 +339,10 @@ const SUB_TOPICS = {
         ],
       },
       {
+        type: "interactive-venn",
+        operation: "intersect",
+      },
+      {
         type: "venn",
         headline: "Intersección Múltiple",
         lead: "Tres círculos criando una triple intersección",
@@ -338,6 +370,10 @@ const SUB_TOPICS = {
           "IN (lista) = OR1 OR OR2 OR OR3...",
           "IN es más limpio que escribir muchos OR",
         ],
+      },
+      {
+        type: "interactive-venn",
+        operation: "union",
       },
       {
         type: "venn",
@@ -1107,16 +1143,65 @@ const SUB_TOPICS = {
       {
         type: "hero",
         emoji: <Sparkles className="w-12 h-12" />,
-        headline: "UNION: Juntar mundos",
-        lead: "UNION combina resultados de dos consultas, sin duplicados.",
+        headline: "17.1: UNION - Juntar mundos",
+        lead: "UNION combina resultados de dos consultas, sin duplicados. Es como unir dos conjuntos en uno.",
+        bullets: [
+          "UNION = todos los elementos de A + todos los de B",
+          "Elimina duplicados automáticamente",
+          "ORDER BY funciona igual que en SELECT normal",
+        ],
         code: "SELECT nombre FROM aventureros\nUNION\nSELECT item FROM equipamiento;",
+        codeLabel: "UNION combina dos resultados",
       },
       {
-        type: "chat",
-        emoji: <Search className="w-12 h-12" />,
-        headline: "INTERSECT y EXCEPT",
-        lead: "INTERSECT: lo que está en ambos.\nEXCEPT: lo que está en el primero pero no en el segundo.",
-        code: "-- INTERSECT: nombres que también son items\nSELECT nombre FROM aventureros\nINTERSECT\nSELECT item FROM equipamiento;",
+        type: "relational-venn",
+        operation: "union",
+      },
+    ],
+  },
+  "17-2": {
+    title: "INTERSECT - La intersección",
+    subtitle: "Lo que está en AMBOS",
+    color: "from-purple-500 to-violet-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "17.2: INTERSECT - Intersección",
+        lead: "INTERSECT devuelve solo los elementos que están en AMBOS conjuntos.",
+        bullets: [
+          "INTERSECT = solo los que están en A Y en B",
+          "Es equivalente a WHERE ... IN (subconsulta)",
+          "Solo aparecen los elementos comunes",
+        ],
+        code: "SELECT nombre FROM aventureros\nINTERSECT\nSELECT nombre FROM mejores_lideres;",
+      },
+      {
+        type: "relational-venn",
+        operation: "intersect",
+      },
+    ],
+  },
+  "17-3": {
+    title: "EXCEPT - La diferencia",
+    subtitle: "Lo que está en A pero no en B",
+    color: "from-red-500 to-rose-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <MinusCircle className="w-12 h-12" />,
+        headline: "17.3: EXCEPT - Diferencia",
+        lead: "EXCEPT devuelve los elementos que están en el primer conjunto pero NO en el segundo.",
+        bullets: [
+          "EXCEPT = A menos B",
+          "Solo los elementos únicos del primero",
+          "Se去掉 los que también están en B",
+        ],
+        code: "SELECT nombre FROM aventureros\nEXCEPT\nSELECT nombre FROM baja_guerreros;",
+      },
+      {
+        type: "relational-venn",
+        operation: "except",
       },
     ],
   },
