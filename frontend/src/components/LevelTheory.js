@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
@@ -96,6 +96,8 @@ const SlideHeader = ({ slide, isSpeaking, onSpeak }) => (
   </div>
 );
 
+const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
+
 const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
   <>
     <SlideHeader slide={slide} isSpeaking={isSpeaking} onSpeak={onSpeak} />
@@ -111,6 +113,11 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
     )}
     {slide.code && <div className="mb-5"><CodeBox code={slide.code} label={slide.codeLabel} /></div>}
     {slide.result && <div className="mb-5"><DataTable {...slide.result} /></div>}
+    {slide.type === 'interactive-venn' && (
+      <div className="mb-5">
+        <VennDiagramSQL operation={slide.operation || 'universe'} />
+      </div>
+    )}
     {(slide.type === 'table' || slide.type === 'highlight-rows') && (
       <div className="mb-4">
         <DataTable 
