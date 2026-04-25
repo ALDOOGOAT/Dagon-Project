@@ -14,7 +14,7 @@ public class ClawbotService {
     @Value("${ollama.url:http://localhost:11434}")
     private String ollamaUrl;
 
-    @Value("${dagon.gemini.api-key:}")
+    @Value("${GEMINI_API_KEY:}")
     private String geminiApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
