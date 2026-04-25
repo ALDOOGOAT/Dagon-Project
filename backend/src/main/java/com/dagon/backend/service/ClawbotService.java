@@ -17,6 +17,9 @@ public class ClawbotService {
     @Value("${GEMINI_API_KEY:}")
     private String geminiApiKey;
 
+    @Value("${GROQ_API_KEY:}")
+    private String groqApiKey;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     private static final String SYSTEM_PROMPT_CHAT = 
@@ -53,7 +56,7 @@ public class ClawbotService {
         "Formato: ERROR: [explicacion] PISTA: [pregunta socratica] EJEMPLO: [codigo]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
-        // Siempre intentar Gemini primero (más completo)
+        // Intentar Gemini primero
         if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
             try {
                 String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
@@ -65,21 +68,24 @@ public class ClawbotService {
             }
         }
 
-        // Si Gemini no está disponible, intentar Ollama local
-        try {
-            String respuesta = callOllamaAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
-            if (respuesta != null && !respuesta.isEmpty()) {
-                return formatearRespuestaAnalisis(respuesta);
+        // Groq como fallback (gratis, rápido)
+        if (groqApiKey != null && !groqApiKey.isEmpty()) {
+            try {
+                String respuesta = callGroqChat(SYSTEM_PROMPT_ANALYSIS + "\n\nEJERCICIO: " + descripcion + "\nCONSULTA CORRECTA: " + queryMaestra + "\nTU CONSULTA: " + queryAlumno + "\nERROR: " + errorDb);
+                if (respuesta != null && !respuesta.isEmpty()) {
+                    return formatearRespuestaAnalisis(respuesta);
+                }
+            } catch (Exception e) {
+                System.err.println("Clawbot: Error con Groq - " + e.getMessage());
             }
-        } catch (Exception e) {
-            // Ollama no disponible, usar fallback
         }
 
+        // Fallback pre-cargado
         return buildFallbackResponse(descripcion, queryMaestra, errorDb, intentos);
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
-        // Siempre intentar Gemini primero
+        // Intentar Gemini primero
         if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
             try {
                 String respuesta = callGeminiChat(mensajeUsuario);
@@ -91,14 +97,16 @@ public class ClawbotService {
             }
         }
 
-        // Intentar Ollama local si está disponible
-        try {
-            String respuesta = callOllamaChat(mensajeUsuario);
-            if (respuesta != null && !respuesta.isEmpty()) {
-                return formatearRespuestaChat(respuesta);
+        // Groq como fallback
+        if (groqApiKey != null && !groqApiKey.isEmpty()) {
+            try {
+                String respuesta = callGroqChat(SYSTEM_PROMPT_CHAT + "\nUsuario: " + mensajeUsuario);
+                if (respuesta != null && !respuesta.isEmpty()) {
+                    return formatearRespuestaChat(respuesta);
+                }
+            } catch (Exception e) {
+                System.err.println("Clawbot: Error con Groq - " + e.getMessage());
             }
-        } catch (Exception e) {
-            // Ollama no disponible
         }
 
         return helpForQuestion(mensajeUsuario.toLowerCase());
@@ -288,6 +296,41 @@ public class ClawbotService {
             }
         } catch (Exception e) {
             System.err.println("Ollama analysis error: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private String callGroqChat(String prompt) {
+        try {
+            String url = "https://api.groq.com/openai/v1/chat/completions";
+
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "user", "content", prompt));
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", "llama-3.1-8b-instant");
+            body.put("messages", messages);
+            body.put("temperature", 0.7);
+            body.put("max_tokens", 800);
+
+            HttpHeaders h = new HttpHeaders();
+            h.setContentType(MediaType.APPLICATION_JSON);
+            h.set("Authorization", "Bearer " + groqApiKey);
+            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
+
+            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
+            Map<String, Object> resp = r.getBody();
+
+            if (resp != null && resp.containsKey("choices")) {
+                List<Map<String, Object>> choices = (List<Map<String, Object>>) resp.get("choices");
+                if (!choices.isEmpty()) {
+                    Map<String, Object> choice = choices.get(0);
+                    Map<String, Object> msg = (Map<String, Object>) choice.get("message");
+                    return msg.get("content").toString();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Groq API error: " + e.getMessage());
         }
         return null;
     }
