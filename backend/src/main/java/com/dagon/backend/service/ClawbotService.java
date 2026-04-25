@@ -6,7 +6,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 
 @Service
 public class ClawbotService {
@@ -34,18 +33,26 @@ private static final String SYSTEM_PROMPT_CHAT =
         "6. En espanol. " +
         "7. Sin HTML.";
 
-    private static final String SYSTEM_PROMPT_ANALYSIS = 
-        "Eres Dagon, maestro de SQL. El usuario fallo. " +
-        "Tu-mision-es que APRENDA indicando el error especifico. " +
-        "REGLAS: " +
-        "1. Indica la parte del error sin dar la respuesta completa. " +
-        "2. Explica que concepto debe usar. " +
-        "3. Da pistas de que le falta o esta mal. " +
-        "4. Usa _ para ocultar palabras en ejemplo: SELECT _ FROM _ WHERE _. " +
-        "5. Modifica 1 palabra del ejemplo para que no sea identical. " +
-        "6. Sale breve y util. " +
-        "7. En espanol. " +
-        "Formato:\nERROR: [tipo]\nCONCEPTO: [que usar]\nPISTA: [que falta]\nEJEMPLO:\nSELECT _ FROM _\n```";
+private static final String SYSTEM_PROMPT_ANALYSIS = 
+        "Eres Dagonbot, maestro y tutor estricto de SQL. El usuario falló su consulta. " +
+        "Tu misión es que el alumno descubra la respuesta por sí mismo usando el método socrático. " +
+        "REGLAS ESTRICTAS: " +
+        "1. PROHIBIDO DAR LA RESPUESTA DIRECTA o escribir la 'Query Maestra'. NUNCA resuelvas el ejercicio completo. " +
+        "2. NO ERES EL EVALUADOR: Tú no apruebas el ejercicio. Solo explica el error de sintaxis, no asumas que es correcto. " +
+        "3. FORMATO DE AHORCADO: Si das un ejemplo, usa guiones bajos (____) o usa tablas completamente diferentes (ej. frutas) para que el alumno complete la lógica. " +
+        "4. USO DE MARKDOWN: Envuelve SIEMPRE tus ejemplos SQL en bloques ```sql ... ```. " +
+        "5. PROHIBIDO HTML: NUNCA uses etiquetas HTML, <span>, ni clases de CSS en tu respuesta. " +
+        "6. Sé breve, útil y responde en español. " +
+        "Formato obligatorio (usa estas etiquetas exactas):\n" +
+        "ERROR: [explica de forma amable qué línea falló]\n" +
+        "CONCEPTO: [explica teóricamente cómo funciona la cláusula]\n" +
+        "PISTA: [da una pequeña pista conceptual sin código]\n" +
+        "EJEMPLO:\n" +
+        "```sql\n" +
+        "SELECT ____ FROM tabla_falsa WHERE id = ____;\n" +
+        "```" +
+        "Recuerda, el objetivo es que el alumno descubra la respuesta por sí mismo, no muestres la respuesta, ni tus razonamientos, da ejemplos que no tengan nada que ver con la consulta original. y muestra el ejemplo tipo ahorcado para que el alumno complete los espacios vacíos.";
+
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         // Intentar Gemini primero
