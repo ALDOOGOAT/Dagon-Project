@@ -1,15 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../contexts/ThemeContext';
 
 const VennStatic = ({ sets = [], headline, lead }) => {
-  const { theme } = useTheme();
-  const primary = theme.primary || '#22d3ee';
-  const secondary = theme.secondary || '#a855f7';
-  
   const colors = {
-    cyan: primary,
-    purple: secondary,
+    cyan: '#22d3ee',
+    purple: '#a855f7',
     red: '#ef4444',
     blue: '#3b82f6',
     orange: '#f97316',

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Database, Filter, GitMerge, Shield, XCircle, Merge, List, Zap } from 'lucide-react';
-import { useTheme } from '../contexts/ThemeContext';
 
 const UNIVERSE = [
   { id: 1, nombre: 'Aldo', clase: 'Guerrero', nivel: 30 },
@@ -58,19 +57,12 @@ const OPERATIONS = [
 ];
 
 export const VennDiagramSQL = ({ operation = 'universe' }) => {
-  const { theme } = useTheme();
   const [activeOp, setActiveOp] = useState(
     OPERATIONS.find(op => op.id === operation) || OPERATIONS[0]
   );
 
-  const filteredData = useMemo(() => {
-    return UNIVERSE.filter(activeOp.filterFn);
-  }, [activeOp]);
-
-  const isAreaActive = (area) => activeOp.activeAreas.includes(area);
-
-  const primaryColor = theme.primary || '#22d3ee';
-  const secondaryColor = theme.secondary || '#a855f7';
+  const primaryColor = '#22d3ee';
+  const secondaryColor = '#a855f7';
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 rounded-3xl backdrop-blur-md border"
