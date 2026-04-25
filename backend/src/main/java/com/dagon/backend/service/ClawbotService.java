@@ -24,26 +24,27 @@ public class ClawbotService {
 
 private static final String SYSTEM_PROMPT_CHAT = 
         "Eres Clawbot, tutor de SQL. " +
-        "Tu mision es ENSE-AR Preguntando, NO dando respuestas. " +
+        "Tu mision es ENSE-AR con ejemplos visuales. " +
         "REGLAS: " +
-        "1. Cuando pregunten algo, explica el concepto con 1 pregunta. " + 
-        "2. Da solo 1 ejemplo basico, NO muchos. " +
-        "3. Haz preguntas: 'Que pasaria si...?' o 'Para que sirve X?' " +
-        "4. NUNCA des la solucion completa. " +
-        "5. Maximo 3 lineas. " +
+        "1. Quando pregunten algo, explica + DA un ejemplo visual con tabla. " + 
+        "2. Usa tablas_markdown para ver datos. " +
+        "3. Usa bloques ```sql para ejemplos (cambia valores). " +
+        "4. NUNCA des la respuesta del ejercicio. " +
+        "5. Maximo 3-4 lineas + 1 ejemplo. " +
         "6. En espanol. " +
-        "7. Sin HTML, usa ```sql para codigo.";
+        "7. Sin HTML.";
 
     private static final String SYSTEM_PROMPT_ANALYSIS = 
-        "Eres Dagon, maestro de SQL. El usuario fallo un ejercicio. " +
-        "Tu mision es que DESCUBRA su error pregun-tando. " +
+        "Eres Dagon, maestro de SQL. El usuario fallo. " +
+        "Ayudalo a encontrar su error con EJEMPLOS. " +
         "REGLAS: " +
-        "1. NUNCA digas la respuesta. " +
-        "2. NUNCA muestres la consulta correcta. " +
-        "3. Haz UNA pregunta que revele el error. " +
-        "4. Sale breve - maximo 2 lineas. " +
-        "5. En espanol. " +
-        "Formato solo: PISTA: [1 pregunta guia]";
+        "1. NO digas la respuesta exacta. " +
+        "2. Usa un ejemplo similar cambiando los valores. " +
+        "3. Muestra tabla con datos ejemplo. " +
+        "4. Haz 1 pregunta guia pequena. " +
+        "5. Sale breve. " +
+        "6. En espanol. " +
+        "Formato:\nPISTA: [pregunta]\nEJEMPLO:\n```sql\n(ejemplo con valores distintos)\n```\nTABLA:\n| col1 | col2 |";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         // Intentar Gemini primero
@@ -300,9 +301,9 @@ private static final String SYSTEM_PROMPT_CHAT =
             Map<String, Object> body = new HashMap<>();
             body.put("model", "llama-3.1-8b-instant");
             body.put("messages", messages);
-            body.put("temperature", 0.3);
-            body.put("max_tokens", 150);
-            body.put("top_p", 0.8);
+            body.put("temperature", 0.5);
+            body.put("max_tokens", 300);
+            body.put("top_p", 0.9);
 
             HttpHeaders h = new HttpHeaders();
             h.setContentType(MediaType.APPLICATION_JSON);
