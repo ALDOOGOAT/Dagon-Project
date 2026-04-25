@@ -66,17 +66,18 @@ public class ClawbotService {
                     return formatearRespuestaAnalisis(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Gemini analysis error: " + e.getMessage());
+                System.err.println("Clawbot: Error con Gemini - " + e.getMessage());
             }
         }
 
+        // Intentar Ollama si está disponible (local), si no usar fallback
         try {
             String respuesta = callOllamaAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
             if (respuesta != null && !respuesta.isEmpty()) {
                 return formatearRespuestaAnalisis(respuesta);
             }
         } catch (Exception e) {
-            System.err.println("Ollama analysis error: " + e.getMessage());
+            // Ollama no disponible, usar fallback
         }
 
         return buildFallbackResponse(descripcion, queryMaestra, errorDb, intentos);
@@ -93,17 +94,18 @@ public class ClawbotService {
                     return formatearRespuestaChat(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Gemini chat error: " + e.getMessage());
+                System.err.println("Clawbot: Error con Gemini - " + e.getMessage());
             }
         }
 
+        // En Railway no hay Ollama, directas responses pre-cargadas
         try {
             String respuesta = callOllamaChat(mensajeUsuario);
             if (respuesta != null && !respuesta.isEmpty()) {
                 return formatearRespuestaChat(respuesta);
             }
         } catch (Exception e) {
-            System.err.println("Ollama chat error: " + e.getMessage());
+            // Ollama no disponible en Railway, seguir al fallback
         }
 
         return helpForQuestion(mensajeUsuario.toLowerCase());
@@ -111,23 +113,34 @@ public class ClawbotService {
 
     private String callGeminiChat(String question) {
         if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-            System.out.println("Gemini API key no configurada, saltando a Ollama");
+            System.out.println("Clawbot: Gemini API key no configurada");
             return null;
         }
 
         try {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
+            
+            // Usar el modelo gemini-1.5-flash que es más económico
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
+
+            String fullPrompt = SYSTEM_PROMPT_CHAT + "\n\nUsuario pregunta: " + question;
 
             List<Map<String, Object>> contents = new ArrayList<>();
             Map<String, Object> content = new HashMap<>();
             
             List<Map<String, Object>> parts = new ArrayList<>();
-            parts.add(Map.of("text", SYSTEM_PROMPT_CHAT + "\n\nUsuario pregunta: " + question));
+            parts.add(Map.of("text", fullPrompt));
             content.put("parts", parts);
             contents.add(content);
 
             Map<String, Object> body = new HashMap<>();
             body.put("contents", contents);
+            body.put("generationConfig", Map.of(
+                "temperature", 0.7,
+                "maxOutputTokens", 800,
+                "topP", 0.95,
+                "topK", 40
+            ));
 
             HttpHeaders h = new HttpHeaders();
             h.setContentType(MediaType.APPLICATION_JSON);
@@ -143,12 +156,14 @@ public class ClawbotService {
                     Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
                     List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
                     if (!candidateParts.isEmpty()) {
-                        return candidateParts.get(0).get("text").toString();
+                        String result = candidateParts.get(0).get("text").toString();
+                        System.out.println("Clawbot: Respuesta Gemini recibida, longitud: " + result.length());
+                        return result;
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Gemini API error: " + e.getMessage());
+            System.err.println("Clawbot: Gemini API error - " + e.getMessage());
         }
         return null;
     }
@@ -159,13 +174,13 @@ public class ClawbotService {
         }
 
         try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
 
             String prompt = SYSTEM_PROMPT_ANALYSIS + "\n\nEJERCICIO: " + desc + "\n" +
                 "CONSULTA CORRECTA: " + queryM + "\n" +
                 "TU CONSULTA: " + queryA + "\n" +
                 "ERROR: " + (error != null ? error : "Sin error") + "\n" +
-                "INTENTO #: " + intentos + "\n\nAnaliza con metodo socratico.";
+                "INTENTO #: " + intentos + "\n\nAnaliza con metodo socratico. Dame pistas claras para que el usuario pueda corregir su consulta.";
 
             List<Map<String, Object>> contents = new ArrayList<>();
             Map<String, Object> content = new HashMap<>();
@@ -177,6 +192,11 @@ public class ClawbotService {
 
             Map<String, Object> body = new HashMap<>();
             body.put("contents", contents);
+            body.put("generationConfig", Map.of(
+                "temperature", 0.3,
+                "maxOutputTokens", 500,
+                "topP", 0.9
+            ));
 
             HttpHeaders h = new HttpHeaders();
             h.setContentType(MediaType.APPLICATION_JSON);
@@ -192,12 +212,14 @@ public class ClawbotService {
                     Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
                     List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
                     if (!candidateParts.isEmpty()) {
-                        return candidateParts.get(0).get("text").toString();
+                        String result = candidateParts.get(0).get("text").toString();
+                        System.out.println("Clawbot: Análisis Gemini recibido para intento " + intentos);
+                        return result;
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Gemini API error: " + e.getMessage());
+            System.err.println("Clawbot: Gemini Analysis error - " + e.getMessage());
         }
         return null;
     }

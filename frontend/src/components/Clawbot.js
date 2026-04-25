@@ -52,9 +52,14 @@ export const Clawbot = () => {
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&amp;/g, '&')
+      .replace(/__SQL_BLOCK__/g, '___SQL_BLOCK___')
+      .replace(/___END_SQL___/g, '___END_SQL___')
       .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
+      .replace(/```\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
+      .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
+      .replace(/```([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/[*]{2,}/g, '')
-      .replace(/#+\s*/g, '\n\n## ')
+      .replace(/#+\s*/g, '## ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
   };
