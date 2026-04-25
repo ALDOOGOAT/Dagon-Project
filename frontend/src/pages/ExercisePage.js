@@ -42,12 +42,16 @@ const formatAIMessage = (text) => {
     line = line.trim();
     if (!line) return;
     
-    if (line.match(/^(PISTA|Pista|pista):/i)) {
+    if (line.match(/^(ERROR|Error|error):/i)) {
+      parts.push({ type: 'error', text: line.replace(/^(ERROR|Error|error):\s*/i, '') });
+    } else if (line.match(/^(CONCEPTO|Concepto|concepto):/i)) {
+      parts.push({ type: 'concepto', text: line.replace(/^(CONCEPTO|Concepto|concepto):\s*/i, '') });
+    } else if (line.match(/^(AYUDA|Ayuda|ayuda):/i)) {
+      parts.push({ type: 'ayuda', text: line.replace(/^(AYUDA|Ayuda|ayuda):\s*/i, '') });
+    } else if (line.match(/^(PISTA|Pista|pista):/i)) {
       parts.push({ type: 'pista', text: line.replace(/^(PISTA|Pista|pista):\s*/i, '') });
     } else if (line.match(/^(PORQUE|Porque|porque|PORQUE):/i)) {
       parts.push({ type: 'porque', text: line.replace(/^(PORQUE|Porque|porque|PORQUE):\s*/i, '') });
-    } else if (line.match(/^(Ayuda|ayuda|Help|help):/i)) {
-      parts.push({ type: 'help', text: line.replace(/^(Ayuda|ayuda|Help|help):\s*/i, '') });
     } else if (line.match(/^(sql|SQL)/i)) {
       parts.push({ type: 'code', text: line.replace(/^(sql|SQL)\s*/i, '') });
     } else if (line.startsWith('## ') || line.startsWith('### ')) {
@@ -65,20 +69,32 @@ const formatAIMessage = (text) => {
     if (part.type === 'heading') {
       return <h4 key={i} className="mt-4 mb-2 text-lg font-bold" style={{ color: '#10b981' }}>{part.text}</h4>;
     }
-    if (part.type === 'pista') {
-      return <div key={i} className="mt-3 mb-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'linear-gradient(135deg, rgba(34,211,238,0.15), rgba(168,85,247,0.15))', borderLeft: '4px solid #22d3ee', color: '#67e8f9' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">💡 Pista</span>
+    if (part.type === 'error') {
+      return <div key={i} className="mt-3 mb-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderLeft: '4px solid #f87171', color: '#fca5a5' }}>
+        <span className="text-xs uppercase tracking-wider opacity-70">❌ Error</span>
         <p className="mt-1 font-semibold">{part.text}</p>
       </div>;
     }
-    if (part.type === 'porque') {
-      return <div key={i} className="mt-2 mb-3 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">⚠️ Error</span>
+    if (part.type === 'concepto') {
+      return <div key={i} className="mt-2 mb-2 px-4 py-3 rounded-xl text-sm" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))', borderLeft: '4px solid #22c55e', color: '#86efac' }}>
+        <span className="text-xs uppercase tracking-wider opacity-70">💡 Concepto</span>
+        <p className="mt-1 font-semibold">{part.text}</p>
+      </div>;
+    }
+    if (part.type === 'ayuda') {
+      return <div key={i} className="mt-2 mb-3 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.15)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>
+        <span className="text-xs uppercase tracking-wider opacity-70">🔧 Ayuda</span>
         <p className="mt-1">{part.text}</p>
       </div>;
     }
-    if (part.type === 'help') {
-      return <div key={i} className="mt-2 mb-2 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>{part.text}</div>;
+    if (part.type === 'pista') {
+      return <div key={i} className="mt-2 mb-2 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(34,211,238,0.1)', borderLeft: '3px solid #22d3ee', color: '#67e8f9' }}>
+        <span className="text-xs uppercase tracking-wider opacity-70">💡 Pista</span>
+        <p className="mt-1">{part.text}</p>
+      </div>;
+    }
+    if (part.type === 'porque') {
+      return <div key={i} className="mt-2 mb-3 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>{part.text}</div>;
     }
     if (part.type === 'code') {
       return <code key={i} className="block my-2 px-4 py-3 rounded-lg text-sm font-mono overflow-x-auto" style={{ backgroundColor: '#0f172a', color: '#6ee7b7', border: '1px solid #1e293b' }}>{part.text}</code>;
