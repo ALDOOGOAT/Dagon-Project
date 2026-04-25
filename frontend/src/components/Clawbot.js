@@ -208,6 +208,11 @@ export const Clawbot = () => {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     
+    // 1. PROTEGEMOS LOS STRINGS Y NÚMEROS ANTES DE PONER ETIQUETAS HTML
+    highlighted = highlighted.replace(/('(?:[^'\\]|\\')*')/g, '___STR___$1___ENDSTR___');
+    highlighted = highlighted.replace(/\b(\d+)\b/g, '___NUM___$1___ENDNUM___');
+    
+    // 2. COLOREAMOS LAS PALABRAS CLAVE DE SQL
     const keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'ON', 'AND', 'OR', 'NOT', 'IS', 'NULL', 'ORDER', 'BY', 'ASC', 'DESC', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET', 'AS', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE', 'TABLE', 'INDEX', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MAX', 'MIN', 'COALESCE', 'IF', 'NULLIF', 'EXISTS', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'LIKE', 'IN', 'BETWEEN'];
     
     keywords.forEach(kw => {
@@ -215,8 +220,9 @@ export const Clawbot = () => {
       highlighted = highlighted.replace(regex, '<span class="text-cyan-400 font-semibold">$1</span>');
     });
     
-    highlighted = highlighted.replace(/('(?:[^'\\]|\\')*')/g, '<span class="text-yellow-300">$1</span>');
-    highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>');
+    // 3. RESTAURAMOS LOS STRINGS Y NÚMEROS YA CON SU HTML SEGURO
+    highlighted = highlighted.replace(/___STR___([\s\S]*?)___ENDSTR___/g, '<span class="text-yellow-300">$1</span>');
+    highlighted = highlighted.replace(/___NUM___([\s\S]*?)___ENDNUM___/g, '<span class="text-orange-400">$1</span>');
     
     return highlighted;
   };
