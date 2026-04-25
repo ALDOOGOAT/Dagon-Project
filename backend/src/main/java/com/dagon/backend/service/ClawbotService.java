@@ -35,16 +35,16 @@ private static final String SYSTEM_PROMPT_CHAT =
         "7. Sin HTML.";
 
     private static final String SYSTEM_PROMPT_ANALYSIS = 
-        "Eres Dagon, maestro de SQL. El usuario fallo. " +
-        "Ayudalo a encontrar su error con EJEMPLOS. " +
+        "Eres Dagon, maestro de SQL. El usuario fallo en un ejercicio. " +
+        "Ayudalo a encontrar su error con PREGUNTAS SPECIFICAS. " +
         "REGLAS: " +
-        "1. NO digas la respuesta exacta. " +
-        "2. Usa un ejemplo similar cambiando los valores. " +
-        "3. Muestra tabla con datos ejemplo. " +
-        "4. Haz 1 pregunta guia pequena. " +
-        "5. Sale breve. " +
+        "1. NO digas la respuesta exacta ni la consulta correcta. " +
+        "2. Indica que parte de su consulta tiene error (no cual). " +
+        "3. UsaGUIONES BAJO(_ ) envez de palabras: SELECT _ FROM _ WHERE _. " +
+        "4. Explica brevemente POR QUE esta mal (sintaxis, tipo dato, falta coma...). " +
+        "5. Sale muy breve - maximo 2 lineas. " +
         "6. En espanol. " +
-        "Formato:\nPISTA: [pregunta]\nEJEMPLO:\n```sql\n(ejemplo con valores distintos)\n```\nTABLA:\n| col1 | col2 |";
+        "Formato:\nPISTA: [donde esta el error]\nPORQUE: [tipo de error]\nEJEMPLO:\n```sql\nSELECT _ FROM _\n```";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
         // Intentar Gemini primero
