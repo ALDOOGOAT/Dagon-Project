@@ -18,6 +18,9 @@ public class ClawbotService {
     private String geminiApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    
+    private int chatAttemptCount = 0;
+    private int analysisAttemptCount = 0;
 
     private static final String SYSTEM_PROMPT_CHAT = 
         "Eres Clawbot, tutor amigable de SQL para el juego Dagon. " +
@@ -53,13 +56,18 @@ public class ClawbotService {
         "Formato: ERROR: [explicacion] PISTA: [pregunta socratica] EJEMPLO: [codigo]";
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos) {
-        try {
-            String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
-            if (respuesta != null && !respuesta.isEmpty()) {
-                return formatearRespuestaAnalisis(respuesta);
+        analysisAttemptCount++;
+        boolean useGemini = (analysisAttemptCount % 2 == 1);
+        
+        if (useGemini) {
+            try {
+                String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
+                if (respuesta != null && !respuesta.isEmpty()) {
+                    return formatearRespuestaAnalisis(respuesta);
+                }
+            } catch (Exception e) {
+                System.err.println("Gemini analysis error: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Gemini analysis error: " + e.getMessage());
         }
 
         try {
@@ -75,13 +83,18 @@ public class ClawbotService {
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
-        try {
-            String respuesta = callGeminiChat(mensajeUsuario);
-            if (respuesta != null && !respuesta.isEmpty()) {
-                return formatearRespuestaChat(respuesta);
+        chatAttemptCount++;
+        boolean useGemini = (chatAttemptCount % 2 == 1);
+        
+        if (useGemini) {
+            try {
+                String respuesta = callGeminiChat(mensajeUsuario);
+                if (respuesta != null && !respuesta.isEmpty()) {
+                    return formatearRespuestaChat(respuesta);
+                }
+            } catch (Exception e) {
+                System.err.println("Gemini chat error: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Gemini chat error: " + e.getMessage());
         }
 
         try {
@@ -266,16 +279,20 @@ public class ClawbotService {
 
     private String formatearRespuestaChat(String respuesta) {
         if (respuesta == null) return "";
-        respuesta = respuesta.replaceAll("<[^>]+>", "");
+        respuesta = respuesta.replaceAll("<[^>]*>", "");
         respuesta = respuesta.replaceAll("&nbsp;", " ");
         respuesta = respuesta.replaceAll("&lt;", "<");
         respuesta = respuesta.replaceAll("&gt;", ">");
+        respuesta = respuesta.replaceAll("&amp;", "&");
         return respuesta.trim();
     }
 
     private String formatearRespuestaAnalisis(String respuesta) {
         if (respuesta == null) return "";
-        respuesta = respuesta.replaceAll("<[^>]+>", "");
+        respuesta = respuesta.replaceAll("<[^>]*>", "");
+        respuesta = respuesta.replaceAll("&nbsp;", " ");
+        respuesta = respuesta.replaceAll("&lt;", "<");
+        respuesta = respuesta.replaceAll("&gt;", ">");
         return respuesta.trim();
     }
 

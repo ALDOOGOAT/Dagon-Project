@@ -47,6 +47,11 @@ export const Clawbot = () => {
   const cleanText = (text) => {
     if (!text) return '';
     return text
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
       .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/[*]{2,}/g, '')
       .replace(/#+\s*/g, '\n\n## ')
@@ -180,12 +185,23 @@ export const Clawbot = () => {
   };
 
   const syntaxHighlight = (sql) => {
-    return sql
-      .replace(/\b(SELECT|FROM|WHERE|JOIN|INNER|LEFT|RIGHT|OUTER|ON|AND|OR|NOT|IS|NULL|ORDER|BY|ASC|DESC|GROUP|HAVING|LIMIT|OFFSET|AS|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|INDEX|DISTINCT|COUNT|SUM|AVG|MAX|MIN|COALESCE|IF|NULLIF|EXISTS|CASE|WHEN|THEN|ELSE|END)\b/g, 
-        '<span class="text-cyan-400 font-semibold">$1</span>')
-      .replace(/('(?:[^'\\]|\\')*')/g, '<span class="text-yellow-300">$1</span>')
-      .replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>')
-      .replace(/\b(SELECT|WHERE|JOIN|ORDER|GROUP)\b/gi, '<span class="text-emerald-400 font-bold">$1</span>');
+    if (!sql) return '';
+    let highlighted = sql
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    
+    const keywords = ['SELECT', 'FROM', 'WHERE', 'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'ON', 'AND', 'OR', 'NOT', 'IS', 'NULL', 'ORDER', 'BY', 'ASC', 'DESC', 'GROUP', 'HAVING', 'LIMIT', 'OFFSET', 'AS', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE', 'TABLE', 'INDEX', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MAX', 'MIN', 'COALESCE', 'IF', 'NULLIF', 'EXISTS', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'LIKE', 'IN', 'BETWEEN'];
+    
+    keywords.forEach(kw => {
+      const regex = new RegExp(`\\b(${kw})\\b`, 'gi');
+      highlighted = highlighted.replace(regex, '<span class="text-cyan-400 font-semibold">$1</span>');
+    });
+    
+    highlighted = highlighted.replace(/('(?:[^'\\]|\\')*')/g, '<span class="text-yellow-300">$1</span>');
+    highlighted = highlighted.replace(/\b(\d+)\b/g, '<span class="text-orange-400">$1</span>');
+    
+    return highlighted;
   };
 
   const suggestedQuestions = [
