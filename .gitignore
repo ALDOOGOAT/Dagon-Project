@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # IDE and editors
 .idea/
 .vscode/
@@ -7,7 +5,7 @@
 # Dependencies
 node_modules/
 /node_modules
-/.pnp
+.pnp
 .pnp.js
 .yarn/install-state.gz
 .yarn/*
@@ -28,14 +26,8 @@ next-env.d.ts
 # Production builds
 /build
 dist/
-dist
 
-# Environment files (comprehensive coverage)
-
-*token.json*
-*credentials.json*
-
-# Logs and debug files
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -76,20 +68,13 @@ agenthub/agents/youtube/db
 # Build caches
 .cache/
 
-# Mobile development
-android-sdk/ -e 
-# Environment files
+# Environment files (NO COMMITEAR)
 *.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+.env.local
+.env.*.local
+
+# Secrets y credentials (NO COMMITEAR)
+*token.json*
+*credentials.json*
+*.pem
+*.key
