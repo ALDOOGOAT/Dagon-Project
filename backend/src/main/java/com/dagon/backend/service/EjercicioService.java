@@ -134,6 +134,40 @@ public class EjercicioService {
         return dtos;
     }
 
+    private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId) throws java.sql.SQLException {
+        List<Map<String, Object>> resultados = new ArrayList<>();
+        String url = sandboxUrl;
+        String user = sandboxUser;
+        String password = sandboxPassword;
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            conn.setAutoCommit(false); // Iniciar transacción
+            try (Statement stmt = conn.createStatement()) {
+                String searchPath = (usuarioId != null && !usuarioId.trim().isEmpty()) 
+                                    ? "sandbox_usuario_" + usuarioId : "lms_sandbox";
+                stmt.execute("SET search_path TO \"" + searchPath + "\"");
+                
+                boolean tieneResultSet = stmt.execute(query);
+                if (tieneResultSet) {
+                    try (ResultSet rs = stmt.getResultSet()) {
+                        ResultSetMetaData metaData = rs.getMetaData();
+                        int columnCount = metaData.getColumnCount();
+                        while (rs.next()) {
+                            Map<String, Object> fila = new LinkedHashMap<>();
+                            for (int i = 1; i <= columnCount; i++) {
+                                fila.put(metaData.getColumnName(i).toLowerCase(), rs.getObject(i) != null ? rs.getObject(i).toString() : null);
+                            }
+                            resultados.add(fila);
+                        }
+                    }
+                }
+            } finally {
+                conn.rollback(); // Deshacer cambios siempre
+            }
+        }
+        return resultados;
+    }
+
     private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId) throws java.sql.SQLException {
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
@@ -241,6 +275,33 @@ public class EjercicioService {
 
     public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         Map<String, Object> respuesta = new HashMap<>();
+
+        // --- CAPA DE SEGURIDAD (ESCUDO DE DAGON) ---
+        String queryClean = queryUsuario.trim().toUpperCase();
+        
+        // 1. Bloqueo de comandos administrativos y peligrosos
+        String[] blackList = {
+            "DROP DATABASE", "DROP SCHEMA", "TRUNCATE", "ALTER ROLE", "CREATE ROLE", 
+            "GRANT", "REVOKE", "PG_SLEEP", "COPY FROM", "COPY TO"
+        };
+        
+        for (String word : blackList) {
+            if (queryClean.contains(word)) {
+                respuesta.put("success", false);
+                respuesta.put("message", "🚫 ¡Acción Prohibida! Los comandos de administración están bloqueados por seguridad.");
+                return respuesta;
+            }
+        }
+
+        // 2. Prevenir que intenten acceder a esquemas internos
+        if (queryClean.contains("LMS_CORE") || queryClean.contains("INFORMATION_SCHEMA") || queryClean.contains("PG_CATALOG")) {
+            if (!queryClean.startsWith("SELECT")) { // Permitir solo lectura si es necesario para el juego
+                respuesta.put("success", false);
+                respuesta.put("message", "🛡️ ¡Interferencia Detectada! No tienes permiso para modificar el núcleo de Dagon.");
+                return respuesta;
+            }
+        }
+        // -------------------------------------------
 
         EjercicioPractico ejercicio = repository.findById(ejercicioId).orElse(null);
 
@@ -397,23 +458,47 @@ public class EjercicioService {
                 if (!queryUsuario.trim().endsWith(";")) {
                     respuesta.put("success", false);
                     respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
-                    respuesta.put("descripcion", ejercicio.getEnunciado());
-                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
-                    respuesta.put("queryAlumno", queryUsuario);
-                    respuesta.put("errorDb", "El usuario olvidó el punto y coma al final de la instrucción SQL.");
                     return respuesta;
                 }
 
-                datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
-                List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId);
-                
-                // Nueva lógica de comparación robusta para DML
+                // Determinar si es DML (Cambio de datos)
                 String upperQ = queryUsuario.trim().toUpperCase();
                 boolean esDML = upperQ.contains("INSERT") || upperQ.contains("UPDATE") || upperQ.contains("DELETE");
-                
+
                 if (esDML) {
+                    String tablaAfectada = extraerNombreTablaDML(upperQ, queryUsuario);
+                    List<Map<String, Object>> beforeData = new ArrayList<>();
+                    if (tablaAfectada != null) {
+                        try {
+                            beforeData = ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
+                        } catch (Exception ignored) {}
+                    }
+
+                    // 1. Obtener qué DEBERÍA pasar (Query Maestra con Rollback)
+                    List<Map<String, Object>> datosMaestros = ejecutarEnSandboxConRollback(ejercicio.getQueryMaestra(), usuarioId);
+                    
+                    // 2. Ejecutar lo que el ALUMNO mandó (Persistente)
+                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    
+                    // 3. Comparar
                     esCorrecto = compararResultadosDML(datosAlumno, datosMaestros);
+
+                    // 4. Capturar estado posterior
+                    List<Map<String, Object>> afterData = new ArrayList<>();
+                    if (tablaAfectada != null) {
+                        try {
+                            afterData = ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
+                        } catch (Exception ignored) {}
+                    }
+
+                    respuesta.put("beforeData", beforeData);
+                    respuesta.put("afterData", afterData);
+                    respuesta.put("isDML", true);
+                    respuesta.put("targetTable", tablaAfectada);
                 } else {
+                    // Para SELECT normal, comparamos resultados directamente
+                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId);
                     esCorrecto = datosAlumno.equals(datosMaestros);
                 }
             }
@@ -542,6 +627,29 @@ public class EjercicioService {
             }
         }
         return respuesta;
+    }
+
+    private String extraerNombreTablaDML(String upperQuery, String queryOriginal) {
+        try {
+            java.util.regex.Pattern pattern;
+            if (upperQuery.contains("DELETE")) {
+                pattern = java.util.regex.Pattern.compile("(?i)DELETE\\s+FROM\\s+[\"]?([\\w\\.]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+            } else if (upperQuery.contains("UPDATE")) {
+                pattern = java.util.regex.Pattern.compile("(?i)UPDATE\\s+[\"]?([\\w\\.]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+            } else if (upperQuery.contains("INSERT")) {
+                pattern = java.util.regex.Pattern.compile("(?i)INSERT\\s+INTO\\s+[\"]?([\\w\\.]+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+            } else {
+                return null;
+            }
+
+            java.util.regex.Matcher matcher = pattern.matcher(queryOriginal);
+            if (matcher.find()) {
+                return matcher.group(1).replaceAll("[\"`;]", "").trim();
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return null;
     }
 
     private boolean compararResultadosDML(List<Map<String, Object>> r1, List<Map<String, Object>> r2) {

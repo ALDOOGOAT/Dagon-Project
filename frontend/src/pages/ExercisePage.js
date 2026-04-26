@@ -134,6 +134,35 @@ const SuccessBurst = () => (
   </div>
 );
 
+const DataComparisonTable = ({ data, colors, highlight = false }) => {
+  if (!data || data.length === 0) {
+    return <div className="p-4 text-xs text-slate-500 italic">Tabla vacía</div>;
+  }
+  const columns = Object.keys(data[0]);
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-[11px] text-left border-collapse">
+        <thead>
+          <tr className="bg-white/5">
+            {columns.map(col => (
+              <th key={col} className="px-3 py-2 font-bold text-slate-400 uppercase tracking-tighter border-b border-white/5">{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr key={i} className={`border-b border-white/5 ${highlight ? 'hover:bg-emerald-500/10' : 'hover:bg-white/5'}`}>
+              {Object.values(row).map((val, j) => (
+                <td key={j} className="px-3 py-1.5 font-mono text-slate-300">{String(val)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
@@ -306,9 +335,9 @@ export const ExercisePage = () => {
         } else {
           toast.success(result.message);
         }
-        setExecutionResult({ success: true, message: result.message, mockData: result.mockData || [] });
-        setBurst(true);
-        setTimeout(() => setBurst(false), 1300);
+        // Guardamos TODO el resultado para que el componente tenga acceso a isDML, beforeData, etc.
+        setExecutionResult({ ...result });
+        setBurst(true);        setTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
         setCombo(c => c + 1);
         sounds.playSuccess();
@@ -813,7 +842,35 @@ export const ExercisePage = () => {
                   </div>
 
                   {/* Tabla de datos o estructura */}
-                  {executionResult.mockData && executionResult.mockData.length > 0 && (
+                  {executionResult.isDML ? (
+                    <div className="p-5 space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* ANTES */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            <div className="w-2 h-2 rounded-full bg-slate-600" />
+                            Estado Inicial de {executionResult.targetTable}
+                          </div>
+                          <div className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden">
+                             <DataComparisonTable data={executionResult.beforeData} colors={colors} />
+                          </div>
+                        </div>
+                        {/* DESPUÉS */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-400">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            Estado Posterior al Cambio
+                          </div>
+                          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.05)]">
+                             <DataComparisonTable data={executionResult.afterData} colors={colors} highlight />
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-center text-slate-500 italic">
+                        Mostrando las primeras 20 filas para comparación visual.
+                      </p>
+                    </div>
+                  ) : executionResult.mockData && executionResult.mockData.length > 0 && (
                     <div className="overflow-x-auto">
                       <div className="text-xs text-amber-400 mb-2 px-5 pt-3">
                         {executionResult.isStructure ? '📋 Estructura de la tabla' : '📊 Datos resultados'}

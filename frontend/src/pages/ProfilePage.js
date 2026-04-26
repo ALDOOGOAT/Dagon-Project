@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { sounds } from '../lib/SoundEngine';
 import { DagonMascot } from '../components/DagonMascot';
 import {
   ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
-  Sparkles, Crown, Shield, Zap, Camera, Upload,
+  Sparkles, Crown, Shield, Zap, Camera, Upload, ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
@@ -429,6 +430,35 @@ export const ProfilePage = () => {
                   {achievements.filter(a => a.unlocked).length}/{achievements.length} desbloqueados
                 </p>
               </div>
+            </motion.div>
+
+            {/* BOTÓN SALÓN DE LA FAMA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-8"
+            >
+              <Button
+                onClick={() => {
+                  sounds.playClick();
+                  navigate('/credits');
+                }}
+                className="w-full py-8 rounded-[32px] glass-card-apple border border-yellow-500/20 hover:border-yellow-400/50 bg-gradient-to-r from-yellow-500/5 to-transparent group transition-all"
+              >
+                <div className="flex items-center justify-between w-full px-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 transition-transform">
+                      <Trophy className="w-6 h-6 text-yellow-400" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest">Descubre a los creadores</p>
+                      <h3 className="text-white font-display text-xl font-black">SALÓN DE LA FAMA</h3>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-6 h-6 text-yellow-500/50 group-hover:text-yellow-400 transition-colors" />
+                </div>
+              </Button>
             </motion.div>
           </div>
         </div>

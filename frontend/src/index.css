@@ -219,7 +219,7 @@ h1, h2, h3, h4, h5, h6 {
         transform: scale(1);
     }
     50% {
-        transform: scale(1.03);
+        transform: scale(1.05);
     }
 }
 
@@ -250,20 +250,20 @@ h1, h2, h3, h4, h5, h6 {
     75% { transform: translateY(-8px) rotate(3deg); }
 }
 
-@keyframes dagon-excited {
-    0%, 100% { transform: scale(1) translateY(0); }
-    50% { transform: scale(1.1) translateY(-15px); }
+@keyframes dagon-thinking {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-6px) scale(1.02); }
 }
 
-@keyframes dagon-thinking {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
+@keyframes dagon-excited {
+    0%, 100% { transform: scale(1) translateY(0); }
+    50% { transform: scale(1.08) translateY(-12px); }
 }
 
 @keyframes dagon-nervous {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg) translateY(-3px); }
-    75% { transform: rotate(5deg) translateY(-3px); }
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(-3deg) translateY(-2px) scale(1.01); }
+    75% { transform: rotate(3deg) translateY(-2px) scale(1.01); }
 }
 
 .animate-dagon-wave { animation: dagon-wave 3s ease-in-out infinite; }

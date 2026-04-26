@@ -15,6 +15,8 @@ import { Toaster } from 'sonner';
 import { AnimatePresence, motion } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
 import { GraduationPage } from './pages/GraduationPage';
+import { CreditsPage } from './pages/CreditsPage';
+
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
   in: { opacity: 1, y: 0 },
@@ -114,6 +116,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <AnimatedPage><GraduationPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/credits"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><CreditsPage /></AnimatedPage>
               </ProtectedRoute>
             }
           />
