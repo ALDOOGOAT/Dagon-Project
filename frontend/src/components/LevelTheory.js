@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import VennStatic from './VennStatic';
+import SqlProjectionInteractive from './SqlProjectionInteractive';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket, MinusCircle,
   Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide,
   GitMerge, Database, Shield, Zap, PenLine, Trash2, Plus, Link2, Settings2,
-  Key, Lock, Eye, EyeOff, List, Hash, Percent, View, FileCode,
-  Wand2, Puzzle, Zap as ZapIcon2, Clock, Users, UserCheck, Trophy, ScrollText
+  Key, Lock, Eye, EyeOff, List, Hash, Percent, View, FileCode, Bot,
+  Wand2, Puzzle, Zap as ZapIcon2, Clock, Users, UserCheck, Trophy, ScrollText, Star, Globe
 } from 'lucide-react';
 
 const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
@@ -113,7 +114,24 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
     {slide.result && <div className="mb-5"><DataTable {...slide.result} /></div>}
     {slide.type === 'venn' && (
       <div className="mb-5">
-        <VennStatic sets={slide.sets} headline={slide.headline} lead={slide.lead} />
+        <VennStatic 
+          operation={slide.operation} 
+          sets={slide.sets} 
+          headline={slide.headline} 
+          lead={slide.lead} 
+        />
+      </div>
+    )}
+    {slide.type === 'interactive-venn' && (
+      <div className="mb-5">
+        <Suspense fallback={<div className="animate-pulse bg-slate-800 rounded-2xl h-80" />}>
+          <VennDiagramSQL operation={slide.operation || 'universe'} />
+        </Suspense>
+      </div>
+    )}
+    {slide.type === 'projection' && (
+      <div className="mb-5">
+        <SqlProjectionInteractive />
       </div>
     )}
     {slide.type === 'relational-venn' && (
@@ -155,279 +173,226 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
 
 const SUB_TOPICS = {
   "1-1": {
-    title: "El Conjunto Universo",
-    subtitle: "El Gran Salón contiene TODOS",
+    title: "El Despertar de la Visión",
+    subtitle: "Módulo 1: El Conjunto Universo",
     color: "from-cyan-500 to-blue-700",
     slides: [
       {
         type: "hero",
         emoji: <Library className="w-12 h-12" />,
-        headline: "1.1: El Conjunto Universo",
-        lead: "Imagina el Gran Salón del Gremio donde están TODOS los aventureros. Ese es el Conjunto Universo.",
+        headline: "Bienvenido al Gran Salón",
+        lead: "Para dominar el abismo, primero debes aprender a observar. Imagina que el Gran Salón del Gremio contiene a TODOS los aventureros. En el mundo de los datos, a este grupo completo lo llamamos TABLA.",
         bullets: [
-          "SELECT * significa: muéstrame TODO del conjunto",
-          "El asterisco (*) es el comodín para TODO",
-          "Una tabla = un conjunto de elementos",
+          "Una Tabla es una estructura que organiza la información.",
+          "Cada fila representa un registro único.",
+          "Cada columna define un atributo del dato.",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "universe",
-      },
-      {
-        type: "venn",
-        headline: "Visualiza el Universo",
-        lead: "El círculo grande representa la tabla completa. SELECT * = todo el círculo.",
-        sets: [{ label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"] }],
-        code: "SELECT * FROM usuarios;",
-        codeLabel: "Todo el conjunto",
       },
       {
         type: "chat",
         emoji: <MessageSquare className="w-12 h-12" />,
-        headline: "El comando SELECT",
-        lead: "Para ver el conjunto completo, usamos SELECT *",
+        headline: "La Sentencia SELECT",
+        lead: "Para consultar información, usamos el hechizo SELECT. Es la base de toda interacción con la base de datos.",
         chat: [
-          { from: "tu", text: "Dagon, quiero ver todos los del Gremio" },
-          { from: "dagon", text: "SELECT * te muestra el universo completo" },
+          { from: "dagon", text: "Si quieres ver el universo completo de una tabla, usamos el comodín asterisco (*)." },
+          { from: "tu", text: "¿El asterisco representa todo?" },
+          { from: "dagon", text: "Exacto. En SQL, '*' es la instrucción para traer todas las columnas sin filtros." },
         ],
-        code: "SELECT * FROM usuarios;",
-        codeLabel: "El asterisco = TODO",
+        code: "SELECT * FROM aventureros;",
+        codeLabel: "Visión Total",
+      },
+      {
+        type: "venn",
+        emoji: <Globe className="w-12 h-12" />,
+        operation: "universe",
+        headline: "El Dominio Total",
+        lead: "La lógica de conjuntos define al Universo como la totalidad. En SQL, SELECT * es la representación de ese concepto.",
+        sets: [{ label: "AVENTUREROS", color: "cyan" }],
       },
     ],
   },
   "1-2": {
-    title: "El Subconjunto - WHERE",
-    subtitle: "Solo los que cumplen una regla",
+    title: "La Mirada Selectiva",
+    subtitle: "Módulo 1: El Subconjunto",
     color: "from-blue-500 to-indigo-700",
     slides: [
       {
         type: "hero",
         emoji: <Search className="w-12 h-12" />,
-        headline: "1.2: El Subconjunto",
-        lead: "De todos los del Gran Salón, los MAGOS dan un paso al frente. Acabas de crear un SUBCONJUNTO.",
+        headline: "El Poder de los Subconjuntos",
+        lead: "La eficiencia es clave en el abismo. A menudo no necesitas todos los datos, sino una parte específica. A esto lo llamamos crear un SUBCONJUNTO.",
         bullets: [
-          "WHERE significa 'donde cumplan esta regla'",
-          "Solo pasan los que cumplen la condición",
+          "Un subconjunto es una porción seleccionada del universo original.",
+          "Podemos filtrar por columnas (Proyección).",
+          "Podemos filtrar por filas (Condiciones).",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "a",
       },
       {
         type: "venn",
-        headline: "El Subconjunto",
-        lead: "El círculo pequeño son los Magos dentro del Grande",
-        sets: [
-          { label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"] },
-          { label: "MAGOS", color: "purple", highlight: ["B", "D"] },
-        ],
-        code: "SELECT * FROM usuarios\nWHERE clase = 'Mago';",
-        codeLabel: "WHERE crea el subconjunto",
+        emoji: <Filter className="w-12 h-12" />,
+        operation: "subset",
+        headline: "Visualizando el Subconjunto",
+        lead: "El círculo representa tu filtro WHERE. Todo lo que cae dentro del círculo es lo que el libro de Dagon te mostrará.",
+        sets: [{ label: "GUERREROS", color: "cyan" }],
+      },
+      {
+        type: "projection",
+        emoji: <Eye className="w-12 h-12" />,
+        headline: "Lentes de Proyección",
+        lead: "Aísla las columnas que realmente importan para tu misión actual.",
       },
     ],
   },
   "1-3": {
-    title: "La Intersección - AND",
-    subtitle: "Debe cumplir TODAS las condiciones",
+    title: "El Nexo de Precisión",
+    subtitle: "Módulo 1: La Intersección (AND)",
     color: "from-indigo-500 to-purple-700",
     slides: [
       {
         type: "hero",
         emoji: <Filter className="w-12 h-12" />,
-        headline: "1.3: La Intersección (AND)",
-        lead: "Deben estar en el círculo de GUERREROS Y tener nivel > 10. Solo los de en medio de ambos círculos.",
+        headline: "La Condición AND",
+        lead: "Cuando buscas un objetivo específico, necesitas que cumpla varias reglas simultáneamente. Para esto utilizamos el nexo lógico AND.",
         bullets: [
-          "AND significa: debe cumplir la Primera Y la Segunda",
-          "Solo los que están en la intersección de ambos conjuntos",
+          "AND requiere que todas las condiciones sean verdaderas.",
+          "Es un filtro de alta precisión: reduce los resultados al mínimo común.",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "intersect",
       },
       {
         type: "venn",
-        headline: "La Intersección",
-        lead: "Solo los que cumplen AMBAS condiciones",
+        emoji: <Zap className="w-12 h-12" />,
+        operation: "intersect",
+        headline: "Intersección Lógica",
+        lead: "Solo los elementos que coexisten en ambos criterios forman parte del resultado. Es el punto de unión entre dos mundos.",
         sets: [
-          { label: "GUERREROS", color: "red", elements: ["A", "B", "C"] },
-          { label: "NIVEL>10", color: "blue", highlight: ["B", "C", "D"] },
+          { label: "GUERREROS", color: "cyan" },
+          { label: "NIVEL > 10", color: "purple" },
         ],
-        code: "SELECT * FROM usuarios\nWHERE clase = 'Guerrero' AND nivel > 10;",
-        codeLabel: "Intersección = ambos círculos",
       },
     ],
   },
   "1-4": {
-    title: "La Unión - OR",
-    subtitle: "Cumple CUALQUIERA de las condiciones",
+    title: "La Unión de Fuerzas",
+    subtitle: "Módulo 1: La Unión (OR)",
     color: "from-purple-500 to-pink-700",
     slides: [
       {
         type: "hero",
         emoji: <GitMerge className="w-12 h-12" />,
-        headline: "1.4: La Unión Lógica (OR)",
-        lead: "Cualquiera que sea Mago O Arquero entra al grupo. Es la UNIÓN de ambos círculos.",
+        headline: "La Condición OR",
+        lead: "A veces, la flexibilidad es necesaria. Si un dato cumple cualquiera de tus reglas, es válido. Para esto usamos el nexo OR.",
         bullets: [
-          "OR significa: cumple la primera O la segunda",
-          "Incluye todos los de ambos conjuntos",
+          "OR permite que el resultado incluya datos que cumplan al menos una regla.",
+          "Expande el alcance de tu búsqueda sumando conjuntos.",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "union",
       },
       {
         type: "venn",
-        headline: "La Unión",
-        lead: "Es la suma de ambos círculos",
+        emoji: <GitMerge className="w-12 h-12" />,
+        operation: "union",
+        headline: "Fusión de Resultados",
+        lead: "La unión combina las fuerzas de ambos criterios. Si está en un grupo o en el otro, es bienvenido.",
         sets: [
-          { label: "MAGOS", color: "purple", elements: ["A", "B"] },
-          { label: "ARQUEROS", color: "orange", elements: ["C", "D"] },
+          { label: "MAGAS", color: "purple" },
+          { label: "ARQUEROS", color: "red" },
         ],
-        code: "SELECT * FROM usuarios\nWHERE clase = 'Mago' OR clase = 'Arquero';",
-        codeLabel: "Unión = círculo gran que contiene a ambos",
       },
     ],
   },
   "1-5": {
-    title: "La Diferencia - NOT/!=",
-    subtitle: "Excluye los que NO cumplen",
+    title: "El Arte de la Exclusión",
+    subtitle: "Módulo 1: La Diferencia (NOT)",
     color: "from-pink-500 to-rose-700",
     slides: [
       {
         type: "hero",
         emoji: <Shield className="w-12 h-12" />,
-        headline: "1.5: La Diferencia (NOT/!=)",
-        lead: "Excluye a los Paladines del grupo. != significa NO ES",
+        headline: "Filtros de Exclusión",
+        lead: "Saber qué dejar fuera es tan importante como saber qué incluir. El operador != (diferente de) nos permite limpiar nuestros resultados.",
         bullets: [
-          "!= o <> significa 'diferente de'",
-          "Es el conjunto TOTAL menos los excluidos",
+          "Elimina ruidos o datos no deseados.",
+          "Representa la diferencia entre lo que tenemos y lo que prohibimos.",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "difference",
       },
       {
         type: "venn",
-        headline: "La Diferencia",
-        lead: "Todo el universo EXCEPTO los excluidos",
+        emoji: <Shield className="w-12 h-12" />,
+        operation: "difference",
+        headline: "Diferencia de Conjuntos",
+        lead: "Tomamos el universo total y restamos a los inactivos. Solo quedan los aventureros con activo = true.",
         sets: [
-          { label: "USUARIOS", color: "cyan", elements: ["A", "B", "C", "D", "E"], exclude: ["B", "D"] },
+          { label: "TODOS", color: "cyan" },
+          { label: "INACTIVOS", color: "red" },
         ],
-        code: "SELECT * FROM usuarios\nWHERE clase != 'Paladin';",
-        codeLabel: "!= excluye del conjunto",
       },
     ],
   },
   "1-6": {
-    title: "Intersección Múltiple - Múltiples AND",
-    subtitle: "Múltiples condiciones a la vez",
+    title: "El Filtro Supremo",
+    subtitle: "Módulo 1: Intersección Múltiple",
     color: "from-rose-500 to-orange-700",
     slides: [
       {
         type: "hero",
         emoji: <Zap className="w-12 h-12" />,
-        headline: "1.6: Múltiples AND",
-        lead: "Guerreros Y nivel > 15 Y activos. Puedes encadenar TODAS las condiciones que necesites.",
+        headline: "Cerrando el cerco",
+        lead: "¿Quieres un Guerrero, de nivel alto, que además esté activo? Cada AND que añades es una cerradura extra.",
         bullets: [
-          "Cada AND es otra condición que debo cumplir",
-          "Cuantas más condiciones, más pequeño el subconjunto",
+          "Puedes encadenar infinitos AND.",
+          "Cada condición reduce el número de resultados.",
+          "Es la forma más precisa de encontrar datos.",
         ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "intersect",
       },
       {
         type: "venn",
-        headline: "Intersección Múltiple",
-        lead: "Tres círculos criando una triple intersección",
+        emoji: <Zap className="w-12 h-12" />,
+        headline: "Triple Intersección",
+        lead: "Tres condiciones cruzándose. Solo los que están en el punto más brillante cumplen las tres.",
         sets: [
-          { label: "Guer.", color: "red", elements: ["A", "B", "C", "X"] },
-          { label: ">15", color: "blue", elements: ["B", "X", "Y"] },
-          { label: "Activos", color: "green", elements: ["B", "C", "Y"] },
-        ],
-        code: "SELECT * FROM usuarios\nWHERE clase = 'Guerrero' AND nivel > 15 AND activo = true;",
-        codeLabel: "Tres condiciones = triple intersección",
-      },
-    ],
-  },
-  "1-7": {
-    title: "Unión Múltiple - IN",
-    subtitle: "IN simplifica muchos OR",
-    color: "from-orange-500 to-amber-700",
-    slides: [
-      {
-        type: "hero",
-        emoji: <List className="w-12 h-12" />,
-        headline: "1.7: La Lista - IN",
-        lead: "Que sean Mago, Arquero o Guerrero. IN es una forma corta de escribir muchos OR.",
-        bullets: [
-          "IN (lista) = OR1 OR OR2 OR OR3...",
-          "IN es más limpio que escribir muchos OR",
-        ],
-      },
-      {
-        type: "interactive-venn",
-        operation: "union",
-      },
-      {
-        type: "venn",
-        headline: "IN = Unión de valores específicos",
-        lead: "Selecciona los valores exactos de una lista",
-        sets: [
-          { label: "IN(Mago,Arquero,Guerrero)", color: "orange", elements: ["A", "B", "C"] },
-        ],
-        code: "SELECT * FROM usuarios\nWHERE clase IN ('Mago', 'Arquero', 'Guerrero');",
-        codeLabel: "IN = lista de valores permitidos",
-      },
-    ],
-  },
-  "1-2": {
-    title: "Mirada Selectiva",
-    subtitle: "Solo lo que importa",
-    color: "from-blue-500 to-indigo-700",
-    slides: [
-      {
-        type: "hero",
-        emoji: <Search className="w-12 h-12" />,
-        headline: "No leas toda la página",
-        lead: "A veces solo quieres saber los nombres. Puedes elegir solo las columnas que te interesan.",
-        code: "SELECT nombre, clase FROM aventureros;",
-        codeLabel: "Solo tráeme nombre y clase",
-      },
-    ],
-  },
-  "1-4": {
-    title: "Los Filtros Mágicos",
-    subtitle: "Encuentra la aguja en el pajar",
-    color: "from-indigo-500 to-purple-700",
-    slides: [
-      {
-        type: "hero",
-        emoji: <Filter className="w-12 h-12" />,
-        headline: "WHERE: El colador de datos",
-        lead: "Usamos WHERE para poner un filtro que solo deja pasar a los que cumplen tu regla.",
-        bullets: [
-          "WHERE significa 'Donde'.",
-          "El texto va entre comillas simples ('Guerrero').",
+          { label: "Guerreros", color: "red" },
+          { label: "Nivel > 15", color: "blue" },
+          { label: "Activos", color: "green" },
         ],
       },
       {
         type: "chat",
         emoji: <MessageSquare className="w-12 h-12" />,
-        headline: "Buscando al Guerrero",
-        lead: "Si solo quieres ver a los Guerreros, le dices al libro:",
-        code: "SELECT * FROM aventureros\nWHERE clase = 'Guerrero';",
-        codeLabel: "Usa '=' para coincidencias exactas",
+        headline: "La Query Maestra",
+        lead: "Mira cómo se ve una consulta con tres condiciones:",
+        code: "SELECT * FROM usuarios\nWHERE clase = 'Guerrero'\nAND nivel > 15\nAND activo = true;",
+      }
+    ],
+  },
+  "1-7": {
+    title: "La Lista de Reclutamiento",
+    subtitle: "Módulo 1: La Cláusula IN",
+    color: "from-orange-500 to-amber-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <List className="w-12 h-12" />,
+        headline: "El Atajo Mágico: IN",
+        lead: "Escribir diez veces 'OR' es agotador. Para eso existe IN: una lista de valores permitidos.",
+        bullets: [
+          "IN ('A', 'B', 'C') es igual a decir A O B O C.",
+          "Mantiene tu código limpio y fácil de leer.",
+          "Es ideal para buscar varios nombres o categorías a la vez.",
+        ],
+      },
+      {
+        type: "chat",
+        emoji: <Sparkles className="w-12 h-12" />,
+        headline: "Simplificando hechizos",
+        chat: [
+          { from: "tu", text: "Dagon, ¿es lo mismo que usar muchos OR?" },
+          { from: "dagon", text: "Exactamente igual, pero mucho más elegante. Un guerrero de verdad escribe código limpio." },
+        ],
+        code: "SELECT * FROM usuarios\nWHERE clase IN ('Mago', 'Arquero', 'Guerrero');",
+        codeLabel: "La forma elegante del OR",
       },
     ],
   },
-  "1-5": {
+  "1-5-bis": {
     title: "Midiendo el Poder",
     subtitle: "Filtros con números",
     color: "from-purple-500 to-pink-700",
@@ -449,7 +414,7 @@ const SUB_TOPICS = {
       },
     ],
   },
-  "1-6": {
+  "1-8": {
     title: "El Detective",
     subtitle: "Buscando pistas",
     color: "from-pink-500 to-rose-700",
@@ -467,7 +432,7 @@ const SUB_TOPICS = {
       },
     ],
   },
-  "1-7": {
+  "1-9": {
     title: "Orden en la Sala",
     subtitle: "Organiza tu tesoro",
     color: "from-teal-500 to-emerald-700",
@@ -483,66 +448,127 @@ const SUB_TOPICS = {
     ],
   },
   "2-1": {
-    title: "El Poder de la Creación",
-    subtitle: "Reclutando héroes",
+    title: "CREATE: El Aliento de Vida",
+    subtitle: "Módulo 2: Inserción (INSERT)",
     color: "from-emerald-500 to-cyan-600",
     slides: [
       {
         type: "hero",
         emoji: <Plus className="w-12 h-12" />,
-        headline: "INSERT INTO: Crear vida",
-        lead: "Añade una nueva fila al libro respondiendo a las preguntas de las columnas.",
+        headline: "Dando Vida a Gimli",
+        lead: "La 'C' de CRUD significa Create. Para traer un nuevo aventurero al mundo, usamos INSERT INTO.",
         bullets: [
-          "INSERT INTO [tabla] (columnas) → Aquí dices a qué columnas les darás datos.",
-          "VALUES (valores) → Aquí pones los datos en el mismo orden.",
+          "Definimos la tabla y las columnas.",
+          "Asignamos los valores en el mismo orden.",
+          "RETURNING *: Un truco de Dagon para ver el registro recién creado al instante.",
         ],
-        code: "INSERT INTO aventureros (nombre, clase) \nVALUES ('Gimli', 'Guerrero');",
-      },
-      {
-        type: "chat",
-        emoji: <Settings2 className="w-12 h-12" />,
-        headline: "¡Cuidado con los tipos!",
-        lead: "Recuerda: El texto va entre comillas simples (' ') y los números van solos.",
-        code: "INSERT INTO aventureros (nombre, nivel) \nVALUES ('Loya', 10);",
+        code: "INSERT INTO aventureros (nombre, clase, nivel) \nVALUES ('Gimli', 'Guerrero', 10) \nRETURNING *;",
       }
     ],
   },
-  "2-4": {
+  "2-2": {
+    title: "READ: La Visión del Oráculo",
+    subtitle: "Módulo 2: Lectura (SELECT)",
+    color: "from-blue-400 to-indigo-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <View className="w-12 h-12" />,
+        headline: "Consultando el Destino",
+        lead: "La 'R' de CRUD es Read. Es lo que ya conoces como SELECT. Sirve para extraer sabiduría del libro.",
+        code: "SELECT * FROM aventureros \nWHERE nivel > 10;",
+        codeLabel: "Buscando veteranos",
+      }
+    ],
+  },
+  "2-3": {
     title: "UPDATE: Cambiar el Destino",
-    subtitle: "Modificando datos",
+    subtitle: "Módulo 2: Actualización",
     color: "from-orange-500 to-amber-600",
     slides: [
       {
         type: "hero",
         emoji: <PenLine className="w-12 h-12" />,
-        headline: "Actualizar registros",
-        lead: "Usa SET para el nuevo valor y WHERE para no cambiar a todo el gremio.",
-        code: "UPDATE aventureros \nSET nivel = 20 \nWHERE nombre = 'Loya';",
-      },
-      {
-        type: "hero",
-        emoji: <Shield className="w-12 h-12" />,
-        headline: "La Regla de Oro",
-        lead: "¡NUNCA olvides el WHERE en un UPDATE! Si lo olvidas, todos los aventureros tendrán el mismo nivel.",
+        headline: "El Entrenamiento de Loya",
+        lead: "La 'U' es Update. Loya ha subido de nivel y debemos reflejarlo en el libro sagrado.",
+        bullets: [
+          "SET: Indica qué columna cambia y su nuevo valor.",
+          "WHERE: Filtra para no cambiar a todos por error.",
+        ],
+        code: "UPDATE aventureros \nSET nivel = 20 \nWHERE nombre = 'Loya' \nRETURNING *;",
       }
     ],
   },
-  "2-6": {
-    title: "El Abismo",
-    subtitle: "Borrando registros",
+  "2-4": {
+    title: "DELETE: El Abismo",
+    subtitle: "Módulo 2: Eliminación",
     color: "from-rose-500 to-red-700",
     slides: [
       {
         type: "hero",
         emoji: <Trash2 className="w-12 h-12" />,
-        headline: "DELETE: Borrado definitivo",
-        lead: "Asegúrate siempre de usar WHERE o vaciarás todo el libro por accidente.",
+        headline: "Sentenciando al Traidor",
+        lead: "La 'D' es Delete. Cuando un aventurero como Dan nos traiciona, su nombre debe ser borrado para siempre.",
+        code: "DELETE FROM aventureros \nWHERE nombre = 'Dan' \nRETURNING *;",
+        codeLabel: "Borrando al traidor",
+      }
+    ],
+  },
+  "2-5": {
+    title: "El Detective de Nombres",
+    subtitle: "Módulo 2: Patrones (LIKE)",
+    color: "from-pink-500 to-purple-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Search className="w-12 h-12" />,
+        headline: "El Comodín Porcentaje (%)",
+        lead: "A veces no recuerdas el nombre completo, solo cómo empieza. LIKE es tu mejor aliado.",
         bullets: [
-          "DELETE FROM [tabla] → No necesitas elegir columnas, borras toda la fila.",
-          "WHERE [condición] → Define exactamente qué fila debe irse al abismo.",
+          "'A%': Cualquier nombre que comience con A.",
+          "'%A': Cualquier nombre que termine con A.",
+          "'%A%': Cualquier nombre que contenga la letra A.",
         ],
-        code: "DELETE FROM aventureros \nWHERE nombre = 'Dan';",
-      },
+        code: "SELECT * FROM aventureros \nWHERE nombre LIKE 'A%';",
+      }
+    ],
+  },
+  "2-6": {
+    title: "Orden y Límite",
+    subtitle: "Módulo 2: Organización",
+    color: "from-teal-500 to-emerald-700",
+    slides: [
+      {
+        type: "hero",
+        emoji: <ArrowDownNarrowWide className="w-12 h-12" />,
+        headline: "Top de Poder",
+        lead: "Para encontrar a los mejores, primero ordenamos y luego limitamos la vista.",
+        bullets: [
+          "ORDER BY: Organiza por columna (ASC o DESC).",
+          "LIMIT: Detiene la avalancha de datos y solo muestra los primeros.",
+        ],
+        code: "SELECT * FROM aventureros \nORDER BY nivel DESC \nLIMIT 3;",
+      }
+    ],
+  },
+  "2-g3": {
+    title: "Alquimia de Datos",
+    subtitle: "Módulo 2: Agregaciones",
+    color: "from-amber-400 to-orange-600",
+    slides: [
+      {
+        type: "hero",
+        emoji: <Star className="w-12 h-12" />,
+        headline: "Funciones de Agregación",
+        lead: "Resume miles de datos en un solo número mágico.",
+        bullets: [
+          "MIN / MAX: El valor más bajo o alto.",
+          "AVG: El promedio de un grupo.",
+          "COUNT: Cuenta cuántos registros hay.",
+          "GROUP BY: Agrupa los resultados (ej. por Clase).",
+        ],
+        code: "SELECT clase, MAX(nivel) \nFROM aventureros \nGROUP BY clase;",
+      }
     ],
   },
   "3-1": {
@@ -832,7 +858,7 @@ const SUB_TOPICS = {
         type: "hero",
         emoji: <Filter className="w-12 h-12" />,
         headline: "Dentro del rango",
-        lead: "BETWEEN busca valores entre dos límites, incluyendo ambos. Es como筛选 10 a 20.",
+        lead: "BETWEEN busca valores entre dos límites, incluyendo ambos. Es como filtrar del 10 al 20.",
         code: "SELECT * FROM aventureros \nWHERE nivel BETWEEN 10 AND 20;",
         codeLabel: "Nivel 10, 11, 12... hasta 20",
       },
@@ -973,7 +999,7 @@ const SUB_TOPICS = {
     ],
   },
 
-  "10-1": {
+  "10-2": {
     title: "Los Planos del Gremio",
     subtitle: "information_schema",
     color: "from-indigo-500 to-blue-600",
@@ -1107,14 +1133,14 @@ const SUB_TOPICS = {
         emoji: <Clock className="w-12 h-12" />,
         headline: "BEGIN: Inicia el viaje",
         lead: "Una transacción agrupa operaciones. Si algo falla, puedes volver atrás con ROLLBACK.",
-        code: "BEGIN;\nINSERT INTO aventureros ...;\nUPDATE equipamiento ...;\nCOMMIT; -- Guardar cambios",
+        code: "BEGIN;\nINSERT INTO aventureros (nombre) VALUES ('Aldo');\nUPDATE equipamiento SET stock = 0;\nCOMMIT; -- Guardar cambios",
       },
       {
         type: "chat",
         emoji: <ArrowLeft className="w-12 h-12" />,
         headline: "ROLLBACK: Volver al pasado",
         lead: "Si algo sale mal, deshaz TODO:",
-        code: "BEGIN;\nINSERT INTO ...;\n-- ¡Ups, algo mal!\nROLLBACK; -- Todo se deshace",
+        code: "BEGIN;\nINSERT INTO aventureros (nombre) VALUES ('Dan');\n-- ¡Ups, algo mal!\nROLLBACK; -- Todo se deshace",
       },
     ],
   },
@@ -1155,6 +1181,9 @@ const SUB_TOPICS = {
       },
       {
         type: "relational-venn",
+        emoji: <GitMerge className="w-12 h-12" />,
+        headline: "Diagrama UNION",
+        lead: "Visualiza cómo UNION combina los resultados de ambas consultas.",
         operation: "union",
       },
     ],
@@ -1178,6 +1207,9 @@ const SUB_TOPICS = {
       },
       {
         type: "relational-venn",
+        emoji: <Filter className="w-12 h-12" />,
+        headline: "Diagrama INTERSECT",
+        lead: "Solo los elementos presentes en ambas consultas aparecen en el resultado.",
         operation: "intersect",
       },
     ],
@@ -1195,12 +1227,15 @@ const SUB_TOPICS = {
         bullets: [
           "EXCEPT = A menos B",
           "Solo los elementos únicos del primero",
-          "Se去掉 los que también están en B",
+          "Se eliminan los que también están en B",
         ],
         code: "SELECT nombre FROM aventureros\nEXCEPT\nSELECT nombre FROM baja_guerreros;",
       },
       {
         type: "relational-venn",
+        emoji: <MinusCircle className="w-12 h-12" />,
+        headline: "Diagrama EXCEPT",
+        lead: "Muestra los elementos del primer conjunto que no aparecen en el segundo.",
         operation: "except",
       },
     ],

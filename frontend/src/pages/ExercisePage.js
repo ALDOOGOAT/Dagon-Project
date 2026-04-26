@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 
 const formatAIMessage = (text) => {
@@ -671,15 +672,30 @@ export const ExercisePage = () => {
                               )}
                               {droppedWords.map((w, i) => (
                                 <Draggable key={`d-${w.id}`} draggableId={`d-${w.id}`} index={i}>
-                                  {(prov, snap) => (
-                                    <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                      className={`bg-emerald-900/80 border border-emerald-400/60 text-emerald-200 px-4 py-2 rounded-xl font-mono font-bold cursor-move transition-all ${
-                                        snap.isDragging ? 'shadow-lg scale-110 shadow-emerald-500/40' : 'hover:bg-emerald-800'
-                                      }`}
-                                    >
-                                      {w.word}
-                                    </div>
-                                  )}
+                                  {(prov, snap) => {
+                                    const child = (
+                                      <div 
+                                        ref={prov.innerRef} 
+                                        {...prov.draggableProps} 
+                                        {...prov.dragHandleProps}
+                                        style={{
+                                          ...prov.draggableProps.style,
+                                          userSelect: 'none',
+                                          pointerEvents: 'auto',
+                                        }}
+                                        className={`bg-emerald-900/90 border-2 border-emerald-400/60 text-emerald-200 px-4 py-2 rounded-xl font-mono font-bold cursor-grab active:cursor-grabbing ${
+                                          snap.isDragging ? 'shadow-[0_0_40px_rgba(16,185,129,0.6)] scale-110 z-[9999] border-white ring-4 ring-emerald-400/20' : 'hover:bg-emerald-800'
+                                        }`}
+                                      >
+                                        {w.word}
+                                      </div>
+                                    );
+                                    
+                                    if (snap.isDragging) {
+                                      return createPortal(child, document.body);
+                                    }
+                                    return child;
+                                  }}
                                 </Draggable>
                               ))}
                               {provided.placeholder}
@@ -693,22 +709,37 @@ export const ExercisePage = () => {
                         <Droppable droppableId="wordBank" direction="horizontal">
                           {(provided, snapshot) => (
                             <div ref={provided.innerRef} {...provided.droppableProps}
-                              className={`min-h-[80px] rounded-2xl border p-4 flex flex-wrap gap-3 items-start content-start transition-all ${
-                                snapshot.isDraggingOver ? 'border-slate-500 bg-slate-800/60' : 'border-white/5 bg-slate-900/30'
+                              className={`min-h-[100px] rounded-2xl border-2 p-4 flex flex-wrap gap-3 items-start content-start transition-all duration-300 ${
+                                snapshot.isDraggingOver ? 'border-cyan-500/50 bg-slate-800/60 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]' : 'border-white/5 bg-slate-900/30'
                               }`}
                             >
                               {availableWords.map((w, i) => (
                                 <Draggable key={w.id} draggableId={w.id} index={i}>
-                                  {(prov, snap) => (
-                                    <div ref={prov.innerRef} {...prov.draggableProps} {...prov.dragHandleProps}
-                                      className={`bg-slate-800 border border-slate-600 text-slate-200 px-4 py-2 rounded-xl font-mono font-medium cursor-move transition-all flex items-center gap-2 ${
-                                        snap.isDragging ? 'shadow-xl scale-110 border-cyan-400' : 'hover:bg-slate-700 hover:-translate-y-1 hover:border-cyan-400/40'
-                                      }`}
-                                    >
-                                      <GripHorizontal className="w-3 h-3 text-slate-500" />
-                                      {w.word}
-                                    </div>
-                                  )}
+                                  {(prov, snap) => {
+                                    const child = (
+                                      <div 
+                                        ref={prov.innerRef} 
+                                        {...prov.draggableProps} 
+                                        {...prov.dragHandleProps}
+                                        style={{
+                                          ...prov.draggableProps.style,
+                                          userSelect: 'none',
+                                          pointerEvents: 'auto',
+                                        }}
+                                        className={`bg-slate-800 border-2 border-slate-600 text-slate-200 px-4 py-2 rounded-xl font-mono font-medium cursor-grab active:cursor-grabbing flex items-center gap-2 ${
+                                          snap.isDragging ? 'shadow-[0_0_40px_rgba(34,211,238,0.6)] scale-110 border-cyan-400 z-[9999] bg-slate-700 ring-4 ring-cyan-400/20' : 'hover:bg-slate-700 hover:-translate-y-1 hover:border-cyan-400/40'
+                                        }`}
+                                      >
+                                        <GripHorizontal className="w-3 h-3 text-slate-500" />
+                                        {w.word}
+                                      </div>
+                                    );
+
+                                    if (snap.isDragging) {
+                                      return createPortal(child, document.body);
+                                    }
+                                    return child;
+                                  }}
                                 </Draggable>
                               ))}
                               {provided.placeholder}
@@ -782,7 +813,7 @@ export const ExercisePage = () => {
                   {executionResult.mockData && executionResult.mockData.length > 0 && (
                     <div className="overflow-x-auto">
                       <div className="text-xs text-amber-400 mb-2 px-5 pt-3">
-                        {executionResult.isStructure ? '📋 Estructura de la tabla' : '📊 Datos результаdos'}
+                        {executionResult.isStructure ? '📋 Estructura de la tabla' : '📊 Datos resultados'}
                       </div>
                       <table className="w-full text-sm text-left text-slate-300">
                         <thead className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/60">
