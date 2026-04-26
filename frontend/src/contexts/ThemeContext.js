@@ -138,6 +138,12 @@ const applyPalette = (paletteName) => {
   const colors = COLOR_PALETTES[paletteName] || COLOR_PALETTES[DEFAULT_PALETTE];
   
   const root = document.documentElement;
+
+  // Añadir transición suave para todos los cambios de color
+  if (!root.style.transition) {
+    root.style.transition = 'background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease';
+  }
+
   root.style.setProperty('--color-primary', colors.primary);
   root.style.setProperty('--color-secondary', colors.secondary);
   root.style.setProperty('--color-accent', colors.accent);
@@ -167,6 +173,9 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--card-foreground', colors.text);
   root.style.setProperty('--popover', colors.surface);
   root.style.setProperty('--popover-foreground', colors.text);
+
+  // También actualizar el color de fondo del body directamente para evitar flashes
+  document.body.style.backgroundColor = colors.background;
 };
 
 export default ThemeContext;

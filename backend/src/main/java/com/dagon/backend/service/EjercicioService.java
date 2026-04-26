@@ -159,17 +159,35 @@ public class EjercicioService {
             String searchPath;
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                 searchPath = "sandbox_usuario_" + usuarioId;
+                // Intentar crear el esquema si no existe (fail-safe)
+                try {
+                    stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + searchPath + "\";");
+                    stmt.execute("GRANT ALL ON SCHEMA \"" + searchPath + "\" TO app_sandbox_user;");
+                } catch (Exception ignored) {}
+                
                 stmt.execute("SET search_path TO \"" + searchPath + "\"");
             } else {
                 stmt.execute("SET search_path TO lms_sandbox");
             }
             
-            boolean tieneResultSet = stmt.execute(queryProcesada);
+            boolean tieneResultSet = false;
+            try {
+                tieneResultSet = stmt.execute(queryProcesada);
+            } catch (java.sql.SQLException e) {
+                String sqlState = e.getSQLState();
+                // 42P07 es 'relation_already_exists' en PostgreSQL
+                if ("42P07".equals(sqlState) || e.getMessage().contains("already exists")) {
+                    // Es un DDL que ya se ejecutó antes. No es error, es éxito previo.
+                    tieneResultSet = false; 
+                } else {
+                    throw e; // Re-lanzar si es un error de sintaxis real u otro
+                }
+            }
             
-            if (esDDL && !tieneResultSet) {
+            if ((esDDL || esDML) && !tieneResultSet) {
                 String tablaExtraida = extraerNombreTablaDDL(upperQuery, queryUsuario);
                 if (tablaExtraida != null) {
-                    String consultaMostrar = "SELECT * FROM " + tablaExtraida + " LIMIT 100;";
+                    String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
                     try {
                         tieneResultSet = stmt.execute(consultaMostrar);
                     } catch (Exception ignored) {}

@@ -126,10 +126,20 @@ const AppRoutes = () => {
 };
 
 function App() {
-  const initSounds = () => sounds.init();
+  const initSounds = () => {
+    sounds.init().then(() => {
+      if (window.location.pathname !== '/') {
+        sounds.startBackgroundMusic();
+      }
+    });
+  };
   
   return (
-    <div className="App" onClick={initSounds} onKeyDown={initSounds}>
+    <div 
+      className="App" 
+      onClick={initSounds} 
+      onKeyDown={initSounds}
+    >
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>

@@ -626,7 +626,10 @@ export const ExercisePage = () => {
                   </span>
                 </div>
                 <Button
-                  onClick={handleValidate}
+                  onClick={() => {
+                    sounds.playStep();
+                    handleValidate();
+                  }}
                   disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
                   className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
                 >
@@ -847,6 +850,7 @@ export const ExercisePage = () => {
                     <div className="p-5">
                       <Button
                         onClick={() => {
+                          sounds.playStep();
                           if (currentExerciseIndex < exercises.length - 1) {
                             setCurrentExerciseIndex(prev => prev + 1);
                             setExecutionResult(null);

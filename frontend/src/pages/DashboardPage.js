@@ -97,7 +97,7 @@ const title = titleFor(userXP);
 
   // Estructura de Cursos y Selección
   const [cursos, setCursos] = useState([]);
-  const [cursoActivoId, setCursoActivoId] = useState(2); // Inicia en Diseño de BD por defecto
+  const [cursoActivoId, setCursoActivoId] = useState(1); // Inicia en Senda del Guerrero por defecto
   const [loadingModulos, setLoadingModulos] = useState(true);
 
   useEffect(() => {
@@ -327,13 +327,17 @@ const title = titleFor(userXP);
                   initial={{ width: 0 }}
                   animate={{ width: `${xpInLevel}%` }}
                   transition={{ duration: 1.2, ease: 'easeOut' }}
-                  className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
+                  className="h-full"
+                  style={{ 
+                    background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})`,
+                    boxShadow: `0 0 20px ${colors.primary}80`
+                  }}
                 />
               </div>
             </div>
 
             <div className="text-right">
-              <p className="font-display text-7xl font-black text-gradient-gold leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]">
+              <p className="font-display text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {userXP}
               </p>
               <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP Totales</p>
@@ -417,11 +421,14 @@ const title = titleFor(userXP);
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {cursos.map(curso => (
                 <button 
-key={curso.id_curso}
-                  onClick={() => setCursoActivoId(curso.id_curso)}
+                  key={curso.id_curso}
+                  onClick={() => {
+                    sounds.playClick();
+                    setCursoActivoId(curso.id_curso);
+                  }}
                   className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
                       cursoActivoId === curso.id_curso 
-                        ? 'border-blue-400/80 shadow-[0_0_20px_rgba(59,130,blue,0.3)]' 
+                        ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]' 
                         : 'border-white/10 hover:border-slate-500'
                   }`}
                   style={{
@@ -439,16 +446,17 @@ key={curso.id_curso}
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
                         </div>
                         <div className="text-left">
-                            <h3 className={`font-display font-black text-xl ${cursoActivoId === curso.id_curso ? 'text-white' : 'text-slate-400'}`}>
-                                {curso.titulo.split(':')[0]}
+                            <h3 className={`font-display font-black text-xl transition-colors ${cursoActivoId === curso.id_curso ? 'text-white' : 'text-slate-400'}`}>
+                                {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
                             </h3>
-                            <p className={`text-xs uppercase tracking-widest font-bold mt-1 ${cursoActivoId === curso.id_curso ? 'text-blue-300' : 'text-slate-600'}`}>
-                                {curso.titulo.split(':')[1] || 'Especialización'}
+                            <p className={`text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors`}
+                               style={{ color: cursoActivoId === curso.id_curso ? colors.accent : colors.textMuted }}>
+                                {curso.titulo}
                             </p>
                         </div>
                     </div>
                     {cursoActivoId === curso.id_curso && (
-                        <div className="w-4 h-4 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(96,165,250,1)]" />
+                        <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ backgroundColor: colors.primary }} />
                     )}
                 </button>
             ))}

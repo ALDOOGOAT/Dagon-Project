@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import VennStatic from './VennStatic';
 import SqlProjectionInteractive from './SqlProjectionInteractive';
+import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket, MinusCircle,
   Library, Grid3x3, MessageSquare, Search, Filter, ArrowDownNarrowWide,
@@ -1397,6 +1398,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   const next = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
+    sounds.playStep();
     if (isLast) onComplete?.();
     else setIndex((i) => i + 1);
   };
@@ -1404,6 +1406,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   const prev = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
+    sounds.playStep();
     if (index > 0) setIndex((i) => i - 1);
   };
 
@@ -1432,7 +1435,10 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
-            <button onClick={onComplete} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
+            <button onClick={() => {
+              sounds.playStep();
+              onComplete?.();
+            }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
               Saltar teoría →
             </button>
           </div>
@@ -1442,7 +1448,10 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
           {theory.slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => setIndex(i)}
+              onClick={() => {
+                sounds.playStep();
+                setIndex(i);
+              }}
               className={`h-2 rounded-full transition-all ${
                 i === index ? 'w-10 bg-cyan-400' : i < index ? 'w-6 bg-emerald-400' : 'w-2 bg-slate-700'
               }`}
