@@ -10,7 +10,7 @@ SELECT * FROM lms_core.modulos ORDER BY id_modulo;
 SELECT MAX(id_ejercicio) FROM lms_core.ejercicios_practicos;
 
 -- ============================================================
--- RE-INSERCIÓN CORRECTA
+-- RE-INSERCIÓN CORRECTA jajjaja
 -- ============================================================
 
 -- MÓDULO 5: Guardianes de los Datos (Constraints & Secuencias)
