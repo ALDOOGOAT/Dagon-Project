@@ -11,7 +11,7 @@ import { sounds } from '../lib/SoundEngine';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight,
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -393,6 +393,29 @@ export const ExercisePage = () => {
     return ((currentExerciseIndex + (executionResult?.success ? 1 : 0)) / exercises.length) * 100;
   }, [currentExerciseIndex, exercises.length, executionResult]);
 
+  const handleResetSandbox = async () => {
+    if (!window.confirm('¿Estás seguro? Esto borrará todos tus cambios en este módulo y restaurará las tablas originales.')) return;
+    
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/reset-sandbox`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        }
+      });
+      if (response.ok) {
+        toast.success('¡Base de datos restaurada!');
+        sounds.playMagic();
+        setExecutionResult(null);
+      } else {
+        toast.error('No se pudo restaurar la base de datos');
+      }
+    } catch (e) {
+      toast.error('Error de conexión al restaurar');
+    }
+  };
+
   const handleLevelJump = (index) => {
     const targetExercise = exercises[index];
     if (!targetExercise) return;
@@ -465,6 +488,15 @@ export const ExercisePage = () => {
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: colors.textMuted }} className="hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
+            </Button>
+            <div className="h-6 w-px bg-white/10" />
+            <Button 
+              variant="ghost" 
+              onClick={handleResetSandbox} 
+              title="Restablecer base de datos del módulo"
+              className="text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" /> Restablecer
             </Button>
             <div className="h-6 w-px bg-white/10" />
             <h1 className="font-display text-base font-black flex items-center gap-2" style={{ color: colors.text }}>

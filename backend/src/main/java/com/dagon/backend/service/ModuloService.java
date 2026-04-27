@@ -143,4 +143,43 @@ public class ModuloService {
         
         return certificado;
     }
+
+    public void reiniciarDatosPorEmail(String identificador) {
+        // Buscamos por email o por ID convertido a string
+        String sqlId = "SELECT id_usuario FROM lms_core.usuarios WHERE email = ? OR id_usuario::varchar = ?";
+        try {
+            List<java.util.UUID> ids = jdbcTemplate.query(sqlId, (rs, rowNum) -> (java.util.UUID) rs.getObject("id_usuario"), identificador, identificador);
+            if (!ids.isEmpty()) {
+                reiniciarDatosUsuario(ids.get(0).toString());
+            } else {
+                System.err.println("No se encontró usuario con identificador: " + identificador);
+            }
+        } catch (Exception e) {
+            System.err.println("Error buscando usuario para reinicio: " + e.getMessage());
+        }
+    }
+
+    public void reiniciarDatosUsuario(String usuarioId) {
+        String esquema = "sandbox_usuario_" + usuarioId;
+        
+        // 1. Obtener lista de tablas del template
+        String sqlTablas = "SELECT tablename FROM pg_tables WHERE schemaname = 'lms_sandbox_template'";
+        List<String> tablas = jdbcTemplate.queryForList(sqlTablas, String.class);
+
+        for (String tabla : tablas) {
+            try {
+                // Borrar tabla actual del usuario
+                jdbcTemplate.execute("DROP TABLE IF EXISTS \"" + esquema + "\".\"" + tabla + "\" CASCADE");
+                
+                // Clonar de nuevo desde template
+                jdbcTemplate.execute("CREATE TABLE \"" + esquema + "\".\"" + tabla + "\" (LIKE lms_sandbox_template.\"" + tabla + "\" INCLUDING ALL)");
+                jdbcTemplate.execute("INSERT INTO \"" + esquema + "\".\"" + tabla + "\" SELECT * FROM lms_sandbox_template.\"" + tabla + "\"");
+                
+                // Asegurar Ownership
+                jdbcTemplate.execute("ALTER TABLE \"" + esquema + "\".\"" + tabla + "\" OWNER TO app_sandbox_user");
+            } catch (Exception e) {
+                System.err.println("Error restaurando tabla " + tabla + ": " + e.getMessage());
+            }
+        }
+    }
 }

@@ -288,11 +288,11 @@ const title = titleFor(userXP);
           <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
             <div className="flex items-center gap-5">
               <div className="relative">
-                <div className={`absolute -inset-3 rounded-3xl ${tierRing(title.tier)}`} />
-                <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl`}>
-                  <DagonMascot size="medium" mood={dashboardMood} />
+                <div className={`absolute -inset-3 rounded-[54px] ${tierRing(title.tier)}`} />
+                <div className={`relative w-44 h-56 rounded-[48px] bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
+                  <DagonMascot size="large" mood={dashboardMood} />
                 </div>
-                <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-3 py-1 rounded-lg border border-yellow-300 animate-badge-pulse">
+                <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-4 py-2 rounded-xl border border-yellow-300 animate-badge-pulse shadow-xl">
                   Lvl {userLevel}
                 </div>
               </div>

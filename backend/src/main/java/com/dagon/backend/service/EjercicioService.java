@@ -277,18 +277,19 @@ public class EjercicioService {
         Map<String, Object> respuesta = new HashMap<>();
 
         // --- CAPA DE SEGURIDAD (ESCUDO DE DAGON) ---
-        String queryClean = queryUsuario.trim().toUpperCase();
+        String queryClean = queryUsuario.trim().toLowerCase();
         
-        // 1. Bloqueo de comandos administrativos y peligrosos
+        // Bloqueo de comandos administrativos y peligrosos con Regex
         String[] blackList = {
-            "DROP DATABASE", "DROP SCHEMA", "TRUNCATE", "ALTER ROLE", "CREATE ROLE", 
-            "GRANT", "REVOKE", "PG_SLEEP", "COPY FROM", "COPY TO"
+            "drop\\s+database", "drop\\s+schema", "truncate", "alter\\s+role", "create\\s+role", 
+            "grant", "revoke", "pg_sleep", "copy\\s+", "drop\\s+table", "create\\s+schema"
         };
         
-        for (String word : blackList) {
-            if (queryClean.contains(word)) {
+        for (String regex : blackList) {
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(".*\\b" + regex + "\\b.*", java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE);
+            if (p.matcher(queryClean).matches()) {
                 respuesta.put("success", false);
-                respuesta.put("message", "🚫 ¡Acción Prohibida! Los comandos de administración están bloqueados por seguridad.");
+                respuesta.put("message", "🚫 ¡Acción Prohibida! Los comandos de administración o destrucción están bloqueados por el Escudo de Dagon.");
                 return respuesta;
             }
         }
