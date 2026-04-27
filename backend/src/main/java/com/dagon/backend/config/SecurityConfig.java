@@ -32,7 +32,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/usuarios/login", "/api/usuarios/registro").permitAll()
                         .requestMatchers("/api/usuarios/imagen/**").permitAll()
                         .requestMatchers("/api/clawbot/**").permitAll()
-                        // ¡NUEVO: Dejamos pasar los saludos invisibles de React!
+                        .requestMatchers("/api/exercises/*/validate").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
