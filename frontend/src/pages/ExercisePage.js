@@ -403,7 +403,17 @@ export const ExercisePage = () => {
   }, [currentExerciseIndex, exercises.length, executionResult]);
 
   const handleResetSandbox = async () => {
-    if (!window.confirm('¿Estás seguro? Esto borrará todos tus cambios en este módulo y restaurará las tablas originales.')) return;
+    const confirmed = window.confirm(
+      '🔄 ¿RESTABLECER BASE DE DATOS?\n\n' +
+      'Esto hará que TODOS tus cambios se pierdan:\n' +
+      '• Los datos que hayas insertsdo\n' +
+      '• Las tablas que hayas creado\n' +
+      '• Los registros modificados o borrados\n\n' +
+      '⚠️ IMPORTANTE: Esta acción no se puede deshacer.\n\n' +
+      'Las tablas volveran a su estado original con los datos de ejemplo.\n\n' +
+      '¿Continuar?'
+    );
+    if (!confirmed) return;
     
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/reset-sandbox`, {
@@ -414,14 +424,16 @@ export const ExercisePage = () => {
         }
       });
       if (response.ok) {
-        toast.success('¡Base de datos restaurada!');
+        toast.success('✅ ¡Base de datos restablecida!\n\nTus tablas ahora tienen los datos originales.');
         sounds.playMagic();
         setExecutionResult(null);
+        setDroppedWords([]);
+        setEditorCode('');
       } else {
-        toast.error('No se pudo restaurar la base de datos');
+        toast.error('❌ No se pudo restablecer la base de datos.');
       }
     } catch (e) {
-      toast.error('Error de conexión al restaurar');
+      toast.error('❌ Error de conexión al restablecer.');
     }
   };
 
@@ -502,7 +514,7 @@ export const ExercisePage = () => {
             <Button 
               variant="ghost" 
               onClick={handleResetSandbox} 
-              title="Restablecer base de datos del módulo"
+              title="🔄 Restablecer tabla: Borra todos tus cambios y vuelve a los datos originales del ejercicio. Útil si cometiste muchos errores o quieres empezar de nuevo."
               className="text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
             >
               <RotateCcw className="w-4 h-4 mr-2" /> Restablecer
