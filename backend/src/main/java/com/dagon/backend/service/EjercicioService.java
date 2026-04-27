@@ -561,6 +561,27 @@ public class EjercicioService {
                 jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto);
             }
 
+            // 🌟 MAGIA DIDÁCTICA: Escanear constraints después de ejecutar la consulta del usuario
+            if (esCorrecto) {
+                String upperQ = queryUsuario.trim().toUpperCase();
+                if (upperQ.contains("ALTER TABLE") || upperQ.contains("CREATE TABLE") || upperQ.contains("ADD CONSTRAINT") || upperQ.contains("DROP CONSTRAINT")) {
+                    String tablaAfectada = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    if (tablaAfectada != null) {
+                        String queryConstraints = "SELECT constraint_name AS nombre_regla, constraint_type AS tipo "
+                            + "FROM information_schema.table_constraints "
+                            + "WHERE table_name = '" + tablaAfectada + "' "
+                            + "AND table_schema = current_schema() "
+                            + "ORDER BY constraint_type;";
+                        try {
+                            List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                            if (listaConstraints != null && !listaConstraints.isEmpty()) {
+                                respuesta.put("constraintsData", listaConstraints);
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+
             if (esCorrecto) {
                 respuesta.put("success", true);
                 if (usuarioId != null && !usuarioId.trim().isEmpty()) {

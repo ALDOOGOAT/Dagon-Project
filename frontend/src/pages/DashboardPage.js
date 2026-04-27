@@ -436,28 +436,6 @@ const title = titleFor(userXP);
               </div>
             </div>
           </button>
-
-          <button
-            onClick={() => navigate('/credits')}
-            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
-            style={{ borderColor: `${colors.primary}40` }}
-          >
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
-                style={{ 
-                  backgroundColor: `${colors.primary}20`,
-                  borderColor: `${colors.primary}40`
-                }}
-              >
-                <Heart className="w-5 h-5" style={{ color: colors.primary }} fill="currentColor" />
-              </div>
-              <div>
-                <p className="font-display text-lg font-black text-white">Equipo Dagon</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Créditos</p>
-              </div>
-            </div>
-          </button>
         </motion.div>
 
         {/* SELECTOR DE CURSOS / SENDAS */}
