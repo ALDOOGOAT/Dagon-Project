@@ -273,7 +273,7 @@ public class EjercicioService {
         return tabla;
     }
 
-    public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
+public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         Map<String, Object> respuesta = new HashMap<>();
 
         // --- CAPA DE SEGURIDAD (ESCUDO DE DAGON) ---
@@ -295,8 +295,8 @@ public class EjercicioService {
         }
 
         // 2. Prevenir que intenten acceder a esquemas internos
-        if (queryClean.contains("LMS_CORE") || queryClean.contains("INFORMATION_SCHEMA") || queryClean.contains("PG_CATALOG")) {
-            if (!queryClean.startsWith("SELECT")) { // Permitir solo lectura si es necesario para el juego
+        if (queryClean.contains("lms_core") || queryClean.contains("information_schema") || queryClean.contains("pg_catalog")) {
+            if (!queryClean.startsWith("select")) { // Permitir solo lectura si es necesario para el juego
                 respuesta.put("success", false);
                 respuesta.put("message", "🛡️ ¡Interferencia Detectada! No tienes permiso para modificar el núcleo de Dagon.");
                 return respuesta;
@@ -462,11 +462,29 @@ public class EjercicioService {
                     return respuesta;
                 }
 
+                // 🌟 LEER CONFIGURACIÓN PARA VALIDACIÓN DDL/SECUENCIAS
+                boolean isDdlValidation = false;
+                String configExtra = ejercicio.getConfiguracionExtra();
+                if (configExtra != null && !configExtra.trim().isEmpty()) {
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode config = mapper.readTree(configExtra);
+                        if (config.has("tipo_validacion") && "ddl".equals(config.get("tipo_validacion").asText())) {
+                            isDdlValidation = true;
+                        }
+                    } catch (Exception ignored) {}
+                }
+
                 // Determinar si es DML (Cambio de datos)
                 String upperQ = queryUsuario.trim().toUpperCase();
                 boolean esDML = upperQ.contains("INSERT") || upperQ.contains("UPDATE") || upperQ.contains("DELETE");
 
-                if (esDML) {
+                // 🌟 LÓGICA DE VALIDACIÓN MODIFICADA
+                if (isDdlValidation) {
+                    // Para secuencias o DDL, ejecutamos y si no hay error de SQL, es correcto.
+                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    esCorrecto = true;
+                } else if (esDML) {
                     String tablaAfectada = extraerNombreTablaDML(upperQ, queryUsuario);
                     List<Map<String, Object>> beforeData = new ArrayList<>();
                     if (tablaAfectada != null) {
@@ -629,7 +647,6 @@ public class EjercicioService {
         }
         return respuesta;
     }
-
     private String extraerNombreTablaDML(String upperQuery, String queryOriginal) {
         try {
             java.util.regex.Pattern pattern;
