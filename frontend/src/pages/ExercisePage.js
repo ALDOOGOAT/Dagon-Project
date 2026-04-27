@@ -282,21 +282,31 @@ export const ExercisePage = () => {
   };
 
   const invokeClawbot = async (errorData) => {
+    console.log("Invocando Clawbot analyze con:", errorData);
     setClawbotThinking(true);
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clawbot/analyze`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${token}` 
+        },
         body: JSON.stringify(errorData)
       });
+      console.log("Response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
-        setClawbotMessage(data.mensaje);
+        console.log("Clawbot response:", data);
+        setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
       } else {
-        setClawbotMessage("Mis circuitos fallaron. ¡Revisa tu sintaxis!");
+        const errorText = await response.text();
+        console.log("Error response:", errorText);
+        setClawbotMessage("Mis circuitos fallaron. Intenta de nuevo.");
       }
     } catch (error) {
-      setClawbotMessage("¡Bzzz! Hubo interferencia al contactar mis servidores.");
+      console.error("Error invokeClawbot:", error);
+      setClawbotMessage("¡Bzzz! No pude contactar mis servidores.");
     } finally {
       setClawbotThinking(false);
     }
