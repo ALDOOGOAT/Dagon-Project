@@ -10,6 +10,9 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
   
   const getMoodColors = () => {
     switch(mood) {
+      case 'love':
+      case 'grateful':
+        return { primary: '#ff6b9d', secondary: '#ec4899', glow: '#f472b6', accent: '#fbcfe8' };
       case 'excited':
       case 'celebrating':
         return { primary: '#ff6b6b', secondary: '#ff4757', glow: '#ff6b6b', accent: '#ffd93d' };
@@ -38,6 +41,9 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
   const getEyeState = () => {
     const colors = getMoodColors();
     switch(mood) {
+      case 'love':
+      case 'grateful':
+        return { scale: 1, opacity: 1, rx: 14, ry: 18, angle: 0, color: colors.glow, heartEyes: true };
       case 'sad':
       case 'disappointed':
         return { scale: 0.7, opacity: 0.5, rx: 14, ry: 12, angle: 15, color: colors.glow };
@@ -63,6 +69,9 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
   const getAnimation = () => {
     if (!animated) return '';
     switch(mood) {
+      case 'love':
+      case 'grateful':
+        return 'animate-dagon-love';
       case 'excited':
       case 'celebrating':
         return 'animate-dagon-excited';
@@ -249,6 +258,29 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
             </circle>
             <circle cx="60" cy="20" r="3" opacity="0.6">
               <animate attributeName="opacity" values="0.6;0.1;0.6" dur="0.7s" repeatCount="indefinite" />
+            </circle>
+          </g>
+        )}
+        
+        {/* Corazones en los ojos para mood love/grateful */}
+        {eyeState.heartEyes && (
+          <g fill="#ff69b4">
+            {/* Corazón ojo izquierdo */}
+            <path transform="translate(30, 48) scale(0.6)" d="M 0 -5 C -5 -10 -15 -5 -15 2 C -15 10 0 18 0 18 C 0 18 15 10 15 2 C 15 -5 5 -10 0 -5">
+              <animate attributeName="opacity" values="1;0.7;1" dur="0.6s" repeatCount="indefinite" />
+            </path>
+            {/* Corazón ojo derecho */}
+            <path transform="translate(80, 48) scale(0.6)" d="M 0 -5 C -5 -10 -15 -5 -15 2 C -15 10 0 18 0 18 C 0 18 15 10 15 2 C 15 -5 5 -10 0 -5">
+              <animate attributeName="opacity" values="1;0.7;1" dur="0.6s" repeatCount="indefinite" begin="0.3s" />
+            </path>
+            {/* Corazoncitos flotando */}
+            <circle cx="20" cy="65" r="2" fill="#ff69b4" opacity="0.8">
+              <animate attributeName="cy" values="65;55;65" dur="1s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.8;0;0.8" dur="1s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="100" cy="60" r="1.5" fill="#ff69b4" opacity="0.7">
+              <animate attributeName="cy" values="60;50;60" dur="1.2s" repeatCount="indefinite" begin="0.2s" />
+              <animate attributeName="opacity" values="0.7;0;0.7" dur="1.2s" repeatCount="indefinite" />
             </circle>
           </g>
         )}
