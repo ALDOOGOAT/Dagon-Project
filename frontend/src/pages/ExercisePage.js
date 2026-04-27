@@ -197,6 +197,12 @@ export const ExercisePage = () => {
   const [shake, setShake] = useState(false);
   const [burst, setBurst] = useState(false);
   const [xpPop, setXpPop] = useState(null);
+  
+  // Estados para intervención pedagógica de Dagon
+  const [isDagonIntervening, setIsDagonIntervening] = useState(false);
+  const [dagonTypingQuery, setDagonTypingQuery] = useState('');
+  const [dagonShowPostMessage, setDagonShowPostMessage] = useState(false);
+  const [dagonOriginalQuery, setDagonOriginalQuery] = useState('');
 
   useEffect(() => { 
     setIsMounted(true); 
@@ -329,6 +335,35 @@ export const ExercisePage = () => {
       const result = await response.json();
 
       if (result.success) {
+        // === INTERVENCIÓN PEDAGÓGICA ===
+        if (result.isPedagogicalIntervention) {
+          setExecutionResult({ ...result });
+          setIsDagonIntervening(true);
+          setDagonTypingQuery('');
+          setDagonShowPostMessage(false);
+          setDagonOriginalQuery(result.userOriginalQuery || '');
+          
+          // Animación de máquina de escribir
+          let i = 0;
+          const queryToType = result.dagonActionQuery || '';
+          const typingInterval = setInterval(() => {
+            setDagonTypingQuery(prev => prev + queryToType.charAt(i));
+            i++;
+            if (i >= queryToType.length) {
+              clearInterval(typingInterval);
+              // Después de terminar de escribir, mostrar mensaje final
+              setTimeout(() => {
+                setDagonShowPostMessage(true);
+              }, 800);
+            }
+          }, 40);
+          
+          sounds.playMagic();
+          setValidating(false);
+          return;
+        }
+        // =================================
+        
         const prevXP = user?.xp || 0;
         const gained = result.xp_gained || 0;
         const newXP = prevXP + gained;
@@ -686,6 +721,79 @@ export const ExercisePage = () => {
                             {formatAIMessage(clawbotMessage)}
                           </div>
                         </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* === INTERVENCIÓN PEDAGÓGICA DE DAGON === */}
+              <AnimatePresence>
+                {isDagonIntervening && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }} 
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mt-4 relative overflow-hidden rounded-2xl border-2 border-amber-400/50 bg-gradient-to-br from-amber-900/30 to-purple-900/30"
+                  >
+                    <div className="absolute inset-0 bg-amber-500/5 animate-pulse" />
+                    <div className="relative z-10 p-5">
+                      {/* Header con Dagon */}
+                      <div className="flex items-center gap-3 mb-4">
+                        <DagonMascot size="medium" mood="thinking" />
+                        <div>
+                          <p className="text-[10px] font-black tracking-[0.4em] uppercase text-amber-400">
+                            💡 Intervención Pedagógica
+                          </p>
+                          <p className="text-[9px] font-bold tracking-[0.2em] text-slate-400 uppercase">
+                            Dagon te ayuda a entender
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Mensaje de Dagon */}
+                      <div className="mb-4 p-4 rounded-xl bg-slate-900/60 border border-amber-500/30">
+                        <p className="text-sm font-gameui text-amber-100 leading-relaxed">
+                          {executionResult?.dagonMessage}
+                        </p>
+                        <p className="mt-3 text-xs font-gameui text-slate-300 leading-relaxed">
+                          {executionResult?.dagonExplanation}
+                        </p>
+                      </div>
+
+                      {/* Consola con animación de escritura */}
+                      <div className="mb-4 p-3 rounded-lg bg-black/80 border border-green-500/40 font-mono text-xs">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-green-400 text-[10px] uppercase">Ejecutando en sandbox...</span>
+                        </div>
+                        <pre className="text-green-300 whitespace-pre-wrap break-all">{dagonTypingQuery}</pre>
+                      </div>
+
+                      {/* Mensaje post-ejecución */}
+                      {dagonShowPostMessage && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }} 
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-4 rounded-xl bg-emerald-900/30 border border-emerald-500/30"
+                        >
+                          <p className="text-sm font-gameui text-emerald-200">
+                            {executionResult?.dagonPostMessage}
+                          </p>
+                          <div className="mt-3 flex items-center justify-between">
+                            <p className="text-xs text-slate-400">
+                              Tu query original: <code className="text-cyan-300">{dagonOriginalQuery}</code>
+                            </p>
+                            <button
+                              onClick={() => {
+                                setEditorCode(dagonOriginalQuery);
+                                setIsDagonIntervening(false);
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors"
+                            >
+                              Ejecutar mi query →
+                            </button>
+                          </div>
+                        </motion.div>
                       )}
                     </div>
                   </motion.div>

@@ -221,10 +221,22 @@ public class EjercicioService {
             if ((esDDL || esDML) && !tieneResultSet) {
                 String tablaExtraida = extraerNombreTablaDDL(upperQuery, queryUsuario);
                 if (tablaExtraida != null) {
-                    String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
-                    try {
-                        tieneResultSet = stmt.execute(consultaMostrar);
-                    } catch (Exception ignored) {}
+                    // 🌟 MAGIA VISUAL: Si es un CREATE TABLE, mostramos su estructura (Blueprint)
+                    if (upperQuery.contains("CREATE TABLE")) {
+                        String consultaEstructura = "SELECT column_name AS columna, data_type AS tipo_dato, is_nullable AS permite_nulos "
+                            + "FROM information_schema.columns "
+                            + "WHERE table_name = '" + tablaExtraida + "' "
+                            + "ORDER BY ordinal_position;";
+                        try {
+                            tieneResultSet = stmt.execute(consultaEstructura);
+                        } catch (Exception ignored) {}
+                    } else {
+                        // Para INSERT, UPDATE o ALTER, mostramos los datos reales
+                        String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
+                        try {
+                            tieneResultSet = stmt.execute(consultaMostrar);
+                        } catch (Exception ignored) {}
+                    }
                 }
             }
             
@@ -565,6 +577,58 @@ public class EjercicioService {
 
         } catch (java.sql.SQLException e) {
             String sqlError = e.getMessage();
+            
+            // === INTERVENCIÓN PEDAGÓGICA: Primary Key Duplicada ===
+            if (sqlError != null && sqlError.toLowerCase().contains("multiple primary keys")) {
+                String upperQ = queryUsuario.trim().toUpperCase();
+                String tablaObj = extraerNombreTablaDDL(upperQ, queryUsuario);
+                String tablaNombre = tablaObj != null ? tablaObj : "la tabla";
+                
+                // Extraer nombre de columna de la query del usuario
+                String columnaPK = "";
+                try {
+                    java.util.regex.Pattern colPattern = java.util.regex.Pattern.compile(
+                        "PRIMARY\\s+KEY\\s*\\(\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\)",
+                        java.util.regex.Pattern.CASE_INSENSITIVE
+                    );
+                    java.util.regex.Matcher colMatcher = colPattern.matcher(queryUsuario);
+                    if (colMatcher.find()) {
+                        columnaPK = colMatcher.group(1);
+                    }
+                } catch (Exception ignored) {}
+                
+                // Construir query de DROP (nombre default de PostgreSQL)
+                String dropConstraint = "ALTER TABLE " + tablaNombre + " DROP CONSTRAINT " + tablaNombre + "_pkey;";
+                
+                // Ejecutar el DROP en secreto para arreglar la base de datos
+                try {
+                    ejecutarEnSandbox(dropConstraint, usuarioId);
+                } catch (Exception dropEx) {
+                    // Ignorar errores del DROP - podría no existir la constraint
+                }
+                
+                // Devolver signal de intervención pedagógica
+                respuesta.put("success", true);
+                respuesta.put("isPedagogicalIntervention", true);
+                respuesta.put("interventionType", "pk_exists");
+                respuesta.put("message", "¡Espera! 👀");
+                respuesta.put("dagonMessage", "¡Tu código es PERFECTO! Pero la tabla «" + tablaNombre + "» ya tiene una Primary Key. En SQL, ¡una tabla solo puede tener un rey!");
+                respuesta.put("dagonExplanation", "Las Primary Keys son como el DNI de cada fila. No puedes tener dos personas con el mismo DNI, ¿verdad? Por eso primero debemos eliminar la anterior antes de crear la nueva.");
+                respuesta.put("dagonActionQuery", dropConstraint);
+                respuesta.put("dagonPostMessage", "¡Puf! 💨 He eliminado la llave vieja. Ahora ejecuta tu consulta original y verás que funciona perfectamente.");
+                respuesta.put("userOriginalQuery", queryUsuario);
+                respuesta.put("xp_gained", 0);
+                
+                // Obtener datos actuales de la tabla
+                try {
+                    String consultaDatos = "SELECT * FROM \"" + tablaNombre + "\" LIMIT 10;";
+                    datosAlumno = ejecutarEnSandbox(consultaDatos, usuarioId);
+                    respuesta.put("mockData", datosAlumno);
+                } catch (Exception ignored) {}
+                
+                return respuesta;
+            }
+            // =============================================================
             
             // Detectar si es error de relación que ya existe (no es error crítico)
             boolean yaExiste = sqlError != null && (
