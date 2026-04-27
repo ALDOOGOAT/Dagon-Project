@@ -11,7 +11,7 @@ import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Calendar, Award
+  User, Calendar, Award, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -412,6 +412,21 @@ const title = titleFor(userXP);
               <div>
                 <p className="font-display text-lg font-black text-white truncate max-w-[100px]">{title.name}</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Rango</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate('/credits')}
+            className="glass-card-apple rounded-2xl p-4 border border-rose-500/30 hover:border-rose-400/60 transition-all group text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/30 to-red-500/20 flex items-center justify-center border border-rose-400/30 group-hover:scale-110 transition-transform">
+                <Heart className="w-5 h-5 text-rose-400" fill="currentColor" />
+              </div>
+              <div>
+                <p className="font-display text-lg font-black text-white truncate max-w-[100px]">Equipo Dagon</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Créditos</p>
               </div>
             </div>
           </button>
