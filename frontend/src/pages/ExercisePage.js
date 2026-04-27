@@ -1079,9 +1079,17 @@ export const ExercisePage = () => {
                       <Button
                         onClick={() => {
                           sounds.playStep();
+                          // Limpiar TODOS los estados antes de avanzar
+                          setIsDagonIntervening(false);
+                          setDagonTypingQuery('');
+                          setDagonShowPostMessage(false);
+                          setExecutionResult(null);
+                          setIntentosFallidos(0);
+                          setClawbotMessage(null);
+                          setEditorCode('');
+                          
                           if (currentExerciseIndex < exercises.length - 1) {
                             setCurrentExerciseIndex(prev => prev + 1);
-                            setExecutionResult(null);
                           } else {
                             toast.success('¡Módulo completado!');
                             navigate(`/graduation/${levelId}`);
