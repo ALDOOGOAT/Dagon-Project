@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
 import { 
   ReactFlow, 
   Background, 
@@ -7,7 +6,7 @@ import {
   Handle, 
   Position, 
   applyNodeChanges, 
-  applyEdgeChanges, 
+  applyEdgeChanges,
   addEdge,
   getBezierPath,
   EdgeLabelRenderer,
@@ -144,7 +143,6 @@ const edgeTypes = { relationshipEdge: RelationshipEdge };
 
 // --- EL LIENZO PRINCIPAL ---
 export const MerDiagramBuilder = ({ onChangeData }) => {
-  const { colors } = useTheme();
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
 

@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 import VennStatic from './VennStatic';
 import SqlProjectionInteractive from './SqlProjectionInteractive';
+import SequenceSimulator from './SequenceSimulator';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, ArrowRight, Volume2, VolumeX, Sparkles, Rocket, MinusCircle,
@@ -133,6 +134,11 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
     {slide.type === 'projection' && (
       <div className="mb-5">
         <SqlProjectionInteractive />
+      </div>
+    )}
+    {slide.type === 'simulator' && (
+      <div className="mb-5 max-w-xl mx-auto">
+        <SequenceSimulator />
       </div>
     )}
     {slide.type === 'relational-venn' && (
@@ -835,6 +841,15 @@ const SUB_TOPICS = {
       {
         type: "hero",
         emoji: <Hash className="w-12 h-12" />,
+        headline: "El Error de Sesión",
+        lead: "Si ejecutas currval() sin haber llamado antes a nextval() en la misma sesión, PostgreSQL lanzará un error.",
+      },
+      {
+        type: "simulator",
+      },
+      {
+        type: "hero",
+        emoji: <ZapIcon2 className="w-12 h-12" />,
         headline: "Las secuencias son el motor",
         lead: "Una secuencia es un objeto que genera números en orden. SERIAL usa una secuencia internamente.",
         code: "SELECT nextval('seq_numeros');",

@@ -496,6 +496,26 @@ public class EjercicioService {
 
                 // 🌟 LÓGICA DE VALIDACIÓN MODIFICADA
                 if (isDdlValidation) {
+                    
+                    // 🪄 PARCHE AUTO-SANADOR DE SECUENCIAS (v2.0 - Soporta currval)
+                    if (upperQ.contains("NEXTVAL") || upperQ.contains("CURRVAL")) {
+                        java.util.regex.Pattern seqPattern = java.util.regex.Pattern.compile("['\"]([a-zA-Z0-9_]+)['\"]");
+                        java.util.regex.Matcher seqMatcher = seqPattern.matcher(queryUsuario);
+                        
+                        if (seqMatcher.find()) {
+                            String seqName = seqMatcher.group(1);
+                            try {
+                                // 1. Garantizamos que la secuencia exista
+                                ejecutarEnSandbox("CREATE SEQUENCE IF NOT EXISTS " + seqName + " START 1;", usuarioId);
+                                
+                                // 2. HACK DE SESIÓN: Si pide CURRVAL, forzamos un NEXTVAL previo
+                                if (upperQ.contains("CURRVAL")) {
+                                    ejecutarEnSandbox("SELECT nextval('" + seqName + "');", usuarioId);
+                                }
+                            } catch (Exception ignored) {}
+                        }
+                    }
+
                     // Para secuencias o DDL, ejecutamos y si no hay error de SQL, es correcto.
                     datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
                     esCorrecto = true;

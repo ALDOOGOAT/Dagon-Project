@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../contexts/ThemeContext';
 import { Award, Download, CheckCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -105,7 +104,6 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
   const [loading, setLoading] = useState(false);
   const [datosCertificado, setDatosCertificado] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const { colors } = useTheme();
 
   useEffect(() => {
     if (isOpen && certificado) {
