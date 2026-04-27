@@ -499,6 +499,20 @@ public class EjercicioService {
                     // Para secuencias o DDL, ejecutamos y si no hay error de SQL, es correcto.
                     datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
                     esCorrecto = true;
+                    
+                    // 🌟 MAGIA DIDÁCTICA: Escanear y devolver las Constraints de la tabla
+                    String tablaAfectada = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    if (tablaAfectada != null) {
+                        String queryConstraints = "SELECT constraint_name AS nombre_regla, constraint_type AS tipo "
+                            + "FROM information_schema.table_constraints "
+                            + "WHERE table_name = '" + tablaAfectada + "' "
+                            + "AND table_schema = current_schema() "
+                            + "ORDER BY constraint_type;";
+                        try {
+                            List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                            respuesta.put("constraintsData", listaConstraints);
+                        } catch (Exception ignored) {}
+                    }
                 } else if (esDML) {
                     String tablaAfectada = extraerNombreTablaDML(upperQ, queryUsuario);
                     List<Map<String, Object>> beforeData = new ArrayList<>();
@@ -624,17 +638,28 @@ public class EjercicioService {
                     String consultaDatos = "SELECT * FROM \"" + tablaNombre + "\" LIMIT 10;";
                     datosAlumno = ejecutarEnSandbox(consultaDatos, usuarioId);
                     respuesta.put("mockData", datosAlumno);
+                    
+                    // 🌟 MAGIA DIDÁCTICA: Escanear constraints después de DROP
+                    String queryConstraints = "SELECT constraint_name AS nombre_regla, constraint_type AS tipo "
+                        + "FROM information_schema.table_constraints "
+                        + "WHERE table_name = '" + tablaNombre + "' "
+                        + "AND table_schema = current_schema() "
+                        + "ORDER BY constraint_type;";
+                    List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                    respuesta.put("constraintsData", listaConstraints);
                 } catch (Exception ignored) {}
                 
                 return respuesta;
             }
             // =============================================================
             
-            // Detectar si es error de relación que ya existe (no es error crítico)
+            // Detectar si es error de relación o constraint que ya existe (no es error crítico)
             boolean yaExiste = sqlError != null && (
                 sqlError.toLowerCase().contains("relation") && sqlError.toLowerCase().contains("already exists") ||
                 sqlError.toLowerCase().contains("table") && sqlError.toLowerCase().contains("already exists") ||
-                sqlError.toLowerCase().contains("duplicate") && sqlError.toLowerCase().contains("key")
+                sqlError.toLowerCase().contains("duplicate") && sqlError.toLowerCase().contains("key") ||
+                sqlError.toLowerCase().contains("constraint") && sqlError.toLowerCase().contains("already exists") ||
+                sqlError.toLowerCase().contains("multiple primary keys")
             );
             
             if (yaExiste) {

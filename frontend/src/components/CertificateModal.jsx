@@ -242,10 +242,10 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
           <Button 
             onClick={handleDescargar}
             disabled={loading}
-            className={`font-bold ${esGuerrero 
-              ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white' 
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white'
-            }`}
+            className="font-bold text-white"
+            style={{ 
+              background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`
+            }}
           >
             <Download className="w-4 h-4 mr-2" />
             {loading ? 'Generando...' : 'Descargar PNG'}

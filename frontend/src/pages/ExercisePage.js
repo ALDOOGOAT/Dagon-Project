@@ -11,7 +11,7 @@ import { sounds } from '../lib/SoundEngine';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -1070,6 +1070,37 @@ export const ExercisePage = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {/* 🌟 MAGIA DIDÁCTICA: Mostrar Constraints de la tabla */}
+                  {executionResult.constraintsData && executionResult.constraintsData.length > 0 && (
+                    <div className="p-5 pt-0">
+                      <div className="p-4 rounded-xl border" style={{ backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}40` }}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Shield className="w-4 h-4" style={{ color: colors.primary }} />
+                          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: colors.primary }}>
+                            🛡️ Reglas Activas (Constraints)
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {executionResult.constraintsData.map((regla, idx) => (
+                            <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/50 border border-white/5">
+                              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded" 
+                                style={{ 
+                                  backgroundColor: `${colors.primary}30`,
+                                  color: colors.primary
+                                }}>
+                                {regla.tipo === 'PRIMARY KEY' ? '🔑 PK' : 
+                                 regla.tipo === 'UNIQUE' ? '✓ UNIQUE' : 
+                                 regla.tipo === 'FOREIGN KEY' ? '🔗 FK' : 
+                                 regla.tipo === 'CHECK' ? '⚡ CHECK' : '📋'}
+                              </span>
+                              <span className="text-xs font-mono text-slate-300">{regla.nombre_regla}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
 

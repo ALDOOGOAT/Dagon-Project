@@ -182,14 +182,14 @@ export const ProfilePage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="relative">
-          <div className="absolute -inset-6 rounded-full bg-cyan-500/10 blur-2xl animate-pulse" />
+          <div className="absolute -inset-6 rounded-full blur-2xl animate-pulse" style={{ backgroundColor: `${colors.primary}20` }} />
           <DagonMascot size="large" mood="thinking" />
         </div>
         <div className="flex flex-col items-center gap-3">
           <div className="w-44 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full w-2/3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-shimmer-width" />
+            <div className="h-full w-2/3 rounded-full animate-shimmer-width" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} />
           </div>
-          <p className="text-cyan-300/60 text-xs font-bold tracking-[0.4em] uppercase">Analizando tu poder...</p>
+          <p className="text-xs font-bold tracking-[0.4em] uppercase" style={{ color: colors.primary }}>Analizando tu poder...</p>
         </div>
       </div>
     );
@@ -204,17 +204,18 @@ export const ProfilePage = () => {
             <ArrowLeft className="w-5 h-5 mr-2" /> Volver
           </Button>
           <div className="h-8 w-px bg-white/10 mx-4" />
-          <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase">Ficha de personaje</p>
+          <p className="text-xs font-bold tracking-[0.4em] uppercase" style={{ color: colors.primary }}>Ficha de personaje</p>
         </div>
 
         {/* PERSONALIZACIÓN DE TEMA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card-apple rounded-3xl p-6 border border-white/10 mb-8"
+          className="glass-card-apple rounded-3xl p-6 border mb-8"
+          style={{ borderColor: colors.border }}
         >
           <h3 className="text-white font-display text-xl font-black mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-cyan-400" />
+            <Sparkles className="w-5 h-5" style={{ color: colors.primary }} />
             Personalización
           </h3>
           <p className="text-slate-400 text-sm mb-4">Elige el tema de color que más te guste</p>
@@ -226,9 +227,10 @@ export const ProfilePage = () => {
                 onClick={() => changePalette(key)}
                 className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
                   palette === key 
-                    ? 'border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.4)] scale-105' 
+                    ? 'border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-105' 
                     : 'border-transparent hover:border-white/30 hover:scale-105'
                 }`}
+                style={palette === key ? { borderColor: colors.primary, boxShadow: `0 0 20px ${colors.primary}40` } : {}}
               >
                 <div className="flex flex-col gap-1">
                   <div 
@@ -240,7 +242,7 @@ export const ProfilePage = () => {
                   <span className="text-xs text-slate-300 font-medium truncate">{theme.name}</span>
                 </div>
                 {palette === key && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-cyan-400 rounded-full flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
                     <Sparkles className="w-2 h-2 text-black" />
                   </div>
                 )}
@@ -301,13 +303,14 @@ export const ProfilePage = () => {
                   initial={{ width: 0 }}
                   animate={{ width: `${xpInLevel}%` }}
                   transition={{ duration: 1.2, ease: 'easeOut' }}
-                  className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500 shadow-[0_0_20px_rgba(99,102,241,0.7)]"
+                  className="h-full shadow-[0_0_20px_rgba(99,102,241,0.7)]"
+                  style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})` }}
                 />
               </div>
             </div>
 
             <div className="text-right">
-              <p className="font-display text-6xl font-black text-gradient-gold leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]">
+              <p className="font-display text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {stats.xp}
               </p>
               <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP totales</p>
@@ -320,25 +323,26 @@ export const ProfilePage = () => {
             {/* RESUMEN DE BATALLA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10"
+              className="glass-card-apple rounded-3xl p-6 lg:p-8 border"
+              style={{ borderColor: colors.border }}
             >
               <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <Target className="text-cyan-400" /> Resumen de batalla
+                <Target /> Resumen de batalla
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { icon: <BookOpen className="w-5 h-5" />, label: 'Completados', value: stats.ejercicios_completados, color: 'text-emerald-400', hover: 'hover:border-emerald-500/30' },
-                  { icon: <Code className="w-5 h-5" />, label: 'Consultas', value: stats.consultas_totales, color: 'text-blue-400', hover: 'hover:border-blue-500/30' },
-                  { icon: <Flame className="w-5 h-5" />, label: 'Racha actual', value: stats.racha, color: 'text-orange-400', hover: 'hover:border-orange-500/30' },
-                  { icon: <Trophy className="w-5 h-5" />, label: 'Mejor racha', value: stats.mejor_racha, color: 'text-yellow-400', hover: 'hover:border-yellow-500/30' },
+                  { icon: <BookOpen className="w-5 h-5" />, label: 'Completados', value: stats.ejercicios_completados, hover: 'hover:border-emerald-500/30' },
+                  { icon: <Code className="w-5 h-5" />, label: 'Consultas', value: stats.consultas_totales, hover: 'hover:border-blue-500/30' },
+                  { icon: <Flame className="w-5 h-5" />, label: 'Racha actual', value: stats.racha, hover: 'hover:border-orange-500/30' },
+                  { icon: <Trophy className="w-5 h-5" />, label: 'Mejor racha', value: stats.mejor_racha, hover: 'hover:border-yellow-500/30' },
                 ].map((s, i) => (
                   <motion.div
                     key={i}
                     whileHover={{ y: -3 }}
                     className={`flex items-center justify-between p-5 bg-slate-900/50 rounded-2xl border border-white/5 ${s.hover} transition-all`}
                   >
-                    <div className={`flex items-center gap-3 font-display font-bold text-sm text-slate-200 ${s.color}`}>
-                      {s.icon} <span className="text-slate-300">{s.label}</span>
+                    <div className="flex items-center gap-3 font-display font-bold text-sm text-slate-200">
+                      <span style={{ color: colors.primary }}>{s.icon}</span> <span className="text-slate-300">{s.label}</span>
                     </div>
                     <span className="font-display text-3xl font-black text-white">{s.value}</span>
                   </motion.div>
@@ -444,19 +448,29 @@ export const ProfilePage = () => {
                   sounds.playClick();
                   navigate('/credits');
                 }}
-                className="w-full py-8 rounded-[32px] glass-card-apple border border-yellow-500/20 hover:border-yellow-400/50 bg-gradient-to-r from-yellow-500/5 to-transparent group transition-all"
+                className="w-full py-8 rounded-[32px] glass-card-apple border group transition-all"
+                style={{ 
+                  borderColor: `${colors.primary}30`,
+                  background: `linear-gradient(90deg, ${colors.primary}10, transparent)`
+                }}
               >
                 <div className="flex items-center justify-between w-full px-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 transition-transform">
-                      <Trophy className="w-6 h-6 text-yellow-400" />
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                      style={{ 
+                        backgroundColor: `${colors.primary}20`,
+                        borderColor: `${colors.primary}40`
+                      }}
+                    >
+                      <Trophy className="w-6 h-6" style={{ color: colors.primary }} />
                     </div>
                     <div className="text-left">
-                      <p className="text-yellow-400 text-xs font-bold uppercase tracking-widest">Descubre a los creadores</p>
+                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.primary }}>Descubre a los creadores</p>
                       <h3 className="text-white font-display text-xl font-black">SALÓN DE LA FAMA</h3>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-yellow-500/50 group-hover:text-yellow-400 transition-colors" />
+                  <ChevronRight className="w-6 h-6 group-hover:transition-colors" style={{ color: colors.primary, opacity: 0.5 }} />
                 </div>
               </Button>
             </motion.div>

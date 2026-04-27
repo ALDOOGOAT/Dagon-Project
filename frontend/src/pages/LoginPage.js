@@ -65,8 +65,8 @@ export const LoginPage = () => {
   return (
     <div className={`min-h-screen flex relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`} data-testid="login-page">
       {/* Lado izquierdo: cinemático */}
-      <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-fuchsia-600/15" />
+<div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden" style={{ backgroundColor: colors.background }}>
+          <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at 50% 50%, ${colors.primary}40, transparent 70%)` }} />
 
         <div className="relative z-10 text-center space-y-8 px-12">
           <motion.div
@@ -75,7 +75,7 @@ export const LoginPage = () => {
             transition={{ duration: 0.8, ease: 'easeOut' }}
           >
             <div className="relative inline-block">
-              <div className="absolute -inset-12 rounded-full bg-blue-500/20 blur-3xl animate-pulse-glow" />
+              <div className="absolute -inset-12 rounded-full blur-3xl animate-pulse-glow" style={{ backgroundColor: `${colors.primary}30` }} />
               <div className="relative animate-float">
                 <DagonMascot size="large" mood="excited" />
               </div>
@@ -117,7 +117,7 @@ export const LoginPage = () => {
                 key={i}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card-apple text-sm font-bold text-slate-200 border border-white/10 hover:border-blue-400/40 hover:scale-105 transition-all"
               >
-                <span className="text-cyan-300">{h.icon}</span>
+                <span style={{ color: colors.primary }}>{h.icon}</span>
                 {h.label}
               </span>
             ))}
@@ -129,9 +129,9 @@ export const LoginPage = () => {
             transition={{ delay: 0.9, duration: 0.6 }}
             className="flex items-center justify-center gap-2 text-xs font-gameui font-bold uppercase tracking-[0.4em] text-slate-500 pt-4"
           >
-            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <Sparkles className="w-3 h-3 text-{colors.primary}" />
             <span>Tutor IA Clawbot incluido</span>
-            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <Sparkles className="w-3 h-3 text-{colors.primary}" />
           </motion.div>
         </div>
       </div>
@@ -153,7 +153,7 @@ export const LoginPage = () => {
 
           <div className="glass-card-apple rounded-3xl p-8 space-y-6 border border-white/10 holo-border shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
             <div className="text-center">
-              <span className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.35em] uppercase text-cyan-300 bg-cyan-500/10 border border-cyan-400/30 px-3 py-1 rounded-full mb-4">
+              <span className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.35em] uppercase text-{colors.primary} bg-cyan-500/10 border border-{colors.primary}/30 px-3 py-1 rounded-full mb-4">
                 <Database className="w-3 h-3" />
                 {isLogin ? 'Acceso de aventurero' : 'Nuevo aventurero'}
               </span>
@@ -176,7 +176,7 @@ export const LoginPage = () => {
                     className="space-y-2 overflow-hidden"
                   >
                     <Label htmlFor="name" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                      <User className="w-3 h-3 text-cyan-400" /> Nombre de aventurero
+                      <User className="w-3 h-3 text-{colors.primary}" /> Nombre de aventurero
                     </Label>
                     <Input
                       id="name"
@@ -199,7 +199,7 @@ export const LoginPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Mail className="w-3 h-3 text-cyan-400" /> Email
+                  <Mail className="w-3 h-3 text-{colors.primary}" /> Email
                 </Label>
                 <Input
                   id="email"
@@ -220,7 +220,7 @@ export const LoginPage = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Lock className="w-3 h-3 text-cyan-400" /> Contraseña
+                  <Lock className="w-3 h-3 text-{colors.primary}" /> Contraseña
                 </Label>
                 <Input
                   id="password"
@@ -243,7 +243,11 @@ export const LoginPage = () => {
                 type="submit"
                 data-testid="submit-button"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-fuchsia-600 hover:from-blue-500 hover:via-indigo-500 hover:to-fuchsia-500 text-white font-display font-black text-lg tracking-wide py-6 rounded-xl transition-all duration-300 shadow-[0_10px_40px_rgba(99,102,241,0.45)] hover:shadow-[0_15px_50px_rgba(99,102,241,0.7)] hover:scale-[1.02]"
+                className="w-full text-white font-display font-black text-lg tracking-wide py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+                style={{ 
+                  background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})`,
+                  boxShadow: `0 10px 40px ${colors.primary}60`
+                }}
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -262,7 +266,7 @@ export const LoginPage = () => {
                 type="button"
                 data-testid="toggle-auth-mode"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-slate-400 hover:text-cyan-300 transition-colors text-sm font-gameui"
+                className="text-slate-400 hover:text-{colors.primary} transition-colors text-sm font-gameui"
               >
                 {isLogin ? '¿No tienes cuenta? ' : '¿Ya eres aventurero? '}
                 <span className="font-bold underline-offset-4 hover:underline">

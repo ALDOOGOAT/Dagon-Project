@@ -44,8 +44,8 @@ export const LeaderboardPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Trophy className="w-12 h-12 text-yellow-400 animate-pulse" />
-          <p className="text-cyan-300 font-bold tracking-[0.4em] uppercase text-xs">Forjando la clasificación...</p>
+          <Trophy className="w-12 h-12 animate-pulse" style={{ color: colors.primary }} />
+          <p className="font-bold tracking-[0.4em] uppercase text-xs" style={{ color: colors.primary }}>Forjando la clasificación...</p>
         </div>
       </div>
     );
@@ -181,17 +181,18 @@ export const LeaderboardPage = () => {
                     transition={{ delay: i * 0.05 }}
 className={`relative flex items-center px-4 py-3 rounded-2xl border transition-all overflow-hidden ${
                       me
-                        ? 'bg-blue-500/10 border-blue-400/40 shadow-[inset_0_0_25px_rgba(59,130,blue,0.15)]'
-                        : 'border-white/5 hover:border-cyan-400/30'
+                        ? 'border'
+                        : 'border-white/5'
                     }`}
                     style={{
-                      backgroundColor: me ? undefined : `${colors.surface}66`
+                      backgroundColor: me ? `${colors.primary}15` : `${colors.surface}66`,
+                      borderColor: me ? `${colors.primary}50` : colors.border
                     }}
                   >
                     {/* XP fill backdrop */}
                     <div
-                      className={`absolute inset-y-0 left-0 bg-gradient-to-r ${lg.color} opacity-10 pointer-events-none`}
-                      style={{ width: `${xpPct}%` }}
+                      className="absolute inset-y-0 left-0 opacity-10 pointer-events-none"
+                      style={{ width: `${xpPct}%`, backgroundColor: colors.primary }}
                     />
                     <div className="relative z-10 w-16 flex justify-center">
                       <div className="w-10 h-10 flex items-center justify-center rounded-xl border font-display font-black" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
@@ -202,11 +203,11 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                       </div>
                     </div>
                     <div className="relative z-10 flex-1 flex items-center gap-3 px-3 min-w-0">
-                      <span className={`font-display font-black truncate ${me ? 'text-blue-200' : 'text-white'}`}>
+                      <span className={`font-display font-black truncate ${me ? '' : 'text-white'}`} style={me ? { color: colors.primary } : {}}>
                         {p.nombre}
                       </span>
                       {me && (
-                        <span className="bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
+                        <span className="text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ backgroundColor: colors.primary }}>
                           Tú
                         </span>
                       )}
