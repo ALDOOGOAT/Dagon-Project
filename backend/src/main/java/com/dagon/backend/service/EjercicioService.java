@@ -254,26 +254,29 @@ public class EjercicioService {
             String sinCreate = queryOriginal.replaceAll("(?i)CREATE\\s+TABLE\\s+", "").trim();
             String[] partes = sinCreate.split("[\\(,\\s]");
             if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
+                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         } else if (upperQuery.contains("ALTER TABLE")) {
             String sinAlter = queryOriginal.replaceAll("(?i)ALTER\\s+TABLE\\s+", "").trim();
             String[] partes = sinAlter.split("\\s+");
             if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
+                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         } else if (upperQuery.contains("DROP TABLE")) {
             String sinDrop = queryOriginal.replaceAll("(?i)DROP\\s+TABLE\\s+", "").trim();
             String[] partes = sinDrop.split("\\s+");
             if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)])", "").trim();
+                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
+                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         }
         
         return tabla;
     }
 
-public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
+    public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         Map<String, Object> respuesta = new HashMap<>();
 
         // --- CAPA DE SEGURIDAD (ESCUDO DE DAGON) ---
@@ -647,6 +650,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         }
         return respuesta;
     }
+    
     private String extraerNombreTablaDML(String upperQuery, String queryOriginal) {
         try {
             java.util.regex.Pattern pattern;
