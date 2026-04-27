@@ -1,40 +1,108 @@
-import React from 'react';
-
 export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, showFire = false }) => {
   const sizeMap = {
     small: 80,
     medium: 120,
-    large: 160,
-    xlarge: 200
+    large: 180,
+    xlarge: 220
   };
   
   const actualSize = sizeMap[size] || sizeMap.medium;
   
   const getMoodColors = () => {
-    const redPrimary = '#ff4757';
     switch(mood) {
-      case 'excited': return { primary: '#ff6b6b', secondary: '#ee5253', glow: '#ff9f43' };
-      case 'angry':   return { primary: '#eb4d4b', secondary: '#4834d4', glow: '#ff0000' };
-      case 'sad':     return { primary: '#95afc0', secondary: '#535c68', glow: '#dff9fb' };
-      default:        return { primary: redPrimary, secondary: '#8b0000', glow: '#ff7f50' };
+      case 'excited':
+      case 'celebrating':
+        return { primary: '#ff6b6b', secondary: '#ff4757', glow: '#ff6b6b', accent: '#ffd93d' };
+      case 'happy':
+        return { primary: '#ff5555', secondary: '#ff3344', glow: '#ff5555', accent: '#ffa502' };
+      case 'determined':
+        return { primary: '#ee3333', secondary: '#cc2222', glow: '#ff4444', accent: '#ff6348' };
+      case 'angry':
+        return { primary: '#8b0000', secondary: '#5c0000', glow: '#ff0000', accent: '#ff2222' };
+      case 'sad':
+      case 'disappointed':
+        return { primary: '#4a5568', secondary: '#2d3748', glow: '#718096', accent: '#a0aec0' };
+      case 'nervous':
+        return { primary: '#dd6b20', secondary: '#c05621', glow: '#ed8936', accent: '#f6ad55' };
+      case 'thinking':
+        return { primary: '#805ad5', secondary: '#6b46c1', glow: '#9f7aea', accent: '#b794f4' };
+      case 'speaking':
+        return { primary: '#d69e2e', secondary: '#b7791f', glow: '#ecc94b', accent: '#f6e05e' };
+      case 'afraid':
+        return { primary: '#1a365c', secondary: '#0d1f3c', glow: '#3182ce', accent: '#63b3ed' };
+      default:
+        return { primary: '#ff5555', secondary: '#ff3344', glow: '#ff5555', accent: '#ffa502' };
+    }
+  };
+  
+  const getEyeState = () => {
+    const colors = getMoodColors();
+    switch(mood) {
+      case 'sad':
+      case 'disappointed':
+        return { scale: 0.7, opacity: 0.5, rx: 14, ry: 12, angle: 15, color: colors.glow };
+      case 'excited':
+      case 'celebrating':
+        return { scale: 1.4, opacity: 1, rx: 16, ry: 22, angle: 0, color: colors.glow, sparkle: true };
+      case 'angry':
+        return { scale: 0.85, opacity: 1, rx: 16, ry: 10, angle: -8, color: '#ff0000', brow: true };
+      case 'nervous':
+        return { scale: 1.1, opacity: 1, rx: 18, ry: 20, angle: 5, color: colors.glow, shake: true };
+      case 'thinking':
+        return { scale: 0.9, opacity: 0.85, rx: 10, ry: 14, angle: 0, color: colors.glow };
+      case 'speaking':
+        return { scale: 1.15, opacity: 1, rx: 15, ry: 19, angle: 0, color: colors.glow };
+      case 'afraid':
+        return { scale: 1.3, opacity: 1, rx: 16, ry: 20, angle: 0, color: '#63b3ed', pupils: true };
+      case 'happy':
+      default:
+        return { scale: 1, opacity: 0.95, rx: 12, ry: 16, angle: 0, color: colors.glow };
     }
   };
   
   const getAnimation = () => {
     if (!animated) return '';
     switch(mood) {
-      case 'excited': return 'animate-dagon-excited';
-      case 'thinking': return 'animate-dagon-thinking';
-      default: return 'animate-float';
+      case 'excited':
+      case 'celebrating':
+        return 'animate-dagon-excited';
+      case 'nervous':
+        return 'animate-dagon-nervous';
+      case 'angry':
+        return 'animate-dagon-angry';
+      case 'speaking':
+        return 'animate-pulse-glow';
+      case 'sad':
+      case 'disappointed':
+        return 'animate-breathe-slow';
+      case 'thinking':
+        return 'animate-dagon-thinking';
+      case 'afraid':
+        return 'animate-dagon-shake';
+      default:
+        return 'animate-float';
     }
   };
-
+  
   const getGlowEffect = () => {
     if (!animated) return '';
-    return 'drop-shadow-[0_0_20px_rgba(255,71,87,0.4)]';
+    switch(mood) {
+      case 'excited':
+      case 'celebrating':
+        return 'drop-shadow-[0_0_20px_rgba(255,107,107,0.8)]';
+      case 'angry':
+        return 'drop-shadow-[0_0_25px_rgba(255,0,0,0.9)]';
+      case 'nervous':
+        return 'drop-shadow-[0_0_15px_rgba(237,137,54,0.7)]';
+      case 'thinking':
+        return 'drop-shadow-[0_0_15px_rgba(159,122,234,0.6)]';
+      default:
+        return 'drop-shadow-[0_0_10px_rgba(255,68,68,0.5)]';
+    }
   };
   
   const colors = getMoodColors();
+  const eyeState = getEyeState();
   const animationClass = getAnimation();
   const glowClass = getGlowEffect();
 
@@ -42,128 +110,214 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
     <div className={`relative inline-block ${animationClass}`} data-testid="dagon-mascot">
       <svg
         width={actualSize}
-        height={actualSize * 1.1}
-        viewBox="0 0 120 140"
+        height={actualSize * 0.85}
+        viewBox="0 0 120 100"
         xmlns="http://www.w3.org/2000/svg"
-        className="animate-breathe"
-        style={{ transformOrigin: 'center 60px' }}
+        className={`animate-breathe ${glowClass}`}
       >
         <defs>
-          <radialGradient id="bodyGrad" cx="50%" cy="35%" r="55%">
-            <stop offset="0%" stopColor="#ff9f9f" />
-            <stop offset="50%" stopColor="#ff4757" />
-            <stop offset="100%" stopColor="#5c0000" />
+          <radialGradient id="dagonBodyGradient" cx="50%" cy="40%">
+            <stop offset="0%" stopColor={colors.primary} />
+            <stop offset="50%" stopColor={colors.secondary} />
+            <stop offset="100%" stopColor={colors.glow} />
           </radialGradient>
-          
-          <radialGradient id="eyeGrad" cx="40%" cy="35%" r="50%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="40%" stopColor="#f0fdfa" />
-            <stop offset="100%" stopColor="#1e293b" />
+          <radialGradient id="dagonEyeGlow" cx="50%" cy="50%">
+            <stop offset="0%" stopColor={colors.glow} />
+            <stop offset="100%" stopColor="transparent" stopOpacity="0" />
           </radialGradient>
-
-          <linearGradient id="headShine" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="white" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
-          </linearGradient>
+          <filter id="dagonGlow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="innerShadow">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+            <feOffset dx="0" dy="2" result="offsetblur"/>
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.3"/>
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="angryBrow">
+            <feGaussianBlur stdDeviation="1.5"/>
+          </filter>
         </defs>
         
-        <g className={glowClass} transform="translate(0, 10)">
+        <g opacity="0.4">
+          <ellipse cx="30" cy="88" rx="4" ry="10" fill={colors.secondary} />
+          <ellipse cx="45" cy="92" rx="3" ry="8" fill={colors.secondary} />
+          <ellipse cx="60" cy="93" rx="3" ry="7" fill={colors.secondary} />
+          <ellipse cx="75" cy="92" rx="3" ry="8" fill={colors.secondary} />
+          <ellipse cx="90" cy="88" rx="4" ry="10" fill={colors.secondary} />
+        </g>
+        
+        <ellipse
+          cx="60"
+          cy="85"
+          rx="50"
+          ry="12"
+          fill={colors.secondary}
+          opacity="0.6"
+        />
+        
+        <path
+          d="M 10 85 Q 10 25, 60 15 Q 110 25, 110 85 L 10 85 Z"
+          fill="url(#dagonBodyGradient)"
+          filter="url(#dagonGlow)"
+        />
+        
+        <path
+          d="M 15 85 Q 15 30, 60 20 Q 105 30, 105 85 L 15 85 Z"
+          fill="url(#innerShadow)"
+          opacity="0.15"
+        />
+        
+        {mood === 'angry' && (
+          <g stroke={colors.accent} strokeWidth="3" strokeLinecap="round" opacity="0.9">
+            <line x1="22" y1="28" x2="45" y2="38" filter="url(#angryBrow)" />
+            <line x1="98" y1="28" x2="75" y2="38" filter="url(#angryBrow)" />
+          </g>
+        )}
+        
+        {mood === 'sad' || mood === 'disappointed' ? (
+          <g stroke={colors.accent} strokeWidth="2" strokeLinecap="round" opacity="0.6">
+            <path d="M 25 32 Q 40 28, 48 35" />
+            <path d="M 95 32 Q 80 28, 72 35" />
+          </g>
+        ) : null}
+        
+        <g transform={`translate(35, 50) scale(${eyeState.scale}) rotate(${eyeState.angle}, 0, 0)`} opacity={eyeState.opacity}>
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="14"
+            ry="18"
+            fill={colors.primary}
+            filter="url(#dagonGlow)"
+          />
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="12"
+            ry="16"
+            fill={eyeState.color || colors.glow}
+          />
+          <ellipse cx="-4" cy="-6" rx="5" ry="7" fill="rgba(255,255,255,0.9)" />
+          <ellipse cx="5" cy="4" rx="2" ry="3" fill="rgba(255,255,255,0.4)" />
           
-          {/* 1. CONTORNO STICKER */}
-          <g fill="black" stroke="black" strokeWidth="5" strokeLinejoin="round">
-             <path d="M 10 85 Q 10 20, 60 10 Q 110 20, 110 85 L 10 85 Z" />
-             <ellipse cx="60" cy="85" rx="52" ry="14" />
-          </g>
-
-          {/* 2. BASE OSCURA */}
-          <ellipse cx="60" cy="85" rx="50" ry="12" fill="#1e2124" />
-
-          {/* 3. TENTÁCULOS DE GOMINOLA */}
-          <g>
-            {[
-              { x: 30, delay: '0s', len: 25 },
-              { x: 45, delay: '0.4s', len: 35 },
-              { x: 60, delay: '0.8s', len: 45 },
-              { x: 75, delay: '1.2s', len: 35 },
-              { x: 90, delay: '1.6s', len: 25 }
-            ].map((t, i) => (
-              <g key={i}>
-                <path
-                  d={`M ${t.x-5} 85 Q ${t.x} ${85+t.len+5}, ${t.x+5} 85`}
-                  fill="black"
-                >
-                   <animate attributeName="d" 
-                    values={`M ${t.x-5} 85 Q ${t.x} ${85+t.len+5}, ${t.x+5} 85; M ${t.x-7} 85 Q ${t.x-3} ${85+t.len+10}, ${t.x+3} 85; M ${t.x-5} 85 Q ${t.x} ${85+t.len+5}, ${t.x+5} 85`} 
-                    dur="3s" begin={t.delay} repeatCount="indefinite" />
-                </path>
-                <path
-                  d={`M ${t.x-3} 85 Q ${t.x} ${85+t.len}, ${t.x+3} 85`}
-                  fill="#8b0000"
-                >
-                  <animate attributeName="d" 
-                    values={`M ${t.x-3} 85 Q ${t.x} ${85+t.len}, ${t.x+3} 85; M ${t.x-5} 85 Q ${t.x-3} ${85+t.len+5}, ${t.x+1} 85; M ${t.x-3} 85 Q ${t.x} ${85+t.len}, ${t.x+3} 85`} 
-                    dur="3s" begin={t.delay} repeatCount="indefinite" />
-                </path>
-                {/* Brillo en tentáculo */}
-                <circle cx={t.x-1} cy={95} r="1.5" fill="white" opacity="0.2" />
-              </g>
-            ))}
-          </g>
+          {eyeState.pupils && (
+            <ellipse cx="0" cy="0" rx="4" ry="6" fill="#1a202c" />
+          )}
+        </g>
+        
+        <g transform={`translate(85, 50) scale(${eyeState.scale}) rotate(${-eyeState.angle}, 0, 0)`} opacity={eyeState.opacity}>
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="14"
+            ry="18"
+            fill={colors.primary}
+            filter="url(#dagonGlow)"
+          />
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="12"
+            ry="16"
+            fill={eyeState.color || colors.glow}
+          />
+          <ellipse cx="-4" cy="-6" rx="5" ry="7" fill="rgba(255,255,255,0.9)" />
+          <ellipse cx="5" cy="4" rx="2" ry="3" fill="rgba(255,255,255,0.4)" />
           
-          {/* 4. CUERPO PRINCIPAL */}
-          <path
-            d="M 10 85 Q 10 20, 60 10 Q 110 20, 110 85 L 10 85 Z"
-            fill="url(#bodyGrad)"
-            stroke="black"
-            strokeWidth="1.2"
-          />
-
-          {/* BRILLO GLOSSY EN LA CABEZA */}
-          <path
-            d="M 30 35 Q 60 18, 90 35 Q 60 25, 30 35"
-            fill="url(#headShine)"
-            opacity="0.6"
-          />
-
-          {/* 5. OJOS MASTER (Líquidos y expresivos) */}
-          <g transform="translate(35, 52)">
-             <circle r="16" fill="black" />
-             <circle r="13" fill="url(#eyeGrad)" />
-             <circle r="6.5" cy="1" fill="#0f172a" />
-             <circle cx="-4" cy="-5" r="3.5" fill="white" opacity="0.9" />
-             <circle cx="4" cy="4" r="1.8" fill="white" opacity="0.4" />
+          {eyeState.pupils && (
+            <ellipse cx="0" cy="0" rx="4" ry="6" fill="#1a202c" />
+          )}
+        </g>
+        
+        {eyeState.sparkle && (
+          <g fill={colors.accent}>
+            <circle cx="25" cy="35" r="2" opacity="0.8">
+              <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.5s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="95" cy="35" r="2" opacity="0.8">
+              <animate attributeName="opacity" values="0.8;0.2;0.8" dur="0.5s" repeatCount="indefinite" begin="0.25s" />
+            </circle>
+            <circle cx="60" cy="20" r="3" opacity="0.6">
+              <animate attributeName="opacity" values="0.6;0.1;0.6" dur="0.7s" repeatCount="indefinite" />
+            </circle>
           </g>
-
-          <g transform="translate(85, 52)">
-             <circle r="16" fill="black" />
-             <circle r="13" fill="url(#eyeGrad)" />
-             <circle r="6.5" cy="1" fill="#0f172a" />
-             <circle cx="-4" cy="-5" r="3.5" fill="white" opacity="0.9" />
-             <circle cx="4" cy="4" r="1.8" fill="white" opacity="0.4" />
+        )}
+        
+        {(mood === 'sad' || mood === 'disappointed') && (
+          <g fill={colors.accent} opacity="0.6">
+            <ellipse cx="28" cy="72" rx="3" ry="5">
+              <animate attributeName="ry" values="5;3;5" dur="2s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="92" cy="72" rx="3" ry="5">
+              <animate attributeName="ry" values="5;3;5" dur="2s" repeatCount="indefinite" begin="1s" />
+            </ellipse>
           </g>
-
-          {/* BOCA CARISMÁTICA */}
-          <path 
-            d="M 53 78 Q 60 83, 67 78" 
-            fill="none" 
-            stroke="black" 
-            strokeWidth="3" 
-            strokeLinecap="round" 
-            opacity="0.8" 
-          />
-
+        )}
+        
+        {mood === 'nervous' && (
+          <g fill="#63b3ed">
+            <ellipse cx="20" cy="40" rx="2" ry="4">
+              <animate attributeName="cy" values="40;50;40" dur="0.8s" repeatCount="indefinite" />
+            </ellipse>
+            <ellipse cx="100" cy="40" rx="2" ry="4">
+              <animate attributeName="cy" values="40;50;40" dur="0.8s" repeatCount="indefinite" begin="0.4s" />
+            </ellipse>
+          </g>
+        )}
+        
+        <g opacity="0.15">
+          <circle cx="35" cy="55" r="8" fill="white" />
+          <circle cx="85" cy="55" r="8" fill="white" />
+          <circle cx="60" cy="70" r="10" fill="white" />
         </g>
 
         {showFire && (
-          <g transform="translate(0, 15)">
+          <g>
+            <animate attributeName="opacity" values="0.6;1;0.6" dur="0.6s" repeatCount="indefinite" />
             <path d="M30 95 Q25 75 35 65 Q30 75 35 55" stroke="#ff6b35" strokeWidth="4" fill="none" opacity="0.9">
-              <animate attributeName="opacity" values="0.6;1;0.6" dur="0.4s" repeatCount="indefinite" />
+              <animate attributeName="d" values="M30 95 Q25 75 35 65 Q30 75 35 55;M30 95 Q28 72 32 62 Q27 72 33 50;M30 95 Q25 75 35 65 Q30 75 35 55" dur="0.4s" repeatCount="indefinite" />
             </path>
+            <path d="M45 97 Q40 80 48 70 Q43 80 50 60" stroke="#ff8c00" strokeWidth="3" fill="none" opacity="0.95">
+              <animate attributeName="d" values="M45 97 Q40 80 48 70 Q43 80 50 60;M45 97 Q42 77 46 67 Q41 77 52 55;M45 97 Q40 80 48 70 Q43 80 50 60" dur="0.35s" repeatCount="indefinite" />
+            </path>
+            <path d="M60 98 Q55 82 60 72 Q55 82 60 62" stroke="#ffa500" strokeWidth="3" fill="none">
+              <animate attributeName="d" values="M60 98 Q55 82 60 72 Q55 82 60 62;M60 98 Q57 79 60 69 Q55 79 60 58;M60 98 Q55 82 60 72 Q55 82 60 62" dur="0.3s" repeatCount="indefinite" />
+            </path>
+            <path d="M75 97 Q80 80 72 70 Q77 80 70 60" stroke="#ff8c00" strokeWidth="3" fill="none" opacity="0.95">
+              <animate attributeName="d" values="M75 97 Q80 80 72 70 Q77 80 70 60;M75 97 Q78 77 74 67 Q79 77 68 55;M75 97 Q80 80 72 70 Q77 80 70 60" dur="0.35s" repeatCount="indefinite" begin="0.1s" />
+            </path>
+            <path d="M90 95 Q95 75 85 65 Q90 75 85 55" stroke="#ff6b35" strokeWidth="4" fill="none" opacity="0.9">
+              <animate attributeName="d" values="M90 95 Q95 75 85 65 Q90 75 85 55;M90 95 Q92 72 88 62 Q93 72 87 50;M90 95 Q95 75 85 65 Q90 75 85 55" dur="0.4s" repeatCount="indefinite" begin="0.15s" />
+            </path>
+            <circle cx="38" cy="48" r="3" fill="#ffd23f" opacity="0.8">
+              <animate attributeName="cy" values="48;30;48" dur="1s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.8;0;0.8" dur="1s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="52" cy="42" r="2.5" fill="#ff6b35" opacity="0.7">
+              <animate attributeName="cy" values="42;25;42" dur="0.8s" repeatCount="indefinite" begin="0.2s" />
+              <animate attributeName="opacity" values="0.7;0;0.7" dur="0.8s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="68" cy="45" r="2.5" fill="#ffa500" opacity="0.7">
+              <animate attributeName="cy" values="45;28;45" dur="0.9s" repeatCount="indefinite" begin="0.1s" />
+              <animate attributeName="opacity" values="0.7;0;0.7" dur="0.9s" repeatCount="indefinite" />
+            </circle>
+            <circle cx="82" cy="50" r="2" fill="#ffd23f" opacity="0.6">
+              <animate attributeName="cy" values="50;32;50" dur="0.85s" repeatCount="indefinite" begin="0.25s" />
+              <animate attributeName="opacity" values="0.6;0;0.6" dur="0.85s" repeatCount="indefinite" />
+            </circle>
           </g>
         )}
       </svg>
     </div>
   );
 };
-
-const getEyeState = () => ({ scale: 1, opacity: 1, angle: 0, pupils: false });
