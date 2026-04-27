@@ -8,7 +8,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import { sounds } from '../lib/SoundEngine';
-import { useTheme } from '../contexts/ThemeContext';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, Shield
@@ -167,7 +166,6 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
-  const { colors } = useTheme();
 
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
@@ -546,10 +544,10 @@ export const ExercisePage = () => {
       {xpPop != null && <XPPop amount={xpPop} />}
 
       {/* HEADER */}
-      <header className="border-b backdrop-blur-md z-10 shrink-0" style={{ backgroundColor: `${colors.background}CC`, borderColor: colors.border }}>
+      <header className="border-b backdrop-blur-md z-10 shrink-0 bg-slate-950/90 border-slate-800">
         <div className="px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: colors.textMuted }} className="hover:text-white">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
             <div className="h-6 w-px bg-white/10" />
@@ -562,15 +560,15 @@ export const ExercisePage = () => {
               <RotateCcw className="w-4 h-4 mr-2" /> Restablecer
             </Button>
             <div className="h-6 w-px bg-white/10" />
-            <h1 className="font-display text-base font-black flex items-center gap-2" style={{ color: colors.text }}>
-              <Database className="w-4 h-4" style={{ color: colors.primary }} />
+            <h1 className="font-display text-base font-black flex items-center gap-2 text-white">
+              <Database className="w-4 h-4 text-emerald-400" />
               Módulo {levelId}
-              <span className="text-sm font-gameui ml-1" style={{ color: colors.textMuted }}>
+              <span className="text-sm font-gameui ml-1 text-slate-400">
                 · Misión {currentExerciseIndex + 1}/{exercises.length}
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto max-w-[40%] scrollbar-none" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto max-w-[40%] scrollbar-none bg-slate-900 border-slate-700">
             {exercises.map((_, i) => {
               const isCompleted = i < currentExerciseIndex;
               const isCurrent = i === currentExerciseIndex;
@@ -598,7 +596,7 @@ export const ExercisePage = () => {
             })}
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ backgroundColor: colors.surface, borderColor: colors.border }}>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-slate-900 border-slate-700">
               <Zap className="w-4 h-4 text-yellow-300" />
               <span className="font-display font-black text-yellow-200 text-sm">{user?.xp || 0}</span>
             </div>
@@ -614,7 +612,7 @@ export const ExercisePage = () => {
             </AnimatePresence>
           </div>
         </div>
-        <div className="h-1" style={{ backgroundColor: colors.surface }}>
+        <div className="h-1 bg-slate-900">
           <motion.div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
             animate={{ width: `${exerciseProgress}%` }} transition={{ duration: 0.5 }} />
         </div>
@@ -723,7 +721,7 @@ export const ExercisePage = () => {
                           <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
                         </div>
 ) : (
-                        <div className="mt-2 p-4 rounded-xl overflow-hidden" style={{ backgroundColor: colors.surface, border: `1px solid ${colors.border}` }}>
+                        <div className="mt-2 p-4 rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
                           <div className="text-sm font-gameui leading-relaxed">
                             {formatAIMessage(clawbotMessage)}
                           </div>
@@ -865,7 +863,7 @@ export const ExercisePage = () => {
                                 snapshot.isDraggingOver ? 'border-cyan-400' : 'border-slate-600'
                               }`}
                               style={{
-                                backgroundColor: snapshot.isDraggingOver ? `${colors.primary}1A` : `${colors.surface}66`
+                                backgroundColor: snapshot.isDraggingOver ? '#10b9811A' : '#1e293b66'
                               }}
                             >
                               {droppedWords.length === 0 && (
@@ -1076,21 +1074,17 @@ export const ExercisePage = () => {
                   {/* 🌟 MAGIA DIDÁCTICA: Mostrar Constraints de la tabla */}
                   {executionResult.constraintsData && executionResult.constraintsData.length > 0 && (
                     <div className="p-5 pt-0">
-                      <div className="p-4 rounded-xl border" style={{ backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}40` }}>
+                      <div className="p-4 rounded-xl border bg-emerald-900/10 border-emerald-500/40">
                         <div className="flex items-center gap-2 mb-3">
-                          <Shield className="w-4 h-4" style={{ color: colors.primary }} />
-                          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: colors.primary }}>
+                          <Shield className="w-4 h-4 text-emerald-400" />
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
                             🛡️ Reglas Activas (Constraints)
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {executionResult.constraintsData.map((regla, idx) => (
                             <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/50 border border-white/5">
-                              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded" 
-                                style={{ 
-                                  backgroundColor: `${colors.primary}30`,
-                                  color: colors.primary
-                                }}>
+                              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-emerald-500/30 text-emerald-400">
                                 {regla.tipo === 'PRIMARY KEY' ? '🔑 PK' : 
                                  regla.tipo === 'UNIQUE' ? '✓ UNIQUE' : 
                                  regla.tipo === 'FOREIGN KEY' ? '🔗 FK' : 
