@@ -1,4 +1,4 @@
--- Agregar columnas de racha a la tabla usuarios
+-- Agregar columnas de racha a la tabla usuarios solo por probar 
 ALTER TABLE lms_core.usuarios
 ADD COLUMN IF NOT EXISTS racha_actual integer DEFAULT 0,
 ADD COLUMN IF NOT EXISTS mejor_racha integer DEFAULT 0,
