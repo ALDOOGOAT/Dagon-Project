@@ -362,6 +362,11 @@ export const ExercisePage = () => {
           setValidating(false);
           return;
         }
+        
+        // Limpiar intervención pedagógica si ya se había mostrado
+        if (isDagonIntervening || result.dagonPostMessage) {
+          setIsDagonIntervening(false);
+        }
         // =================================
         
         const prevXP = user?.xp || 0;
@@ -396,6 +401,8 @@ export const ExercisePage = () => {
         sounds.playMagic();
       } else {
         toast.error(result.message);
+        // Limpiar intervención pedagógica si existe
+        setIsDagonIntervening(false);
         setExecutionResult({ success: false, message: result.message });
         setShake(true);
         setTimeout(() => setShake(false), 500);
@@ -787,6 +794,9 @@ export const ExercisePage = () => {
                               onClick={() => {
                                 setEditorCode(dagonOriginalQuery);
                                 setIsDagonIntervening(false);
+                                setDagonTypingQuery('');
+                                setDagonShowPostMessage(false);
+                                setExecutionResult(null);
                               }}
                               className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors"
                             >
