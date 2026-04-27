@@ -216,7 +216,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
               : '0 0 30px rgba(59, 130, 246, 0.3)'
           }}
         >
-          <div className="relative rounded-xl overflow-hidden" style={{ backgroundColor: colors.surface }}>
+          <div className="relative rounded-xl overflow-hidden bg-slate-800">
             {previewUrl ? (
               <img 
                 src={previewUrl} 
@@ -240,10 +240,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
           <Button 
             onClick={handleDescargar}
             disabled={loading}
-            className="font-bold text-white"
-            style={{ 
-              background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`
-            }}
+            className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-white font-bold"
           >
             <Download className="w-4 h-4 mr-2" />
             {loading ? 'Generando...' : 'Descargar PNG'}

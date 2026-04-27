@@ -497,8 +497,8 @@ public class EjercicioService {
                 // 🌟 LÓGICA DE VALIDACIÓN MODIFICADA
                 if (isDdlValidation) {
                     
-                    // 🪄 PARCHE AUTO-SANADOR DE SECUENCIAS (v2.0 - Soporta currval)
-                    if (upperQ.contains("NEXTVAL") || upperQ.contains("CURRVAL")) {
+                    // 🪄 PARCHE AUTO-SANADOR DE SECUENCIAS (v2.0 - Soporta currval y setval)
+                    if (upperQ.contains("NEXTVAL") || upperQ.contains("CURRVAL") || upperQ.contains("SETVAL")) {
                         java.util.regex.Pattern seqPattern = java.util.regex.Pattern.compile("['\"]([a-zA-Z0-9_]+)['\"]");
                         java.util.regex.Matcher seqMatcher = seqPattern.matcher(queryUsuario);
                         
