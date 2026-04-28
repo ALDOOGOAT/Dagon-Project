@@ -120,14 +120,14 @@ const AppRoutes = () => {
             }
           />
           <Route
-            path="/credits"
-            element={
-              <ProtectedRoute>
-                <AnimatedPage><CreditsPage /></AnimatedPage>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+             path="/credits"
+             element={
+               <ProtectedRoute>
+                 <AnimatedPage><CreditsPage /></AnimatedPage>
+               </ProtectedRoute>
+             }
+           />
+         </Routes>
       </AnimatePresence>
       <Clawbot />
       <Toaster position="top-right" theme="dark" richColors />

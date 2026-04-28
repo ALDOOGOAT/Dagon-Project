@@ -5,6 +5,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { TutorialOverlay } from '../components/TutorialOverlay';
+import { WelcomeCard } from '../components/WelcomeCard';
+import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import { CertificateModal, useCertificado } from '../components/CertificateModal';
 import { sounds } from '../lib/SoundEngine';
@@ -211,6 +213,7 @@ const title = titleFor(userXP);
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
       {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} />}
+      <WelcomeCard />
       {showQuickPractice && (
         <QuickPracticeMode
           userLevel={user?.level || 'nivel-0'}
@@ -436,9 +439,12 @@ const title = titleFor(userXP);
               </div>
             </div>
           </button>
-        </motion.div>
+          </motion.div>
 
-        {/* SELECTOR DE CURSOS / SENDAS */}
+          {/* DIDACTIC CARDS */}
+          <DidacticCard />
+
+          {/* SELECTOR DE CURSOS / SENDAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {cursos.map(curso => (
                 <button 
