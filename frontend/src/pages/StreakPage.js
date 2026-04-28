@@ -367,10 +367,10 @@ export const StreakPage = () => {
             transition={{ delay: 0.15 }}
             className="lg:col-span-2"
           >
-            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10 p-6">
+            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border p-6" style={{ borderColor: colors.border }}>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <Sparkles className="w-5 h-5" style={{ color: colors.primary }} />
                   <h3 className="font-display text-xl font-black text-white uppercase tracking-wide">Calendario</h3>
                 </div>
                 
@@ -381,7 +381,7 @@ export const StreakPage = () => {
                   >
                     <ChevronLeft className="w-5 h-5 text-slate-400" />
                   </button>
-                  <span className="px-4 font-display font-black text-cyan-300 min-w-[160px] text-center">
+                  <span className="px-4 font-display font-black min-w-[160px] text-center" style={{ color: colors.primary }}>
                     {MESES[mesActual.getMonth()]} {mesActual.getFullYear()}
                   </span>
                   <button
@@ -478,7 +478,7 @@ export const StreakPage = () => {
             transition={{ delay: 0.2 }}
             className="space-y-4"
           >
-            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10 p-5">
+            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border p-5" style={{ borderColor: colors.border }}>
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-4 h-4 text-fuchsia-400" />
                 <span className="text-xs font-bold uppercase tracking-[0.3em] text-fuchsia-300">Próximo Meta</span>
@@ -499,7 +499,7 @@ export const StreakPage = () => {
               </p>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/10 p-5">
+            <div className="bg-slate-900/50 backdrop-blur-xl rounded-3xl border p-5" style={{ borderColor: colors.border }}>
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4 text-yellow-400" />
                 <span className="text-xs font-bold uppercase tracking-[0.3em] text-yellow-300">Récord</span>

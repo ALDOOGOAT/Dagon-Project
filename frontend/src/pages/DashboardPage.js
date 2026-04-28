@@ -373,11 +373,18 @@ const title = titleFor(userXP);
 
           <button
             onClick={() => navigate('/profile')}
-            className="glass-card-apple rounded-2xl p-4 border border-cyan-500/30 hover:border-cyan-400/60 transition-all group text-left"
+            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
+            style={{ borderColor: `${colors.primary}40` }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/30 to-blue-500/20 flex items-center justify-center border border-cyan-400/30 group-hover:scale-110 transition-transform">
-                <Zap className="w-5 h-5 text-cyan-400" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                style={{ 
+                  backgroundColor: `${colors.primary}20`,
+                  borderColor: `${colors.primary}40`
+                }}
+              >
+                <Zap className="w-5 h-5" style={{ color: colors.primary }} />
               </div>
               <div>
                 <p className="font-display text-2xl font-black text-white">{userXP}</p>
@@ -388,11 +395,18 @@ const title = titleFor(userXP);
 
           <button
             onClick={() => navigate('/leaderboard')}
-            className="glass-card-apple rounded-2xl p-4 border border-yellow-500/30 hover:border-yellow-400/60 transition-all group text-left"
+            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
+            style={{ borderColor: `${colors.accent}40` }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500/30 to-amber-500/20 flex items-center justify-center border border-yellow-400/30 group-hover:scale-110 transition-transform">
-                <Trophy className="w-5 h-5 text-yellow-400" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                style={{ 
+                  backgroundColor: `${colors.accent}20`,
+                  borderColor: `${colors.accent}40`
+                }}
+              >
+                <Trophy className="w-5 h-5" style={{ color: colors.accent }} />
               </div>
               <div>
                 <p className="font-display text-2xl font-black text-white">{userRank !== '-' ? `#${userRank}` : '-'}</p>
@@ -403,30 +417,22 @@ const title = titleFor(userXP);
 
           <button
             onClick={() => navigate('/profile')}
-            className="glass-card-apple rounded-2xl p-4 border border-fuchsia-500/30 hover:border-fuchsia-400/60 transition-all group text-left"
+            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
+            style={{ borderColor: `${colors.secondary}40` }}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500/30 to-purple-500/20 flex items-center justify-center border border-fuchsia-400/30 group-hover:scale-110 transition-transform">
-                <Crown className="w-5 h-5 text-fuchsia-400" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                style={{ 
+                  backgroundColor: `${colors.secondary}20`,
+                  borderColor: `${colors.secondary}40`
+                }}
+              >
+                <Crown className="w-5 h-5" style={{ color: colors.secondary }} />
               </div>
               <div>
                 <p className="font-display text-lg font-black text-white truncate max-w-[100px]">{title.name}</p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Rango</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/credits')}
-            className="glass-card-apple rounded-2xl p-4 border border-rose-500/30 hover:border-rose-400/60 transition-all group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/30 to-red-500/20 flex items-center justify-center border border-rose-400/30 group-hover:scale-110 transition-transform">
-                <Heart className="w-5 h-5 text-rose-400" fill="currentColor" />
-              </div>
-              <div>
-                <p className="font-display text-lg font-black text-white truncate max-w-[100px]">Equipo Dagon</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Créditos</p>
               </div>
             </div>
           </button>
@@ -622,12 +628,13 @@ const title = titleFor(userXP);
             {/* Mini leaderboard (RESTAURADO) */}
             <motion.div
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl p-6 border border-white/10"
+              className="glass-card-apple rounded-3xl p-6 border"
+              style={{ borderColor: colors.border }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-yellow-300" />
-                  <span className="text-xs font-bold uppercase tracking-[0.3em] text-yellow-300">Top aventureros</span>
+                  <Crown className="w-4 h-4" style={{ color: colors.accent }} />
+                  <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: colors.accent }}>Top aventureros</span>
                 </div>
                 <button
                   onClick={() => navigate('/leaderboard')}
@@ -641,7 +648,7 @@ const title = titleFor(userXP);
                 <p className="text-slate-500 text-sm italic font-gameui">Sin datos aún.</p>
               ) : (
                 <ul className="space-y-2">
-                  {topPlayers.map((p) => {
+                  {topPlayers.slice(0, 5).map((p) => {
                     const me = user?.idUsuario === p.idUsuario;
                     const medalColor =
                       p.rango === 1 ? 'text-yellow-300' :
@@ -663,7 +670,7 @@ const title = titleFor(userXP);
                             {p.nombre}{me && ' (tú)'}
                           </span>
                         </div>
-                        <span className="font-display font-black text-sm text-cyan-300 flex items-center gap-1">
+                        <span className="font-display font-black text-sm flex items-center gap-1" style={{ color: colors.primary }}>
                           {p.xp}<Zap className="w-3 h-3" />
                         </span>
                       </li>
@@ -671,6 +678,31 @@ const title = titleFor(userXP);
                   })}
                 </ul>
               )}
+            </motion.div>
+
+            {/* Botón Créditos / Equipo Dagon */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+              className="glass-card-apple rounded-3xl p-6 border cursor-pointer group"
+              style={{ borderColor: colors.border }}
+              onClick={() => navigate('/credits')}
+            >
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                  style={{ 
+                    backgroundColor: `${colors.primary}20`,
+                    borderColor: `${colors.primary}40`
+                  }}
+                >
+                  <Heart className="w-7 h-7" style={{ color: colors.primary }} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-display text-lg font-black text-white">Equipo Dagon</p>
+                  <p className="text-xs text-slate-400 font-gameui">Ver créditos y agradecimientos</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+              </div>
             </motion.div>
           </aside>
         </div>

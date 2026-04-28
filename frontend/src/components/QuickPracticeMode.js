@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DagonMascot } from './DagonMascot';
-import { useTheme } from '../contexts/ThemeContext';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { 
@@ -76,7 +75,6 @@ export const QuickPracticeMode = ({
   onXPGain = () => {},
   onClose = () => {} 
 }) => {
-  const { colors } = useTheme();
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [query, setQuery] = useState(null);
   const [droppedWords, setDroppedWords] = useState([]);
@@ -457,7 +455,7 @@ export const QuickPracticeMode = ({
 
             <Button
               onClick={handleFreePractice}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-4 sm:py-6 text-base sm:text-lg font-bold rounded-xl"
+              className="w-full py-4 sm:py-6 text-base sm:text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 shadow-lg shadow-emerald-500/25"
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Práctica Libre (Mixta)
@@ -518,7 +516,7 @@ export const QuickPracticeMode = ({
 
             <Button
               onClick={() => setShowDifficultySelect(true)}
-              className="w-full mt-4 sm:mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 py-4 sm:py-6 text-base sm:text-lg font-bold rounded-xl"
+              className="w-full mt-4 sm:mt-6 py-4 sm:py-6 text-base sm:text-lg font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500 shadow-lg shadow-emerald-500/25"
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Elegir Dificultad
@@ -692,7 +690,7 @@ export const QuickPracticeMode = ({
                 </Button>
                 <Button
                   onClick={generateNewQuery}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-sm sm:text-base"
+                  className="text-sm sm:text-base bg-gradient-to-r from-emerald-500 to-cyan-600 hover:from-emerald-400 hover:to-cyan-500"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Siguiente

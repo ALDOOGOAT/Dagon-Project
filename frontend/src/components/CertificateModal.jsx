@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useTheme } from '../contexts/ThemeContext';
 import { Award, Download, CheckCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -105,7 +104,6 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
   const [loading, setLoading] = useState(false);
   const [datosCertificado, setDatosCertificado] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const { colors } = useTheme();
 
   useEffect(() => {
     if (isOpen && certificado) {
@@ -218,7 +216,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
               : '0 0 30px rgba(59, 130, 246, 0.3)'
           }}
         >
-          <div className="relative rounded-xl overflow-hidden" style={{ backgroundColor: colors.surface }}>
+          <div className="relative rounded-xl overflow-hidden bg-slate-800">
             {previewUrl ? (
               <img 
                 src={previewUrl} 
@@ -242,10 +240,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
           <Button 
             onClick={handleDescargar}
             disabled={loading}
-            className={`font-bold ${esGuerrero 
-              ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white' 
-              : 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white'
-            }`}
+            className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-white font-bold"
           >
             <Download className="w-4 h-4 mr-2" />
             {loading ? 'Generando...' : 'Descargar PNG'}

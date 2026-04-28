@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════════
+  RESUMEN DE CAMBIOS - REVERSIÓN A COMMIT ESTABLE
+═══════════════════════════════════════════════════════════════
+
+FECHA: 27 Abril 2026
+COMMIT ANTERIOR: ff0a2fc (problemático)
+COMMIT ACTUAL: 2eb8ed3 (estable)
+
+─────────────────────────────────────────────────────────────
+  QUÉ SE REVIERTE:
+─────────────────────────────────────────────────────────────
+
+Se revertió el código al commit 2eb8ed3 debido a los siguientes problemas:
+
+1. CERTIFICADO MODAL NO APARECÍA
+   - Los cambios en CertificateModal con useTheme() causaban 
+     errores al generar el certificado
+   - La función generarCertificadoPNG no recibía colors correctamente
+   - El modal se quedaba en pantalla negra
+
+2. DIAGRAMAS MER EN PANTALLA NEGRA  
+   - MerDiagramBuilder使用了 useTheme() que devolvía undefined
+   - Los colores de las tablas/edges se ponían en negro
+   - No se podían ver las entidades ni relaciones
+
+3. PRACTICAS RÁPIDAS (QuickPractice) NO SE CERRABA
+   - Al presionar X, la pantalla se quedaba en negro
+   - Posible conflicto con cambios de theming
+
+4. CONFLICTOS CON DINAMIZACIÓN DE COMPONENTES
+   - Varios componentes usaban colors.primary/secondary/accent
+   - Algunos valores eran undefined causando errores visuales
+   - Los componentes se rompen en lugar de caerback a default
+
+─────────────────────────────────────────────────────────────
+  QUÉ SE CONSERVA (del commit 2eb8ed3):
+─────────────────────────────────────────────────────────────
+
+✓ Parche auto-sanador de secuencias (NEXTVAL/CURRVAL)
+✓ Mostrar constraints después de ALTER/CREATE TABLE  
+✓ Detección de constraints duplicadas
+✓ Botón "Equipo Dagon" en Credits (solo uno)
+✓ Mejoras en CreditsPage con ojos de corazón
+✓ Limpiar estados al pasar al siguiente ejercicio
+✓ Intervención pedagógica para PK duplicada
+✓ Restauración de DagonMascot con animaciones completas
+
+─────────────────────────────────────────────────────────────
+  DECISIÓN:
+─────────────────────────────────────────────────────────────
+
+Se decidió REVERTIR porque:
+- Los cambios de theming dinámicos causaron más problemas de los que resuelven
+- Es preferible mantener un frontend funcional que uno parcialmente mejorado
+- Los usuarios no podían completar ejercicios ni ver certificados
+- La prioridad es la estabilidad antes de continuar con mejoras
+
+SIGUIENTES PASOS (para el usuario):
+1. probar que todo funcione correctamente  
+2. Si todo OK, hacer commit con los cambios estables
+3. SI QUIERE continuar con theming, hacerlo con más precaución
+   - Verificar que useTheme() siempre devuelva valores por defecto
+   - Probar cada componente individualmente antes de commit
+
+═══════════════════════════════════════════════════════════════
