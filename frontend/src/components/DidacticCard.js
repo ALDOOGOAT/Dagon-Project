@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Database, Code, Zap, BookOpen, ChevronRight, Sparkles } from 'lucide-react';
+import { Database, Code, Zap, BookOpen, ChevronRight, Sparkles, Bot } from 'lucide-react';
 import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
 
@@ -11,10 +11,11 @@ const didacticTopics = [
     title: 'SQL: Tu Voz en la Base de Datos',
     shortDesc: 'El lenguaje universal para comunicarte con datos',
     fullExplanation: 'SQL (Structured Query Language) es como dar instrucciones en español a una biblioteca mágica. Con SELECT pides información, con INSERT agregas nuevos libros, y con UPDATE modificas existentes. Es el estándar global usado por todas las empresas.',
-    example: 'SELECT nombre, nivel FROM aventureros WHERE clase = \'Guerrero\';',
+    example: "SELECT nombre, nivel \nFROM aventureros \nWHERE clase = 'Guerrero';",
     color: 'from-blue-600 to-cyan-700',
-    borderColor: 'border-blue-500/30',
-    bgColor: 'bg-blue-500/5'
+    borderColor: 'border-blue-400/50',
+    bgColor: 'bg-blue-500/10',
+    aiGlow: 'shadow-[0_0_20px_rgba(59,130,246,0.2)]'
   },
   {
     id: 'postgres-why',
@@ -24,8 +25,9 @@ const didacticTopics = [
     fullExplanation: 'PostgreSQL es el motor de base de datos open-source más avanzado. Lo usan empresas como Uber, Netflix, Instagram y Apple. Soporta JSON, procesamiento geoespacial, y es increíblemente estable. ¡Es la mejor opción para aprender SQL real!',
     example: '-- Conectando a PostgreSQL\npsql -h localhost -U usuario -d dagon_db',
     color: 'from-green-600 to-emerald-700',
-    borderColor: 'border-green-500/30',
-    bgColor: 'bg-green-500/5'
+    borderColor: 'border-green-400/50',
+    bgColor: 'bg-green-500/10',
+    aiGlow: 'shadow-[0_0_20px_rgba(16,185,129,0.2)]'
   },
   {
     id: 'dagon-mission',
@@ -35,8 +37,9 @@ const didacticTopics = [
     fullExplanation: 'Dagon nació porque creemos que aprender SQL no debe ser aburrido. Nuestra misión es que domines bases de datos jugando, sin clases magistrales aburridas. Queremos que cada consulta SQL se sienta como una victoria en tu aventura por el Abismo de los Datos.',
     example: '¡Compite, gana XP, sube de nivel y diviértete!',
     color: 'from-fuchsia-600 to-purple-700',
-    borderColor: 'border-fuchsia-500/30',
-    bgColor: 'bg-fuchsia-500/5'
+    borderColor: 'border-fuchsia-400/50',
+    bgColor: 'bg-fuchsia-500/10',
+    aiGlow: 'shadow-[0_0_20px_rgba(217,70,239,0.2)]'
   }
 ];
 
@@ -48,22 +51,29 @@ export const DidacticCard = ({ onExplore }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8 }}
-      className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 mb-8 relative overflow-hidden"
+      className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 mb-8 relative overflow-hidden bg-black/40 backdrop-blur-xl"
     >
-      <div className="absolute -top-32 -right-32 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Luces de fondo estilo IA */}
+      <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
       
-      <div className="flex items-center gap-3 mb-6 relative z-10">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-cyan-300" />
+      <div className="flex items-center gap-3 mb-8 relative z-10">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 border border-white/10 flex items-center justify-center shadow-inner">
+          <Bot className="w-6 h-6 text-fuchsia-300" />
         </div>
         <div>
-          <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase">Aprende</p>
-          <h2 className="font-display text-2xl font-black text-white">Conceptos Clave</h2>
+          <p className="text-cyan-300 text-xs font-bold tracking-[0.3em] uppercase mb-1 flex items-center gap-2">
+            <Sparkles className="w-3 h-3" /> Base de Conocimiento
+          </p>
+          {/* Título con gradiente tipo IA */}
+          <h2 className="font-display text-2xl font-black bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">
+            Análisis de Conceptos Clave
+          </h2>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
-        {didacticTopics.map((topic, index) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+        {didacticTopics.map((topic) => {
           const Icon = topic.icon;
           const isExpanded = expandedTopic === topic.id;
           
@@ -71,35 +81,36 @@ export const DidacticCard = ({ onExplore }) => {
             <motion.div
               key={topic.id}
               layout
-              className={`rounded-2xl border transition-all cursor-pointer ${
+              className={`rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
                 isExpanded 
-                  ? `${topic.borderColor} ${topic.bgColor}` 
-                  : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  ? `${topic.borderColor} ${topic.bgColor} ${topic.aiGlow}` 
+                  : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
               }`}
               onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: isExpanded ? 1 : 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <div className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${topic.color} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className="w-5 h-5 text-white" />
+              <div className="p-5">
+                <div className="flex items-start gap-4 mb-3">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${topic.color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                    <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-display font-black text-white text-sm leading-tight">
+                  <div className="min-w-0 flex-1 pt-1">
+                    <h4 className="font-display font-bold text-white text-base leading-tight mb-1 break-words">
                       {topic.title}
                     </h4>
+                    <p className="text-xs text-slate-400 leading-snug break-words">
+                      {topic.shortDesc}
+                    </p>
                   </div>
                   <motion.div
                     animate={{ rotate: isExpanded ? 90 : 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.3, ease: "backOut" }}
+                    className="pt-2"
                   >
-                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                    <ChevronRight className={`w-5 h-5 ${isExpanded ? 'text-fuchsia-400' : 'text-slate-500'}`} />
                   </motion.div>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {topic.shortDesc}
-                </p>
               </div>
 
               <AnimatePresence>
@@ -108,31 +119,38 @@ export const DidacticCard = ({ onExplore }) => {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="px-4 pb-4 border-t border-white/10">
-                      <div className="pt-4 flex gap-4">
-                        <div className="flex-shrink-0">
-                          <DagonMascot size="small" mood="happy" />
+                    <div className="px-5 pb-5 border-t border-white/10 bg-black/20">
+                      <div className="pt-5 flex gap-4">
+                        <div className="flex-shrink-0 mt-1">
+                          <DagonMascot size="small" mood="excited" />
                         </div>
-                        <div>
-                          <p className="text-sm text-slate-300 leading-relaxed mb-3">
+                        <div className="flex-1 min-w-0">
+                          {/* Control estricto de desbordamiento en el párrafo */}
+                          <p className="text-sm text-slate-300 leading-relaxed mb-4 break-words">
                             {topic.fullExplanation}
                           </p>
-                          <div className="bg-black/30 rounded-xl p-3 font-mono text-xs text-green-300 mb-3 overflow-x-auto">
-                            <pre>{topic.example}</pre>
+                          
+                          {/* Caja de código con estilo terminal y control de desbordamiento */}
+                          <div className="bg-[#0D1117] border border-white/5 rounded-xl p-4 mb-4 w-full shadow-inner relative group">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <code className="block font-mono text-xs text-emerald-400 whitespace-pre-wrap break-words leading-relaxed">
+                              {topic.example}
+                            </code>
                           </div>
+
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
                               if (onExplore) onExplore(topic.id);
                             }}
                             size="sm"
-                            className="bg-white/10 hover:bg-white/20 text-white text-xs"
+                            className="w-full bg-white/10 hover:bg-white/20 text-white text-xs border border-white/5 transition-all hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                           >
-                            Explorar más
-                            <ChevronRight className="w-3 h-3 ml-1" />
+                            Profundizar en este tema
+                            <ChevronRight className="w-3 h-3 ml-2" />
                           </Button>
                         </div>
                       </div>
@@ -145,10 +163,10 @@ export const DidacticCard = ({ onExplore }) => {
         })}
       </div>
       
-      <div className="mt-4 text-center relative z-10">
+      <div className="mt-6 text-center relative z-10">
         <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
-          <Sparkles className="w-3 h-3 text-yellow-300" />
-          Haz clic en cada tarjeta para aprender más detalles
+          <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
+          Haz clic en cualquier panel para inicializar el módulo de aprendizaje
         </p>
       </div>
     </motion.div>
