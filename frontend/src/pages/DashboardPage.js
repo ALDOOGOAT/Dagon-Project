@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
-import { TutorialOverlay } from '../components/TutorialOverlay';
+import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlay';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
@@ -48,7 +48,7 @@ export const DashboardPage = () => {
   const navigate = useNavigate();
   const { colors } = useTheme();
 
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
   const [showCertificado, setShowCertificado] = useState(false);
   const [certificadoData, setCertificadoData] = useState(null);
@@ -212,7 +212,7 @@ const title = titleFor(userXP);
 
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
-      {showTutorial && <TutorialOverlay onComplete={() => setShowTutorial(false)} />}
+      <TutorialOverlay isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
       <WelcomeCard />
       {showQuickPractice && (
         <QuickPracticeMode
@@ -240,6 +240,7 @@ const title = titleFor(userXP);
           </motion.div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <TourTrigger onClick={() => setShowTutorial(true)} />
             <Button
               onClick={() => navigate('/profile')}
               className="bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 text-slate-200 hover:text-white font-display font-black text-sm"
