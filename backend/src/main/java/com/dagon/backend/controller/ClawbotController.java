@@ -57,8 +57,15 @@ public class ClawbotController {
             intentos = Integer.parseInt(payload.get("intentos").toString());
         }
 
-        // 3. Llamamos al servicio con los 5 parámetros requeridos
-        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(descripcion, queryMaestra, queryAlumno, errorDb, intentos);
+        // 3. Contexto del nivel y ejercicio
+        int nivelId = 0;
+        if (payload.get("nivelId") != null) {
+            nivelId = Integer.parseInt(payload.get("nivelId").toString());
+        }
+        String tituloEjercicio = payload.get("tituloEjercicio") != null ? payload.get("tituloEjercicio").toString() : "";
+
+        // 4. Llamamos al servicio con contexto completo
+        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
 
         Map<String, String> respuesta = new HashMap<>();
         respuesta.put("mensaje", respuestaClawbot);

@@ -87,6 +87,27 @@ class SoundEngine {
     });
   }
 
+  playSelect() {
+    this.playTone(600, 0.1, 'sine', 0.15);
+  }
+
+  playCountdown(t) {
+    const freq = 440 + (6 - t) * 100;
+    this.playTone(freq, 0.2, 'triangle', 0.15);
+  }
+
+  playClockTicking() {
+    this.playTone(800, 0.02, 'sine', 0.05);
+  }
+
+  stopTimerLoop() {
+    // No-op for now as we use discrete tones
+  }
+
+  playTimeWarning() {
+    this.playTone(200, 0.5, 'sawtooth', 0.1);
+  }
+
   // --- NUEVOS MÉTODOS REQUERIDOS ---
   playTheoryOpen() {
     // Sonido de "apertura" suave y brillante

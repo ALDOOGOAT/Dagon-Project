@@ -305,6 +305,14 @@ public class EjercicioService {
             if (p.matcher(queryClean).matches()) {
                 respuesta.put("success", false);
                 respuesta.put("message", "🚫 ¡Acción Prohibida! Los comandos de administración o destrucción están bloqueados por el Escudo de Dagon.");
+                // Datos para retroalimentación IA
+                EjercicioPractico ejSeg = repository.findById(ejercicioId).orElse(null);
+                if (ejSeg != null) {
+                    respuesta.put("descripcion", ejSeg.getEnunciado());
+                    respuesta.put("queryMaestra", ejSeg.getQueryMaestra());
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "Comando prohibido: el alumno intentó usar una instrucción destructiva o administrativa.");
+                }
                 return respuesta;
             }
         }
@@ -314,6 +322,14 @@ public class EjercicioService {
             if (!queryClean.startsWith("select")) { // Permitir solo lectura si es necesario para el juego
                 respuesta.put("success", false);
                 respuesta.put("message", "🛡️ ¡Interferencia Detectada! No tienes permiso para modificar el núcleo de Dagon.");
+                // Datos para retroalimentación IA
+                EjercicioPractico ejEsq = repository.findById(ejercicioId).orElse(null);
+                if (ejEsq != null) {
+                    respuesta.put("descripcion", ejEsq.getEnunciado());
+                    respuesta.put("queryMaestra", ejEsq.getQueryMaestra());
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "El alumno intentó acceder a esquemas internos del sistema.");
+                }
                 return respuesta;
             }
         }
@@ -376,6 +392,10 @@ public class EjercicioService {
                     respuesta.put("success", false);
                     respuesta.put("message", mensajeEntidades + " Necesitas al menos " + minEntidades + " entidad(es).");
                     respuesta.put("xp_gained", 0);
+                    respuesta.put("descripcion", ejercicio.getEnunciado());
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "El diagrama tiene menos entidades de las requeridas (" + diagramNodes.size() + "/" + minEntidades + ").");
                     return respuesta;
                 }
 
@@ -384,6 +404,10 @@ public class EjercicioService {
                     respuesta.put("success", false);
                     respuesta.put("message", mensajeRelaciones + " Necesitas al menos " + minRelaciones + " relación(es).");
                     respuesta.put("xp_gained", 0);
+                    respuesta.put("descripcion", ejercicio.getEnunciado());
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "El diagrama tiene menos relaciones de las requeridas (" + diagramEdges.size() + "/" + minRelaciones + ").");
                     return respuesta;
                 }
 
@@ -404,6 +428,10 @@ public class EjercicioService {
                     respuesta.put("success", false);
                     respuesta.put("message", "Las entidades necesitan más atributos (columnas). Agrega al menos " + minAtributos + " atributo(s) en total.");
                     respuesta.put("xp_gained", 0);
+                    respuesta.put("descripcion", ejercicio.getEnunciado());
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "Faltan atributos en las entidades (" + totalAtributos + "/" + minAtributos + ").");
                     return respuesta;
                 }
 
@@ -423,6 +451,10 @@ public class EjercicioService {
                         respuesta.put("success", false);
                         respuesta.put("message", "Tu diagrama necesita una entidad relacionada con: " + String.join(" o ", opciones) + ".");
                         respuesta.put("xp_gained", 0);
+                        respuesta.put("descripcion", ejercicio.getEnunciado());
+                        respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                        respuesta.put("queryAlumno", queryUsuario);
+                        respuesta.put("errorDb", "Falta una entidad requerida: " + String.join(" o ", opciones) + ".");
                         return respuesta;
                     }
                 }
@@ -463,6 +495,10 @@ public class EjercicioService {
                                 respuesta.put("success", false);
                                 respuesta.put("message", msg + ".");
                                 respuesta.put("xp_gained", 0);
+                                respuesta.put("descripcion", ejercicio.getEnunciado());
+                                respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                                respuesta.put("queryAlumno", queryUsuario);
+                                respuesta.put("errorDb", msg + ".");
                                 return respuesta;
                             }
                         }
@@ -474,6 +510,11 @@ public class EjercicioService {
                 if (!queryUsuario.trim().endsWith(";")) {
                     respuesta.put("success", false);
                     respuesta.put("message", "¡Error de Sintaxis! Te faltó cerrar la instrucción con el punto y coma (;) al final.");
+                    // Datos para retroalimentación IA
+                    respuesta.put("descripcion", ejercicio.getEnunciado());
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                    respuesta.put("queryAlumno", queryUsuario);
+                    respuesta.put("errorDb", "Falta el punto y coma (;) al final de la instrucción SQL.");
                     return respuesta;
                 }
 
@@ -710,6 +751,10 @@ public class EjercicioService {
                 respuesta.put("success", false);
                 respuesta.put("message", "Error al procesar la respuesta: " + errMsg);
                 respuesta.put("xp_gained", 0);
+                respuesta.put("descripcion", ejercicio.getEnunciado());
+                respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                respuesta.put("queryAlumno", queryUsuario);
+                respuesta.put("errorDb", errMsg);
             }
         }
         return respuesta;

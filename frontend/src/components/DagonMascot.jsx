@@ -1,3 +1,5 @@
+import React from 'react';
+
 export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, showFire = false }) => {
   const sizeMap = {
     small: 80,
@@ -112,11 +114,10 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
   
   const colors = getMoodColors();
   const eyeState = getEyeState();
-  const animationClass = getAnimation();
   const glowClass = getGlowEffect();
 
   return (
-    <div className={`relative inline-block ${animationClass}`} data-testid="dagon-mascot">
+    <div className={`relative inline-block ${animated ? 'animate-float' : ''}`} data-testid="dagon-mascot">
       <svg
         width={actualSize}
         height={actualSize * 0.85}

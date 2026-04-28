@@ -417,6 +417,8 @@ export const ExercisePage = () => {
             queryAlumno: result.queryAlumno,
             errorDb: result.errorDb || result.message,
             intentos: nuevos,
+            nivelId: parseInt(levelId),
+            tituloEjercicio: exercise.title,
           });
         }
       }

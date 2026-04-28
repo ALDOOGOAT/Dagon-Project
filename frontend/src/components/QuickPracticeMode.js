@@ -189,22 +189,24 @@ export const QuickPracticeMode = ({
     let interval;
     if (isRunning && timer > 0) {
       interval = setInterval(() => {
-        setTimer(t => t - 1);
-        
-        if (t <= 6 && t > 0) {
-          sounds.playCountdown(t);
-        } else if (t > 10) {
-          sounds.playClockTicking();
-        }
+        setTimer(t => {
+          const nextTimer = t - 1;
+          if (nextTimer <= 6 && nextTimer > 0) {
+            sounds.playCountdown?.(nextTimer);
+          } else if (nextTimer > 10 && nextTimer % 2 === 0) {
+            sounds.playClockTicking?.();
+          }
+          return nextTimer;
+        });
       }, 1000);
     } else if (timer === 0 && isRunning) {
       handleTimeout();
     }
     return () => {
       clearInterval(interval);
-      sounds.stopTimerLoop();
+      sounds.stopTimerLoop?.();
     };
-  }, [isRunning, timer]);
+  }, [isRunning, timer === 0]); // optimized dependency
 
   useEffect(() => {
     localStorage.setItem('dagon_daily_progress', JSON.stringify(dailyProgress));
@@ -415,7 +417,12 @@ export const QuickPracticeMode = ({
                       key={challenge.id}
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={() => !completed && setShowDifficultySelect(false) && startChallenge(challenge)}
+                      onClick={() => {
+                        if (!completed) {
+                          setShowDifficultySelect(false);
+                          startChallenge(challenge);
+                        }
+                      }}
                       className={`p-3 sm:p-4 rounded-xl border cursor-pointer transition-all ${
                         completed 
                           ? 'bg-green-500/20 border-green-500/50' 
