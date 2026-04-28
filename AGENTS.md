@@ -1,43 +1,55 @@
 # AGENTS.md - Proyecto Dagon
 
-## Stack Real (verificar en CLAUDE.md)
+> For architecture, commands, and conventions: see `CLAUDE.md`.
+> For repo layout and endpoint docs: see `CLAUDE.md` §3, §5, §6.
 
-| Capa | Tech |
-|------|------|
-| Frontend | React 19 + Craco, Monaco Editor, Tailwind, @xyflow/react |
-| Backend | Spring Boot 4.0.3 (Java 21), Spring Security + JWT |
-| DB | PostgreSQL - schemas `lms_core`, `lms_sandbox` |
+## Developer Commands
 
-## Motor de Validación SQL (`EjercicioService.java`)
+```bash
+# Backend (Maven wrapper, Java 21 required)
+cd backend && ./mvnw spring-boot:run        # http://localhost:8080
 
-- **Normalización**: `compararResultadosDML` convierte valores a `String` antes de comparar
-- **IDs secuenciales**: Ignora columnas `id_` o `id` al comparar inserciones
-- **Inyección DML**: Añade `RETURNING *;` automáticamente a `INSERT`/`UPDATE`/`DELETE`
+# Frontend (yarn, NOT npm — see packageManager field)
+cd frontend && yarn install && yarn start    # http://localhost:3000 (uses craco, not react-scripts)
 
-## Constructor de Diagramas MER
+# MPI analytics service (requires mpi4py + flask)
+cd mpi_service && ./run_mpi.sh              # http://localhost:5001
+```
 
-- Las líneas de conexión (`RelationshipEdge`) tienen selector de cardinalidad (`1:1`, `1:N`, `M:N`)
-- La cardinalidad se guarda en el objeto `data` del edge de ReactFlow
+Frontend test: `cd frontend && yarn test` (craco test)
+Backend test: `cd backend && ./mvnw test`
 
-## Reto Final: La Posada (Módulo 4, niveles 25-27)
+## Critical Config Facts
 
-1. **Nivel 25**: Diseño plano con `huespedes`, `habitaciones`, `reservas`
-2. **Nivel 26**: Consulta ocupación - JOIN triple
-3. **Nivel 27**: Reporte ingresos - `SUM(precio_noche)` + `GROUP BY`
+- **`ddl-auto=none`** — Hibernate never creates/updates tables. `BaseDeDatosZaca.sql` is the DB source of truth. Never enable `ddl-auto=update` or add Flyway without asking.
+- **Secrets in `backend/src/main/resources/application.properties`** — Contains real DB credentials and Gemini API key in plaintext. Do NOT expose in responses or commits.
+- **CORS** — Backend allows only `http://localhost:3000`. Update `SecurityConfig.java` and `@CrossOrigin` annotations if port changes.
+- **Hardcoded backend URL** — `DashboardPage.js` hardcodes `http://localhost:8080`. `apiService.js` uses `process.env.REACT_APP_BACKEND_URL`. No `.env` exists currently. Use `API_BASE` constant for new calls.
 
-Tablas ya existen pobladas en `lms_sandbox`.
+## SQL Sandbox Execution
 
-## Seguridad
+- User code runs under role `app_sandbox_user` (no `DROP`/`TRUNCATE`)
+- `search_path` must be `lms_sandbox`
+- `EjercicioService.java` auto-appends `RETURNING *;` to DML statements
+- Comparison ignores `id`/`id_` columns and normalizes all values to `String`
 
-- Código usuario ejecuta bajo rol `app_sandbox_user`
-- Sin permisos `DROP`/`TRUNCATE`
-- `search_path` debe ser `lms_sandbox`
+## Language & Style Conventions
 
-## Narrativa
+- Comments, UI strings, and commits in **Spanish**
+- Icons: `lucide-react` only — no emojis unless user requests
+- Fonts: Inter (UI) + JetBrains Mono (code) — loaded in `frontend/src/index.css`
+- Custom classes: `glass-card`, `glass-card-apple`, `neon-glow`, `neon-glow-red`, `cyber-bg`, `grid-pattern`, `animate-float`, `animate-breathe`, `animate-pulse-glow` — reuse before creating new ones
 
-- Tono: Mentor épico (Dagon), nunca puramente académico
-- Analogías: `reservas` = Libro de Registro, `WHERE` = Colador Mágico, `JOIN` = Puente de Datos
+## MPI Analytics (Academic Feature)
 
----
+- Python microservice using `mpi4py` + Flask
+- `AnalyticsController.java` proxies requests to `http://127.0.0.1:5001`
+- `mpirun -np 4 python analytics_mpi.py` — scatter/reduce across ranks
+- Frontend `/analytics` page shows rank-by-rank MPI timing with Recharts + Framer Motion
 
-> Para arquitectura, comandos y rutas: ver `CLAUDE.md`
+## What NOT to Do
+
+- Do not mock the DB in exercise validation (breaks script master contract)
+- Do not replace Tailwind with CSS modules or styled-components
+- Do not change `/analytics/mpi` contract without updating frontend
+- Do not commit `application.properties` secrets to public repos

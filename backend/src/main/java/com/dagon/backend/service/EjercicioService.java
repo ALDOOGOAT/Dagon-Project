@@ -179,8 +179,10 @@ public class EjercicioService {
 
         queryProcesada = queryProcesada.replaceAll("--.*$", "").trim();
 
-        boolean esDML = upperQuery.contains("INSERT") || upperQuery.contains("UPDATE") || upperQuery.contains("DELETE");
-        boolean esDDL = upperQuery.contains("CREATE") || upperQuery.contains("ALTER") || upperQuery.contains("DROP");
+        // 🌟 LÓGICA CURADA (REGEX OPTIMIZADO)
+        // Solo será true si la consulta EMPIEZA con INSERT, UPDATE o DELETE, ignorando SELECT ... FOR UPDATE
+        boolean esDML = upperQuery.matches("^\\s*(INSERT|UPDATE|DELETE)\\b[\\s\\S]*");
+        boolean esDDL = upperQuery.matches("^\\s*(CREATE|ALTER|DROP)\\b[\\s\\S]*");
 
         if (esDML && !upperQuery.contains("RETURNING")) {
             queryProcesada = queryProcesada.replaceAll(";\\s*$", "");
@@ -266,21 +268,18 @@ public class EjercicioService {
             String sinCreate = queryOriginal.replaceAll("(?i)CREATE\\s+TABLE\\s+", "").trim();
             String[] partes = sinCreate.split("[\\(,\\s]");
             if (partes.length > 0) {
-                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
                 tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         } else if (upperQuery.contains("ALTER TABLE")) {
             String sinAlter = queryOriginal.replaceAll("(?i)ALTER\\s+TABLE\\s+", "").trim();
             String[] partes = sinAlter.split("\\s+");
             if (partes.length > 0) {
-                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
                 tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         } else if (upperQuery.contains("DROP TABLE")) {
             String sinDrop = queryOriginal.replaceAll("(?i)DROP\\s+TABLE\\s+", "").trim();
             String[] partes = sinDrop.split("\\s+");
             if (partes.length > 0) {
-                // CORREGIDO: Se quitó el ')' erróneo de la expresión regular
                 tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
             }
         }
@@ -531,9 +530,9 @@ public class EjercicioService {
                     } catch (Exception ignored) {}
                 }
 
-                // Determinar si es DML (Cambio de datos)
+                // Determinar si es DML (Cambio de datos) - 🌟 LÓGICA CURADA (REGEX OPTIMIZADO)
                 String upperQ = queryUsuario.trim().toUpperCase();
-                boolean esDML = upperQ.contains("INSERT") || upperQ.contains("UPDATE") || upperQ.contains("DELETE");
+                boolean esDML = upperQ.matches("^\\s*(INSERT|UPDATE|DELETE)\\b[\\s\\S]*");
 
                 // 🌟 LÓGICA DE VALIDACIÓN MODIFICADA
                 if (isDdlValidation) {

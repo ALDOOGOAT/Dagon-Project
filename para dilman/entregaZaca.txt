@@ -1,0 +1,962 @@
+================================================================================
+                  ENTREGA ZACA - PROYECTO DAGON LMS
+                  Documentación Técnica Completa
+================================================================================
+
+ÍNDICE
+  1. Visión General del Sistema
+  2. Arquitectura y Patrones de Diseño
+  3. Estructura de Carpetas
+  4. Funcionamiento del Backend (Capa por Capa)
+  5. Conexión de Clases con la Base de Datos
+  6. Archivo pom.xml - Dependencias y Build
+  7. APIs y Endpoints REST
+  8. Seguridad: JWT y Filtros
+  9. Motor de Validación SQL (Sandbox)
+ 10. Conexión Backend ↔ Frontend
+ 11. Frontend: React y Servicios
+ 12. Microservicio MPI (Analytics)
+ 13. Base de Datos: Esquemas y Script Maestro
+ 14. Flujo Completo de una Petición
+
+================================================================================
+  1. VISIÓN GENERAL DEL SISTEMA
+================================================================================
+
+Dagon es un LMS (Learning Management System) gamificado para aprender SQL/PostgreSQL.
+Estética "Abyss & Crimson" (oscuro, glassmorphism, pulpo rojo).
+
+  USUARIO → Frontend (React) → Backend (Spring Boot) → PostgreSQL
+                       ↓
+                  Clawbot IA (Gemini) ────→ Microservicio MPI (Analytics)
+
+  MÓDULOS:
+  - Registro/Login con JWT
+  - 5 niveles progresivos de SQL (SELECT, WHERE, JOIN, GROUP BY, DDL)
+  - Tutor IA (Clawbot) con retroalimentación socrática
+  - Leaderboard global y rachas diarias
+  - Analytics con programación paralela (MPI)
+  - Modo Drag & Drop y Diagramas ER como formatos alternativos
+
+================================================================================
+  2. ARQUITECTURA Y PATRONES DE DISEÑO
+================================================================================
+
+  PATRONES UTILIZADOS:
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        PATRÓN MVC (Model-View-Controller)           │
+  │                                                                     │
+  │  VIEW (Frontend)                                                    │
+  │    React Pages ──────────────────────────────────────────────┐      │
+  │                                                               │      │
+  │  CONTROLLER (Backend)                                         │      │
+  │    UsuarioController ──→ UsuarioService ──→ UsuarioRepository │      │
+  │    NivelController   ──→ EjercicioService ──→ EjercicioRepo  │      │
+  │    ClawbotController ──→ ClawbotService                       │      │
+  │    LeaderboardController ──→ LeaderboardService               │      │
+  │    AnalyticsController ──→ RestTemplate → MPI Service         │      │
+  │                                                               │      │
+  │  MODEL (Entidades JPA)                                        │      │
+  │    Usuario.java, EjercicioPractico.java ──→ PostgreSQL       │      │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │              PATRÓN REPOSITORY (Spring Data JPA)                   │
+  │                                                                     │
+  │  Interfaz extiende JpaRepository<Entidad, ID>                      │
+  │  Spring genera automáticamente las consultas SQL:                  │
+  │    - findByEmail(String) → SELECT * FROM usuarios WHERE email = ?   │
+  │    - findByIdModuloOrderByOrdenAsc → WHERE id_modulo = ? ORDER BY   │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │              PATRÓN DTO (Data Transfer Object)                      │
+  │                                                                     │
+  │  EjercicioDTO.java  →  Datos que el frontend necesita ver          │
+  │  NivelDTO.java     →  Estructura de módulos/niveles               │
+  │  (Separar entidad JPA de lo que se envía por la API)               │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │              INYECCIÓN DE DEPENDENCIAS (Spring IoC)                │
+  │                                                                     │
+  │  @Autowired en Controllers:                                       │
+  │    @Autowired private UsuarioService usuarioService;                │
+  │  Spring inyecta automáticamente las instancias de los servicios    │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │              PATRÓN FILTER CHAIN (Seguridad)                        │
+  │                                                                     │
+  │  JwtAuthenticationFilter → valida token en cada petición            │
+  │  SecurityConfig → configura qué rutas son públicas/privadas        │
+  └─────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+  3. ESTRUCTURA DE CARPETAS
+================================================================================
+
+Dagon-Project/
+├── CLAUDE.md                  ← Guía para IA (arquitectura, comandos)
+├── AGENTS.md                  ← Instrucciones para agentes
+├── BaseDeDatosZaca.sql        ← Script maestro de la DB (22 KB)
+├── respaldo_db.sql            ← Respaldo con datos
+│
+├── backend/                   ← Spring Boot (Java 21)
+│   ├── pom.xml               ← Dependencias Maven
+│   ├── mvnw                  ← Maven wrapper (ejecutar sin instalar Maven)
+│   └── src/main/
+│       ├── java/com/dagon/backend/
+│       │   ├── DagonBackendApplication.java  ← main()
+│       │   ├── config/SecurityConfig.java    ← CORS, CSRF, JWT
+│       │   ├── security/
+│       │   │   ├── JwtUtil.java             ← Generar/validar tokens
+│       │   │   └── JwtAuthenticationFilter.java ← Filtro de peticiones
+│       │   ├── controller/                   ← Endpoints REST
+│       │   │   ├── UsuarioController.java
+│       │   │   ├── NivelController.java
+│       │   │   ├── ModuloController.java
+│       │   │   ├── ClawbotController.java
+│       │   │   ├── LeaderboardController.java
+│       │   │   └── AnalyticsController.java
+│       │   ├── service/                      ← Lógica de negocio
+│       │   │   ├── UsuarioService.java
+│       │   │   ├── EjercicioService.java     ← Motor de validación SQL
+│       │   │   ├── ModuloService.java
+│       │   │   ├── ClawbotService.java
+│       │   │   └── LeaderboardService.java
+│       │   ├── model/                        ← Entidades JPA
+│       │   │   ├── Usuario.java
+│       │   │   └── EjercicioPractico.java
+│       │   ├── dto/                          ← Data Transfer Objects
+│       │   │   ├── EjercicioDTO.java
+│       │   │   └── NivelDTO.java
+│       │   └── repository/                   ← Spring Data JPA
+│       │       ├── UsuarioRepository.java
+│       │       └── EjercicioPracticoRepository.java
+│       └── resources/
+│           └── application.properties        ← Config (DB, JWT, MPI, Gemini)
+│
+├── frontend/                  ← React 19 + Craco
+│   ├── package.json         ← yarn (NO npm)
+│   ├── craco.config.js      ← Config de webpack (override react-scripts)
+│   ├── tailwind.config.js
+│   └── src/
+│       ├── App.js           ← Rutas (React Router v7)
+│       ├── apiService.js    ← Cliente HTTP (axios)
+│       ├── contexts/AuthContext.js  ← JWT token global
+│       ├── pages/           ← Login, Dashboard, Exercise, Leaderboard...
+│       ├── components/      ← UI reutilizable (Shadcn/Radix)
+│       └── index.css        ← Estilos globales + fuentes
+│
+└── mpi_service/             ← Microservicio Python MPI
+    ├── analytics_mpi.py     ← Lógica paralela (scatter/reduce)
+    ├── server.py            ← HTTP wrapper (Flask)
+    ├── requirements.txt
+    └── run_mpi.sh          ← mpirun -np 4 python server.py
+
+================================================================================
+  4. FUNCIONAMIENTO DEL BACKEND (CAPA POR CAPA)
+================================================================================
+
+  FLUJO DE UNA PETICIÓN HTTP:
+
+  ┌──────────┐    HTTP Request     ┌──────────────────┐
+  │ Frontend │ ──────────────────→ │ UsuarioController│
+  │  (React) │                    │    @RestController│
+  └──────────┘                    └────────┬─────────┘
+                                          │
+                    ┌─────────────────────▼─────────────────────┐
+                    │         @Autowired UsuarioService          │
+                    │  (Lógica de negocio, validaciones)        │
+                    └─────────────────────┬─────────────────────┘
+                                          │
+                    ┌─────────────────────▼─────────────────────┐
+                    │      UsuarioRepository extends JpaRepository│
+                    │  (Interfaz: Spring genera las queries)     │
+                    └─────────────────────┬─────────────────────┘
+                                          │
+                    ┌─────────────────────▼─────────────────────┐
+                    │         PostgreSQL (lms_core / lms_sandbox)│
+                    │    - usuarios, ejercicios_practicos, etc.  │
+                    └────────────────────────────────────────────┘
+
+  EJEMPLO CONCRETO - LOGIN:
+
+  1. Frontend envía POST /api/usuarios/login { email, passwordHash }
+  2. UsuarioController.loginUsuario() recibe la petición
+  3. Llama a UsuarioService.iniciarSesion(email, password)
+  4. UsuarioService usa UsuarioRepository.findByEmail(email)
+  5. Spring Data JPA genera: SELECT * FROM lms_core.usuarios WHERE email = ?
+  6. Se compara password_hash
+  7. Si es correcto → JwtUtil.generarToken(idUsuario) → devuelve token
+  8. Controller responde: { token: "eyJ...", user: { ... } }
+
+================================================================================
+  5. CONEXIÓN DE CLASES CON LA BASE DE DATOS
+================================================================================
+
+  DIAGRAMA DE CLASES Y SU CONEXIÓN A BD:
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                            MODELO (JPA)                            │
+  │                                                                     │
+  │  @Entity @Table(name="usuarios", schema="lms_core")                │
+  │  class Usuario {                                                   │
+  │    @Id @GeneratedValue(strategy=UUID)                              │
+  │    private UUID idUsuario;       ← Mapeo a columna id_usuario      │
+  │                                                                     │
+  │    @Column(nullable=false, unique=true)                             │
+  │    private String email;          ← Mapeo a columna email           │
+  │    ...                                                             │
+  │  }                                                                 │
+  └───────────────────────────────────┬─────────────────────────────────┘
+                                      │ JPA/Hibernate
+                                      │ (ddl-auto=none → NO crea tablas)
+                                      ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        REPOSITORY (Spring Data)                    │
+  │                                                                     │
+  │  @Repository                                                        │
+  │  interface UsuarioRepository extends JpaRepository<Usuario, UUID> { │
+  │    Optional<Usuario> findByEmail(String email);                     │
+  │    // Spring traduce findByEmail →                                  │
+  │    // "SELECT * FROM lms_core.usuarios WHERE email = ?"             │
+  │  }                                                                 │
+  └───────────────────────────────────┬─────────────────────────────────┘
+                                      │ @Autowired
+                                      ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                          SERVICE                                   │
+  │                                                                     │
+  │  @Service                                                           │
+  │  class UsuarioService {                                             │
+  │    @Autowired private UsuarioRepository usuarioRepository;           │
+  │                                                                     │
+  │    public Usuario iniciarSesion(String email, String pass) {        │
+  │      Optional<Usuario> opt = usuarioRepository.findByEmail(email);  │
+  │      // ... validar contraseña ...                                 │
+  │      return usuario;                                                │
+  │    }                                                               │
+  │  }                                                                 │
+  └───────────────────────────────────┬─────────────────────────────────┘
+                                      │ @Autowired
+                                      ▼
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                        CONTROLLER                                  │
+  │                                                                     │
+  │  @RestController @RequestMapping("/api/usuarios")                   │
+  │  class UsuarioController {                                         │
+  │    @Autowired private UsuarioService usuarioService;                │
+  │                                                                     │
+  │    @PostMapping("/login")                                           │
+  │    public ResponseEntity<?> loginUsuario(@RequestBody Usuario c) { │
+  │      Usuario u = usuarioService.iniciarSesion(c.getEmail(), ...);   │
+  │      return ResponseEntity.ok(u);                                   │
+  │    }                                                               │
+  │  }                                                                 │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  EJERCICIO PRÁCTICO (Entidad y Repositorio):
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  @Entity @Table(name="ejercicios_practicos", schema="lms_core")    │
+  │  class EjercicioPractico {                                         │
+  │    @Id @GeneratedValue(strategy=IDENTITY)                           │
+  │    private Integer idEjercicio;       ← PK autoincremental        │
+  │    private Integer idModulo;           ← FK a tabla modulos        │
+  │    private String enunciado;           ← Texto del ejercicio      │
+  │    private String queryMaestra;         ← Respuesta correcta       │
+  │    private String formato;              ← "editor", "drag_drop", "diagram" │
+  │    private String configuracionExtra;   ← JSON con reglas adicionales │
+  │  }                                                                 │
+  │                                                                     │
+  │  @Repository                                                        │
+  │  interface EjercicioPracticoRepository extends JpaRepository<...> { │
+  │    List<EjercicioPractico> findByIdModuloOrderByOrdenAsc(Integer);  │
+  │  }                                                                 │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ACCESO DIRECTO CON JdbcTemplate (para consultas complejas):
+  - UsuarioService, ModuloService, LeaderboardService usan @Autowired JdbcTemplate
+  - Permite ejecutar SQL nativo: jdbcTemplate.queryForObject(sql, params)
+  - Usado para: ranking, estadísticas de usuario, validación de módulos
+
+================================================================================
+  6. ARCHIVO pom.xml - DEPENDENCIAS Y BUILD
+================================================================================
+
+  <?xml version="1.0" encoding="UTF-8"?>
+  <project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- HERENCIA: Spring Boot Parent (4.0.3) -->
+    <parent>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-parent</artifactId>
+      <version>4.0.3</version>
+    </parent>
+
+    <groupId>com.dagon</groupId>
+    <artifactId>backend</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>dagon-backend</name>
+
+    <properties>
+      <java.version>21</java.version>  <!-- REQUIERE JAVA 21 -->
+    </properties>
+
+    <!-- DEPENDENCIAS PRINCIPALES -->
+    <dependencies>
+      <!-- Seguridad: JWT (JSON Web Token) -->
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-api</artifactId>
+        <version>0.11.5</version>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-impl</artifactId>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.jsonwebtoken</groupId>
+        <artifactId>jjwt-jackson</artifactId>
+        <scope>runtime</scope>
+      </dependency>
+
+      <!-- Spring Boot Starters -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-security</artifactId>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+        <!-- Incluye Hibernate como JPA provider -->
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webmvc</artifactId>
+      </dependency>
+
+      <!-- Base de Datos PostgreSQL -->
+      <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
+      </dependency>
+
+      <!-- Lombok: Reduce boilerplate (getters, setters, constructors) -->
+      <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+      </dependency>
+
+      <!-- Jackson: Serialización JSON -->
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+      </dependency>
+
+      <!-- Test -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webmvc-test</artifactId>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+
+    <build>
+      <plugins>
+        <!-- Compiler plugin: Procesa anotaciones de Lombok -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <configuration>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+
+        <!-- Spring Boot Plugin: Empaqueta como JAR ejecutable -->
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <configuration>
+            <excludes>
+              <exclude><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId></exclude>
+            </excludes>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </project>
+
+  COMANDOS MAVEN (usar ./mvnw, NO mvn):
+    ./mvnw spring-boot:run    → Ejecuta la app
+    ./mvnw test               → Ejecuta tests
+    ./mvnw clean package      → Genera JAR en target/
+
+================================================================================
+  7. APIs Y ENDPOINTS REST
+================================================================================
+
+  BASE URL: http://localhost:8080/api
+  AUTENTICACIÓN: Bearer Token (JWT) en header Authorization
+  EXCEPCIONES: /api/usuarios/login, /api/usuarios/registro, /api/clawbot/**
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                        USUARIOS (/api/usuarios)                            │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /registro                │ Registro de nuevo usuario            │
+  │          │                          │ Body: { nombre, email, passwordHash }│
+  │          │                          │ Resp: { token, user }               │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /login                   │ Login de usuario                    │
+  │          │                          │ Body: { email, passwordHash }        │
+  │          │                          │ Resp: { token, user }               │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /{id}/stats              │ Estadísticas del usuario            │
+  │          │                          │ XP, racha, posición, distribución   │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /{id}/profile            │ Perfil público del usuario          │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /{id}/foto               │ Obtener URL de foto de perfil       │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /{id}/foto               │ Subir foto de perfil (MultipartFile) │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /ranking                 │ Top 10 leaderboard (vista BD)       │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /imagen/{filename}       │ Servir archivos de imagen           │
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                        NIVELES (/api/levels, /api/exercises)                │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /levels                  │ Lista todos los niveles/módulos      │
+  │          │                          │ Resp: { levels: [NivelDTO...] }     │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /exercises/{levelId}     │ Ejercicios de un nivel específico   │
+  │          │                          │ Resp: { exercises: [EjercicioDTO] } │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /practica-rapida         │ 3 ejercicios aleatorios (modo racha)│
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /exercises/{id}/validate │ Validar consulta SQL del usuario    │
+  │          │                          │ Body: { query, usuarioId }           │
+  │          │                          │ Resp: { success, message, xp_gained }│
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                        MÓDULOS (/api/modulos)                              │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /                        │ Lista módulos con estado (bloqueado)│
+  │          │                          │ Requiere JWT (Authentication)        │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /completados             │ Módulos que el usuario ya completó  │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /cursos-completados      │ Cursos completados (para certificado│
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /certificado/{cursoId}   │ Genera certificado de curso         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /reset-sandbox           │ Reinicia datos del sandbox del user │
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                        CLAWBOT (/api/clawbot)                              │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /chat                    │ Chat libre con Clawbot (Gemini)     │
+  │          │                          │ Body: { mensaje, historial }        │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ POST     │ /analyze                 │ Análisis de error (pedagogía)       │
+  │          │                          │ Body: { descripcion, queryMaestra,  │
+  │          │                          │        queryAlumno, errorDb }       │
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                    LEADERBOARD (/api/leaderboard)                           │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /                        │ Ranking global (vista BD)           │
+  │          │                          │ SELECT * FROM lms_core.v_ranking_   │
+  │          │                          │ alumnos ORDER BY xp_total DESC      │
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+  ┌──────────────────────────────────────────────────────────────────────────────┐
+  │                    ANALYTICS (/api/analytics)                               │
+  ├──────────┬──────────────────────────┬──────────────────────────────────────┤
+  │ MÉTODO   │ ENDPOINT                 │ DESCRIPCIÓN                         │
+  ├──────────┼──────────────────────────┼──────────────────────────────────────┤
+  │ GET      │ /mpi                     │ Proxy al microservicio Python MPI   │
+  │          │                          │ Spring → POST http://127.0.0.1:5001 │
+  │          │                          │ Resp: { ok, resultado, proxy_ms }   │
+  └──────────┴──────────────────────────┴──────────────────────────────────────┘
+
+================================================================================
+  8. SEGURIDAD: JWT Y FILTROS
+================================================================================
+
+  FLUJO DE SEGURIDAD:
+
+  PETICIÓN HTTP → SecurityFilterChain → JwtAuthenticationFilter → Controller
+                        │                         │
+                        │ (CORS + CSRF)           │ (Validar token)
+                        │                         │
+                        ▼                         ▼
+                   ¿Es ruta pública?        Extraer token del header
+                   /api/usuarios/login        Authorization: Bearer eyJ...
+                   /api/usuarios/registro
+                   /api/clawbot/**                    │
+                        │                             ▼
+                        SI                       JwtUtil.validarToken(token)
+                        │                             │
+                        ▼                             SI → Set Authentication
+                   Dejar pasar                      en SecurityContext
+                        │                             │
+                        └──────────┬──────────────────┘
+                                   ▼
+                         CONTROLLER (@AuthenticationPrincipal)
+
+  JWT UTIL (Generación y validación):
+
+  @Component
+  class JwtUtil {
+    private static final Key SECRET_KEY = Keys.secretKeyFor(HS256);
+    private static final long EXPIRATION_TIME = 86400000; // 24h
+
+    // Crear token
+    public String generarToken(String idUsuario) {
+      return Jwts.builder()
+        .setSubject(idUsuario)           // Guarda el UUID del usuario
+        .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+        .signWith(SECRET_KEY)            // Firma con llave secreta
+        .compact();
+    }
+
+    // Validar token
+    public boolean validarToken(String token) {
+      try { getClaims(token); return true; }
+      catch (Exception e) { return false; }
+    }
+  }
+
+  SecurityConfig.java (Configuración de seguridad):
+
+  @Configuration @EnableWebSecurity
+  class SecurityConfig {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) {
+      http
+        .cors(cors -> cors.configurationSource(corsConfig())) // CORS
+        .csrf(csrf -> csrf.disable())                         // Deshabilitar CSRF
+        .authorizeHttpRequests(auth -> auth
+          .requestMatchers("/api/usuarios/login", "/api/usuarios/registro").permitAll()
+          .requestMatchers("/api/clawbot/**").permitAll()
+          .anyRequest().authenticated()                        // Todo lo demás requiere JWT
+        )
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+      return http.build();
+    }
+
+    // CORS: Permitir peticiones desde React (localhost:3000)
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+      CorsConfiguration config = new CorsConfiguration();
+      config.setAllowedOriginPatterns(Arrays.asList("*"));
+      config.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+      config.setAllowedHeaders(Arrays.asList("*"));
+      config.setAllowCredentials(true);
+      UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+      source.registerCorsConfiguration("/**", config);
+      return source;
+    }
+  }
+
+================================================================================
+  9. MOTOR DE VALIDACIÓN SQL (EjercicioService)
+================================================================================
+
+  FLUJO DE VALIDACIÓN DE UN EJERCICIO SQL:
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 1. Frontend envía POST /api/exercises/{id}/validate                   │
+  │    Body: { query: "SELECT * FROM aventureros WHERE nivel > 5;",       │
+  │            usuarioId: "uuid-del-usuario" }                             │
+  └─────────────────────────────┬───────────────────────────────────────────┘
+                                │
+                                ▼
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 2. EjercicioService.validarConsulta(id, queryUsuario, usuarioId)      │
+  │                                                                       │
+  │  2.1 SEGURIDAD (Escudo de Dagon):                                     │
+  │      - Bloquear: DROP DATABASE, DROP SCHEMA, TRUNCATE, ALTER ROLE     │
+  │      - Bloquear acceso a lms_core en modificaciones                    │
+  │      - Regex blacklist para comandos administrativos                   │
+  │                                                                       │
+  │  2.2 DETECTAR FORMATO:                                                │
+  │      - "editor": Consulta SQL normal                                  │
+  │      - "drag_drop": Armar query desde palabras arrastradas            │
+  │      - "diagram": Validar JSON de diagrama ER (nodos y edges)         │
+  └─────────────────────────────┬───────────────────────────────────────────┘
+                                │
+        ┌───────────────────────┴───────────────────────┐
+        │                                               │
+        ▼                                               ▼
+  ┌─────────────────┐                        ┌──────────────────────┐
+  │  FORMATO SQL    │                        │   FORMATO DIAGRAM   │
+  │ (editor/drag)   │                        │                    │
+  ├─────────────────┤                        ├──────────────────────┤
+  │ ¿Es DDL?        │                        │ Validar nodos (entidades) │
+  │ (CREATE/ALTER)  │                        │ Validar edges (relaciones) │
+  │   ↓ SÍ         │                        │ Validar cardinalidad       │
+  │ ejecutarEn      │                        │ Validar atributos mínimos  │
+  │ Sandbox(query)  │                        │ Validar entidades requeridas│
+  │   ↓ NO         │                        └──────────────────────┘
+  │ ¿Es DML?       │
+  │ (INSERT/UPDATE)│
+  │   ↓ SÍ         │
+  │ ejecutarEn     │
+  │ SandboxCon      │
+  │ Rollback       │──→ Obtener datos maestros
+  │ (queryMaestra) │
+  │   ↓            │
+  │ ejecutarEn     │
+  │ Sandbox(query) │──→ Obtener datos alumno
+  │   ↓            │
+  │ comparar       │
+  │ ResultadosDML  │──→ Ignora columnas id/id_
+  │                │    Normaliza todo a String
+  │   ↓ NO (SELECT)│
+  │ ejecutarEn     │
+  │ Sandbox(query) │──→ Comparar directamente
+  │ maestra vs     │
+  │ alumno         │
+  └────────────────┘
+
+  SANDBOX (Ejecución segura):
+
+  - Conexión: app_sandbox_user (rol limitado, sin DROP/TRUNCATE)
+  - search_path: lms_sandbox (o sandbox_usuario_{uuid} para aislamiento)
+  - Auto-rollback en validación DML: conn.setAutoCommit(false) + conn.rollback()
+  - Para DDL: ejecutarEnSandbox() persistente (CREATE TABLE, ALTER TABLE)
+  - Auto-inyecta RETURNING *; a DML si no lo tiene
+
+  PEDAGOGÍA ADAPTATIVA:
+  - Si Dagon detecta "multiple primary keys" → ejecuta DROP CONSTRAINT automático
+  - El response indica: isPedagogicalIntervention: true
+  - Frontend muestra mensaje explicativo de Dagon
+
+================================================================================
+ 10. CONEXIÓN BACKEND ↔ FRONTEND
+================================================================================
+
+  CÓMO SE CONECTAN:
+
+  ┌──────────────────────────┐          HTTP/REST          ┌────────────────────┐
+  │       FRONTEND           │ ←──────────────────────→   │     BACKEND        │
+  │       (React)            │    JSON + Bearer Token     │   (Spring Boot)    │
+  └──────────────────────────┘                            └────────────────────┘
+           │                                  │
+           │                                  │
+           ▼                                  ▼
+  ┌──────────────────────────┐         ┌────────────────────┐
+  │   apiService.js          │         │  Controllers       │
+  │   (axios client)         │         │  @RestController   │
+  └──────────────────────────┘         └────────────────────┘
+
+  apiService.js (Frontend):
+
+  const API_URL = process.env.REACT_APP_BACKEND_URL; // undefined actualmente
+  const API = `${API_URL}/api`;  // Si API_URL no está definido → /api
+
+  // En DashboardPage.js se hardcodea: http://localhost:8080
+  // TODO: Crear .env con REACT_APP_BACKEND_URL=http://localhost:8080
+
+  export const apiService = {
+    getLevels: async () => {
+      const response = await axios.get(`${API}/levels`);
+      return response.data;
+    },
+    validateExercise: async (exerciseId, query, levelId) => {
+      const response = await axios.post(`${API}/exercises/validate`, {
+        exercise_id: exerciseId,
+        query,
+        level_id: levelId
+      });
+      return response.data;
+    },
+    chat: async (message, sessionId) => {
+      const response = await axios.post(`${API}/chat`, { message, session_id: sessionId });
+      return response.data;
+    }
+  };
+
+  FLUJO DE AUTENTICACIÓN:
+
+  1. Usuario ingresa email/password en LoginPage.js
+  2. POST /api/usuarios/login → Backend valida → devuelve { token, user }
+  3. Frontend guarda token en AuthContext (contexto global de React)
+  4. Para peticiones autenticadas:
+     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  5. JwtAuthenticationFilter valida el token en cada petición
+
+  CORS (Cross-Origin Resource Sharing):
+
+  - Backend: SecurityConfig permite origins: "*" (o localhost:3000)
+  - Frontend corre en localhost:3000 → Backend en localhost:8080
+  - Sin CORS configurado → el navegador bloquea las peticiones
+
+================================================================================
+ 11. FRONTEND: REACT Y SERVICIOS
+================================================================================
+
+  TECNOLOGÍAS:
+  - React 19 (Hooks, Functional Components)
+  - React Router v7 (Navegación: /dashboard, /exercise/:id, etc.)
+  - Craco (Override de webpack sin eject)
+  - Tailwind CSS 3.4 + Shadcn/Radix (UI components)
+  - Framer Motion (Animaciones)
+  - Monaco Editor (Editor de código SQL)
+  - Axios (Cliente HTTP)
+  - Recharts (Gráficos en Analytics)
+  - Lucide React (Iconos)
+
+  RUTAS (App.js):
+
+  | Path         | Componente      | Protegida |
+  |--------------|----------------|-----------|
+  | /            | LoginPage      | No        |
+  | /dashboard   | DashboardPage  | SÍ (JWT)  |
+  | /exercise/:id| ExercisePage   | SÍ        |
+  | /leaderboard | LeaderboardPage| SÍ        |
+  | /profile     | ProfilePage    | SÍ        |
+  | /streak      | StreakPage     | No        |
+  | /analytics   | AnalyticsPage  | SÍ        |
+
+  AuthContext.js (Contexto de autenticación global):
+
+  const AuthContext = createContext();
+
+  export const AuthProvider = ({ children }) => {
+    const [token, setToken] = useState(localStorage.getItem('dagon_token'));
+    const [user, setUser] = useState(null);
+
+    const login = (token, user) => {
+      localStorage.setItem('dagon_token', token);
+      setToken(token);
+      setUser(user);
+    };
+
+    const logout = () => {
+      localStorage.removeItem('dagon_token');
+      setToken(null);
+      setUser(null);
+    };
+
+    return (
+      <AuthContext.Provider value={{ token, user, login, logout }}>
+        {children}
+      </AuthContext.Provider>
+    );
+  };
+
+  PÁGINAS PRINCIPALES:
+
+  - LoginPage: Formulario de login/registro → usa apiService o AuthContext
+  - DashboardPage: Lista de módulos/niveles, XP, racha
+  - ExercisePage: Editor SQL (Monaco) o Drag&Drop o Diagrama ER
+  - LeaderboardPage: Tabla de posiciones global
+  - ProfilePage: Estadísticas, foto, historial, distribución de XP
+  - AnalyticsPage: Gráficos MPI, tiempos por rank
+
+================================================================================
+ 12. MICROSERVICIO MPI (ANALYTICS)
+================================================================================
+
+  OBJETIVO ACADÉMICO: Demostrar programación paralela con mpi4py
+
+  FLUJO:
+
+  Frontend → GET /analytics (AnalyticsPage)
+      ↓
+  Backend → GET /api/analytics/mpi (AnalyticsController)
+      ↓ HTTP POST con { usuarios: ranking }
+  MPI Service (Flask en localhost:5001)
+      ↓ mpirun -np 4 python analytics_mpi.py
+  Lógica MPI:
+      - Scatter: rank 0 reparte subconjuntos de usuarios a los demás ranks
+      - Cada rank calcula: promedio XP, distribución por rango, top-N
+      - Reduce: rank 0 agrega resultados de todos los ranks
+      ↓
+  JSON con estadísticas + tiempos por rank
+      ↓
+  Frontend muestra resultados con Recharts + Framer Motion
+
+  ARCHIVOS:
+
+  - mpi_service/server.py: Wrapper Flask que lanza el script MPI
+  - mpi_service/analytics_mpi.py: Lógica de cálculo paralelo
+  - mpi_service/run_mpi.sh: mpirun -np 4 python server.py
+
+  PREREQUISITOS MPI:
+    brew install open-mpi
+    pip install mpi4py flask psycopg2-binary
+
+================================================================================
+ 13. BASE DE DATOS: ESQUEMAS Y SCRIPT MAESTRO
+================================================================================
+
+  POSTGRESQL - 2 ESQUEMAS PRINCIPALES:
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  lms_core (Datos del sistema)                                      │
+  │    - usuarios          (id_usuario UUID, nombre, email, password_hash)│
+  │    - cursos            (id_curso, titulo)                           │
+  │    - modulos           (id_modulo, id_curso, titulo, xp_requerida) │
+  │    - ejercicios_practicos (id_ejercicio, id_modulo, enunciado,     │
+  │                          query_maestra, formato, dificultad)       │
+  │    - intentos          (id_intento, id_usuario, id_ejercicio,      │
+  │                          query_enviada, es_correcto, fecha_intento)│
+  │    - v_ranking_alumnos (Vista: nombre, xp_total, ranking)          │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  lms_sandbox (Datos para ejercicios de los alumnos)                │
+  │    - aventureros, misiones, bestiario, equipamiento, etc.          │
+  │    (Tablas que el alumno consulta/manipula en los ejercicios)      │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  lms_sandbox_template (Template para reset de sandbox)             │
+  │    - Copia de lms_sandbox que se clona al reiniciar datos          │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  sandbox_usuario_{uuid} (Esquema aislado por usuario)              │
+  │    - Se crea dinámicamente para cada usuario                       │
+  │    - Permite que cada alumno tenga sus propias tablas en DDL       │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  REGLAS IMPORTANTES:
+  - ddl-auto=none: Hibernate NUNCA crea/modifica tablas
+  - BaseDeDatosZaca.sql es la FUENTE DE VERDAD
+  - Si necesitas una tabla nueva → agregar SQL al script maestro
+  - Esquema de sandbox: search_path = 'lms_sandbox'
+
+  CONEXIÓN SANDBOX (application.properties):
+
+  dagon.sandbox.url=jdbc:postgresql://shinkansen.proxy.rlwy.net:55940/railway
+  dagon.sandbox.username=app_sandbox_user
+  dagon.sandbox.password=Taxi2097
+
+  CONEXIÓN PRINCIPAL (misma URL, diferente usuario):
+
+  spring.datasource.url=jdbc:postgresql://shinkansen.proxy.rlwy.net:55940/railway
+  spring.datasource.username=postgres
+  spring.datasource.password=cbpOPRZfHXLYaWalGVnuHToLmMEqYtRS
+
+================================================================================
+ 14. FLUJO COMPLETO DE UNA PETICIÓN
+================================================================================
+
+  CASO: Usuario resuelve un ejercicio SQL
+
+  1. [Frontend] Usuario escribe SQL en Monaco Editor (ExercisePage.js)
+     SELECT * FROM aventureros WHERE nivel > 10;
+
+  2. [Frontend] Click en "Ejecutar" → validateExercise(exerciseId, query, levelId)
+     POST http://localhost:8080/api/exercises/5/validate
+     Headers: Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+     Body: { query: "SELECT * FROM aventureros WHERE nivel > 10;", usuarioId: "..." }
+
+  3. [Backend] JwtAuthenticationFilter valida el token JWT
+     - Extrae idUsuario del token
+     - Setea Authentication en SecurityContext
+
+  4. [Backend] NivelController.validarEjercicio(id, request)
+     - Extrae queryUsuario y usuarioId del request body
+     - Llama a ejercicioService.validarConsulta(id, queryUsuario, usuarioId)
+
+  5. [Backend] EjercicioService.validarConsulta():
+     a) SEGURIDAD: Verifica que no sea DROP DATABASE, TRUNCATE, etc.
+     b) Obtiene el ejercicio de la BD: repository.findById(ejercicioId)
+     c) Lee queryMaestra: "SELECT * FROM aventureros WHERE nivel > 5;"
+     d) Ejecuta queryMaestra en sandbox (con rollback) → datosMaestros
+     e) Ejecuta queryUsuario en sandbox (persistente) → datosAlumno
+     f) Compara resultados ignorando columnas id/id_
+     g) Si es correcto:
+        - Inserta en lms_core.intentos (registro de intento)
+        - Actualiza racha diaria: usuarioService.registrarPracticaDiaria()
+        - Responde: { success: true, xp_gained: 50, message: "¡Excelente!" }
+     h) Si es incorrecto:
+        - Inserta intento con es_correcto = false
+        - Responde: { success: false, message: "Los datos no coinciden",
+                      queryMaestra, queryAlumno, errorDb }
+
+  6. [Frontend] ExercisePage.js recibe la respuesta
+     - Si success: true → Muestra animación de éxito, suma XP, avanza
+     - Si success: false → Muestra error, ofrece ayuda de Clawbot
+
+  7. [Frontend] Si el usuario pide ayuda → Clawbot
+     POST /api/clawbot/analyze
+     Body: { descripcion, queryMaestra, queryAlumno, errorDb, intentos }
+     → ClawbotService → Gemini API → Respuesta pedagógica socrática
+
+================================================================================
+  COMANDOS PARA EJECUTAR EL PROYECTO
+================================================================================
+
+  BACKEND:
+  cd backend
+  ./mvnw spring-boot:run
+  → Disponible en http://localhost:8080
+
+  FRONTEND:
+  cd frontend
+  yarn install    (usa yarn, NO npm - ver packageManager en package.json)
+  yarn start      (usa craco start, NO react-scripts start)
+  → Disponible en http://localhost:3000
+
+  MPI SERVICE:
+  cd mpi_service
+  ./run_mpi.sh
+  → Disponible en http://localhost:5001
+
+  TESTS:
+  cd backend && ./mvnw test
+  cd frontend && yarn test
+
+================================================================================
+  CONSIDERACIONES FINALES
+================================================================================
+
+  - COMENTARIOS, UI Y COMMITS EN ESPAÑOL
+  - NO usar emojis (salvo que el usuario pida) → usar lucide-react para iconos
+  - NO reemplazar Tailwind con CSS modules
+  - NO hacer commit de application.properties (contiene secretos)
+  - NO cambiar ddl-auto a "update" (usar BaseDeDatosZaca.sql)
+  - CLASES CSS personalizadas: glass-card, neon-glow, cyber-bg, etc.
+  - FUENTES: Inter (UI) + JetBrains Mono (código)
+
+================================================================================
+  FIN DE DOCUMENTACIÓN
+================================================================================
