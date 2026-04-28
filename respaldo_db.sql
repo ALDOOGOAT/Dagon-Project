@@ -20,7 +20,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: lms_core; Type: SCHEMA; Schema: -; Owner: postgres
+-- Name: lms_core; Type: SCHEMA; Schema: -; Owner: postgres setso
 --
 
 CREATE SCHEMA lms_core;
