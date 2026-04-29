@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useLayoutEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext(null);
 
@@ -112,26 +113,46 @@ export const COLOR_PALETTES = {
 
 const DEFAULT_PALETTE = 'dagon';
 const THEME_ROOT_CLASSES = ['theme-dark', 'theme-light'];
+const LEGACY_PALETTE_KEY = 'userPalette';
+const getUserPaletteKey = (userId) => `userPalette:${userId}`;
 
 const getValidPalette = (paletteName) => {
   return COLOR_PALETTES[paletteName] ? paletteName : DEFAULT_PALETTE;
 };
 
 export const ThemeProvider = ({ children }) => {
+  const { user } = useAuth();
+  const userId = user?.idUsuario || null;
   const [palette, setPalette] = useState(() => {
-    return getValidPalette(localStorage.getItem('userPalette'));
+    return DEFAULT_PALETTE;
   });
 
   useLayoutEffect(() => {
-    const nextPalette = getValidPalette(palette);
-    if (nextPalette !== palette) {
-      setPalette(nextPalette);
+    const storageKey = userId ? getUserPaletteKey(userId) : null;
+    const storedPalette = storageKey
+      ? localStorage.getItem(storageKey)
+      : null;
+    const legacyPalette = localStorage.getItem(LEGACY_PALETTE_KEY);
+    const preferredPalette = userId
+      ? (storedPalette || legacyPalette || DEFAULT_PALETTE)
+      : DEFAULT_PALETTE;
+    const resolvedPalette = getValidPalette(preferredPalette);
+
+    if (storageKey && !storedPalette && legacyPalette) {
+      localStorage.setItem(storageKey, resolvedPalette);
+    }
+
+    if (resolvedPalette !== palette) {
+      setPalette(resolvedPalette);
       return;
     }
 
-    localStorage.setItem('userPalette', palette);
-    applyPalette(palette);
-  }, [palette]);
+    if (storageKey) {
+      localStorage.setItem(storageKey, resolvedPalette);
+    }
+    localStorage.setItem(LEGACY_PALETTE_KEY, resolvedPalette);
+    applyPalette(resolvedPalette);
+  }, [palette, userId]);
 
   const changePalette = (newPalette) => {
     if (COLOR_PALETTES[newPalette]) {
