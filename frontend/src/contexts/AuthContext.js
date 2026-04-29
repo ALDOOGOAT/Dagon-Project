@@ -98,6 +98,7 @@ const login = async (email, password) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userAvatar');
+    localStorage.removeItem('userPalette');
     setToken(null);
     setUser(null);
     delete axios.defaults.headers.common['Authorization'];

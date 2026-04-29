@@ -97,67 +97,106 @@ export const COLOR_PALETTES = {
   aurora: {
     name: 'Aurora Gold',
     mode: 'light',
-    primary: '#f59e0b',
-    secondary: '#facc15',
-    accent: '#fb923c',
-    background: '#fffdf7',
-    surface: '#fffaf0',
-    surfaceAlt: '#fef3c7',
-    text: '#1f2937',
-    textMuted: '#78716c',
-    border: '#f3d38a',
-    gradient: 'from-amber-400 via-yellow-300 to-orange-300',
-    gradientAlt: 'from-amber-200/60 via-white/20 to-yellow-200/60',
+    primary: '#c67a1d',
+    secondary: '#e6c76a',
+    accent: '#d99a4e',
+    background: '#fffaf4',
+    surface: '#fff8ee',
+    surfaceAlt: '#f4e2bb',
+    text: '#2d241b',
+    textMuted: '#836b52',
+    border: '#dec7a0',
+    gradient: 'from-amber-600 via-yellow-300 to-orange-300',
+    gradientAlt: 'from-amber-100/70 via-white/28 to-orange-100/58',
   },
 };
 
 const DEFAULT_PALETTE = 'dagon';
 const THEME_ROOT_CLASSES = ['theme-dark', 'theme-light'];
-const LEGACY_PALETTE_KEY = 'userPalette';
 const getUserPaletteKey = (userId) => `userPalette:${userId}`;
 
 const getValidPalette = (paletteName) => {
   return COLOR_PALETTES[paletteName] ? paletteName : DEFAULT_PALETTE;
 };
 
+const hexToRgb = (hex) => {
+  if (!hex || typeof hex !== 'string' || !hex.startsWith('#') || hex.length !== 7) {
+    return { r: 99, g: 102, b: 241 };
+  }
+
+  return {
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  };
+};
+
+const rgba = (hex, alpha) => {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getUserIdFromToken = (token) => {
+  if (!token) return null;
+
+  try {
+    const base64Url = token.split('.')[1];
+    if (!base64Url) return null;
+
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+
+    return payload?.sub || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const getStoredPalette = (userId) => {
+  if (!userId) return DEFAULT_PALETTE;
+
+  const storedPalette = localStorage.getItem(getUserPaletteKey(userId));
+  return getValidPalette(storedPalette || DEFAULT_PALETTE);
+};
+
 export const ThemeProvider = ({ children }) => {
-  const { user } = useAuth();
-  const userId = user?.idUsuario || null;
+  const { user, token } = useAuth();
+  const resolvedUserId = user?.idUsuario || getUserIdFromToken(token);
   const [palette, setPalette] = useState(() => {
-    return DEFAULT_PALETTE;
+    return getStoredPalette(user?.idUsuario || getUserIdFromToken(token));
   });
 
   useLayoutEffect(() => {
-    const storageKey = userId ? getUserPaletteKey(userId) : null;
-    const storedPalette = storageKey
-      ? localStorage.getItem(storageKey)
-      : null;
-    const legacyPalette = localStorage.getItem(LEGACY_PALETTE_KEY);
-    const preferredPalette = userId
-      ? (storedPalette || legacyPalette || DEFAULT_PALETTE)
-      : DEFAULT_PALETTE;
-    const resolvedPalette = getValidPalette(preferredPalette);
-
-    if (storageKey && !storedPalette && legacyPalette) {
-      localStorage.setItem(storageKey, resolvedPalette);
-    }
+    const resolvedPalette = getStoredPalette(resolvedUserId);
 
     if (resolvedPalette !== palette) {
       setPalette(resolvedPalette);
+      applyPalette(resolvedPalette);
       return;
     }
 
-    if (storageKey) {
-      localStorage.setItem(storageKey, resolvedPalette);
+    if (resolvedUserId) {
+      localStorage.setItem(getUserPaletteKey(resolvedUserId), resolvedPalette);
     }
-    localStorage.setItem(LEGACY_PALETTE_KEY, resolvedPalette);
     applyPalette(resolvedPalette);
-  }, [palette, userId]);
+  }, [palette, resolvedUserId]);
 
   const changePalette = (newPalette) => {
-    if (COLOR_PALETTES[newPalette]) {
-      setPalette(newPalette);
+    const safePalette = getValidPalette(newPalette);
+
+    setPalette(safePalette);
+
+    if (resolvedUserId) {
+      localStorage.setItem(getUserPaletteKey(resolvedUserId), safePalette);
     }
+
+    applyPalette(safePalette);
   };
 
   const currentColors = COLOR_PALETTES[palette] || COLOR_PALETTES[DEFAULT_PALETTE];
@@ -192,6 +231,7 @@ const applyPalette = (paletteName) => {
   const colors = COLOR_PALETTES[safePalette] || COLOR_PALETTES[DEFAULT_PALETTE];
   const root = document.documentElement;
   const isLight = colors.mode === 'light';
+  const isAurora = safePalette === 'aurora';
 
   // Añadir transición suave para todos los cambios de color
   if (!root.style.transition) {
@@ -207,12 +247,37 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--color-text', colors.text);
   root.style.setProperty('--color-text-muted', colors.textMuted);
   root.style.setProperty('--color-border', colors.border);
-  root.style.setProperty('--glass-surface', isLight ? 'rgba(255, 251, 240, 0.72)' : 'rgba(255, 255, 255, 0.05)');
-  root.style.setProperty('--glass-surface-strong', isLight ? 'rgba(255, 248, 230, 0.88)' : 'rgba(30, 41, 59, 0.4)');
-  root.style.setProperty('--glass-border', isLight ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.18)');
-  root.style.setProperty('--glass-highlight', isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.15)');
-  root.style.setProperty('--glass-shadow', isLight ? '0 25px 60px -25px rgba(217, 119, 6, 0.22)' : '0 8px 32px 0 rgba(0, 0, 0, 0.37)');
-  root.style.setProperty('--grid-opacity', isLight ? '0.09' : '0.05');
+  root.style.setProperty('--glass-surface', isLight
+    ? (isAurora ? 'rgba(255, 248, 238, 0.78)' : 'rgba(255, 251, 240, 0.72)')
+    : 'rgba(255, 255, 255, 0.05)');
+  root.style.setProperty('--glass-surface-strong', isLight
+    ? (isAurora ? 'rgba(255, 244, 226, 0.9)' : 'rgba(255, 248, 230, 0.88)')
+    : 'rgba(30, 41, 59, 0.4)');
+  root.style.setProperty('--glass-border', isLight
+    ? (isAurora ? 'rgba(217, 119, 6, 0.16)' : 'rgba(245, 158, 11, 0.18)')
+    : 'rgba(255, 255, 255, 0.18)');
+  root.style.setProperty('--glass-highlight', isLight
+    ? (isAurora ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.92)')
+    : 'rgba(255, 255, 255, 0.15)');
+  root.style.setProperty('--glass-shadow', isLight
+    ? (isAurora ? '0 30px 80px -34px rgba(180, 83, 9, 0.24)' : '0 25px 60px -25px rgba(217, 119, 6, 0.22)')
+    : '0 8px 32px 0 rgba(0, 0, 0, 0.37)');
+  root.style.setProperty('--grid-opacity', isLight ? (isAurora ? '0.055' : '0.09') : '0.05');
+  root.style.setProperty('--theme-orb-a', isLight ? rgba(colors.primary, 0.16) : rgba(colors.primary, 0.18));
+  root.style.setProperty('--theme-orb-b', isLight ? rgba(colors.secondary, 0.14) : rgba(colors.secondary, 0.16));
+  root.style.setProperty('--theme-orb-c', isLight ? rgba(colors.accent, 0.12) : rgba(colors.accent, 0.12));
+  root.style.setProperty('--theme-shell', isLight
+    ? `radial-gradient(circle at top, rgba(255,255,255,0.98) 0%, ${rgba(colors.surface, 0.94)} 34%, ${rgba(colors.surfaceAlt, 0.78)} 74%, ${rgba(colors.border, 0.52)} 100%)`
+    : `radial-gradient(ellipse at top, ${rgba(colors.surfaceAlt, 0.62)} 0%, ${rgba(colors.surface, 0.46)} 30%, ${colors.background} 100%)`);
+  root.style.setProperty('--theme-overlay', isLight
+    ? `linear-gradient(145deg, rgba(255,255,255,0.74) 0%, ${rgba(colors.surface, 0.28)} 36%, ${rgba(colors.surfaceAlt, 0.14)} 72%, rgba(255,255,255,0.08) 100%)`
+    : `linear-gradient(180deg, ${rgba(colors.primary, 0.14)} 0%, transparent 42%, ${rgba(colors.secondary, 0.12)} 100%)`);
+  root.style.setProperty('--theme-vignette', isLight
+    ? `linear-gradient(180deg, ${rgba('#ffffff', 0.08)} 0%, transparent 54%, ${rgba(colors.surfaceAlt, 0.18)} 100%)`
+    : `linear-gradient(180deg, transparent 0%, transparent 56%, ${rgba(colors.background, 0.82)} 100%)`);
+  root.style.setProperty('--panel-shadow', isLight
+    ? `0 24px 64px -30px ${rgba(colors.primary, 0.24)}`
+    : `0 24px 64px -26px ${rgba(colors.background, 0.62)}`);
   root.dataset.themeMode = isLight ? 'light' : 'dark';
   root.dataset.themePalette = safePalette;
   root.classList.remove(...THEME_ROOT_CLASSES);
@@ -241,7 +306,9 @@ const applyPalette = (paletteName) => {
   // También actualizar el color de fondo del body directamente para evitar flashes
   document.body.style.backgroundColor = colors.background;
   document.body.style.backgroundImage = isLight
-    ? 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,220,0.92) 55%, rgba(255,243,199,0.88) 100%)'
+    ? (isAurora
+      ? 'radial-gradient(circle at top, rgba(255,255,255,0.98) 0%, rgba(255,248,236,0.95) 34%, rgba(245,226,191,0.86) 74%, rgba(232,205,163,0.72) 100%), linear-gradient(135deg, rgba(255,255,255,0.84) 0%, rgba(255,248,240,0.62) 40%, rgba(243,224,188,0.28) 100%)'
+      : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,220,0.92) 55%, rgba(255,243,199,0.88) 100%)')
     : '';
 };
 

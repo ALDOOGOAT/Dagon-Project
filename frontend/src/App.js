@@ -65,7 +65,7 @@ const AppRoutes = () => {
   
   return (
     <>
-      <AbyssBackground intensity={1.1} tint={bgTint} mode={isLightTheme ? 'light' : 'dark'} />
+      <AbyssBackground intensity={1.1} tint={bgTint} mode={isLightTheme ? 'light' : 'dark'} colors={colors} />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={

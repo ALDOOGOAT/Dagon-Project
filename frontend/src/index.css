@@ -29,6 +29,10 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: var(--color-background);
     color: var(--color-text);
+    transition:
+        background-color 320ms ease,
+        color 320ms ease,
+        background-image 420ms ease;
 }
 
 code {
@@ -94,6 +98,11 @@ h1, h2, h3, h4, h5, h6 {
         backdrop-filter: blur(24px) saturate(180%);
         border: 1px solid var(--glass-border);
         box-shadow: var(--glass-shadow);
+        transition:
+            background-color 280ms ease,
+            border-color 280ms ease,
+            box-shadow 280ms ease,
+            transform 280ms ease;
     }
     
     .glass-card-apple {
@@ -103,6 +112,11 @@ h1, h2, h3, h4, h5, h6 {
         box-shadow: 
             var(--glass-shadow),
             inset 0 1px 0 0 var(--glass-highlight);
+        transition:
+            background-color 280ms ease,
+            border-color 280ms ease,
+            box-shadow 280ms ease,
+            transform 280ms ease;
     }
     
     .grid-pattern {
@@ -119,6 +133,7 @@ h1, h2, h3, h4, h5, h6 {
 
     .neon-glow-cyan {
         box-shadow: 0 0 22px var(--color-primary), inset 0 0 20px rgba(255, 255, 255, 0.05);
+        transition: box-shadow 280ms ease;
     }
 
     .text-gradient-abyss {
@@ -126,6 +141,7 @@ h1, h2, h3, h4, h5, h6 {
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
+        filter: saturate(1.02);
     }
 
     .glass-card-deep {
@@ -135,12 +151,117 @@ h1, h2, h3, h4, h5, h6 {
         box-shadow:
             0 20px 60px -20px rgba(0, 0, 0, 0.6),
             inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+        transition:
+            background 280ms ease,
+            border-color 280ms ease,
+            box-shadow 280ms ease,
+            transform 280ms ease;
     }
 
     .theme-surface-soft {
         background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface) 88%, white 12%), color-mix(in srgb, var(--color-surface-alt) 74%, transparent 26%));
         border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent 30%);
         box-shadow: 0 20px 60px -30px color-mix(in srgb, var(--color-primary) 20%, transparent 80%);
+    }
+
+    .theme-light .theme-surface-soft {
+        background: linear-gradient(
+            155deg,
+            color-mix(in srgb, var(--color-surface) 92%, white 8%) 0%,
+            color-mix(in srgb, var(--color-surface-alt) 24%, var(--color-surface) 76%) 100%
+        );
+        border: 1px solid color-mix(in srgb, var(--color-border) 52%, white 48%);
+        box-shadow:
+            0 24px 70px -36px color-mix(in srgb, var(--color-primary) 18%, transparent 82%),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.56);
+    }
+
+    .theme-light .text-gradient-abyss {
+        background: linear-gradient(110deg, #9a5d16 0%, #c67a1d 38%, #d7b458 72%, #d99a4e 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        filter: saturate(0.92) brightness(0.96);
+    }
+
+    .theme-light .glass-card,
+    .theme-light .glass-card-apple {
+        box-shadow:
+            var(--glass-shadow),
+            inset 0 1px 0 0 var(--glass-highlight),
+            0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .theme-dark .glass-card,
+    .theme-dark .glass-card-apple,
+    .theme-dark .glass-card-deep,
+    .theme-dark .theme-surface-soft {
+        box-shadow:
+            var(--panel-shadow),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .theme-dark .text-gradient-abyss {
+        filter: saturate(1.08) brightness(1.05);
+    }
+
+    .theme-dark .glass-card:hover,
+    .theme-dark .glass-card-apple:hover,
+    .theme-dark .glass-card-deep:hover,
+    .theme-dark .theme-surface-soft:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 28px 80px -42px color-mix(in srgb, var(--color-primary) 32%, transparent 68%),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .theme-light .glass-card:hover,
+    .theme-light .glass-card-apple:hover,
+    .theme-light .glass-card-deep:hover,
+    .theme-light .theme-surface-soft:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 26px 72px -38px color-mix(in srgb, var(--color-primary) 20%, transparent 80%),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.52);
+    }
+
+    html[data-theme-palette='aurora'] body {
+        color: #2d241b;
+    }
+
+    html[data-theme-palette='aurora'] .grid-pattern {
+        opacity: 0.04;
+    }
+
+    html[data-theme-palette='aurora'] .glass-card,
+    html[data-theme-palette='aurora'] .glass-card-apple,
+    html[data-theme-palette='aurora'] .theme-surface-soft,
+    html[data-theme-palette='aurora'] .glass-card-deep {
+        backdrop-filter: blur(32px) saturate(145%);
+    }
+
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(h1, h2, h3, h4, h5, h6, p, span, div, li, small, strong, label):is(.text-white, .text-white\/90, .text-slate-100, .text-slate-200, .text-slate-300, .text-yellow-200, .text-cyan-200, .text-fuchsia-200) {
+        color: #34281c !important;
+    }
+
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(h1, h2, h3, h4, h5, h6, p, span, div, li, small, strong, label).text-white\/70 {
+        color: rgba(52, 40, 28, 0.72) !important;
+    }
+
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(h1, h2, h3, h4, h5, h6, p, span, div, li, small, strong, label).text-white\/50 {
+        color: rgba(52, 40, 28, 0.54) !important;
+    }
+
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(svg).text-white,
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(svg).text-slate-200,
+    html[data-theme-palette='aurora'] :is(.glass-card, .glass-card-apple, .theme-surface-soft, .glass-card-deep)
+    :is(svg).text-slate-300 {
+        color: #8a6331 !important;
     }
 
     .tilt-card {
@@ -152,6 +273,21 @@ h1, h2, h3, h4, h5, h6 {
     .tilt-card:hover {
         transform: translateY(-4px) rotateX(2deg) rotateY(-2deg);
         box-shadow: 0 30px 70px -20px var(--color-primary);
+    }
+
+    .theme-button-dynamic {
+        transition:
+            background 240ms ease,
+            border-color 240ms ease,
+            color 240ms ease,
+            box-shadow 240ms ease,
+            transform 240ms ease;
+        box-shadow: 0 14px 34px -20px color-mix(in srgb, var(--color-primary) 34%, transparent 66%);
+    }
+
+    .theme-button-dynamic:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 18px 42px -22px color-mix(in srgb, var(--color-primary) 44%, transparent 56%);
     }
 
     .shimmer-border {

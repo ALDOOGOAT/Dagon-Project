@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
-import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlay';
+import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlay.jsx';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';

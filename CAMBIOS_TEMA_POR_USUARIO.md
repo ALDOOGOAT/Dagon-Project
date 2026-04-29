@@ -1,74 +1,67 @@
-# Cambios: Persistencia de tema por usuario
+# Cambios: corrección final del tema por usuario
 
-## Problema detectado
+## Problema real detectado
 
-La paleta del frontend se estaba guardando en una clave global de `localStorage`:
+El fallo no era solo una persistencia global antigua. También había un problema de inicialización:
 
-- `userPalette`
+1. El tema dependía de `user.idUsuario`.
+2. Al recargar o volver a entrar, primero existía el `token`, pero el objeto `user` todavía no estaba hidratado.
+3. Durante ese lapso, `ThemeContext` caía al tema por defecto.
+4. El resultado visual era que la app reaparecía en oscuro o en otra paleta previa y no siempre recuperaba a tiempo la seleccionada por el usuario.
 
-Eso provocaba este comportamiento:
-
-1. Un usuario entraba a `ProfilePage` y cambiaba el color.
-2. Cerraba sesión.
-3. Otro usuario entraba después.
-4. El sistema seguía usando la última paleta global guardada.
-
-En otras palabras, el tema quedaba pegado entre sesiones y no estaba aislado por usuario.
+Eso explica el comportamiento reportado de volver a ver la interfaz oscura o azul al reingresar.
 
 ## Causa raíz
 
-El problema estaba en:
+La lógica estaba concentrada en:
 
 - [frontend/src/contexts/ThemeContext.js](/home/aldo/Descargas/Dagon_Project/Dagon-Project/frontend/src/contexts/ThemeContext.js)
 
-La paleta se inicializaba y persistía con una sola clave global, sin tomar en cuenta `idUsuario`.
+La restauración de la paleta esperaba a que `useAuth()` ya tuviera `user` completo. Si la sesión todavía estaba validándose, el tema arrancaba con el default.
 
 ## Solución implementada
 
-Se cambió la persistencia del tema para que sea por usuario autenticado.
+Se endureció la resolución del tema para que use la identidad del usuario incluso antes de que el perfil termine de cargar.
 
 ### Ajustes realizados
 
-1. `ThemeContext` ahora consume `useAuth()` para conocer el usuario actual.
-2. La paleta ya no depende solo de `userPalette`.
-3. Se usa una clave por usuario:
+1. `ThemeContext` ahora usa `user.idUsuario` y, si todavía no existe, extrae el `sub` directamente del JWT.
+2. La lectura inicial del tema ya no espera al fetch del perfil.
+3. La persistencia sigue siendo por usuario:
 
 ```text
 userPalette:<idUsuario>
 ```
 
-4. Si no hay sesión iniciada:
-   - el tema vuelve a `dagon`
-   - así el login ya no hereda el color del usuario anterior
+4. `changePalette()` ahora persiste y aplica la paleta inmediatamente, reduciendo carreras entre navegación, render y escritura en `localStorage`.
+5. Si no hay un usuario autenticado resoluble, el sistema usa `dagon` como fallback controlado.
 
-5. Si existe el valor antiguo global:
-   - se migra automáticamente al usuario autenticado
-   - esto evita perder la preferencia ya guardada
+### Flujo final
 
-### Flujo nuevo
-
-- Sin login: tema `dagon`
-- Login usuario A: carga `userPalette:<idUsuarioA>`
-- Login usuario B: carga `userPalette:<idUsuarioB>`
-- Logout: vuelve a `dagon`
+- Sin sesión: tema `dagon`
+- Con sesión y token válido: se resuelve el `idUsuario` desde `user` o desde el JWT
+- Con ese `idUsuario`: se carga `userPalette:<idUsuario>`
+- Al cambiar color en perfil: se guarda y aplica inmediatamente
+- Al volver a entrar: la paleta se restaura sin depender de que `/profile` termine antes
 
 ## Archivos modificados
 
 - [frontend/src/contexts/ThemeContext.js](/home/aldo/Descargas/Dagon_Project/Dagon-Project/frontend/src/contexts/ThemeContext.js)
+- [frontend/src/contexts/AuthContext.js](/home/aldo/Descargas/Dagon_Project/Dagon-Project/frontend/src/contexts/AuthContext.js)
 
 ## Backend
 
-Se revisó el backend de autenticación y perfil:
+Se revisó el flujo backend relacionado:
 
-- [frontend/src/contexts/AuthContext.js](/home/aldo/Descargas/Dagon_Project/Dagon-Project/frontend/src/contexts/AuthContext.js)
 - [backend/src/main/java/com/dagon/backend/controller/UsuarioController.java](/home/aldo/Descargas/Dagon_Project/Dagon-Project/backend/src/main/java/com/dagon/backend/controller/UsuarioController.java)
 
-No fue necesario hacer cambios backend para resolver este bug.
+No fue necesario cambiar backend.
 
 Motivo:
 
-- El backend ya entrega `user.idUsuario` al hacer login
-- eso es suficiente para que el frontend persista el tema por usuario
+- el login ya devuelve `token`
+- el JWT ya contiene el `sub` con el identificador del usuario
+- eso permite que el frontend recupere la paleta correcta antes de que el perfil termine de hidratarse
 
 ## Pruebas ejecutadas
 
@@ -80,33 +73,24 @@ Comando ejecutado:
 cd frontend && yarn build
 ```
 
-Resultado:
+Resultado esperado de validación:
 
 - compilación exitosa
 - sin errores de build
-- solo warnings previos de hooks `useEffect`
+- pueden seguir apareciendo warnings previos de hooks, pero no bloquean deploy
 
 ### Backend
 
-Comando ejecutado:
-
-```bash
-cd backend && ./mvnw test
-```
-
-Resultado:
-
-- `BUILD SUCCESS`
-- `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`
+No hubo cambios backend en esta corrección final. La revisión fue de contrato y flujo de autenticación.
 
 ## Impacto esperado
 
-Después de este cambio:
+Después de este ajuste:
 
-- el tema ya no debe quedarse con el color del usuario anterior
-- cada usuario conserva su propia paleta
-- el login no debería abrir con una paleta ajena si no hay sesión activa
+- el tema ya no debe quedarse pegado en oscuro o azul al reingresar
+- la paleta del usuario debe restaurarse desde el primer montaje útil de sesión
+- la experiencia deja de depender del tiempo que tarde en resolverse `user`
 
 ## Nota final
 
-Este cambio corrige la persistencia del tema entre usuarios. No modifica la base de datos ni agrega nuevas columnas de preferencias en backend.
+Esta corrección mantiene la solución en frontend y no modifica la base de datos ni agrega columnas nuevas de preferencias.

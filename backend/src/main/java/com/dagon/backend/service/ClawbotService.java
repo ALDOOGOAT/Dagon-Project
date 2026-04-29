@@ -21,36 +21,45 @@ public class ClawbotService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-private static final String SYSTEM_PROMPT_CHAT = 
-        "Eres Clawbot, tutor de SQL. " +
-        "Tu mision es ENSE-AR con ejemplos visuales. " +
-        "REGLAS: " +
-        "1. Quando pregunten algo, explica + DA un ejemplo visual con tabla. " + 
-        "2. Usa tablas_markdown para ver datos. " +
-        "3. Usa bloques ```sql para ejemplos (cambia valores). " +
-        "4. NUNCA des la respuesta del ejercicio. " +
-        "5. Maximo 3-4 lineas + 1 ejemplo. " +
-        "6. En espanol. " +
-        "7. Sin HTML.";
+private static final String SYSTEM_PROMPT_CHAT =
+        "Eres Clawbot, tutor de SQL en espanol. " +
+        "No resuelves ejercicios del alumno; guias con metodo socratico. " +
+        "Siempre ayudas a pensar, no a copiar.\n\n" +
+        "REGLAS:\n" +
+        "1. Nunca des la respuesta exacta de un ejercicio evaluado ni una consulta completa que lo resuelva.\n" +
+        "2. Explica el concepto de forma corta y clara.\n" +
+        "3. Haz al menos una pregunta socratica para que el alumno deduzca el siguiente paso.\n" +
+        "4. Si usas ejemplo SQL, debe ser ANALOGO, con tablas inventadas y diferente al problema real.\n" +
+        "5. Cuando sea util, usa plantillas incompletas tipo ahorcado: SELECT ____ FROM ____ WHERE ____;\n" +
+        "6. Usa bloques ```sql para plantillas o ejemplos.\n" +
+        "7. Sin HTML. Sin markdown complejo. En espanol.\n\n" +
+        "FORMATO IDEAL:\n" +
+        "IDEA: [concepto breve]\n" +
+        "PISTA: [pregunta o pista]\n" +
+        "MINIEJEMPLO:\n```sql\n...ejemplo analogo con huecos...\n```";
 
 private static final String SYSTEM_PROMPT_ANALYSIS =
-        "Eres Dagon, un tutor de SQL sabio y paciente con personalidad de pulpo ancestral. " +
-        "Tu rol es GUIAR al alumno para que descubra la solución por sí mismo. NUNCA das la respuesta.\n\n" +
+        "Eres Clawbot, tutor socratico de SQL. " +
+        "Debes ayudar a resolver el problema sin revelar la solucion real.\n\n" +
         "REGLAS INQUEBRANTABLES:\n" +
-        "1. PROHIBIDO mostrar la query correcta, la Query Maestra, o cualquier solución completa.\n" +
-        "2. PROHIBIDO escribir la consulta que el alumno debería enviar.\n" +
-        "3. Si das un ejemplo SQL, DEBE ser con tablas INVENTADAS (frutas, mascotas, planetas) y con espacios en blanco (____) para que el alumno los llene.\n" +
-        "4. Haz PREGUNTAS al alumno: '¿Qué crees que falta?', '¿Qué columna necesitas filtrar?'\n" +
-        "5. PROHIBIDO HTML. Usa texto plano y bloques ```sql para ejemplos.\n" +
-        "6. Responde en español, máximo 6 líneas.\n\n" +
-        "FORMATO OBLIGATORIO (usa estas etiquetas exactas):\n" +
-        "ERROR: [qué salió mal, en una oración amable]\n" +
-        "CONCEPTO: [la teoría detrás del concepto SQL involucrado, 1-2 oraciones]\n" +
-        "PISTA: [una pregunta socrática que guíe al alumno hacia la respuesta]\n\n" +
+        "1. Nunca muestres la query correcta, la query maestra, ni una variante equivalente que resuelva el ejercicio.\n" +
+        "2. Nunca completes la consulta real del alumno.\n" +
+        "3. Explica que concepto SQL esta fallando con lenguaje claro y corto.\n" +
+        "4. Haz preguntas socraticas concretas para obligar al alumno a pensar.\n" +
+        "5. Da un ejemplo ANALOGO con tablas inventadas como frutas, libros, mascotas o planetas.\n" +
+        "6. Ese ejemplo debe usar huecos tipo ahorcado cuando sea posible: SELECT ____ FROM ____ WHERE ____;\n" +
+        "7. El ejemplo nunca debe usar los nombres reales del ejercicio.\n" +
+        "8. Sin HTML. En espanol. Tono paciente y util.\n\n" +
+        "FORMATO OBLIGATORIO:\n" +
+        "ERROR: [que idea esta fallando]\n" +
+        "CONCEPTO: [explicacion breve del concepto]\n" +
+        "PISTA: [pregunta socratica concreta]\n" +
+        "MINIEJEMPLO:\n```sql\n[ejemplo analogo con huecos]\n```\n" +
+        "CIERRE: [una pregunta final para que el alumno intente corregirlo]\n\n" +
         "ADAPTACION POR INTENTOS:\n" +
-        "- Intento 1: Solo señala el error y haz una pregunta general.\n" +
-        "- Intento 2: Agrega el CONCEPTO teórico y una pista más específica.\n" +
-        "- Intento 3+: Da un ejemplo con tabla inventada y espacios en blanco (____), pero NUNCA la respuesta real.\n";
+        "- Intento 1: error + concepto breve + una pregunta. El miniejemplo puede ser muy corto.\n" +
+        "- Intento 2: pista mas concreta y una plantilla con huecos.\n" +
+        "- Intento 3 o mas: ejemplo analogo mas guiado, pero siempre incompleto.\n";
 
 
     public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos, int nivelId, String tituloEjercicio) {
@@ -107,10 +116,12 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
+        String promptChat = buildChatPrompt(mensajeUsuario, historial);
+
         // Intentar Gemini primero
         if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
             try {
-                String respuesta = callGeminiChat(mensajeUsuario);
+                String respuesta = callGeminiChat(promptChat);
                 if (respuesta != null && !respuesta.isEmpty()) {
                     return formatearRespuestaChat(respuesta);
                 }
@@ -122,7 +133,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         // Groq como fallback
         if (groqApiKey != null && !groqApiKey.isEmpty()) {
             try {
-                String respuesta = callGroqChat(SYSTEM_PROMPT_CHAT + "\nUsuario: " + mensajeUsuario);
+                String respuesta = callGroqChat(promptChat);
                 if (respuesta != null && !respuesta.isEmpty()) {
                     return formatearRespuestaChat(respuesta);
                 }
@@ -134,7 +145,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         return helpForQuestion(mensajeUsuario.toLowerCase());
     }
 
-    private String callGeminiChat(String question) {
+    private String callGeminiChat(String prompt) {
         if (geminiApiKey == null || geminiApiKey.isEmpty()) {
             System.out.println("Clawbot: Gemini API key no configurada");
             return null;
@@ -146,13 +157,11 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
             // Usar el modelo gemini-1.5-flash que es más económico
             url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
 
-            String fullPrompt = SYSTEM_PROMPT_CHAT + "\n\nUsuario pregunta: " + question;
-
             List<Map<String, Object>> contents = new ArrayList<>();
             Map<String, Object> content = new HashMap<>();
             
             List<Map<String, Object>> parts = new ArrayList<>();
-            parts.add(Map.of("text", fullPrompt));
+            parts.add(Map.of("text", prompt));
             content.put("parts", parts);
             contents.add(content);
 
@@ -209,14 +218,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                 nivelAyuda = "Lleva " + intentos + " intentos. Da un ejemplo con una tabla INVENTADA (mascotas, planetas, frutas) usando espacios en blanco (____) para que complete. NUNCA uses las tablas ni datos del ejercicio real.";
             }
 
-            String prompt = SYSTEM_PROMPT_ANALYSIS +
-                "\n\nCONTEXTO DEL NIVEL: " + contextoNivel +
-                "\nEJERCICIO (lo que debe resolver): " + desc +
-                "\nLO QUE EL ALUMNO ESCRIBIÓ: " + queryA +
-                "\nERROR OBTENIDO: " + (error != null ? error : "Sin error de sintaxis, pero los datos no coinciden") +
-                "\nINTENTO #: " + intentos +
-                "\nNIVEL DE AYUDA: " + nivelAyuda +
-                "\n\nIMPORTANTE: NO tienes acceso a la respuesta correcta. Tu trabajo es guiar basándote en el error y el concepto del nivel. Haz preguntas, no des respuestas.";
+            String prompt = buildAnalysisPrompt(desc, queryA, error, intentos, contextoNivel, nivelAyuda);
 
             List<Map<String, Object>> contents = new ArrayList<>();
             Map<String, Object> content = new HashMap<>();
@@ -300,13 +302,14 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         try {
             String url = ollamaUrl + "/api/chat";
 
-            String prompt = SYSTEM_PROMPT_ANALYSIS +
-                "\n\nCONTEXTO DEL NIVEL: " + contextoNivel +
-                "\nEJERCICIO: " + desc +
-                "\nLO QUE EL ALUMNO ESCRIBIÓ: " + queryA +
-                "\nERROR: " + (error != null ? error : "Sin error") +
-                "\nINTENTO #: " + intentos +
-                "\n\nGuía al alumno con preguntas, NUNCA des la respuesta.";
+            String prompt = buildAnalysisPrompt(
+                desc,
+                queryA,
+                error != null ? error : "Sin error",
+                intentos,
+                contextoNivel,
+                "Usa una explicacion progresiva y un ejemplo analogo incompleto."
+            );
 
             List<Map<String, Object>> messages = new ArrayList<>();
             messages.add(Map.of("role", "user", "content", prompt));
@@ -373,6 +376,43 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         return null;
     }
 
+    private String buildChatPrompt(String mensajeUsuario, List<Map<String, String>> historial) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(SYSTEM_PROMPT_CHAT).append("\n\n");
+
+        if (historial != null && !historial.isEmpty()) {
+            sb.append("CONTEXTO RECIENTE:\n");
+            int start = Math.max(0, historial.size() - 4);
+            for (int i = start; i < historial.size(); i++) {
+                Map<String, String> item = historial.get(i);
+                String role = item.getOrDefault("role", "user");
+                String content = item.getOrDefault("content", "");
+                sb.append(role.equals("assistant") ? "Tutor: " : "Alumno: ")
+                  .append(content)
+                  .append("\n");
+            }
+            sb.append("\n");
+        }
+
+        sb.append("PREGUNTA ACTUAL DEL ALUMNO:\n")
+          .append(mensajeUsuario)
+          .append("\n\n")
+          .append("Recuerda: explica, pregunta y da un miniejemplo analogo con huecos si aplica.");
+
+        return sb.toString();
+    }
+
+    private String buildAnalysisPrompt(String desc, String queryA, String error, int intentos, String contextoNivel, String nivelAyuda) {
+        return SYSTEM_PROMPT_ANALYSIS +
+            "\nCONTEXTO DEL NIVEL: " + contextoNivel +
+            "\nEJERCICIO REAL: " + desc +
+            "\nCONSULTA DEL ALUMNO: " + queryA +
+            "\nERROR O DESAJUSTE: " + (error != null ? error : "Sin error de sintaxis, pero el resultado no coincide") +
+            "\nINTENTO ACTUAL: " + intentos +
+            "\nNIVEL DE AYUDA: " + nivelAyuda +
+            "\n\nRecuerda: no des la solucion real; usa ejemplo analogo y huecos.";
+    }
+
     private String formatearRespuestaChat(String respuesta) {
         if (respuesta == null) return "";
         respuesta = respuesta.replaceAll("<[^>]+>", "");
@@ -407,26 +447,29 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         StringBuilder sb = new StringBuilder();
 
         if (intentos <= 1) {
-            sb.append("ERROR: Algo no salió bien en tu consulta.\n\n");
-            sb.append("PISTA: Lee otra vez el enunciado: \"").append(desc).append("\"\n");
-            sb.append("¿Qué te pide exactamente? ¿Qué palabras clave de SQL necesitas para lograrlo?");
+            sb.append("ERROR: Hay una idea de la consulta que no coincide con lo que pide el ejercicio.\n\n");
+            sb.append("CONCEPTO: Antes de escribir SQL, conviene separar el problema en tabla, columnas y condicion.\n\n");
+            sb.append("PISTA: Si lees otra vez el enunciado, ¿te pide seleccionar, filtrar, unir o agrupar?\n\n");
+            sb.append("CIERRE: ¿Que clausula SQL crees que deberia aparecer primero en tu borrador?");
         } else if (intentos == 2) {
-            sb.append("ERROR: Tu consulta aún no devuelve lo esperado.\n\n");
+            sb.append("ERROR: Tu consulta aun no expresa correctamente la operacion que pide el ejercicio.\n\n");
             sb.append("CONCEPTO: ");
             if (error != null && error.toLowerCase().contains("syntax")) {
-                sb.append("Revisa la estructura de tu consulta. ¿Están todas las cláusulas en el orden correcto? (SELECT... FROM... WHERE...)\n");
+                sb.append("Revisa el orden de las clausulas. En SQL, la estructura importa tanto como los nombres.\n");
             } else if (error != null && error.toLowerCase().contains("column")) {
-                sb.append("Los nombres de columnas deben coincidir exactamente con los de la tabla. ¿Estás seguro de los nombres?\n");
+                sb.append("Los nombres de columnas deben coincidir exactamente con la tabla que estas consultando.\n");
             } else {
-                sb.append("Compara lo que el ejercicio pide con lo que tu consulta realmente hace. ¿Estás filtrando o agrupando correctamente?\n");
+                sb.append("Compara lo que el ejercicio pide con lo que tu consulta realmente hace. Puede faltar un filtro, una tabla o una agrupacion.\n");
             }
-            sb.append("\nPISTA: ¿Qué parte de tu consulta crees que podría estar causando el problema?");
+            sb.append("\nPISTA: Si lo hicieras con una tabla de libros, ¿que pondrias aqui?\n\n");
+            sb.append("```sql\nSELECT ____ FROM libros WHERE ____ = '____';\n```\n\n");
+            sb.append("CIERRE: ¿Que parte de esa plantilla se parece mas a tu ejercicio real?");
         } else {
-            sb.append("ERROR: Llevas varios intentos, ¡pero no te rindas!\n\n");
-            sb.append("CONCEPTO: Piensa paso a paso: (1) ¿De qué tabla necesitas datos? (2) ¿Qué columnas? (3) ¿Qué filtro?\n\n");
-            sb.append("PISTA: Imagina una tabla de mascotas:\n\n");
-            sb.append("```sql\nSELECT ____ FROM mascotas WHERE ____ = '____';\n```\n\n");
-            sb.append("¿Cómo completarías los espacios? Ahora aplica la misma lógica a tu ejercicio.");
+            sb.append("ERROR: Ya detectaste parte del camino, pero aun falta expresar bien la logica en SQL.\n\n");
+            sb.append("CONCEPTO: Resuelve la consulta por capas: origen de datos, columnas necesarias y condicion exacta.\n\n");
+            sb.append("PISTA: Prueba primero con un ejemplo analogo y luego traduce esa estructura a tu caso.\n\n");
+            sb.append("MINIEJEMPLO:\n```sql\nSELECT ____\nFROM mascotas\nWHERE ____ = '____';\n```\n\n");
+            sb.append("CIERRE: ¿Que iria en cada hueco si la meta fuera traer solo los nombres de las mascotas de tipo gato?");
         }
 
         return sb.toString();
