@@ -98,6 +98,7 @@ public class EjercicioService {
                 dto.setHint("Pista: Recuerda usar la sintaxis correcta y terminar con punto y coma (;).");
             }
 
+            dto.setPedagogia(construirPedagogiaEjercicio(ej));
             dtos.add(dto);
             contador++;
         }
@@ -344,6 +345,7 @@ public class EjercicioService {
 
         int xpGanada = (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10;
         String formato = ejercicio.getFormato();
+        boolean esMisionTransaccional = esMisionTransaccional(ejercicio);
         boolean esCorrecto = false;
         List<Map<String, Object>> datosAlumno = new ArrayList<>();
 
@@ -603,11 +605,42 @@ public class EjercicioService {
                     respuesta.put("afterData", afterData);
                     respuesta.put("isDML", true);
                     respuesta.put("targetTable", tablaAfectada);
+                    if (esMisionTransaccional && tablaAfectada != null) {
+                        respuesta.put("isTransactionVisual", true);
+                        respuesta.put("transactionOutcome", construirResumenResultadoTransaccional(queryUsuario, beforeData, afterData));
+                    }
                 } else {
                     // Para SELECT normal, comparamos resultados directamente
+                    String tablaTransaccional = esMisionTransaccional ? extraerNombreTablaTransaccional(queryUsuario) : null;
+                    if (tablaTransaccional == null && esMisionTransaccional) {
+                        tablaTransaccional = extraerNombreTablaTransaccional(ejercicio.getQueryMaestra());
+                    }
+                    List<Map<String, Object>> beforeData = new ArrayList<>();
+                    if (tablaTransaccional != null) {
+                        try {
+                            beforeData = ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
+                        } catch (Exception ignored) {}
+                    }
+
                     datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
                     List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId);
                     esCorrecto = datosAlumno.equals(datosMaestros);
+
+                    if (tablaTransaccional != null) {
+                        List<Map<String, Object>> afterData = new ArrayList<>();
+                        try {
+                            afterData = ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
+                        } catch (Exception ignored) {}
+
+                        respuesta.put("beforeData", beforeData);
+                        respuesta.put("afterData", afterData);
+                        respuesta.put("targetTable", tablaTransaccional);
+                        respuesta.put("isTransactionVisual", true);
+                        respuesta.put("transactionOutcome", construirResumenResultadoTransaccional(queryUsuario, beforeData, afterData));
+                    } else if (esMisionTransaccional) {
+                        respuesta.put("isTransactionVisual", true);
+                        respuesta.put("transactionOutcome", construirResumenResultadoTransaccional(queryUsuario, Collections.emptyList(), Collections.emptyList()));
+                    }
                 }
             }
 
@@ -669,6 +702,9 @@ public class EjercicioService {
                 respuesta.put("errorDb", "Los datos obtenidos no son los esperados.");
             }
             respuesta.put("mockData", datosAlumno);
+            if (esMisionTransaccional) {
+                anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+            }
 
         } catch (java.sql.SQLException e) {
             String sqlError = e.getMessage();
@@ -730,6 +766,9 @@ public class EjercicioService {
                     respuesta.put("constraintsData", listaConstraints);
                 } catch (Exception ignored) {}
                 
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
                 return respuesta;
             }
             // =============================================================
@@ -779,6 +818,9 @@ public class EjercicioService {
                 esCorrecto = true;
                 respuesta.put("mockData", datosAlumno);
                 respuesta.put("xp_gained", 0);
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
             } else {
                 respuesta.put("success", false);
                 respuesta.put("message", "Error de SQL: " + sqlError);
@@ -787,6 +829,9 @@ public class EjercicioService {
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
                 respuesta.put("errorDb", sqlError);
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
             }
         } catch (Exception e) {
             String errMsg = e.getMessage();
@@ -801,6 +846,9 @@ public class EjercicioService {
                         respuesta.put("message", "¡Consulta ejecutada! Pero los datos no coinciden con lo esperado.");
                         respuesta.put("mockData", datosAlumno);
                         respuesta.put("xp_gained", 0);
+                        if (esMisionTransaccional) {
+                            anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                        }
                         return respuesta;
                     }
                 } catch (Exception ignored) {}
@@ -812,6 +860,9 @@ public class EjercicioService {
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
                 respuesta.put("errorDb", errMsg);
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
             } else {
                 respuesta.put("success", false);
                 respuesta.put("message", "Error al procesar la respuesta: " + errMsg);
@@ -820,6 +871,9 @@ public class EjercicioService {
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
                 respuesta.put("errorDb", errMsg);
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
             }
         }
         return respuesta;
@@ -873,5 +927,396 @@ public class EjercicioService {
             if (!m1.equals(m2)) return false;
         }
         return true;
+    }
+
+    private Map<String, Object> construirPedagogiaEjercicio(EjercicioPractico ejercicio) {
+        Map<String, Object> pedagogia = new LinkedHashMap<>();
+
+        if (ejercicio.getConfiguracionExtra() != null && !ejercicio.getConfiguracionExtra().trim().isEmpty()) {
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode config = mapper.readTree(ejercicio.getConfiguracionExtra());
+                pedagogia.putAll(mapper.convertValue(config, LinkedHashMap.class));
+            } catch (Exception ignored) {}
+        }
+
+        if (esMisionTransaccional(ejercicio)) {
+            pedagogia.putIfAbsent("modo", "terminal_transaccional");
+            pedagogia.putIfAbsent("terminal_prompt_base", "dagon=#");
+            pedagogia.putIfAbsent("terminal_prompt_tx", "dagon=*#");
+            pedagogia.putIfAbsent("paneles", Arrays.asList("sesion_a", "sesion_b", "linea_tiempo", "aislamiento"));
+            pedagogia.putIfAbsent("foco", Arrays.asList("BEGIN", "COMMIT", "ROLLBACK", "SAVEPOINT", "visibilidad"));
+            pedagogia.putIfAbsent("sesiones_paralelas", true);
+            pedagogia.putIfAbsent("mensaje_terminal", "Esta misión se enseña como un laboratorio de terminal PostgreSQL con dos sesiones en paralelo.");
+        }
+
+        return pedagogia;
+    }
+
+    private boolean esMisionTransaccional(EjercicioPractico ejercicio) {
+        if (ejercicio == null) {
+            return false;
+        }
+
+        if (Integer.valueOf(15).equals(ejercicio.getIdModulo())) {
+            return true;
+        }
+
+        String configExtra = ejercicio.getConfiguracionExtra();
+        if (configExtra == null || configExtra.trim().isEmpty()) {
+            return false;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode config = mapper.readTree(configExtra);
+
+            if (config.has("tipo_validacion") && "transaccion".equalsIgnoreCase(config.get("tipo_validacion").asText())) {
+                return true;
+            }
+
+            return config.has("modo") && "terminal_transaccional".equalsIgnoreCase(config.get("modo").asText());
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private void anexarSimulacionTransaccional(Map<String, Object> respuesta, EjercicioPractico ejercicio, String queryUsuario, String usuarioId) {
+        try {
+            respuesta.put("transactionSimulation", construirSimulacionTransaccional(ejercicio, queryUsuario, usuarioId));
+        } catch (Exception e) {
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("mode", "postgres_transaction_lab");
+            fallback.put("available", false);
+            fallback.put("message", "No fue posible generar la simulación paralela completa, pero el módulo sigue marcado como laboratorio transaccional.");
+            fallback.put("error", e.getMessage());
+            fallback.put("timeline", construirLineaTiempoBasica(queryUsuario));
+            respuesta.put("transactionSimulation", fallback);
+        }
+    }
+
+    private Map<String, Object> construirSimulacionTransaccional(EjercicioPractico ejercicio, String queryUsuario, String usuarioId) throws java.sql.SQLException {
+        Map<String, Object> simulacion = new LinkedHashMap<>();
+        List<Map<String, Object>> timeline = new ArrayList<>();
+        List<String> sentencias = separarSentenciasSql(queryUsuario);
+        String demoTable = "tx_demo_" + UUID.randomUUID().toString().replace("-", "").substring(0, 10);
+
+        simulacion.put("mode", "postgres_transaction_lab");
+        simulacion.put("available", true);
+        simulacion.put("headline", "Laboratorio de dos sesiones");
+        simulacion.put("basePrompt", "dagon=#");
+        simulacion.put("txPrompt", "dagon=*#");
+        simulacion.put("demoTable", demoTable);
+        simulacion.put("timeline", timeline);
+        simulacion.put("focus", Arrays.asList(
+            "La Sesión A puede acumular cambios sin confirmarlos",
+            "La Sesión B representa a otro cliente leyendo al mismo tiempo",
+            "COMMIT publica el cambio; ROLLBACK lo borra del presente"
+        ));
+
+        if (sentencias.isEmpty()) {
+            simulacion.put("available", false);
+            simulacion.put("message", "No se detectaron sentencias para construir la simulación transaccional.");
+            return simulacion;
+        }
+
+        String url = sandboxUrl;
+        String user = sandboxUser;
+        String password = sandboxPassword;
+
+        try (Connection sesionA = DriverManager.getConnection(url, user, password);
+             Connection sesionB = DriverManager.getConnection(url, user, password);
+             Statement adminA = sesionA.createStatement();
+             Statement adminB = sesionB.createStatement()) {
+
+            prepararSearchPath(adminA, usuarioId);
+            prepararSearchPath(adminB, usuarioId);
+
+            adminA.execute("CREATE TABLE \"" + demoTable + "\" (id SERIAL PRIMARY KEY, etiqueta VARCHAR(80), saldo INTEGER NOT NULL);");
+            adminA.execute("INSERT INTO \"" + demoTable + "\" (etiqueta, saldo) VALUES ('origen', 100), ('reserva', 200);");
+
+            boolean transaccionAbierta = false;
+            int step = 1;
+
+            for (String sentencia : sentencias) {
+                String normalizada = sentencia.trim();
+                if (normalizada.isEmpty()) {
+                    continue;
+                }
+
+                String upper = normalizada.toUpperCase(Locale.ROOT);
+                Map<String, Object> evento = new LinkedHashMap<>();
+                evento.put("step", step++);
+                evento.put("statement", normalizada.endsWith(";") ? normalizada : normalizada + ";");
+                evento.put("prompt", transaccionAbierta ? "dagon=*#" : "dagon=#");
+                evento.put("session", "Sesión A");
+                evento.put("parallelSession", "Sesión B");
+                evento.put("concept", describirConceptoTransaccional(upper));
+
+                if (upper.startsWith("BEGIN")) {
+                    sesionA.setAutoCommit(false);
+                    transaccionAbierta = true;
+                    evento.put("effect", "La sesión A abre una transacción y a partir de aquí trabaja en un presente privado.");
+                } else if (upper.startsWith("SAVEPOINT")) {
+                    if (!transaccionAbierta) {
+                        sesionA.setAutoCommit(false);
+                        transaccionAbierta = true;
+                    }
+                    adminA.execute(normalizada);
+                    evento.put("effect", "Se colocó un punto de retorno intermedio para deshacer solo una parte del trabajo.");
+                } else if (upper.startsWith("ROLLBACK TO")) {
+                    adminA.execute(normalizada);
+                    evento.put("effect", "La sesión A volvió al savepoint sin destruir toda la transacción.");
+                } else if (upper.startsWith("ROLLBACK")) {
+                    if (transaccionAbierta) {
+                        sesionA.rollback();
+                    }
+                    sesionA.setAutoCommit(true);
+                    transaccionAbierta = false;
+                    evento.put("effect", "Todo lo pendiente desaparece; la sesión B nunca llega a ver esos cambios.");
+                } else if (upper.startsWith("COMMIT")) {
+                    if (transaccionAbierta) {
+                        sesionA.commit();
+                    }
+                    sesionA.setAutoCommit(true);
+                    transaccionAbierta = false;
+                    evento.put("effect", "Los cambios salen del estado privado y se publican para todas las sesiones.");
+                } else if (upper.startsWith("INSERT")) {
+                    if (!transaccionAbierta) {
+                        sesionA.setAutoCommit(false);
+                        transaccionAbierta = true;
+                    }
+                    adminA.execute("INSERT INTO \"" + demoTable + "\" (etiqueta, saldo) VALUES ('pendiente_" + step + "', " + (90 + step) + ");");
+                    evento.put("effect", "Sesión A agregó una fila nueva en su burbuja transaccional.");
+                } else if (upper.startsWith("UPDATE")) {
+                    if (!transaccionAbierta) {
+                        sesionA.setAutoCommit(false);
+                        transaccionAbierta = true;
+                    }
+                    adminA.execute("UPDATE \"" + demoTable + "\" SET saldo = saldo + 25 WHERE id = 1;");
+                    evento.put("effect", "Sesión A modificó una fila existente, pero el cambio aún no es público.");
+                } else if (upper.startsWith("DELETE")) {
+                    if (!transaccionAbierta) {
+                        sesionA.setAutoCommit(false);
+                        transaccionAbierta = true;
+                    }
+                    adminA.execute("DELETE FROM \"" + demoTable + "\" WHERE id = 2;");
+                    evento.put("effect", "Sesión A retiró una fila del laboratorio; la otra sesión sigue viendo el estado confirmado.");
+                } else if (upper.startsWith("SELECT")) {
+                    evento.put("effect", "La consulta observa el estado visible en ese instante y ayuda a comparar lo que ve cada sesión.");
+                } else {
+                    evento.put("effect", "La sentencia se interpreta como parte del flujo transaccional y se explica sin tocar el sandbox real del ejercicio.");
+                }
+
+                evento.put("sessionAVisibleRows", contarFilas(adminA, demoTable));
+                evento.put("sessionBVisibleRows", contarFilas(adminB, demoTable));
+                evento.put("visibilityHint", construirHintVisibilidad(transaccionAbierta, evento.get("sessionAVisibleRows"), evento.get("sessionBVisibleRows")));
+                timeline.add(evento);
+            }
+
+            if (transaccionAbierta) {
+                sesionA.rollback();
+                sesionA.setAutoCommit(true);
+            }
+
+            adminA.execute("DROP TABLE IF EXISTS \"" + demoTable + "\";");
+        }
+
+        simulacion.put("summary", "La simulación usa dos conexiones JDBC contra una tabla efímera para hacer visible el aislamiento entre sesiones.");
+        return simulacion;
+    }
+
+    private void prepararSearchPath(Statement stmt, String usuarioId) throws java.sql.SQLException {
+        String searchPath;
+        if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+            searchPath = "sandbox_usuario_" + usuarioId;
+            try {
+                stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + searchPath + "\";");
+                stmt.execute("GRANT ALL ON SCHEMA \"" + searchPath + "\" TO app_sandbox_user;");
+            } catch (Exception ignored) {}
+        } else {
+            searchPath = "lms_sandbox";
+        }
+        stmt.execute("SET search_path TO \"" + searchPath + "\"");
+    }
+
+    private List<Map<String, Object>> construirLineaTiempoBasica(String queryUsuario) {
+        List<Map<String, Object>> timeline = new ArrayList<>();
+        int step = 1;
+        for (String sentencia : separarSentenciasSql(queryUsuario)) {
+            String upper = sentencia.trim().toUpperCase(Locale.ROOT);
+            Map<String, Object> evento = new LinkedHashMap<>();
+            evento.put("step", step++);
+            evento.put("statement", sentencia.endsWith(";") ? sentencia : sentencia + ";");
+            evento.put("prompt", upper.startsWith("BEGIN") ? "dagon=#" : "dagon=*#");
+            evento.put("concept", describirConceptoTransaccional(upper));
+            evento.put("effect", "Traza pedagógica disponible aunque la simulación completa no haya podido ejecutarse.");
+            timeline.add(evento);
+        }
+        return timeline;
+    }
+
+    private List<String> separarSentenciasSql(String queryUsuario) {
+        List<String> sentencias = new ArrayList<>();
+        if (queryUsuario == null || queryUsuario.trim().isEmpty()) {
+            return sentencias;
+        }
+
+        StringBuilder actual = new StringBuilder();
+        boolean enComillaSimple = false;
+        boolean enComillaDoble = false;
+
+        for (int i = 0; i < queryUsuario.length(); i++) {
+            char c = queryUsuario.charAt(i);
+
+            if (c == '\'' && !enComillaDoble) {
+                enComillaSimple = !enComillaSimple;
+            } else if (c == '"' && !enComillaSimple) {
+                enComillaDoble = !enComillaDoble;
+            }
+
+            if (c == ';' && !enComillaSimple && !enComillaDoble) {
+                String stmt = actual.toString().trim();
+                if (!stmt.isEmpty()) {
+                    sentencias.add(stmt + ";");
+                }
+                actual.setLength(0);
+            } else {
+                actual.append(c);
+            }
+        }
+
+        String restante = actual.toString().trim();
+        if (!restante.isEmpty()) {
+            sentencias.add(restante);
+        }
+
+        return sentencias;
+    }
+
+    private String extraerNombreTablaTransaccional(String queryUsuario) {
+        for (String sentencia : separarSentenciasSql(queryUsuario)) {
+            String upper = sentencia.trim().toUpperCase(Locale.ROOT);
+            if (upper.startsWith("INSERT") || upper.startsWith("UPDATE") || upper.startsWith("DELETE")) {
+                String tabla = extraerNombreTablaDML(upper, sentencia);
+                if (tabla != null && !tabla.isBlank()) {
+                    return tabla;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Map<String, Object> construirResumenResultadoTransaccional(String queryUsuario, List<Map<String, Object>> beforeData, List<Map<String, Object>> afterData) {
+        Map<String, Object> resumen = new LinkedHashMap<>();
+        String upper = queryUsuario != null ? queryUsuario.toUpperCase(Locale.ROOT) : "";
+
+        String outcomeType = "commit";
+        String headline = "Cambios confirmados";
+        String explanation = "La transacción publicó sus cambios y ahora forman parte del estado confirmado de la tabla.";
+
+        if (upper.contains("ROLLBACK TO")) {
+            outcomeType = "savepoint";
+            headline = "Rollback parcial aplicado";
+            explanation = "La transacción conservó la parte anterior al savepoint y deshizo solo el tramo posterior.";
+        } else if (upper.contains("ROLLBACK")) {
+            outcomeType = "rollback";
+            headline = "Cambios revertidos";
+            explanation = "El estado final volvió al último COMMIT visible; nada de lo pendiente quedó publicado.";
+        } else if (upper.contains("COMMIT")) {
+            outcomeType = "commit";
+            headline = "Cambios confirmados";
+            explanation = "La transacción publicó sus cambios y ahora forman parte del estado confirmado de la tabla.";
+        }
+
+        resumen.put("type", outcomeType);
+        resumen.put("headline", headline);
+        resumen.put("explanation", explanation);
+        resumen.put("beforeCount", beforeData != null ? beforeData.size() : 0);
+        resumen.put("afterCount", afterData != null ? afterData.size() : 0);
+        resumen.put("changed", !Objects.equals(beforeData, afterData));
+        resumen.put("queryPattern", construirPlantillaTransaccional(queryUsuario));
+
+        return resumen;
+    }
+
+    private String construirPlantillaTransaccional(String queryUsuario) {
+        List<String> piezas = new ArrayList<>();
+        for (String sentencia : separarSentenciasSql(queryUsuario)) {
+            String upper = sentencia.trim().toUpperCase(Locale.ROOT);
+            if (upper.startsWith("BEGIN")) {
+                piezas.add("BEGIN;");
+            } else if (upper.startsWith("INSERT")) {
+                piezas.add("INSERT INTO ____ VALUES (...);");
+            } else if (upper.startsWith("UPDATE")) {
+                piezas.add("UPDATE ____ SET ____ WHERE ____;");
+            } else if (upper.startsWith("DELETE")) {
+                piezas.add("DELETE FROM ____ WHERE ____;");
+            } else if (upper.startsWith("SAVEPOINT")) {
+                piezas.add("SAVEPOINT ____;");
+            } else if (upper.startsWith("ROLLBACK TO")) {
+                piezas.add("ROLLBACK TO SAVEPOINT ____;");
+            } else if (upper.startsWith("ROLLBACK")) {
+                piezas.add("ROLLBACK;");
+            } else if (upper.startsWith("COMMIT")) {
+                piezas.add("COMMIT;");
+            } else if (upper.startsWith("SELECT")) {
+                piezas.add("SELECT ____ FROM ____;");
+            }
+        }
+
+        return piezas.isEmpty() ? "BEGIN; ... COMMIT;" : String.join("  ", piezas);
+    }
+
+    private String describirConceptoTransaccional(String upper) {
+        if (upper.startsWith("BEGIN")) {
+            return "Apertura de transacción";
+        }
+        if (upper.startsWith("COMMIT")) {
+            return "Confirmación global";
+        }
+        if (upper.startsWith("ROLLBACK TO")) {
+            return "Deshacer parcial";
+        }
+        if (upper.startsWith("ROLLBACK")) {
+            return "Deshacer total";
+        }
+        if (upper.startsWith("SAVEPOINT")) {
+            return "Punto de guardado";
+        }
+        if (upper.startsWith("INSERT")) {
+            return "Cambio pendiente";
+        }
+        if (upper.startsWith("UPDATE")) {
+            return "Actualización pendiente";
+        }
+        if (upper.startsWith("DELETE")) {
+            return "Eliminación pendiente";
+        }
+        if (upper.startsWith("SELECT")) {
+            return "Lectura de visibilidad";
+        }
+        return "Sentencia avanzada";
+    }
+
+    private String construirHintVisibilidad(boolean transaccionAbierta, Object sessionAVisibleRows, Object sessionBVisibleRows) {
+        if (!transaccionAbierta) {
+            return "Ambas sesiones ya comparten el mismo estado confirmado.";
+        }
+
+        if (!Objects.equals(sessionAVisibleRows, sessionBVisibleRows)) {
+            return "La Sesión A ya ve su cambio, pero la Sesión B sigue atrapada en el último COMMIT confirmado.";
+        }
+
+        return "Aunque el conteo coincida, el punto clave es que la transacción sigue abierta y aislada.";
+    }
+
+    private int contarFilas(Statement stmt, String tabla) throws java.sql.SQLException {
+        try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) AS total FROM \"" + tabla + "\"")) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
+        }
+        return 0;
     }
 }

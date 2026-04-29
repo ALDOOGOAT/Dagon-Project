@@ -1,6 +1,7 @@
 package com.dagon.backend.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public class EjercicioDTO {
     private Integer id;
@@ -12,6 +13,7 @@ public class EjercicioDTO {
     private Integer orden;
     // ¡NUEVO! El banco de palabras para el Drag & Drop
     private List<String> wordBank;
+    private Map<String, Object> pedagogia;
     // --- GETTERS Y SETTERS ---
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
@@ -36,4 +38,7 @@ public class EjercicioDTO {
 
     public List<String> getWordBank() { return wordBank; }
     public void setWordBank(List<String> wordBank) { this.wordBank = wordBank; }
+
+    public Map<String, Object> getPedagogia() { return pedagogia; }
+    public void setPedagogia(Map<String, Object> pedagogia) { this.pedagogia = pedagogia; }
 }
