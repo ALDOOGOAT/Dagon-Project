@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Database, Code, Zap, BookOpen, ChevronRight, Sparkles, Bot } from 'lucide-react';
 import { Button } from './ui/button';
 import { DagonMascot } from './DagonMascot';
+import { useTheme } from '../contexts/ThemeContext';
 
 const didacticTopics = [
   {
@@ -45,24 +46,29 @@ const didacticTopics = [
 
 export const DidacticCard = ({ onExplore }) => {
   const [expandedTopic, setExpandedTopic] = useState(null);
+  const { colors } = useTheme();
+  const isLight = colors.mode === 'light';
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.8 }}
-      className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 mb-8 relative overflow-hidden bg-black/40 backdrop-blur-xl"
+      className="glass-card-apple rounded-3xl p-6 lg:p-8 border mb-8 relative overflow-hidden backdrop-blur-xl"
+      style={{ borderColor: colors.border, backgroundColor: isLight ? 'rgba(255,250,240,0.78)' : 'rgba(0,0,0,0.40)' }}
     >
       {/* Luces de fondo estilo IA */}
-      <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(192,38,211,0.10)' }} />
+      <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-[100px] pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.10)' : 'rgba(8,145,178,0.10)' }} />
       
       <div className="flex items-center gap-3 mb-8 relative z-10">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 border border-white/10 flex items-center justify-center shadow-inner">
-          <Bot className="w-6 h-6 text-fuchsia-300" />
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner" style={{ background: `linear-gradient(135deg, ${colors.primary}22, ${colors.accent}22)`, border: `1px solid ${colors.border}` }}>
+          <Bot className="w-6 h-6" style={{ color: colors.primary }} />
         </div>
         <div>
-          <p className="text-cyan-300 text-xs font-bold tracking-[0.3em] uppercase mb-1 flex items-center gap-2">
+          <p className="text-xs font-bold tracking-[0.3em] uppercase mb-1 flex items-center gap-2" style={{ color: colors.accent }}>
             <Sparkles className="w-3 h-3" /> Base de Conocimiento
           </p>
           {/* Título con gradiente tipo IA */}
@@ -84,8 +90,12 @@ export const DidacticCard = ({ onExplore }) => {
               className={`rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
                 isExpanded 
                   ? `${topic.borderColor} ${topic.bgColor} ${topic.aiGlow}` 
-                  : 'border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20'
+                  : ''
               }`}
+              style={!isExpanded ? {
+                borderColor: isLight ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.10)',
+                backgroundColor: isLight ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.05)'
+              } : undefined}
               onClick={() => setExpandedTopic(isExpanded ? null : topic.id)}
               whileHover={{ scale: isExpanded ? 1 : 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -96,10 +106,10 @@ export const DidacticCard = ({ onExplore }) => {
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="min-w-0 flex-1 pt-1">
-                    <h4 className="font-display font-bold text-white text-base leading-tight mb-1 break-words">
+                    <h4 className="font-display font-bold text-base leading-tight mb-1 break-words" style={{ color: headingColor }}>
                       {topic.title}
                     </h4>
-                    <p className="text-xs text-slate-400 leading-snug break-words">
+                    <p className="text-xs leading-snug break-words" style={{ color: mutedColor }}>
                       {topic.shortDesc}
                     </p>
                   </div>
@@ -108,7 +118,7 @@ export const DidacticCard = ({ onExplore }) => {
                     transition={{ duration: 0.3, ease: "backOut" }}
                     className="pt-2"
                   >
-                    <ChevronRight className={`w-5 h-5 ${isExpanded ? 'text-fuchsia-400' : 'text-slate-500'}`} />
+                    <ChevronRight className="w-5 h-5" style={{ color: isExpanded ? colors.primary : mutedColor }} />
                   </motion.div>
                 </div>
               </div>
@@ -122,21 +132,21 @@ export const DidacticCard = ({ onExplore }) => {
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="px-5 pb-5 border-t border-white/10 bg-black/20">
+                    <div className="px-5 pb-5 border-t" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.10)', backgroundColor: isLight ? 'rgba(255,248,235,0.52)' : 'rgba(0,0,0,0.20)' }}>
                       <div className="pt-5 flex gap-4">
                         <div className="flex-shrink-0 mt-1">
                           <DagonMascot size="small" mood="excited" />
                         </div>
                         <div className="flex-1 min-w-0">
                           {/* Control estricto de desbordamiento en el párrafo */}
-                          <p className="text-sm text-slate-300 leading-relaxed mb-4 break-words">
+                          <p className="text-sm leading-relaxed mb-4 break-words" style={{ color: headingColor }}>
                             {topic.fullExplanation}
                           </p>
                           
                           {/* Caja de código con estilo terminal y control de desbordamiento */}
-                          <div className="bg-[#0D1117] border border-white/5 rounded-xl p-4 mb-4 w-full shadow-inner relative group">
+                          <div className="border rounded-xl p-4 mb-4 w-full shadow-inner relative group" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.78)' : '#0D1117', borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.05)' }}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <code className="block font-mono text-xs text-emerald-400 whitespace-pre-wrap break-words leading-relaxed">
+                            <code className="block font-mono text-xs whitespace-pre-wrap break-words leading-relaxed" style={{ color: isLight ? '#b45309' : '#6ee7b7' }}>
                               {topic.example}
                             </code>
                           </div>
@@ -147,7 +157,8 @@ export const DidacticCard = ({ onExplore }) => {
                               if (onExplore) onExplore(topic.id);
                             }}
                             size="sm"
-                            className="w-full bg-white/10 hover:bg-white/20 text-white text-xs border border-white/5 transition-all hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                            className="w-full text-xs border transition-all"
+                            style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(255,255,255,0.10)', color: headingColor, borderColor: isLight ? 'rgba(245,158,11,0.16)' : 'rgba(255,255,255,0.05)' }}
                           >
                             Profundizar en este tema
                             <ChevronRight className="w-3 h-3 ml-2" />
@@ -164,8 +175,8 @@ export const DidacticCard = ({ onExplore }) => {
       </div>
       
       <div className="mt-6 text-center relative z-10">
-        <p className="text-xs text-slate-500 flex items-center justify-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
+        <p className="text-xs flex items-center justify-center gap-2" style={{ color: mutedColor }}>
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: colors.primary }} />
           Haz clic en cualquier panel para inicializar el módulo de aprendizaje
         </p>
       </div>

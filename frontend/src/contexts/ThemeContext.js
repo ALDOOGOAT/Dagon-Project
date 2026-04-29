@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useLayoutEffect } from 'react';
 
 const ThemeContext = createContext(null);
 
@@ -111,13 +111,24 @@ export const COLOR_PALETTES = {
 };
 
 const DEFAULT_PALETTE = 'dagon';
+const THEME_ROOT_CLASSES = ['theme-dark', 'theme-light'];
+
+const getValidPalette = (paletteName) => {
+  return COLOR_PALETTES[paletteName] ? paletteName : DEFAULT_PALETTE;
+};
 
 export const ThemeProvider = ({ children }) => {
   const [palette, setPalette] = useState(() => {
-    return localStorage.getItem('userPalette') || DEFAULT_PALETTE;
+    return getValidPalette(localStorage.getItem('userPalette'));
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const nextPalette = getValidPalette(palette);
+    if (nextPalette !== palette) {
+      setPalette(nextPalette);
+      return;
+    }
+
     localStorage.setItem('userPalette', palette);
     applyPalette(palette);
   }, [palette]);
@@ -156,7 +167,8 @@ export const useTheme = () => {
 };
 
 const applyPalette = (paletteName) => {
-  const colors = COLOR_PALETTES[paletteName] || COLOR_PALETTES[DEFAULT_PALETTE];
+  const safePalette = getValidPalette(paletteName);
+  const colors = COLOR_PALETTES[safePalette] || COLOR_PALETTES[DEFAULT_PALETTE];
   const root = document.documentElement;
   const isLight = colors.mode === 'light';
 
@@ -181,6 +193,9 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--glass-shadow', isLight ? '0 25px 60px -25px rgba(217, 119, 6, 0.22)' : '0 8px 32px 0 rgba(0, 0, 0, 0.37)');
   root.style.setProperty('--grid-opacity', isLight ? '0.09' : '0.05');
   root.dataset.themeMode = isLight ? 'light' : 'dark';
+  root.dataset.themePalette = safePalette;
+  root.classList.remove(...THEME_ROOT_CLASSES);
+  root.classList.add(isLight ? 'theme-light' : 'theme-dark');
   
   root.style.setProperty('--background', colors.background);
   root.style.setProperty('--foreground', colors.text);

@@ -5,6 +5,7 @@ import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import { sounds } from '../lib/SoundEngine';
@@ -17,8 +18,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 
-const formatAIMessage = (text) => {
+const formatAIMessage = (text, theme = {}) => {
   if (!text) return null;
+  const isLight = theme.mode === 'light';
   
   let cleaned = text
     .replace(/\\n/g, '\n')
@@ -65,42 +67,42 @@ if (line.match(/^(ERROR|Error|error):/i)) {
   
   return parts.map((part, i) => {
     if (part.type === 'heading') {
-      return <h4 key={i} className="mt-4 mb-2 text-lg font-bold" style={{ color: '#10b981' }}>{part.text}</h4>;
+      return <h4 key={i} className="mt-4 mb-2 text-lg font-bold" style={{ color: theme.primary || '#10b981' }}>{part.text}</h4>;
     }
     if (part.type === 'error') {
-      return <div key={i} className="mt-3 mb-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderLeft: '4px solid #f87171', color: '#fca5a5' }}>
+      return <div key={i} className="mt-3 mb-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderLeft: '4px solid #f87171', color: isLight ? '#b91c1c' : '#fca5a5' }}>
         <span className="text-xs uppercase tracking-wider opacity-70">❌ Error</span>
         <p className="mt-1 font-semibold">{part.text}</p>
       </div>;
     }
     if (part.type === 'concepto') {
-      return <div key={i} className="mt-2 mb-2 px-4 py-3 rounded-xl text-sm" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))', borderLeft: '4px solid #22c55e', color: '#86efac' }}>
+      return <div key={i} className="mt-2 mb-2 px-4 py-3 rounded-xl text-sm" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))', borderLeft: '4px solid #22c55e', color: isLight ? '#166534' : '#86efac' }}>
         <span className="text-xs uppercase tracking-wider opacity-70">💡 Concepto</span>
         <p className="mt-1 font-semibold">{part.text}</p>
       </div>;
     }
     if (part.type === 'ayuda') {
-      return <div key={i} className="mt-2 mb-3 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.15)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>
+      return <div key={i} className="mt-2 mb-3 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.15)', borderLeft: '3px solid #fbbf24', color: isLight ? '#92400e' : '#fcd34d' }}>
         <span className="text-xs uppercase tracking-wider opacity-70">🔧 Ayuda</span>
         <p className="mt-1">{part.text}</p>
       </div>;
     }
     if (part.type === 'pista') {
-      return <div key={i} className="mt-2 mb-2 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(34,211,238,0.1)', borderLeft: '3px solid #22d3ee', color: '#67e8f9' }}>
+      return <div key={i} className="mt-2 mb-2 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(34,211,238,0.1)', borderLeft: '3px solid #22d3ee', color: isLight ? '#155e75' : '#67e8f9' }}>
         <span className="text-xs uppercase tracking-wider opacity-70">💡 Pista</span>
         <p className="mt-1">{part.text}</p>
       </div>;
     }
     if (part.type === 'porque') {
-      return <div key={i} className="mt-2 mb-3 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: '#fcd34d' }}>{part.text}</div>;
+      return <div key={i} className="mt-2 mb-3 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: isLight ? '#92400e' : '#fcd34d' }}>{part.text}</div>;
     }
     if (part.type === 'code') {
-      return <code key={i} className="block my-2 px-4 py-3 rounded-lg text-sm font-mono overflow-x-auto" style={{ backgroundColor: '#0f172a', color: '#6ee7b7', border: '1px solid #1e293b' }}>{part.text}</code>;
+      return <code key={i} className="block my-2 px-4 py-3 rounded-lg text-sm font-mono overflow-x-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : '#0f172a', color: isLight ? '#b45309' : '#6ee7b7', border: `1px solid ${isLight ? 'rgba(245,158,11,0.14)' : '#1e293b'}` }}>{part.text}</code>;
     }
     if (part.type === 'table') {
-      return <div key={i} className="my-3 p-3 rounded-lg overflow-x-auto text-xs font-mono" style={{ backgroundColor: '#1e293b', color: '#94a3b8' }}>{part.text}</div>;
+      return <div key={i} className="my-3 p-3 rounded-lg overflow-x-auto text-xs font-mono" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : '#1e293b', color: isLight ? '#6b7280' : '#94a3b8' }}>{part.text}</div>;
     }
-    return <p key={i} className="mt-2 mb-1 text-sm" style={{ color: '#e2e8f0' }}>{part.text}</p>;
+    return <p key={i} className="mt-2 mb-1 text-sm" style={{ color: isLight ? '#374151' : '#e2e8f0' }}>{part.text}</p>;
   });
 };
 
@@ -135,24 +137,25 @@ const SuccessBurst = () => (
 
 const DataComparisonTable = ({ data, colors, highlight = false }) => {
   if (!data || data.length === 0) {
-    return <div className="p-4 text-xs text-slate-500 italic">Tabla vacía</div>;
+    return <div className="p-4 text-xs italic" style={{ color: colors.textMuted }}>Tabla vacía</div>;
   }
+  const isLight = colors.mode === 'light';
   const columns = Object.keys(data[0]);
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-[11px] text-left border-collapse">
         <thead>
-          <tr className="bg-white/5">
+          <tr style={{ backgroundColor: isLight ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.05)' }}>
             {columns.map(col => (
-              <th key={col} className="px-3 py-2 font-bold text-slate-400 uppercase tracking-tighter border-b border-white/5">{col}</th>
+              <th key={col} className="px-3 py-2 font-bold uppercase tracking-tighter border-b" style={{ color: colors.textMuted, borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)' }}>{col}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
-            <tr key={i} className={`border-b border-white/5 ${highlight ? 'hover:bg-emerald-500/10' : 'hover:bg-white/5'}`}>
+            <tr key={i} className={`${highlight ? 'hover:bg-emerald-500/10' : ''}`} style={{ borderBottom: `1px solid ${isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)'}` }}>
               {Object.values(row).map((val, j) => (
-                <td key={j} className="px-3 py-1.5 font-mono text-slate-300">{String(val)}</td>
+                <td key={j} className="px-3 py-1.5 font-mono" style={{ color: isLight ? '#374151' : '#cbd5e1' }}>{String(val)}</td>
               ))}
             </tr>
           ))}
@@ -166,6 +169,10 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
+  const { colors } = useTheme();
+  const isLight = colors.mode === 'light';
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
 
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
@@ -506,14 +513,14 @@ export const ExercisePage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="relative">
-          <div className="absolute -inset-4 rounded-full bg-cyan-500/10 blur-2xl animate-pulse" />
+          <div className="absolute -inset-4 rounded-full blur-2xl animate-pulse" style={{ backgroundColor: `${colors.primary}18` }} />
           <DagonMascot size="large" mood="thinking" />
         </div>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-48 h-3 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full animate-shimmer-width" style={{ width: '60%' }} />
+          <div className="w-48 h-3 rounded-full overflow-hidden" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.74)' : '#334155' }}>
+            <div className="h-full rounded-full animate-shimmer-width" style={{ width: '60%', background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} />
           </div>
-          <p className="text-cyan-300/60 text-sm font-gameui">Cargando misión...</p>
+          <p className="text-sm font-gameui" style={{ color: colors.primary }}>Cargando misión...</p>
         </div>
       </div>
     );
@@ -523,8 +530,8 @@ export const ExercisePage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <DagonMascot size="large" mood="sad" />
-        <p className="text-white text-xl font-gameui">Este módulo aún no tiene misiones.</p>
-        <Button onClick={() => navigate('/dashboard')} className="bg-blue-600">Volver al mapa</Button>
+        <p className="text-xl font-gameui" style={{ color: headingColor }}>Este módulo aún no tiene misiones.</p>
+        <Button onClick={() => navigate('/dashboard')} style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, color: isLight ? '#1f2937' : '#ffffff' }}>Volver al mapa</Button>
       </div>
     );
   }
@@ -546,26 +553,26 @@ export const ExercisePage = () => {
       {xpPop != null && <XPPop amount={xpPop} />}
 
       {/* HEADER */}
-      <header className="border-b backdrop-blur-md z-10 shrink-0 bg-slate-950/90 border-slate-800">
+      <header className="border-b backdrop-blur-md z-10 shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,252,245,0.90)' : 'rgba(2,6,23,0.90)', borderColor: isLight ? 'rgba(245,158,11,0.14)' : '#1e293b' }}>
         <div className="px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: mutedColor }}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
-            <div className="h-6 w-px bg-white/10" />
+            <div className="h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
             <Button 
               variant="ghost" 
               onClick={handleResetSandbox} 
               title="🔄 Restablecer tabla: Borra todos tus cambios y vuelve a los datos originales del ejercicio. Útil si cometiste muchos errores o quieres empezar de nuevo."
-              className="text-slate-500 hover:text-amber-400 hover:bg-amber-400/10"
+              style={{ color: mutedColor }}
             >
               <RotateCcw className="w-4 h-4 mr-2" /> Restablecer
             </Button>
-            <div className="h-6 w-px bg-white/10" />
-            <h1 className="font-display text-base font-black flex items-center gap-2 text-white">
-              <Database className="w-4 h-4 text-emerald-400" />
+            <div className="h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
+            <h1 className="font-display text-base font-black flex items-center gap-2" style={{ color: headingColor }}>
+              <Database className="w-4 h-4" style={{ color: colors.primary }} />
               Módulo {levelId}
-              <span className="text-sm font-gameui ml-1 text-slate-400">
+              <span className="text-sm font-gameui ml-1" style={{ color: mutedColor }}>
                 · Misión {currentExerciseIndex + 1}/{exercises.length}
               </span>
             </h1>
@@ -598,9 +605,9 @@ export const ExercisePage = () => {
             })}
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-slate-900 border-slate-700">
-              <Zap className="w-4 h-4 text-yellow-300" />
-              <span className="font-display font-black text-yellow-200 text-sm">{user?.xp || 0}</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : '#0f172a', borderColor: isLight ? 'rgba(245,158,11,0.18)' : '#334155' }}>
+              <Zap className="w-4 h-4" style={{ color: isLight ? '#d97706' : '#fde047' }} />
+              <span className="font-display font-black text-sm" style={{ color: isLight ? '#b45309' : '#fef08a' }}>{user?.xp || 0}</span>
             </div>
             <AnimatePresence>
               {combo >= 2 && (
@@ -614,8 +621,9 @@ export const ExercisePage = () => {
             </AnimatePresence>
           </div>
         </div>
-        <div className="h-1 bg-slate-900">
-          <motion.div className="h-full bg-gradient-to-r from-cyan-400 via-blue-500 to-fuchsia-500"
+        <div className="h-1" style={{ backgroundColor: isLight ? 'rgba(120,113,108,0.14)' : '#0f172a' }}>
+          <motion.div className="h-full"
+            style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})` }}
             animate={{ width: `${exerciseProgress}%` }} transition={{ duration: 0.5 }} />
         </div>
       </header>
@@ -638,9 +646,10 @@ export const ExercisePage = () => {
 
             {/* MASCOTA + INSTRUCCIONES */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-              className="glass-card-apple rounded-3xl p-6 border border-white/10 relative overflow-hidden"
+              className="glass-card-apple rounded-3xl p-6 border relative overflow-hidden"
+              style={{ borderColor: colors.border }}
             >
-              <div className="absolute -top-20 -right-20 w-60 h-60 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${colors.primary}12` }} />
               <div className="relative z-10 flex items-start gap-5">
                 <div className="shrink-0">
                   <div className="relative">
@@ -654,7 +663,7 @@ export const ExercisePage = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-cyan-300 text-[10px] font-bold tracking-[0.35em] uppercase">
+                    <span className="text-[10px] font-bold tracking-[0.35em] uppercase" style={{ color: colors.accent }}>
                       {exercise.title}
                     </span>
                     {intentosFallidos > 0 && !executionResult?.success && (
@@ -663,7 +672,7 @@ export const ExercisePage = () => {
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-100 font-gameui text-base leading-relaxed">
+                  <p className="font-gameui text-base leading-relaxed" style={{ color: headingColor }}>
                     {exercise.description}
                   </p>
 
@@ -671,7 +680,8 @@ export const ExercisePage = () => {
                   {exercise.hint && !clawbotMessage && (
                     <button
                       onClick={() => setShowHint(!showHint)}
-                      className="mt-3 text-amber-300 text-xs font-bold flex items-center gap-1 hover:text-amber-200 transition-colors"
+                      className="mt-3 text-xs font-bold flex items-center gap-1 transition-colors"
+                      style={{ color: isLight ? '#b45309' : '#fcd34d' }}
                     >
                       <Lightbulb className="w-3 h-3" />
                       {showHint ? 'Ocultar pista' : 'Necesito una pista'}
@@ -680,7 +690,8 @@ export const ExercisePage = () => {
                   <AnimatePresence>
                     {showHint && !clawbotMessage && (
                       <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }} className="mt-2 text-amber-200/80 text-sm font-gameui italic"
+                        exit={{ opacity: 0, height: 0 }} className="mt-2 text-sm font-gameui italic"
+                        style={{ color: isLight ? '#92400e' : '#fde68a' }}
                       >
                         {exercise.hint}
                       </motion.p>
@@ -699,14 +710,14 @@ export const ExercisePage = () => {
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/10 via-purple-400/10 to-rose-400/10 animate-pulse opacity-50" />
                     <div className="relative z-10 p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center shadow-lg">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
                           <Bot className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex-1">
                           <p className="text-[10px] font-black tracking-[0.4em] uppercase bg-gradient-to-r from-cyan-400 via-purple-400 to-rose-400 bg-clip-text text-transparent">
                             Dagon responde
                           </p>
-                          <p className="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">
+                          <p className="text-[9px] font-bold tracking-[0.2em] uppercase" style={{ color: mutedColor }}>
                             {clawbotThinking ? 'Procesando...' : 'IA Generativa'}
                           </p>
                         </div>
@@ -723,9 +734,9 @@ export const ExercisePage = () => {
                           <span className="w-2 h-2 bg-rose-400 rounded-full animate-bounce shadow-[0_0_8px_rgba(244,63,94,0.8)]" style={{ animationDelay: '0.3s' }} />
                         </div>
 ) : (
-                        <div className="mt-2 p-4 rounded-xl overflow-hidden bg-slate-900 border border-slate-700">
+                        <div className="mt-2 p-4 rounded-xl overflow-hidden border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : '#0f172a', borderColor: isLight ? 'rgba(245,158,11,0.14)' : '#334155' }}>
                           <div className="text-sm font-gameui leading-relaxed">
-                            {formatAIMessage(clawbotMessage)}
+                            {formatAIMessage(clawbotMessage, colors)}
                           </div>
                         </div>
                       )}

@@ -47,6 +47,14 @@ export const DashboardPage = () => {
   const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
   const { colors } = useTheme();
+  const isLight = colors.mode === 'light';
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
+  const pillBg = isLight ? 'rgba(250, 204, 21, 0.14)' : 'rgba(6, 182, 212, 0.10)';
+  const pillBorder = isLight ? 'rgba(245, 158, 11, 0.24)' : 'rgba(34, 211, 238, 0.30)';
+  const pillText = isLight ? '#92400e' : '#cffafe';
+  const warmSurface = isLight ? 'rgba(255,250,240,0.82)' : `${colors.surface}80`;
+  const softBorder = isLight ? `${colors.border}88` : colors.border;
 
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
@@ -189,14 +197,14 @@ const title = titleFor(userXP);
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="relative">
-          <div className="absolute -inset-6 rounded-full bg-fuchsia-500/10 blur-2xl animate-pulse" />
+          <div className="absolute -inset-6 rounded-full blur-2xl animate-pulse" style={{ backgroundColor: `${colors.primary}20` }} />
           <DagonMascot size="large" mood="thinking" />
         </div>
         <div className="flex flex-col items-center gap-3">
-          <div className="w-48 h-2 bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full w-2/3 bg-gradient-to-r from-fuchsia-500 to-blue-500 rounded-full animate-shimmer-width" />
+          <div className="w-48 h-2 rounded-full overflow-hidden" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.75)' : '#334155' }}>
+            <div className="h-full w-2/3 rounded-full animate-shimmer-width" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }} />
           </div>
-          <p className="text-fuchsia-300/60 text-xs font-bold tracking-[0.4em] uppercase">Cargando la Academia...</p>
+          <p className="text-xs font-bold tracking-[0.4em] uppercase" style={{ color: colors.primary }}>Cargando la Academia...</p>
         </div>
       </div>
     );
@@ -228,13 +236,13 @@ const title = titleFor(userXP);
         {/* HEADER */}
         <div className="flex justify-between items-start mb-8 gap-4 flex-wrap">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px]">
-            <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2">
+            <p className="text-xs font-bold tracking-[0.4em] uppercase mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
-            <h1 className="font-display text-5xl lg:text-6xl font-black text-white leading-none">
+            <h1 className="font-display text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
               Hola, <span className="text-gradient-abyss">{user?.nombre || 'aventurero'}</span>
             </h1>
-            <p className="text-slate-400 mt-3 font-gameui">
+            <p className="mt-3 font-gameui" style={{ color: mutedColor }}>
               Selecciona tu senda y desciende a las profundidades.
             </p>
           </motion.div>
@@ -243,7 +251,8 @@ const title = titleFor(userXP);
             <TourTrigger onClick={() => setShowTutorial(true)} />
             <Button
               onClick={() => navigate('/profile')}
-              className="bg-slate-800/60 hover:bg-slate-700/80 border border-white/10 text-slate-200 hover:text-white font-display font-black text-sm"
+              className="border font-display font-black text-sm"
+              style={{ backgroundColor: warmSurface, borderColor: softBorder, color: headingColor }}
             >
               <User className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Mi Perfil</span>
@@ -251,7 +260,8 @@ const title = titleFor(userXP);
             {userStreak > 0 ? (
               <Button
                 onClick={() => navigate('/streak')}
-                className="bg-gradient-to-r from-orange-600/80 to-rose-600/80 hover:from-orange-500 hover:to-rose-500 border border-orange-400/40 text-white font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm"
+                className="border font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm"
+                style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, borderColor: 'rgba(251,146,60,0.35)', color: isLight ? '#1f2937' : '#ffffff' }}
               >
                 <Flame className="w-4 h-4 mr-2 animate-pulse" />
                 {userStreak} días
@@ -260,7 +270,8 @@ const title = titleFor(userXP);
               <Button
                 onClick={() => navigate('/streak')}
                 variant="ghost"
-                className="text-orange-300 hover:text-orange-200 hover:bg-orange-500/10 text-sm"
+                className="text-sm"
+                style={{ color: isLight ? '#b45309' : '#fdba74' }}
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Racha</span>
@@ -268,13 +279,14 @@ const title = titleFor(userXP);
             )}
             <Button
               onClick={() => setShowQuickPractice(true)}
-              className="bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-400 hover:to-rose-400 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm"
+              className="font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm"
+              style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, color: isLight ? '#1f2937' : '#ffffff' }}
             >
               <Target className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Práctica Rápida</span>
               <span className="sm:hidden">Práctica</span>
             </Button>
-            <Button onClick={handleLogout} variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/5 text-sm">
+            <Button onClick={handleLogout} variant="ghost" className="text-sm" style={{ color: mutedColor }}>
               <LogOut className="w-5 h-5 mr-2" />
               <span className="hidden sm:inline">Salir</span>
             </Button>
@@ -284,10 +296,11 @@ const title = titleFor(userXP);
         {/* PLAYER HERO CARD */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 mb-8 holo-border relative overflow-hidden"
+          className="glass-card-apple rounded-3xl p-6 lg:p-8 border mb-8 holo-border relative overflow-hidden"
+          style={{ borderColor: colors.border }}
         >
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }} />
+          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(37,99,235,0.15)' }} />
 
           <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
             <div className="flex items-center gap-5">
@@ -305,25 +318,25 @@ const title = titleFor(userXP);
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 {userStreak > 0 && (
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/20 border border-orange-400/40">
-                    <Flame className="w-3 h-3 text-orange-300" />
-                    <span className="font-gameui text-xs font-bold tracking-widest uppercase text-orange-200">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.16)' : 'rgba(249,115,22,0.20)', borderColor: 'rgba(251,146,60,0.30)' }}>
+                    <Flame className="w-3 h-3" style={{ color: isLight ? '#c2410c' : '#fdba74' }} />
+                    <span className="font-gameui text-xs font-bold tracking-widest uppercase" style={{ color: isLight ? '#9a3412' : '#fed7aa' }}>
                       {userStreak} días
                     </span>
                   </span>
                 )}
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
-                  <Sparkles className="w-3 h-3 text-cyan-300" />
-                  <span className="font-gameui text-xs font-bold tracking-widest uppercase text-cyan-200">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border" style={{ backgroundColor: pillBg, borderColor: pillBorder }}>
+                  <Sparkles className="w-3 h-3" style={{ color: colors.primary }} />
+                  <span className="font-gameui text-xs font-bold tracking-widest uppercase" style={{ color: pillText }}>
                     {title.name}
                   </span>
                 </span>
               </div>
 
               <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-300 font-gameui text-sm">Progreso al nivel {userLevel + 1}</span>
-                <span className="font-display font-black text-white">
-                  {xpInLevel}<span className="text-slate-500">/100 XP</span>
+                <span className="font-gameui text-sm" style={{ color: mutedColor }}>Progreso al nivel {userLevel + 1}</span>
+                <span className="font-display font-black" style={{ color: headingColor }}>
+                  {xpInLevel}<span style={{ color: mutedColor }}>/100 XP</span>
                 </span>
               </div>
               <div className="relative w-full h-4 rounded-full border overflow-hidden xp-bar-shine" style={{ backgroundColor: `${colors.surface}CC`, borderColor: colors.border }}>
@@ -344,11 +357,11 @@ const title = titleFor(userXP);
               <p className="font-display text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {userXP}
               </p>
-              <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP Totales</p>
+              <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP Totales</p>
               {userStreak > 0 && (
                 <div className="flex items-center gap-1 mt-3 justify-end">
-                  <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
-                  <span className="font-display font-black text-orange-300">x{userStreak}</span>
+                  <Flame className="w-4 h-4 animate-pulse" style={{ color: isLight ? '#ea580c' : '#fb923c' }} />
+                  <span className="font-display font-black" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>x{userStreak}</span>
                 </div>
               )}
             </div>
@@ -369,8 +382,8 @@ const title = titleFor(userXP);
                 <Flame className="w-5 h-5 text-orange-400" />
               </div>
               <div>
-                <p className="font-display text-2xl font-black text-white">{userStreak || 0}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Días</p>
+                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userStreak || 0}</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Días</p>
               </div>
             </div>
           </button>
@@ -391,8 +404,8 @@ const title = titleFor(userXP);
                 <Zap className="w-5 h-5" style={{ color: colors.primary }} />
               </div>
               <div>
-                <p className="font-display text-2xl font-black text-white">{userXP}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">XP Total</p>
+                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userXP}</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>XP Total</p>
               </div>
             </div>
           </button>
@@ -413,8 +426,8 @@ const title = titleFor(userXP);
                 <Trophy className="w-5 h-5" style={{ color: colors.accent }} />
               </div>
               <div>
-                <p className="font-display text-2xl font-black text-white">{userRank !== '-' ? `#${userRank}` : '-'}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Ranking</p>
+                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userRank !== '-' ? `#${userRank}` : '-'}</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Ranking</p>
               </div>
             </div>
           </button>
@@ -435,8 +448,8 @@ const title = titleFor(userXP);
                 <Crown className="w-5 h-5" style={{ color: colors.secondary }} />
               </div>
               <div>
-                <p className="font-display text-lg font-black text-white truncate max-w-[100px]">{title.name}</p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Rango</p>
+                <p className="font-display text-lg font-black truncate max-w-[100px]" style={{ color: headingColor }}>{title.name}</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Rango</p>
               </div>
             </div>
           </button>
@@ -474,7 +487,7 @@ const title = titleFor(userXP);
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
                         </div>
                         <div className="text-left">
-                            <h3 className={`font-display font-black text-xl transition-colors ${cursoActivoId === curso.id_curso ? 'text-white' : 'text-slate-400'}`}>
+                            <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoActivoId === curso.id_curso ? headingColor : mutedColor }}>
                                 {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
                             </h3>
                             <p className={`text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors`}
@@ -493,17 +506,17 @@ const title = titleFor(userXP);
         {/* MAIN GRID */}
         <div className="grid lg:grid-cols-[1fr_320px] gap-8">
           {/* SENDERO DE NIVELES DEL CURSO ACTIVO */}
-          <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 relative overflow-hidden">
-            <div className="absolute -top-32 -right-32 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
+            <div className="absolute -top-32 -right-32 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.10)' : 'rgba(59,130,246,0.10)' }} />
 
             <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center">
-                  {cursoActivoId === 1 ? <Swords className="w-6 h-6 text-blue-300" /> : <Hammer className="w-6 h-6 text-blue-300" />}
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${colors.primary}20`, border: `1px solid ${colors.primary}40` }}>
+                  {cursoActivoId === 1 ? <Swords className="w-6 h-6" style={{ color: colors.primary }} /> : <Hammer className="w-6 h-6" style={{ color: colors.primary }} />}
                 </div>
                 <div>
-                  <h2 className="font-display text-3xl font-black text-white">{cursoActivo.titulo}</h2>
-                  <p className="text-slate-400 text-sm font-gameui">Conquista las misiones para graduarte de esta Senda</p>
+                  <h2 className="font-display text-3xl font-black" style={{ color: headingColor }}>{cursoActivo.titulo}</h2>
+                  <p className="text-sm font-gameui" style={{ color: mutedColor }}>Conquista las misiones para graduarte de esta Senda</p>
                 </div>
               </div>
               
@@ -614,13 +627,13 @@ const title = titleFor(userXP);
           {/* SIDEBAR (Práctica Rápida y Top) */}
           <aside className="space-y-6">
             <motion.div className="glass-card-apple rounded-3xl p-6 border border-white/10 relative overflow-hidden holo-border">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-fuchsia-500/15 rounded-full blur-3xl" />
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
-                <CalendarDays className="w-4 h-4 text-fuchsia-300" />
-                <span className="text-xs font-bold uppercase tracking-[0.3em] text-fuchsia-300">Reto del día</span>
+                <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
+                <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: colors.primary }}>Reto del día</span>
               </div>
-              <h3 className="font-display text-xl font-black text-white mb-2">Práctica Relámpago</h3>
-              <p className="text-slate-400 text-sm font-gameui mb-4">
+              <h3 className="font-display text-xl font-black mb-2" style={{ color: headingColor }}>Práctica Relámpago</h3>
+              <p className="text-sm font-gameui mb-4" style={{ color: mutedColor }}>
                 Resuelve 3 ejercicios rápidos antes de acabar el día y gana XP bonus.
               </p>
               <Button
@@ -645,14 +658,15 @@ const title = titleFor(userXP);
                 </div>
                 <button
                   onClick={() => navigate('/leaderboard')}
-                  className="text-slate-400 hover:text-white text-xs font-gameui font-bold flex items-center gap-1"
+                  className="text-xs font-gameui font-bold flex items-center gap-1"
+                  style={{ color: mutedColor }}
                 >
                   Ver todo <ChevronRight className="w-3 h-3" />
                 </button>
               </div>
 
               {topPlayers.length === 0 ? (
-                <p className="text-slate-500 text-sm italic font-gameui">Sin datos aún.</p>
+                <p className="text-sm italic font-gameui" style={{ color: mutedColor }}>Sin datos aún.</p>
               ) : (
                 <ul className="space-y-2">
                   {topPlayers.slice(0, 5).map((p) => {
@@ -673,7 +687,7 @@ const title = titleFor(userXP);
                           <span className={`font-display font-black text-lg w-6 text-center ${medalColor}`}>
                             {p.rango <= 3 ? <Star className="w-4 h-4 inline fill-current" /> : `#${p.rango}`}
                           </span>
-                          <span className={`font-gameui font-bold truncate ${me ? 'text-blue-200' : 'text-slate-200'}`}>
+                          <span className="font-gameui font-bold truncate" style={{ color: me ? colors.primary : headingColor }}>
                             {p.nombre}{me && ' (tú)'}
                           </span>
                         </div>
@@ -705,10 +719,10 @@ const title = titleFor(userXP);
                   <Heart className="w-7 h-7" style={{ color: colors.primary }} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-display text-lg font-black text-white">Equipo Dagon</p>
-                  <p className="text-xs text-slate-400 font-gameui">Ver créditos y agradecimientos</p>
+                  <p className="font-display text-lg font-black" style={{ color: headingColor }}>Equipo Dagon</p>
+                  <p className="text-xs font-gameui" style={{ color: mutedColor }}>Ver créditos y agradecimientos</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
+                <ChevronRight className="w-5 h-5 transition-colors" style={{ color: mutedColor }} />
               </div>
             </motion.div>
           </aside>

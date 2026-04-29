@@ -19,6 +19,11 @@ export const LeaderboardPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const { colors } = useTheme();
+  const isLight = colors.mode === 'light';
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
+  const surfaceColor = isLight ? 'rgba(255, 250, 240, 0.82)' : `${colors.surface}66`;
+  const borderColor = isLight ? `${colors.border}88` : colors.border;
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,14 +73,14 @@ export const LeaderboardPage = () => {
     <div className="min-h-screen py-10" data-testid="leaderboard-page">
       <div className="container mx-auto px-4 max-w-5xl">
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white">
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: mutedColor }}>
             <ArrowLeft className="w-5 h-5 mr-2" /> Volver
           </Button>
-          <div className="h-8 w-px bg-white/10" />
+          <div className="h-8 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
           <div>
-            <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-1">Hall of Fame</p>
-            <h1 className="font-display text-4xl font-black text-white flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-300" />
+            <p className="text-xs font-bold tracking-[0.4em] uppercase mb-1" style={{ color: colors.accent }}>Hall of Fame</p>
+            <h1 className="font-display text-4xl font-black flex items-center gap-3" style={{ color: headingColor }}>
+              <Trophy className="w-8 h-8" style={{ color: isLight ? '#d97706' : '#fde047' }} />
               Salón de la Fama
             </h1>
           </div>
@@ -85,18 +90,19 @@ export const LeaderboardPage = () => {
         {top3.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card-apple rounded-3xl p-6 lg:p-10 border border-white/10 mb-8 holo-border relative overflow-hidden"
+            className="glass-card-apple rounded-3xl p-6 lg:p-10 border mb-8 holo-border relative overflow-hidden"
+            style={{ borderColor: colors.border }}
           >
-            <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.16)' : 'rgba(234,179,8,0.10)' }} />
 
             <div className="relative z-10">
-              <p className="text-center text-yellow-300 text-xs font-bold tracking-[0.4em] uppercase mb-2">
+              <p className="text-center text-xs font-bold tracking-[0.4em] uppercase mb-2" style={{ color: isLight ? '#d97706' : '#fde047' }}>
                 Top 3 del abismo
               </p>
-              <h2 className="font-display text-3xl font-black text-white text-center mb-10 flex items-center justify-center gap-2">
-                <Sparkles className="w-5 h-5 text-yellow-300" />
+              <h2 className="font-display text-3xl font-black text-center mb-10 flex items-center justify-center gap-2" style={{ color: headingColor }}>
+                <Sparkles className="w-5 h-5" style={{ color: isLight ? '#d97706' : '#fde047' }} />
                 Los más profundos
-                <Sparkles className="w-5 h-5 text-yellow-300" />
+                <Sparkles className="w-5 h-5" style={{ color: isLight ? '#d97706' : '#fde047' }} />
               </h2>
 
               <div className="grid grid-cols-3 gap-4 items-end">
@@ -128,7 +134,7 @@ export const LeaderboardPage = () => {
                           </span>
                         )}
                       </div>
-                      <p className="font-display font-black text-white text-center truncate max-w-[140px]">
+                      <p className="font-display font-black text-center truncate max-w-[140px]" style={{ color: headingColor }}>
                         {p.nombre}
                       </p>
                       <p className={`font-display font-black text-2xl ${
@@ -152,10 +158,10 @@ export const LeaderboardPage = () => {
         )}
 
         {/* LISTA REST */}
-        <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 relative overflow-hidden">
-          <div className="absolute -bottom-32 -right-32 w-72 h-72 bg-fuchsia-500/10 rounded-full blur-3xl" />
+        <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
+          <div className="absolute -bottom-32 -right-32 w-72 h-72 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(217,70,239,0.10)' }} />
 
-          <div className="flex justify-between items-center px-4 py-3 mb-3 border-b border-white/5 text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em]">
+          <div className="flex justify-between items-center px-4 py-3 mb-3 border-b text-[10px] font-bold uppercase tracking-[0.3em]" style={{ borderColor: isLight ? 'rgba(217,119,6,0.10)' : 'rgba(255,255,255,0.05)', color: mutedColor }}>
             <div className="w-16 text-center">Rango</div>
             <div className="flex-1">Aventurero</div>
             <div className="w-32 hidden md:block">Liga</div>
@@ -166,7 +172,7 @@ export const LeaderboardPage = () => {
           </div>
 
           {leaderboardData.length === 0 ? (
-            <p className="text-center text-slate-500 py-10 italic font-gameui">Aún no hay aventureros en la base de datos.</p>
+            <p className="text-center py-10 italic font-gameui" style={{ color: mutedColor }}>Aún no hay aventureros en la base de datos.</p>
           ) : (
             <ul className="space-y-2">
               {(top3.length === 0 ? leaderboardData : rest).map((p, i) => {
@@ -185,8 +191,8 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                         : 'border-white/5'
                     }`}
                     style={{
-                      backgroundColor: me ? `${colors.primary}15` : `${colors.surface}66`,
-                      borderColor: me ? `${colors.primary}50` : colors.border
+                      backgroundColor: me ? `${colors.primary}15` : surfaceColor,
+                      borderColor: me ? `${colors.primary}50` : borderColor
                     }}
                   >
                     {/* XP fill backdrop */}
@@ -203,7 +209,7 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                       </div>
                     </div>
                     <div className="relative z-10 flex-1 flex items-center gap-3 px-3 min-w-0">
-                      <span className={`font-display font-black truncate ${me ? '' : 'text-white'}`} style={me ? { color: colors.primary } : {}}>
+                      <span className="font-display font-black truncate" style={{ color: me ? colors.primary : headingColor }}>
                         {p.nombre}
                       </span>
                       {me && (
@@ -215,15 +221,15 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                     <div className="relative z-10 w-32 hidden md:flex">
                       <span className={`text-xs font-bold tracking-widest uppercase ${lg.text}`}>{lg.name}</span>
                     </div>
-                    <div className="relative z-10 w-32 text-right hidden sm:flex items-center justify-end gap-2 text-slate-400 font-mono">
-                      <Target className="w-4 h-4 text-slate-500" />
+                    <div className="relative z-10 w-32 text-right hidden sm:flex items-center justify-end gap-2 font-mono" style={{ color: mutedColor }}>
+                      <Target className="w-4 h-4" style={{ color: mutedColor }} />
                       {p.misionesResueltas}
                     </div>
                     <div className="relative z-10 w-32 text-right flex items-center justify-end gap-2">
-                      <span className={`font-display font-black text-xl ${me ? 'text-blue-200' : 'text-white'}`}>
+                      <span className="font-display font-black text-xl" style={{ color: me ? colors.primary : headingColor }}>
                         {p.xp}
                       </span>
-                      <Zap className={`w-4 h-4 ${me ? 'text-blue-300' : 'text-yellow-300'}`} />
+                      <Zap className="w-4 h-4" style={{ color: me ? colors.primary : (isLight ? '#d97706' : '#fde047') }} />
                     </div>
                   </motion.li>
                 );

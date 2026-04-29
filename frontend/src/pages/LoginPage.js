@@ -35,6 +35,21 @@ export const LoginPage = () => {
   const { login, register } = useAuth();
   const { colors } = useTheme();
   const navigate = useNavigate();
+  const isLight = colors.mode === 'light';
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
+  const labelColor = isLight ? '#6b4f1d' : '#e2e8f0';
+  const chipTextColor = isLight ? '#5b4636' : '#e2e8f0';
+  const chipStyle = {
+    color: chipTextColor,
+    borderColor: isLight ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255,255,255,0.10)',
+    backgroundColor: isLight ? 'rgba(255, 250, 240, 0.72)' : 'rgba(255,255,255,0.05)',
+  };
+  const accentBadgeStyle = {
+    color: colors.primary,
+    backgroundColor: isLight ? 'rgba(250, 204, 21, 0.12)' : 'rgba(6, 182, 212, 0.10)',
+    borderColor: isLight ? 'rgba(245, 158, 11, 0.24)' : `${colors.primary}4d`,
+  };
 
   useEffect(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => setIsPageReady(true)));
@@ -99,7 +114,8 @@ export const LoginPage = () => {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -14, opacity: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-xl font-gameui font-medium text-slate-300 max-w-md mx-auto"
+                className="text-xl font-gameui font-medium max-w-md mx-auto"
+                style={{ color: mutedColor }}
               >
                 {TAGLINES[taglineIdx]}
               </motion.p>
@@ -115,7 +131,8 @@ export const LoginPage = () => {
             {HIGHLIGHTS.map((h, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card-apple text-sm font-bold text-slate-200 border border-white/10 hover:border-blue-400/40 hover:scale-105 transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card-apple text-sm font-bold hover:scale-105 transition-all"
+                style={chipStyle}
               >
                 <span style={{ color: colors.primary }}>{h.icon}</span>
                 {h.label}
@@ -127,11 +144,12 @@ export const LoginPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.9, duration: 0.6 }}
-            className="flex items-center justify-center gap-2 text-xs font-gameui font-bold uppercase tracking-[0.4em] text-slate-500 pt-4"
+            className="flex items-center justify-center gap-2 text-xs font-gameui font-bold uppercase tracking-[0.4em] pt-4"
+            style={{ color: mutedColor }}
           >
-            <Sparkles className="w-3 h-3 text-{colors.primary}" />
+            <Sparkles className="w-3 h-3" style={{ color: colors.primary }} />
             <span>Tutor IA Clawbot incluido</span>
-            <Sparkles className="w-3 h-3 text-{colors.primary}" />
+            <Sparkles className="w-3 h-3" style={{ color: colors.primary }} />
           </motion.div>
         </div>
       </div>
@@ -151,16 +169,22 @@ export const LoginPage = () => {
             <h1 className="font-display text-5xl font-black text-gradient-abyss mt-3">DAGON</h1>
           </div>
 
-          <div className="glass-card-apple rounded-3xl p-8 space-y-6 border border-white/10 holo-border shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+          <div
+            className="glass-card-apple rounded-3xl p-8 space-y-6 border holo-border"
+            style={{
+              borderColor: colors.border,
+              boxShadow: isLight ? '0 30px 80px -20px rgba(245, 158, 11, 0.22)' : '0 30px 80px -20px rgba(0,0,0,0.6)'
+            }}
+          >
             <div className="text-center">
-              <span className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.35em] uppercase text-{colors.primary} bg-cyan-500/10 border border-{colors.primary}/30 px-3 py-1 rounded-full mb-4">
+              <span className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.35em] uppercase px-3 py-1 rounded-full mb-4 border" style={accentBadgeStyle}>
                 <Database className="w-3 h-3" />
                 {isLogin ? 'Acceso de aventurero' : 'Nuevo aventurero'}
               </span>
-              <h2 className="font-display text-3xl font-black text-white mb-2">
+              <h2 className="font-display text-3xl font-black mb-2" style={{ color: headingColor }}>
                 {isLogin ? 'Vuelve al abismo' : 'Forja tu leyenda'}
               </h2>
-              <p className="text-slate-400 font-gameui text-sm">
+              <p className="font-gameui text-sm" style={{ color: mutedColor }}>
                 {isLogin ? 'Continúa tu viaje de aprendizaje SQL' : 'Crea tu cuenta y empieza a ganar XP'}
               </p>
             </div>
@@ -175,8 +199,8 @@ export const LoginPage = () => {
                     transition={{ duration: 0.3 }}
                     className="space-y-2 overflow-hidden"
                   >
-                    <Label htmlFor="name" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                      <User className="w-3 h-3 text-{colors.primary}" /> Nombre de aventurero
+                    <Label htmlFor="name" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                      <User className="w-3 h-3" style={{ color: colors.primary }} /> Nombre de aventurero
                     </Label>
                     <Input
                       id="name"
@@ -198,8 +222,8 @@ export const LoginPage = () => {
               </AnimatePresence>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Mail className="w-3 h-3 text-{colors.primary}" /> Email
+                <Label htmlFor="email" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                  <Mail className="w-3 h-3" style={{ color: colors.primary }} /> Email
                 </Label>
                 <Input
                   id="email"
@@ -219,8 +243,8 @@ export const LoginPage = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-slate-200 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                  <Lock className="w-3 h-3 text-{colors.primary}" /> Contraseña
+                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                  <Lock className="w-3 h-3" style={{ color: colors.primary }} /> Contraseña
                 </Label>
                 <Input
                   id="password"
@@ -243,10 +267,11 @@ export const LoginPage = () => {
                 type="submit"
                 data-testid="submit-button"
                 disabled={loading}
-                className="w-full text-white font-display font-black text-lg tracking-wide py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+                className="w-full font-display font-black text-lg tracking-wide py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]"
                 style={{ 
                   background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})`,
-                  boxShadow: `0 10px 40px ${colors.primary}60`
+                  boxShadow: `0 10px 40px ${colors.primary}60`,
+                  color: isLight ? '#1f2937' : '#ffffff'
                 }}
               >
                 {loading ? (
@@ -266,7 +291,8 @@ export const LoginPage = () => {
                 type="button"
                 data-testid="toggle-auth-mode"
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-slate-400 hover:text-{colors.primary} transition-colors text-sm font-gameui"
+                className="transition-colors text-sm font-gameui"
+                style={{ color: mutedColor }}
               >
                 {isLogin ? '¿No tienes cuenta? ' : '¿Ya eres aventurero? '}
                 <span className="font-bold underline-offset-4 hover:underline">
