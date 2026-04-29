@@ -5,6 +5,7 @@ const ThemeContext = createContext(null);
 export const COLOR_PALETTES = {
   dagon: {
     name: 'Dagon Original',
+    mode: 'dark',
     primary: '#10b981',
     secondary: '#06b6d4', 
     accent: '#22d3ee',
@@ -19,6 +20,7 @@ export const COLOR_PALETTES = {
   },
   ocean: {
     name: 'Ocean',
+    mode: 'dark',
     primary: '#0ea5e9',
     secondary: '#06b6d4',
     accent: '#22d3ee',
@@ -33,6 +35,7 @@ export const COLOR_PALETTES = {
   },
   synthwave: {
     name: 'Synthwave',
+    mode: 'dark',
     primary: '#d946ef',
     secondary: '#a855f7',
     accent: '#ec4899',
@@ -47,6 +50,7 @@ export const COLOR_PALETTES = {
   },
   dragon: {
     name: 'Dragon',
+    mode: 'dark',
     primary: '#dc2626',
     secondary: '#991b1b',
     accent: '#f87171',
@@ -61,6 +65,7 @@ export const COLOR_PALETTES = {
   },
   forest: {
     name: 'Forest',
+    mode: 'dark',
     primary: '#22c55e',
     secondary: '#15803d',
     accent: '#4ade80',
@@ -75,6 +80,7 @@ export const COLOR_PALETTES = {
   },
   midnight: {
     name: 'Midnight',
+    mode: 'dark',
     primary: '#6366f1',
     secondary: '#4338ca',
     accent: '#818cf8',
@@ -86,6 +92,21 @@ export const COLOR_PALETTES = {
     border: '#312e81',
     gradient: 'from-indigo-600 to-violet-700',
     gradientAlt: 'from-indigo-900/20 via-transparent to-violet-900/20',
+  },
+  aurora: {
+    name: 'Aurora Gold',
+    mode: 'light',
+    primary: '#f59e0b',
+    secondary: '#facc15',
+    accent: '#fb923c',
+    background: '#fffdf7',
+    surface: '#fffaf0',
+    surfaceAlt: '#fef3c7',
+    text: '#1f2937',
+    textMuted: '#78716c',
+    border: '#f3d38a',
+    gradient: 'from-amber-400 via-yellow-300 to-orange-300',
+    gradientAlt: 'from-amber-200/60 via-white/20 to-yellow-200/60',
   },
 };
 
@@ -136,8 +157,8 @@ export const useTheme = () => {
 
 const applyPalette = (paletteName) => {
   const colors = COLOR_PALETTES[paletteName] || COLOR_PALETTES[DEFAULT_PALETTE];
-  
   const root = document.documentElement;
+  const isLight = colors.mode === 'light';
 
   // Añadir transición suave para todos los cambios de color
   if (!root.style.transition) {
@@ -153,11 +174,18 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--color-text', colors.text);
   root.style.setProperty('--color-text-muted', colors.textMuted);
   root.style.setProperty('--color-border', colors.border);
+  root.style.setProperty('--glass-surface', isLight ? 'rgba(255, 251, 240, 0.72)' : 'rgba(255, 255, 255, 0.05)');
+  root.style.setProperty('--glass-surface-strong', isLight ? 'rgba(255, 248, 230, 0.88)' : 'rgba(30, 41, 59, 0.4)');
+  root.style.setProperty('--glass-border', isLight ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255, 255, 255, 0.18)');
+  root.style.setProperty('--glass-highlight', isLight ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.15)');
+  root.style.setProperty('--glass-shadow', isLight ? '0 25px 60px -25px rgba(217, 119, 6, 0.22)' : '0 8px 32px 0 rgba(0, 0, 0, 0.37)');
+  root.style.setProperty('--grid-opacity', isLight ? '0.09' : '0.05');
+  root.dataset.themeMode = isLight ? 'light' : 'dark';
   
   root.style.setProperty('--background', colors.background);
   root.style.setProperty('--foreground', colors.text);
   root.style.setProperty('--primary', colors.primary);
-  root.style.setProperty('--primary-foreground', '#ffffff');
+  root.style.setProperty('--primary-foreground', isLight ? '#1f2937' : '#ffffff');
   root.style.setProperty('--secondary', colors.secondary);
   root.style.setProperty('--secondary-foreground', colors.text);
   root.style.setProperty('--muted', colors.surfaceAlt);
@@ -176,6 +204,9 @@ const applyPalette = (paletteName) => {
 
   // También actualizar el color de fondo del body directamente para evitar flashes
   document.body.style.backgroundColor = colors.background;
+  document.body.style.backgroundImage = isLight
+    ? 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,220,0.92) 55%, rgba(255,243,199,0.88) 100%)'
+    : '';
 };
 
 export default ThemeContext;

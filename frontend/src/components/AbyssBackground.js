@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
  *
  * Uso: <AbyssBackground intensity={1.2} tint="rgba(99,102,241,0.85)" />
  */
-export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)' }) => {
+export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)', mode = 'dark' }) => {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
@@ -80,8 +80,14 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       const r = tintMatch ? tintMatch[1] : '30';
       const g = tintMatch ? tintMatch[2] : '41';
       const b = tintMatch ? tintMatch[3] : '59';
-      grad.addColorStop(0, 'rgba(30, 41, 59, 0.0)');
-      grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
+      if (mode === 'light') {
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        grad.addColorStop(0.45, `rgba(${r}, ${g}, ${b}, 0.08)`);
+        grad.addColorStop(1, `rgba(${Math.min(255, Math.floor(Number(r) + 20))}, ${Math.min(255, Math.floor(Number(g) + 10))}, ${Math.max(80, Math.floor(Number(b) * 0.35))}, 0.18)`);
+      } else {
+        grad.addColorStop(0, 'rgba(30, 41, 59, 0.0)');
+        grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
+      }
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -120,13 +126,17 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
         }
         ctx.beginPath();
         ctx.arc(b.x + swayX + offX, b.y + offY, b.r, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(186, 230, 253, ${0.28 * b.depth})`;
+        ctx.strokeStyle = mode === 'light'
+          ? `rgba(${Math.min(255, Number(r) + 35)}, ${Math.min(255, Number(g) + 25)}, 180, ${0.18 * b.depth})`
+          : `rgba(186, 230, 253, ${0.28 * b.depth})`;
         ctx.lineWidth = 1;
         ctx.stroke();
         // highlight
         ctx.beginPath();
         ctx.arc(b.x + swayX + offX - b.r * 0.35, b.y + offY - b.r * 0.35, b.r * 0.25, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.45 * b.depth})`;
+        ctx.fillStyle = mode === 'light'
+          ? `rgba(255, 255, 255, ${0.7 * b.depth})`
+          : `rgba(255, 255, 255, ${0.45 * b.depth})`;
         ctx.fill();
       }
 
@@ -139,17 +149,34 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouse);
     };
-  }, [intensity, tint]);
+  }, [intensity, tint, mode]);
+
+  const isLight = mode === 'light';
+  const shellBase = isLight ? 'bg-transparent' : 'bg-abyss-deep';
+  const shellGridOpacity = isLight ? 'opacity-80' : 'opacity-50';
+  const vignette = isLight
+    ? 'bg-gradient-to-b from-white/20 via-transparent to-amber-100/50'
+    : 'bg-gradient-to-b from-transparent via-transparent to-slate-950/70';
+  const orbA = isLight ? 'bg-amber-300/30' : 'bg-blue-600/15';
+  const orbB = isLight ? 'bg-yellow-300/25' : 'bg-fuchsia-600/15';
+  const orbC = isLight ? 'bg-orange-200/30' : 'bg-cyan-500/8';
 
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
-      <div className="absolute inset-0 bg-abyss-deep" />
-      <div className="absolute inset-0 grid-pattern opacity-50" />
+      <div className={`absolute inset-0 ${shellBase}`} />
+      {isLight && (
+        <>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(255,248,220,0.92)_42%,_rgba(254,243,199,0.78)_78%,_rgba(255,237,213,0.62)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.88)_0%,rgba(255,248,220,0.52)_35%,rgba(254,243,199,0.18)_100%)]" />
+        </>
+      )}
+      <div className={`absolute inset-0 grid-pattern ${shellGridOpacity}`} />
       <canvas ref={canvasRef} className="absolute inset-0" />
-      <div className="absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full bg-blue-600/15 blur-[120px] animate-pulse-slow" />
-      <div className="absolute -bottom-32 -right-32 w-[520px] h-[520px] rounded-full bg-fuchsia-600/15 blur-[120px] animate-pulse-slower" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full bg-cyan-500/8 blur-[140px] animate-pulse-slow" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/70" />
+      <div className={`absolute -top-32 -left-32 w-[520px] h-[520px] rounded-full blur-[120px] animate-pulse-slow ${orbA}`} />
+      <div className={`absolute -bottom-32 -right-32 w-[520px] h-[520px] rounded-full blur-[120px] animate-pulse-slower ${orbB}`} />
+      <div className={`absolute top-1/3 left-1/2 -translate-x-1/2 w-[640px] h-[640px] rounded-full blur-[140px] animate-pulse-slow ${orbC}`} />
+      {isLight && <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.55),transparent_45%)]" />}
+      <div className={`absolute inset-0 ${vignette}`} />
     </div>
   );
 };

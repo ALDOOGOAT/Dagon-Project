@@ -48,6 +48,7 @@ export const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const { palette, changePalette, palettes, colors } = useTheme();
+  const isLight = colors.mode === 'light';
   const [stats, setStats] = useState({
     xp: 0, ejercicios_completados: 0, consultas_totales: 0,
     racha: 0, mejor_racha: 0, distribucion_xp: []
@@ -59,6 +60,31 @@ export const ProfilePage = () => {
   const userLevel = Math.floor(stats.xp / 100) + 1;
   const xpInLevel = stats.xp % 100;
   const title = titleFor(stats.xp);
+  const headingColor = colors.text;
+  const mutedColor = colors.textMuted;
+  const softSurface = isLight ? 'rgba(255, 250, 240, 0.82)' : 'rgba(15, 23, 42, 0.5)';
+  const softSurfaceBorder = isLight ? `${colors.border}aa` : 'rgba(255,255,255,0.05)';
+  const statCardStyle = {
+    backgroundColor: softSurface,
+    borderColor: softSurfaceBorder,
+    boxShadow: isLight ? '0 18px 40px -28px rgba(245, 158, 11, 0.35)' : undefined,
+  };
+  const chipStyle = {
+    backgroundColor: isLight ? 'rgba(250, 204, 21, 0.16)' : 'rgba(6, 182, 212, 0.10)',
+    borderColor: isLight ? 'rgba(245, 158, 11, 0.28)' : 'rgba(34, 211, 238, 0.30)',
+  };
+  const chipIconColor = isLight ? colors.primary : '#67e8f9';
+  const chipTextColor = isLight ? '#92400e' : '#cffafe';
+  const progressTrackStyle = {
+    backgroundColor: isLight ? 'rgba(255, 255, 255, 0.82)' : 'rgba(15, 23, 42, 0.8)',
+    borderColor: isLight ? `${colors.border}88` : 'rgba(255,255,255,0.05)',
+  };
+  const lockedAchievementStyle = isLight
+    ? { borderColor: 'rgba(216, 180, 84, 0.18)', backgroundColor: 'rgba(255, 248, 230, 0.62)', opacity: 0.72 }
+    : undefined;
+  const heroOrbStyle = isLight
+    ? { background: 'radial-gradient(circle, rgba(250,204,21,0.18) 0%, rgba(255,255,255,0) 72%)' }
+    : undefined;
 
   const profileMood = useMemo(() => {
     if (loading) return 'thinking';
@@ -200,10 +226,10 @@ export const ProfilePage = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
 
         <div className="flex items-center mb-8">
-          <Button onClick={() => navigate('/dashboard')} variant="ghost" className="text-slate-400 hover:text-white">
+          <Button onClick={() => navigate('/dashboard')} variant="ghost" className="transition-colors" style={{ color: mutedColor }}>
             <ArrowLeft className="w-5 h-5 mr-2" /> Volver
           </Button>
-          <div className="h-8 w-px bg-white/10 mx-4" />
+          <div className="h-8 w-px mx-4" style={{ backgroundColor: isLight ? 'rgba(217, 119, 6, 0.18)' : 'rgba(255,255,255,0.10)' }} />
           <p className="text-xs font-bold tracking-[0.4em] uppercase" style={{ color: colors.primary }}>Ficha de personaje</p>
         </div>
 
@@ -214,11 +240,11 @@ export const ProfilePage = () => {
           className="glass-card-apple rounded-3xl p-6 border mb-8"
           style={{ borderColor: colors.border }}
         >
-          <h3 className="text-white font-display text-xl font-black mb-4 flex items-center gap-2">
+          <h3 className="font-display text-xl font-black mb-4 flex items-center gap-2" style={{ color: headingColor }}>
             <Sparkles className="w-5 h-5" style={{ color: colors.primary }} />
             Personalización
           </h3>
-          <p className="text-slate-400 text-sm mb-4">Elige el tema de color que más te guste</p>
+          <p className="text-sm mb-4" style={{ color: mutedColor }}>Elige el tema de color que más te guste</p>
           
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {Object.entries(palettes).map(([key, theme]) => (
@@ -239,11 +265,11 @@ export const ProfilePage = () => {
                       background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 100%)` 
                     }}
                   />
-                  <span className="text-xs text-slate-300 font-medium truncate">{theme.name}</span>
+                  <span className="text-xs font-medium truncate" style={{ color: isLight ? '#5b4636' : '#cbd5e1' }}>{theme.name}</span>
                 </div>
                 {palette === key && (
                   <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
-                    <Sparkles className="w-2 h-2 text-black" />
+                    <Sparkles className="w-2 h-2" style={{ color: isLight ? '#ffffff' : '#000000' }} />
                   </div>
                 )}
               </button>
@@ -255,8 +281,12 @@ export const ProfilePage = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 holo-border mb-8 relative overflow-hidden"
+          style={{ borderColor: colors.border }}
         >
-          <div className="absolute -top-32 -right-32 w-96 h-96 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
+          <div
+            className={`absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none ${isLight ? '' : 'bg-fuchsia-600/15'}`}
+            style={heroOrbStyle}
+          />
 
           <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
             <div className="relative group">
@@ -282,23 +312,23 @@ export const ProfilePage = () => {
             </div>
 
             <div>
-              <h1 className="font-display text-3xl lg:text-4xl font-black text-white mb-2">
+              <h1 className="font-display text-3xl lg:text-4xl font-black mb-2" style={{ color: headingColor }}>
                 {user?.nombre || user?.email}
               </h1>
               <div className="flex items-center gap-2 mb-4 flex-wrap">
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
-                  <Sparkles className="w-3 h-3 text-cyan-300" />
-                  <span className="font-gameui text-xs font-bold tracking-widest uppercase text-cyan-200">{title.name}</span>
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border" style={chipStyle}>
+                  <Sparkles className="w-3 h-3" style={{ color: chipIconColor }} />
+                  <span className="font-gameui text-xs font-bold tracking-widest uppercase" style={{ color: chipTextColor }}>{title.name}</span>
                 </span>
-                <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-                  Tier <span className="text-slate-300">{title.tier}</span>
+                <span className="text-xs font-bold uppercase tracking-widest" style={{ color: mutedColor }}>
+                  Tier <span style={{ color: headingColor }}>{title.tier}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-slate-400 text-sm font-gameui">Progreso al nivel {userLevel + 1}</span>
-                <span className="font-display font-black text-white text-sm">{xpInLevel}/100 XP</span>
+                <span className="text-sm font-gameui" style={{ color: mutedColor }}>Progreso al nivel {userLevel + 1}</span>
+                <span className="font-display font-black text-sm" style={{ color: headingColor }}>{xpInLevel}/100 XP</span>
               </div>
-              <div className="relative w-full h-4 bg-slate-900/80 rounded-full border border-white/5 overflow-hidden xp-bar-shine">
+              <div className="relative w-full h-4 rounded-full border overflow-hidden xp-bar-shine" style={progressTrackStyle}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${xpInLevel}%` }}
@@ -313,7 +343,7 @@ export const ProfilePage = () => {
               <p className="font-display text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {stats.xp}
               </p>
-              <p className="text-slate-400 text-xs uppercase tracking-[0.4em] font-bold mt-2">XP totales</p>
+              <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP totales</p>
             </div>
           </div>
         </motion.div>
@@ -326,7 +356,7 @@ export const ProfilePage = () => {
               className="glass-card-apple rounded-3xl p-6 lg:p-8 border"
               style={{ borderColor: colors.border }}
             >
-              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
+              <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
                 <Target /> Resumen de batalla
               </h2>
               <div className="grid grid-cols-2 gap-4">
@@ -339,12 +369,13 @@ export const ProfilePage = () => {
                   <motion.div
                     key={i}
                     whileHover={{ y: -3 }}
-                    className={`flex items-center justify-between p-5 bg-slate-900/50 rounded-2xl border border-white/5 ${s.hover} transition-all`}
+                    className={`flex items-center justify-between p-5 rounded-2xl border ${s.hover} transition-all`}
+                    style={statCardStyle}
                   >
-                    <div className="flex items-center gap-3 font-display font-bold text-sm text-slate-200">
-                      <span style={{ color: colors.primary }}>{s.icon}</span> <span className="text-slate-300">{s.label}</span>
+                    <div className="flex items-center gap-3 font-display font-bold text-sm" style={{ color: headingColor }}>
+                      <span style={{ color: colors.primary }}>{s.icon}</span> <span style={{ color: mutedColor }}>{s.label}</span>
                     </div>
-                    <span className="font-display text-3xl font-black text-white">{s.value}</span>
+                    <span className="font-display text-3xl font-black" style={{ color: headingColor }}>{s.value}</span>
                   </motion.div>
                 ))}
               </div>
@@ -354,9 +385,10 @@ export const ProfilePage = () => {
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
               className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10"
+              style={{ borderColor: colors.border }}
             >
-              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <BarChart3 className="text-fuchsia-400" /> Origen del poder
+              <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
+                <BarChart3 style={{ color: colors.primary }} /> Origen del poder
               </h2>
               <div className="space-y-5">
                 {stats.distribucion_xp && stats.distribucion_xp.length > 0 ? (
@@ -367,11 +399,11 @@ export const ProfilePage = () => {
                       <div key={index}>
                         <div className="flex justify-between text-sm mb-2">
                           <span className={`font-display font-bold ${style.text}`}>{style.name}</span>
-                          <span className="text-slate-300 font-display font-bold">
-                            {item.xp_ganada} XP <span className="text-slate-600">({percent}%)</span>
+                          <span className="font-display font-bold" style={{ color: headingColor }}>
+                            {item.xp_ganada} XP <span style={{ color: mutedColor }}>({percent}%)</span>
                           </span>
                         </div>
-                        <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-white/5">
+                        <div className="w-full h-3 rounded-full overflow-hidden border" style={progressTrackStyle}>
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${percent}%` }}
@@ -383,7 +415,7 @@ export const ProfilePage = () => {
                     );
                   })
                 ) : (
-                  <p className="text-slate-500 text-center py-4 font-gameui">Resuelve ejercicios para ver tu análisis de XP.</p>
+                  <p className="text-center py-4 font-gameui" style={{ color: mutedColor }}>Resuelve ejercicios para ver tu análisis de XP.</p>
                 )}
               </div>
             </motion.div>
@@ -394,9 +426,10 @@ export const ProfilePage = () => {
             <motion.div
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
               className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 sticky top-8"
+              style={{ borderColor: colors.border }}
             >
-              <h2 className="font-display text-xl font-black text-white mb-6 flex items-center gap-2 uppercase tracking-wide">
-                <Award className="text-yellow-300" /> Trofeos
+              <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
+                <Award style={{ color: isLight ? '#d97706' : '#fde047' }} /> Trofeos
               </h2>
 
               <div className="space-y-3">
@@ -409,20 +442,24 @@ export const ProfilePage = () => {
                         ? `bg-gradient-to-br ${a.gradient} ${a.border} shadow-lg`
                         : 'border-slate-800 bg-slate-900/30 opacity-50 grayscale'
                     }`}
+                    style={!a.unlocked ? lockedAchievementStyle : undefined}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-xl ${a.unlocked ? 'bg-slate-900/50' : 'bg-slate-900/30'} ${a.iconColor}`}>
+                      <div
+                        className={`p-2.5 rounded-xl ${a.iconColor}`}
+                        style={{ backgroundColor: a.unlocked ? (isLight ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.5)') : (isLight ? 'rgba(255,255,255,0.42)' : 'rgba(15,23,42,0.3)') }}
+                      >
                         {a.icon}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-display font-black text-white text-sm">{a.title}</h3>
-                        <p className="text-xs text-slate-400 font-gameui">{a.desc}</p>
+                        <h3 className="font-display font-black text-sm" style={{ color: headingColor }}>{a.title}</h3>
+                        <p className="text-xs font-gameui" style={{ color: mutedColor }}>{a.desc}</p>
                       </div>
-                      <span className="font-display font-black text-xs text-yellow-300">{a.xpReward}</span>
+                      <span className="font-display font-black text-xs" style={{ color: isLight ? '#b45309' : '#fde047' }}>{a.xpReward}</span>
                     </div>
                     {a.unlocked && (
                       <div className="absolute top-2 right-2">
-                        <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                        <Sparkles className="w-4 h-4 animate-pulse" style={{ color: isLight ? '#d97706' : '#fde047' }} />
                       </div>
                     )}
                   </motion.div>
@@ -430,7 +467,7 @@ export const ProfilePage = () => {
               </div>
 
               <div className="mt-6 text-center">
-                <p className="text-slate-500 text-xs font-gameui">
+                <p className="text-xs font-gameui" style={{ color: mutedColor }}>
                   {achievements.filter(a => a.unlocked).length}/{achievements.length} desbloqueados
                 </p>
               </div>
@@ -467,7 +504,7 @@ export const ProfilePage = () => {
                     </div>
                     <div className="text-left">
                       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.primary }}>Descubre a los creadores</p>
-                      <h3 className="text-white font-display text-xl font-black">SALÓN DE LA FAMA</h3>
+                      <h3 className="font-display text-xl font-black" style={{ color: headingColor }}>SALÓN DE LA FAMA</h3>
                     </div>
                   </div>
                   <ChevronRight className="w-6 h-6 group-hover:transition-colors" style={{ color: colors.primary, opacity: 0.5 }} />

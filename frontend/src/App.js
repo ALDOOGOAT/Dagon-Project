@@ -59,12 +59,13 @@ const AppRoutes = () => {
   const { token } = useAuth();
   const { colors } = useTheme();
   const location = useLocation();
+  const isLightTheme = colors?.mode === 'light';
   
   const bgTint = colors ? `rgba(${parseInt(colors.primary.slice(1,3), 16)}, ${parseInt(colors.primary.slice(3,5), 16)}, ${parseInt(colors.primary.slice(5,7), 16)}, 0.85)` : 'rgba(99,102,241,0.85)';
   
   return (
     <>
-      <AbyssBackground intensity={1.1} tint={bgTint} />
+      <AbyssBackground intensity={1.1} tint={bgTint} mode={isLightTheme ? 'light' : 'dark'} />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
@@ -130,7 +131,7 @@ const AppRoutes = () => {
          </Routes>
       </AnimatePresence>
       <Clawbot />
-      <Toaster position="top-right" theme="dark" richColors />
+      <Toaster position="top-right" theme={isLightTheme ? 'light' : 'dark'} richColors />
     </>
   );
 };
