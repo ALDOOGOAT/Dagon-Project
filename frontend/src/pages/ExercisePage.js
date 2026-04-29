@@ -11,7 +11,7 @@ import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, Shield
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -263,6 +263,67 @@ const DataComparisonTable = ({ data, colors, highlight = false, rowMarkers = [],
   );
 };
 
+const CompactSection = ({ title, subtitle, defaultOpen = true, colors, accentColor, children, countLabel = null }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const isLight = colors.mode === 'light';
+
+  return (
+    <div
+      className="rounded-2xl border overflow-hidden"
+      style={{
+        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
+        backgroundColor: isLight ? 'rgba(255,255,255,0.80)' : 'rgba(15,23,42,0.62)'
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: accentColor || colors.textMuted }}>
+            {title}
+          </p>
+          {subtitle && (
+            <p className="mt-1 text-xs font-gameui" style={{ color: colors.textMuted }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+        <div className="shrink-0 flex items-center gap-2">
+          {countLabel && (
+            <span
+              className="px-2 py-1 rounded-full text-[10px] font-mono"
+              style={{
+                color: colors.text,
+                backgroundColor: isLight ? 'rgba(255,248,235,0.94)' : 'rgba(2,6,23,0.82)'
+              }}
+            >
+              {countLabel}
+            </span>
+          )}
+          {isOpen ? <ChevronUp className="w-4 h-4" style={{ color: colors.textMuted }} /> : <ChevronDown className="w-4 h-4" style={{ color: colors.textMuted }} />}
+        </div>
+      </button>
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 const TransactionPedagogyCard = ({ pedagogia, colors }) => {
   if (!pedagogia || pedagogia.modo !== 'terminal_transaccional') return null;
 
@@ -384,7 +445,7 @@ const TransactionSimulationPanel = ({ simulation, colors }) => {
 
   return (
     <div
-      className="p-5 space-y-5 border-b"
+      className="p-4 md:p-5 space-y-4 border-b"
       style={{
         borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
         background: isLight
@@ -392,7 +453,7 @@ const TransactionSimulationPanel = ({ simulation, colors }) => {
           : 'linear-gradient(180deg, rgba(8,15,32,0.90), rgba(15,23,42,0.78))'
       }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)] gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.34em] font-black mb-2" style={{ color: colors.accent }}>
             Simulación transaccional
@@ -404,7 +465,7 @@ const TransactionSimulationPanel = ({ simulation, colors }) => {
             {simulation.summary || simulation.message || 'La traza compara lo que ve la Sesión A con lo que todavía puede leer la Sesión B.'}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3 min-w-[260px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
           <div
             className="rounded-2xl border px-4 py-3"
             style={{
@@ -412,121 +473,140 @@ const TransactionSimulationPanel = ({ simulation, colors }) => {
               backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
             }}
           >
-            <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión A</p>
-            <p className="mt-2 font-mono text-sm" style={{ color: colors.primary }}>{simulation.basePrompt || 'dagon=#'}</p>
-            <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente que ejecuta la transacción.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión A</p>
+                <p className="mt-2 font-mono text-sm" style={{ color: colors.primary }}>{simulation.basePrompt || 'dagon=#'}</p>
+                <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente que ejecuta la transacción.</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión B</p>
+                <p className="mt-2 font-mono text-sm" style={{ color: colors.secondary }}>{simulation.basePrompt || 'dagon=#'}</p>
+                <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente paralelo que intenta leer.</p>
+              </div>
+            </div>
           </div>
-          <div
-            className="rounded-2xl border px-4 py-3"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión B</p>
-            <p className="mt-2 font-mono text-sm" style={{ color: colors.secondary }}>{simulation.basePrompt || 'dagon=#'}</p>
-            <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente paralelo que intenta leer.</p>
-          </div>
+          {focus.length > 0 && (
+            <CompactSection
+              title="Focos pedagógicos"
+              subtitle="Ideas clave de esta ejecución"
+              colors={colors}
+              accentColor={colors.accent}
+              defaultOpen={false}
+              countLabel={`${focus.length} ideas`}
+            >
+              <div className="grid grid-cols-1 gap-2">
+                {focus.map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-xl border px-3 py-2"
+                    style={{
+                      borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
+                      backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.54)'
+                    }}
+                  >
+                    <p className="text-sm font-gameui" style={{ color: colors.text }}>{item}</p>
+                  </div>
+                ))}
+              </div>
+            </CompactSection>
+          )}
         </div>
       </div>
 
-      {focus.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {focus.map((item) => (
-            <div
-              key={item}
-              className="rounded-2xl border px-4 py-3"
-              style={{
-                borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-                backgroundColor: isLight ? 'rgba(255,255,255,0.76)' : 'rgba(15,23,42,0.56)'
-              }}
-            >
-              <p className="text-sm font-gameui" style={{ color: colors.text }}>{item}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
       {timeline.length > 0 && (
-        <div className="space-y-3">
-          {timeline.map((event) => (
-            <motion.div
-              key={`${event.step}-${event.statement}`}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: event.step * 0.03 }}
-              className="rounded-3xl border p-4"
-              style={{
-                borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-                backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.74)'
-              }}
-            >
-              <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black"
-                  style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
-                >
-                  {event.step}
-                </span>
-                <span
-                  className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.22em] font-bold"
-                  style={{ backgroundColor: `${colors.secondary}18`, color: colors.secondary }}
-                >
-                  {event.concept}
-                </span>
-              </div>
-              <div
-                className="rounded-2xl border px-4 py-3 font-mono text-sm overflow-x-auto"
+        <CompactSection
+          title="Línea de tiempo"
+          subtitle="Pasos de la ejecución en dos sesiones"
+          colors={colors}
+          accentColor={colors.accent}
+          defaultOpen={true}
+          countLabel={`${timeline.length} pasos`}
+        >
+          <div className="max-h-[26rem] overflow-y-auto pr-1 space-y-3 scroll-fancy">
+            {timeline.map((event) => (
+              <motion.div
+                key={`${event.step}-${event.statement}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: event.step * 0.03 }}
+                className="rounded-2xl border p-3 md:p-4"
                 style={{
-                  borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
-                  backgroundColor: isLight ? 'rgba(255,250,240,0.92)' : 'rgba(2,6,23,0.92)',
-                  color: colors.text
+                  borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
+                  backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.74)'
                 }}
               >
-                <span style={{ color: event.prompt === simulation.txPrompt ? colors.secondary : colors.primary }}>
-                  {event.prompt || simulation.basePrompt || 'dagon=#'}
-                </span>{' '}
-                {event.statement}
-              </div>
-              <p className="mt-3 text-sm font-gameui" style={{ color: colors.text }}>
-                {event.effect}
-              </p>
-              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <div
-                  className="rounded-2xl border px-4 py-3"
-                  style={{
-                    borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                    backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
-                  }}
-                >
-                  <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>Sesión A ve</p>
-                  <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionAVisibleRows} fila(s)</p>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black"
+                    style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
+                  >
+                    {event.step}
+                  </span>
+                  <span
+                    className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.22em] font-bold"
+                    style={{ backgroundColor: `${colors.secondary}18`, color: colors.secondary }}
+                  >
+                    {event.concept}
+                  </span>
                 </div>
                 <div
-                  className="rounded-2xl border px-4 py-3"
+                  className="rounded-2xl border px-3 py-3 font-mono text-xs md:text-sm overflow-x-auto"
                   style={{
-                    borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                    backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
+                    borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
+                    backgroundColor: isLight ? 'rgba(255,250,240,0.92)' : 'rgba(2,6,23,0.92)',
+                    color: colors.text
                   }}
                 >
-                  <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>Sesión B ve</p>
-                  <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionBVisibleRows} fila(s)</p>
+                  <span style={{ color: event.prompt === simulation.txPrompt ? colors.secondary : colors.primary }}>
+                    {event.prompt || simulation.basePrompt || 'dagon=#'}
+                  </span>{' '}
+                  {event.statement}
                 </div>
-              </div>
-              <div
-                className="mt-3 rounded-2xl border px-4 py-3"
-                style={{
-                  borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                  backgroundColor: isLight ? 'rgba(254,243,199,0.42)' : 'rgba(34,211,238,0.08)'
-                }}
-              >
-                <p className="text-xs font-gameui" style={{ color: colors.textMuted }}>
-                  {event.visibilityHint}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_220px] gap-3">
+                  <div>
+                    <p className="text-sm font-gameui" style={{ color: colors.text }}>
+                      {event.effect}
+                    </p>
+                    <div
+                      className="mt-3 rounded-2xl border px-3 py-2"
+                      style={{
+                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
+                        backgroundColor: isLight ? 'rgba(254,243,199,0.42)' : 'rgba(34,211,238,0.08)'
+                      }}
+                    >
+                      <p className="text-xs font-gameui" style={{ color: colors.textMuted }}>
+                        {event.visibilityHint}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
+                    <div
+                      className="rounded-2xl border px-3 py-2"
+                      style={{
+                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
+                        backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>A ve</p>
+                      <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionAVisibleRows}</p>
+                    </div>
+                    <div
+                      className="rounded-2xl border px-3 py-2"
+                      style={{
+                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
+                        backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
+                      }}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>B ve</p>
+                      <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionBVisibleRows}</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </CompactSection>
       )}
     </div>
   );
@@ -563,7 +643,7 @@ const TransactionOutcomePanel = ({ result, colors }) => {
           : 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(8,15,32,0.82))'
       }}
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.34em] font-black mb-2" style={{ color: accent }}>
             Estado confirmado en la BD
@@ -575,7 +655,7 @@ const TransactionOutcomePanel = ({ result, colors }) => {
             {outcome.explanation || 'Así quedó la tabla afectada después del desenlace de la transacción.'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div
             className="rounded-2xl border px-4 py-3 min-w-[130px]"
             style={{
@@ -657,24 +737,23 @@ const TransactionOutcomePanel = ({ result, colors }) => {
       </motion.div>
 
       {result.targetTable && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <motion.div
           initial={{ opacity: 0, x: -14 }}
           animate={{ opacity: 1, x: 0 }}
           className="space-y-2"
         >
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: isLight ? '#a8a29e' : '#64748b' }} />
-            Estado previo de {result.targetTable}
-          </div>
-          <div className="rounded-xl border overflow-hidden"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.56)'
-            }}
+          <CompactSection
+            title={`Estado previo de ${result.targetTable}`}
+            subtitle="Así estaba la tabla antes de ejecutar"
+            defaultOpen={false}
+            colors={colors}
+            countLabel={`${beforeData.length} filas`}
           >
-            <DataComparisonTable data={beforeData} colors={colors} rowMarkers={beforeMarkers} animateRows />
-          </div>
+            <div className="max-h-[20rem] overflow-auto scroll-fancy">
+              <DataComparisonTable data={beforeData} colors={colors} rowMarkers={beforeMarkers} animateRows />
+            </div>
+          </CompactSection>
         </motion.div>
 
         <motion.div
@@ -683,20 +762,21 @@ const TransactionOutcomePanel = ({ result, colors }) => {
           transition={{ delay: 0.08 }}
           className="space-y-2"
         >
-          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest" style={{ color: accent }}>
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: accent }} />
-            Estado final confirmado
-          </div>
-          <div
-            className="rounded-xl border overflow-hidden"
-            style={{
-              borderColor: `${accent}33`,
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.56)',
-              boxShadow: `0 0 24px ${accent}1a`
-            }}
+          <CompactSection
+            title="Estado final confirmado"
+            subtitle="Lo que quedó persistido tras el desenlace"
+            defaultOpen={true}
+            colors={colors}
+            accentColor={accent}
+            countLabel={`${afterData.length} filas`}
           >
-            <DataComparisonTable data={afterData} colors={colors} highlight rowMarkers={afterMarkers} animateRows />
-          </div>
+            <div
+              className="max-h-[20rem] overflow-auto scroll-fancy rounded-xl"
+              style={{ boxShadow: `0 0 24px ${accent}1a` }}
+            >
+              <DataComparisonTable data={afterData} colors={colors} highlight rowMarkers={afterMarkers} animateRows />
+            </div>
+          </CompactSection>
         </motion.div>
         </div>
       )}
