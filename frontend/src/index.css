@@ -29,10 +29,6 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: var(--color-background);
     color: var(--color-text);
-    transition:
-        background-color 320ms ease,
-        color 320ms ease,
-        background-image 420ms ease;
 }
 
 code {
@@ -96,6 +92,9 @@ h1, h2, h3, h4, h5, h6 {
     .glass-card {
         background: var(--glass-surface-strong);
         backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        transform: translateZ(0);
+        will-change: transform, backdrop-filter;
         border: 1px solid var(--glass-border);
         box-shadow: var(--glass-shadow);
         transition:
@@ -108,6 +107,9 @@ h1, h2, h3, h4, h5, h6 {
     .glass-card-apple {
         background: var(--glass-surface);
         backdrop-filter: blur(40px) saturate(200%);
+        -webkit-backdrop-filter: blur(40px) saturate(200%);
+        transform: translateZ(0);
+        will-change: transform, backdrop-filter;
         border: 1px solid var(--glass-border);
         box-shadow: 
             var(--glass-shadow),
@@ -147,6 +149,9 @@ h1, h2, h3, h4, h5, h6 {
     .glass-card-deep {
         background: linear-gradient(140deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%);
         backdrop-filter: blur(28px) saturate(180%);
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+        transform: translateZ(0);
+        will-change: transform, backdrop-filter;
         border: 1px solid var(--color-border);
         box-shadow:
             0 20px 60px -20px rgba(0, 0, 0, 0.6),
