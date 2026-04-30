@@ -1,0 +1,19 @@
+services:
+  dagon-mpi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dagon-mpi
+    environment:
+      PORT: "5001"
+      DAGON_MPI_PROCS: "4"
+      DAGON_MPIRUN: mpirun
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped

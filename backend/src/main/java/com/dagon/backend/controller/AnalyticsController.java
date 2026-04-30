@@ -7,6 +7,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,8 +25,8 @@ import java.util.Map;
  *
  * Academico: expone GET /api/analytics/mpi. Toma el ranking ya
  * consolidado por LeaderboardService y lo reenvia al servicio mpi4py
- * que corre en localhost:5001. Devuelve al frontend las metricas
- * calculadas en paralelo mas el tiempo de pared total.
+ * configurado en dagon.mpi.url. Devuelve al frontend las metricas
+ * calculadas en paralelo y un fallback estable si MPI esta offline.
  */
 @RestController
 @RequestMapping("/api/analytics")
@@ -37,7 +39,7 @@ public class AnalyticsController {
     @Value("${dagon.mpi.url:http://127.0.0.1:5001}")
     private String mpiServiceUrl;
 
-    private final RestTemplate rest = new RestTemplate();
+    private final RestTemplate rest = new RestTemplate(requestFactory());
 
     @GetMapping("/mpi")
     public ResponseEntity<Map<String, Object>> analyticsMpi() {
@@ -58,20 +60,44 @@ public class AnalyticsController {
             );
             long t1 = System.currentTimeMillis();
 
-            Map<String, Object> salida = new HashMap<>();
-            salida.put("ok", true);
+            if (respuesta == null) {
+                return ResponseEntity.ok(fallback("El servicio MPI no devolvio datos", ranking.size()));
+            }
+
+            Map<String, Object> salida = baseResponse(true, "online", ranking.size());
             salida.put("resultado", respuesta);
             salida.put("proxy_ms", t1 - t0);
-            salida.put("mpi_url", mpiServiceUrl);
             return ResponseEntity.ok(salida);
         } catch (RestClientException ex) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("ok", false);
-            error.put("error", "No se pudo contactar el servicio MPI");
-            error.put("detalle", ex.getMessage());
-            error.put("mpi_url", mpiServiceUrl);
-            error.put("hint", "Corre ./mpi_service/run_mpi.sh para levantar el servicio.");
-            return ResponseEntity.status(502).body(error);
+            return ResponseEntity.ok(fallback("No se pudo contactar el servicio MPI", ranking.size()));
         }
+    }
+
+    private Map<String, Object> fallback(String error, int rankingCount) {
+        Map<String, Object> salida = baseResponse(false, "offline", rankingCount);
+        salida.put("error", error);
+        salida.put("hint", "En local levanta mpi_service/run_mpi.sh. En Railway configura DAGON_MPI_URL hacia el servicio MPI.");
+        return salida;
+    }
+
+    private Map<String, Object> baseResponse(boolean ok, String estado, int rankingCount) {
+        Map<String, Object> salida = new LinkedHashMap<>();
+        salida.put("ok", ok);
+        salida.put("estado", estado);
+        salida.put("ranking_count", rankingCount);
+        salida.put("pipeline", List.of(
+                "LeaderboardService.obtenerRankingGlobal()",
+                "AnalyticsController /api/analytics/mpi",
+                "mpi_service/server.py",
+                "mpi_service/analytics_mpi.py"
+        ));
+        return salida;
+    }
+
+    private static SimpleClientHttpRequestFactory requestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(2500);
+        factory.setReadTimeout(15000);
+        return factory;
     }
 }

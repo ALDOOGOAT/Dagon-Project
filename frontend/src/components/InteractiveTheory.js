@@ -102,7 +102,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   const currentSlideData = slides[currentSlide];
 
   return (
-    <div className="theory-shell min-h-[600px] flex items-center justify-center p-8" data-testid="interactive-theory">
+    <div className="min-h-[600px] flex items-center justify-center p-8" data-testid="interactive-theory">
       <div className="max-w-4xl w-full">
         {/* Progreso */}
         <div className="mb-8">
@@ -126,7 +126,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
         </div>
 
         {/* Contenido principal */}
-        <div className="theory-main-card glass-card-apple rounded-3xl p-12 relative overflow-hidden">
+        <div className="glass-card-apple rounded-3xl p-12 relative overflow-hidden">
           {/* Efectos de fondo */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
@@ -150,7 +150,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
             </h2>
 
             {/* Contenido */}
-            <div className="theory-copy-card backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 mb-6">
+            <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-8 mb-6">
               <p className="text-xl text-slate-200 leading-relaxed text-center">
                 {currentSlideData.content}
               </p>
@@ -167,7 +167,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
                 {['📊', '🔍', '⚡'].map((icon, i) => (
                   <div 
                     key={i}
-                    className="theory-concept-card backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:scale-105 transition-transform"
+                    className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:scale-105 transition-transform"
                   >
                     <div className="text-4xl mb-2">{icon}</div>
                     <div className="text-sm text-slate-400">Concepto {i + 1}</div>

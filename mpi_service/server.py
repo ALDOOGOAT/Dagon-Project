@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -28,6 +29,7 @@ MPI_PROCS = int(os.environ.get("DAGON_MPI_PROCS", "4"))
 MPIRUN = os.environ.get("DAGON_MPIRUN", "mpirun")
 
 
+@app.get("/")
 @app.get("/health")
 def health():
     return jsonify({"ok": True, "procs": MPI_PROCS})
@@ -49,7 +51,7 @@ def analytics():
         cmd = [
             MPIRUN, "-np", str(MPI_PROCS),
             "--oversubscribe",  # permite correr en laptops con <4 cores fisicos
-            "python", str(SCRIPT), str(in_file), str(out_file),
+            sys.executable, str(SCRIPT), str(in_file), str(out_file),
         ]
         t0 = time.time()
         try:
@@ -78,5 +80,6 @@ def analytics():
 
 
 if __name__ == "__main__":
+    host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "5001"))
-    app.run(host="127.0.0.1", port=port, debug=False)
+    app.run(host=host, port=port, debug=False)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
-import { ChevronRight, X, Volume2, VolumeX, Database, Code, Trophy, Sparkles, BookOpen, Target, PlayCircle, RotateCcw } from 'lucide-react';
+import { ChevronRight, X, Volume2, VolumeX, Database, Code, Trophy, Sparkles, BookOpen, Target, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const tutorialSteps = [

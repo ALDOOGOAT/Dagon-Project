@@ -53,10 +53,10 @@ export const DidacticCard = ({ onExplore }) => {
   
   return (
     <motion.div
-      initial={false}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18 }}
-      className="glass-card-apple rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border mb-6 sm:mb-8 relative overflow-hidden backdrop-blur-xl"
+      transition={{ delay: 0.8 }}
+      className="glass-card-apple rounded-3xl p-6 lg:p-8 border mb-8 relative overflow-hidden backdrop-blur-xl"
       style={{ borderColor: colors.border, backgroundColor: isLight ? 'rgba(255,250,240,0.78)' : 'rgba(0,0,0,0.40)' }}
     >
       {/* Luces de fondo estilo IA */}
@@ -72,7 +72,7 @@ export const DidacticCard = ({ onExplore }) => {
             <Sparkles className="w-3 h-3" /> Base de Conocimiento
           </p>
           {/* Título con gradiente tipo IA */}
-          <h2 className="font-display text-xl sm:text-2xl font-black bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">
+          <h2 className="font-display text-2xl font-black bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-indigo-400 bg-clip-text text-transparent">
             Análisis de Conceptos Clave
           </h2>
         </div>
@@ -133,7 +133,7 @@ export const DidacticCard = ({ onExplore }) => {
                     className="overflow-hidden"
                   >
                     <div className="px-5 pb-5 border-t" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.10)', backgroundColor: isLight ? 'rgba(255,248,235,0.52)' : 'rgba(0,0,0,0.20)' }}>
-                      <div className="pt-5 flex flex-col sm:flex-row gap-4">
+                      <div className="pt-5 flex gap-4">
                         <div className="flex-shrink-0 mt-1">
                           <DagonMascot size="small" mood="excited" />
                         </div>

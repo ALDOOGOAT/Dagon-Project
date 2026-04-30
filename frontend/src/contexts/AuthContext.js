@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
@@ -7,8 +7,8 @@ const API_URL = process.env.REACT_APP_API_URL;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
-  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('token')));
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
 
 useEffect(() => {
     const fetchUser = async () => {
@@ -101,13 +101,12 @@ const login = async (email, password) => {
     localStorage.removeItem('userPalette');
     setToken(null);
     setUser(null);
-    setLoading(false);
     delete axios.defaults.headers.common['Authorization'];
   };
 
-  const updateUserXP = useCallback((newXP) => {
-    setUser(prev => prev ? ({ ...prev, xp: newXP }) : prev);
-  }, []);
+  const updateUserXP = (newXP) => {
+    setUser(prev => ({ ...prev, xp: newXP }));
+  };
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP }}>

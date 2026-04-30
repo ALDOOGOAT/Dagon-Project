@@ -1,18 +1,255 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, Trophy, Medal, Zap, Target, Crown, Sparkles } from 'lucide-react';
+import {
+  Activity,
+  ArrowLeft,
+  Clock,
+  Cpu,
+  Crown,
+  Database,
+  GitBranch,
+  Medal,
+  RefreshCw,
+  Server,
+  Sparkles,
+  Target,
+  Trophy,
+  Wifi,
+  WifiOff,
+  Zap
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { DagonMascot } from '../components/DagonMascot';
+
+const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
+const numberFormatter = new Intl.NumberFormat('es-MX');
+
+const toNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const formatNumber = (value) => numberFormatter.format(toNumber(value));
+
+const formatMs = (value) => {
+  const parsed = toNumber(value);
+  if (parsed <= 0) return '0 ms';
+  if (parsed < 10) return `${parsed.toFixed(2)} ms`;
+  if (parsed < 100) return `${parsed.toFixed(1)} ms`;
+  return `${Math.round(parsed)} ms`;
+};
 
 const leagueFor = (xp) => {
   if (xp >= 2000) return { name: 'Abismo', color: 'from-fuchsia-500 to-indigo-700', text: 'text-fuchsia-200', ring: 'ring-tier-abyss' };
   if (xp >= 1000) return { name: 'Oro',    color: 'from-yellow-300 to-amber-600',   text: 'text-yellow-200', ring: 'ring-tier-gold' };
   if (xp >= 500)  return { name: 'Plata',  color: 'from-slate-200 to-slate-500',    text: 'text-slate-200',  ring: 'ring-tier-silver' };
   return { name: 'Bronce', color: 'from-amber-700 to-orange-900', text: 'text-amber-200', ring: 'ring-tier-bronze' };
+};
+
+const MpiAnalyticsPanel = ({
+  analytics,
+  loading,
+  onRefresh,
+  colors,
+  isLight,
+  headingColor,
+  mutedColor,
+  borderColor,
+  surfaceColor
+}) => {
+  const resultado = analytics?.resultado || {};
+  const mpi = resultado.mpi || {};
+  const totales = resultado.totales || {};
+  const promedios = resultado.promedios || {};
+  const ranks = Array.isArray(mpi.por_rank) ? mpi.por_rank : [];
+  const distribucion = Object.entries(resultado.distribucion_titulos || {});
+  const pipeline = Array.isArray(analytics?.pipeline) ? analytics.pipeline : [
+    'LeaderboardService.obtenerRankingGlobal()',
+    'AnalyticsController /api/analytics/mpi',
+    'mpi_service/server.py',
+    'mpi_service/analytics_mpi.py'
+  ];
+  const online = Boolean(analytics?.ok);
+  const status = loading
+    ? { label: 'Ejecutando', icon: Activity, color: colors.primary }
+    : online
+      ? { label: 'Online', icon: Wifi, color: isLight ? '#15803d' : '#86efac' }
+      : { label: 'Offline', icon: WifiOff, color: isLight ? '#b45309' : '#fbbf24' };
+  const StatusIcon = status.icon;
+  const maxRankUsers = Math.max(1, ...ranks.map((rank) => toNumber(rank.usuarios)));
+  const totalUsuarios = toNumber(totales.usuarios, analytics?.ranking_count || 0);
+  const procesos = toNumber(mpi.procesos, ranks.length);
+  const wallMs = toNumber(resultado.wall_ms);
+  const proxyMs = toNumber(analytics?.proxy_ms);
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass-card-apple rounded-3xl p-5 sm:p-6 lg:p-8 border mb-8 relative overflow-hidden"
+      style={{ borderColor }}
+      aria-label="Analytics MPI del ranking"
+    >
+      <div
+        className="absolute inset-x-0 top-0 h-1"
+        style={{
+          background: `linear-gradient(90deg, ${colors.primary}, ${isLight ? '#d97706' : '#fde047'}, ${colors.accent})`
+        }}
+      />
+
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase mb-2" style={{ color: colors.accent }}>
+            Analytics distribuido
+          </p>
+          <h2 className="font-display text-2xl sm:text-3xl font-black flex items-center gap-3" style={{ color: headingColor }}>
+            <Cpu className="w-7 h-7 shrink-0" style={{ color: colors.primary }} />
+            Motor MPI del ranking
+          </h2>
+          <p className="mt-2 text-sm sm:text-base max-w-3xl" style={{ color: mutedColor }}>
+            El backend toma el ranking actual y lo procesa con ranks MPI para calcular metricas paralelas sin bloquear la clasificacion.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="h-11 px-4 rounded-2xl border flex items-center gap-2 font-bold text-sm"
+            style={{ backgroundColor: surfaceColor, borderColor, color: status.color }}
+          >
+            <StatusIcon className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
+            {status.label}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onRefresh}
+            disabled={loading}
+            className="h-11 rounded-2xl"
+            style={{ borderColor, color: headingColor }}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Usuarios analizados', value: formatNumber(totalUsuarios), icon: Database },
+          { label: 'Procesos MPI', value: procesos ? formatNumber(procesos) : 'Pendiente', icon: Cpu },
+          { label: 'Tiempo MPI', value: formatMs(wallMs), icon: Clock },
+          { label: 'Proxy backend', value: formatMs(proxyMs), icon: Server },
+        ].map((metric) => {
+          const MetricIcon = metric.icon;
+          return (
+            <div
+              key={metric.label}
+              className="rounded-2xl border p-4 min-w-0"
+              style={{ backgroundColor: surfaceColor, borderColor }}
+            >
+              <div className="flex items-center gap-2 text-xs font-bold uppercase" style={{ color: mutedColor }}>
+                <MetricIcon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{metric.label}</span>
+              </div>
+              <p className="font-display text-xl sm:text-2xl font-black mt-2 break-words" style={{ color: headingColor }}>
+                {metric.value}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="relative z-10 mt-6 grid lg:grid-cols-[1.25fr_0.75fr] gap-5">
+        <div className="rounded-2xl border p-4 sm:p-5" style={{ backgroundColor: surfaceColor, borderColor }}>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-display text-lg font-black" style={{ color: headingColor }}>Ranks en ejecucion</h3>
+              <p className="text-sm" style={{ color: mutedColor }}>Scatter, compute y reduce sobre el ranking actual.</p>
+            </div>
+            <GitBranch className="w-5 h-5 shrink-0" style={{ color: colors.primary }} />
+          </div>
+
+          {ranks.length > 0 ? (
+            <div className="space-y-3">
+              {ranks.map((rank) => {
+                const usuarios = toNumber(rank.usuarios);
+                const pct = Math.max(6, (usuarios / maxRankUsers) * 100);
+                return (
+                  <div key={rank.rank} className="grid grid-cols-[64px_1fr] sm:grid-cols-[72px_1fr_auto] gap-2 sm:gap-3 items-center">
+                    <span className="font-mono text-sm font-bold" style={{ color: headingColor }}>
+                      Rank {rank.rank}
+                    </span>
+                    <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: isLight ? 'rgba(146,64,14,0.12)' : 'rgba(255,255,255,0.08)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${pct}%`,
+                          background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent})`
+                        }}
+                      />
+                    </div>
+                    <span className="font-mono text-xs text-right col-span-2 sm:col-span-1" style={{ color: mutedColor }}>
+                      {formatNumber(usuarios)} usr / {formatMs(rank.elapsed_ms)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed p-5" style={{ borderColor, color: mutedColor }}>
+              {loading ? 'Esperando respuesta de los procesos MPI...' : analytics?.error || 'MPI no ha entregado metricas todavia.'}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border p-4 sm:p-5" style={{ backgroundColor: surfaceColor, borderColor }}>
+          <h3 className="font-display text-lg font-black mb-4" style={{ color: headingColor }}>Resumen paralelo</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm" style={{ color: mutedColor }}>XP promedio</span>
+              <span className="font-display font-black" style={{ color: headingColor }}>{formatNumber(promedios.xp)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm" style={{ color: mutedColor }}>Misiones promedio</span>
+              <span className="font-display font-black" style={{ color: headingColor }}>{formatNumber(promedios.misiones)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm" style={{ color: mutedColor }}>XP maximo</span>
+              <span className="font-display font-black" style={{ color: headingColor }}>{formatNumber(totales.xp_max)}</span>
+            </div>
+          </div>
+
+          {distribucion.length > 0 && (
+            <div className="mt-5 pt-4 border-t space-y-2" style={{ borderColor }}>
+              {distribucion.map(([titulo, cuenta]) => (
+                <div key={titulo} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate" style={{ color: mutedColor }}>{titulo}</span>
+                  <span className="font-mono font-bold" style={{ color: headingColor }}>{formatNumber(cuenta)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-5 flex flex-wrap gap-2">
+        {pipeline.map((step, index) => (
+          <span
+            key={`${step}-${index}`}
+            className="inline-flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-mono break-all"
+            style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.05)', borderColor, color: mutedColor }}
+          >
+            <span className="font-bold" style={{ color: colors.primary }}>{index + 1}</span>
+            {step}
+          </span>
+        ))}
+      </div>
+    </motion.section>
+  );
 };
 
 export const LeaderboardPage = () => {
@@ -26,11 +263,41 @@ export const LeaderboardPage = () => {
   const borderColor = isLight ? `${colors.border}88` : colors.border;
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mpiAnalytics, setMpiAnalytics] = useState(null);
+  const [mpiLoading, setMpiLoading] = useState(false);
+
+  const fetchMpiAnalytics = useCallback(async () => {
+    if (!token) return;
+    setMpiLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/analytics/mpi`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setMpiAnalytics(await response.json());
+      } else {
+        setMpiAnalytics({
+          ok: false,
+          estado: 'offline',
+          error: 'El backend no pudo consultar el servicio MPI.'
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching MPI analytics:", error);
+      setMpiAnalytics({
+        ok: false,
+        estado: 'offline',
+        error: 'No se pudo conectar con analytics MPI.'
+      });
+    } finally {
+      setMpiLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/leaderboard`, {
+        const response = await fetch(`${API_BASE}/api/leaderboard`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) setLeaderboardData(await response.json());
@@ -42,8 +309,11 @@ export const LeaderboardPage = () => {
         setLoading(false);
       }
     };
-    if (token) fetchLeaderboard();
-  }, [token]);
+    if (token) {
+      fetchLeaderboard();
+      fetchMpiAnalytics();
+    }
+  }, [token, fetchMpiAnalytics]);
 
   if (loading) {
     return (
@@ -85,6 +355,18 @@ export const LeaderboardPage = () => {
             </h1>
           </div>
         </div>
+
+        <MpiAnalyticsPanel
+          analytics={mpiAnalytics}
+          loading={mpiLoading}
+          onRefresh={fetchMpiAnalytics}
+          colors={colors}
+          isLight={isLight}
+          headingColor={headingColor}
+          mutedColor={mutedColor}
+          borderColor={borderColor}
+          surfaceColor={surfaceColor}
+        />
 
         {/* PODIUM */}
         {top3.length > 0 && (

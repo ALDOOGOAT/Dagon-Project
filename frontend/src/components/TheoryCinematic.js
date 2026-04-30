@@ -214,13 +214,13 @@ export const TheoryCinematic = ({
   };
 
   return (
-    <div className="theory-shell min-h-screen cyber-bg grid-pattern flex items-center justify-center p-4">
+    <div className="min-h-screen cyber-bg grid-pattern flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-4xl"
       >
-        <div className="theory-main-card glass-card-apple rounded-3xl p-8 overflow-hidden">
+        <div className="glass-card-apple rounded-3xl p-8 overflow-hidden">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -300,7 +300,7 @@ export const TheoryCinematic = ({
                 <motion.div 
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="theory-copy-card backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto"
+                  className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto"
                 >
                   <p className="text-xl text-white leading-relaxed">
                     {scene?.text}
@@ -318,7 +318,7 @@ export const TheoryCinematic = ({
                         scale: highlightedConcept === concept.key ? 1.05 : 0.95,
                         borderColor: highlightedConcept === concept.key ? 'rgba(59, 130, 246, 0.5)' : 'transparent'
                       }}
-                      className="theory-concept-card bg-white/5 border-2 border-transparent rounded-xl p-4 text-center transition-all"
+                      className="bg-white/5 border-2 border-transparent rounded-xl p-4 text-center transition-all"
                     >
                       <div className="text-3xl mb-2">{concept.icon}</div>
                       <h4 className="font-semibold text-white text-sm">{concept.title}</h4>
@@ -353,7 +353,7 @@ export const TheoryCinematic = ({
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.1 }}
                       whileHover={{ scale: 1.05 }}
-                      className="theory-concept-card bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:border-blue-500/50 transition-all"
+                      className="bg-white/5 border border-white/10 rounded-xl p-6 text-center hover:border-blue-500/50 transition-all"
                     >
                       <div className="text-4xl mb-3">{concept.icon}</div>
                       <h4 className="font-bold text-white mb-1">{concept.title}</h4>
