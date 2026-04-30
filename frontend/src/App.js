@@ -12,39 +12,44 @@ import { ProfilePage } from './pages/ProfilePage';
 import { Clawbot } from './components/Clawbot';
 import { AbyssBackground } from './components/AbyssBackground';
 import { Toaster } from 'sonner';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
 import { GraduationPage } from './pages/GraduationPage';
 import { CreditsPage } from './pages/CreditsPage';
 
 const pageVariants = {
-  initial: { opacity: 0, y: 10 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: -10 }
+  initial: { opacity: 0.98 },
+  in: { opacity: 1 },
+  out: { opacity: 0.98 }
 };
 
 const pageTransition = {
   type: 'tween',
   ease: 'easeInOut',
-  duration: 0.3
+  duration: 0.18
 };
 
-const AnimatedPage = ({ children }) => (
-  <motion.div
-    initial="initial"
-    animate="in"
-    exit="out"
-    variants={pageVariants}
-    transition={pageTransition}
-  >
-    {children}
-  </motion.div>
-);
+const AnimatedPage = ({ children }) => {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className="route-page"
+      initial={reduceMotion ? false : "initial"}
+      animate="in"
+      exit={reduceMotion ? undefined : "out"}
+      variants={pageVariants}
+      transition={reduceMotion ? { duration: 0 } : pageTransition}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 const ProtectedRoute = ({ children }) => {
   const { token, loading } = useAuth();
   
-  if (loading) {
+  if (!token && loading) {
     return (
       <div className="min-h-screen abyss-bg flex items-center justify-center">
         <div className="text-white text-xl">Cargando...</div>
@@ -66,7 +71,7 @@ const AppRoutes = () => {
   return (
     <>
       <AbyssBackground intensity={1.1} tint={bgTint} mode={isLightTheme ? 'light' : 'dark'} colors={colors} />
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="sync" initial={false}>
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
             token ? <Navigate to="/dashboard" replace /> : 

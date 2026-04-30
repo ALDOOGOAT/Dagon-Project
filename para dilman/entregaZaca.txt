@@ -623,14 +623,22 @@ Dagon-Project/
         ▼                                               ▼
   ┌─────────────────┐                        ┌──────────────────────┐
   │  FORMATO SQL    │                        │   FORMATO DIAGRAM   │
-  │ (editor/drag)   │                        │                    │
+  │ (editor/drag/tx)│                        │                    │
   ├─────────────────┤                        ├──────────────────────┤
-  │ ¿Es DDL?        │                        │ Validar nodos (entidades) │
-  │ (CREATE/ALTER)  │                        │ Validar edges (relaciones) │
-  │   ↓ SÍ         │                        │ Validar cardinalidad       │
-  │ ejecutarEn      │                        │ Validar atributos mínimos  │
-  │ Sandbox(query)  │                        │ Validar entidades requeridas│
-  │   ↓ NO         │                        └──────────────────────┘
+  │ ¿Es Transaccional?│                        │ Validar nodos (entidades) │
+  │ (Módulo 15)      │                        │ Validar edges (relaciones) │
+  │   ↓ SÍ           │                        │ Validar cardinalidad       │
+  │ simular          │                        │ Validar atributos mínimos  │
+  │ Concurrencia     │                        │ Validar entidades requeridas│
+  │ (construirSimulacion)                    └──────────────────────┘
+  │ Genera eventos de visibilidad (A vs B)
+  │   ↓ NO           │
+  │ ¿Es DDL?        │
+  │ (CREATE/ALTER)  │
+  │   ↓ SÍ         │
+  │ ejecutarEn      │
+  │ Sandbox(query)  │
+  │   ↓ NO         │
   │ ¿Es DML?       │
   │ (INSERT/UPDATE)│
   │   ↓ SÍ         │
@@ -652,13 +660,22 @@ Dagon-Project/
   │ alumno         │
   └────────────────┘
 
-  SANDBOX (Ejecución segura):
+  SANDBOX Y TRANSACCIONES (Ejecución segura y Aislamiento):
 
   - Conexión: app_sandbox_user (rol limitado, sin DROP/TRUNCATE)
   - search_path: lms_sandbox (o sandbox_usuario_{uuid} para aislamiento)
-  - Auto-rollback en validación DML: conn.setAutoCommit(false) + conn.rollback()
+  - Auto-rollback en validación DML clásica: conn.setAutoCommit(false) + conn.rollback()
   - Para DDL: ejecutarEnSandbox() persistente (CREATE TABLE, ALTER TABLE)
-  - Auto-inyecta RETURNING *; a DML si no lo tiene
+  - Auto-inyecta RETURNING *; a DML si no lo tiene.
+
+  - MÓDULO 15 (SIMULACIÓN DE PARALELISMO):
+    Para enseñar conceptos de concurrencia y sistemas distribuidos, el Módulo 15
+    (`transaccion.sql`) implementa una validación especial. 
+    `EjercicioService.construirSimulacionTransaccional()` trocea la consulta del
+    alumno (BEGIN, COMMIT, ROLLBACK) y genera un árbol de eventos JSON ("Sesión A" 
+    y "Sesión B"). Evalúa en tiempo real el concepto de "Aislamiento" (Isolation)
+    y cómo las lecturas sucias afectan el estado global. El frontend dibuja estos 
+    eventos en un diagrama de terminal concurrente en pantalla dividida.
 
   PEDAGOGÍA ADAPTATIVA:
   - Si Dagon detecta "multiple primary keys" → ejecuta DROP CONSTRAINT automático
@@ -899,18 +916,21 @@ Dagon-Project/
   5. [Backend] EjercicioService.validarConsulta():
      a) SEGURIDAD: Verifica que no sea DROP DATABASE, TRUNCATE, etc.
      b) Obtiene el ejercicio de la BD: repository.findById(ejercicioId)
-     c) Lee queryMaestra: "SELECT * FROM aventureros WHERE nivel > 5;"
-     d) Ejecuta queryMaestra en sandbox (con rollback) → datosMaestros
-     e) Ejecuta queryUsuario en sandbox (persistente) → datosAlumno
-     f) Compara resultados ignorando columnas id/id_
-     g) Si es correcto:
+     c) Si es el MÓDULO 15 (Transacciones):
+        - Trocea la query y genera `transactionSimulation` (simulando concurrencia A/B).
+        - Empaqueta el estado inicial, final y los eventos simulados en la respuesta.
+     d) Lee queryMaestra: "SELECT * FROM aventureros WHERE nivel > 5;"
+     e) Ejecuta queryMaestra en sandbox (con rollback) → datosMaestros
+     f) Ejecuta queryUsuario en sandbox (persistente) → datosAlumno
+     g) Compara resultados ignorando columnas id/id_
+     h) Si es correcto:
         - Inserta en lms_core.intentos (registro de intento)
         - Actualiza racha diaria: usuarioService.registrarPracticaDiaria()
-        - Responde: { success: true, xp_gained: 50, message: "¡Excelente!" }
-     h) Si es incorrecto:
+        - Responde: { success: true, xp_gained: 50, transactionSimulation: [...] }
+     i) Si es incorrecto:
         - Inserta intento con es_correcto = false
         - Responde: { success: false, message: "Los datos no coinciden",
-                      queryMaestra, queryAlumno, errorDb }
+                      queryMaestra, queryAlumno, transactionSimulation: [...] }
 
   6. [Frontend] ExercisePage.js recibe la respuesta
      - Si success: true → Muestra animación de éxito, suma XP, avanza

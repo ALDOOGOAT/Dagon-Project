@@ -33,22 +33,58 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    const compactViewport = window.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let particles = [];
     let bubbles = [];
-    const PARTICLE_COUNT = Math.floor(70 * intensity);
-    const BUBBLE_COUNT = Math.floor(18 * intensity);
+    let resizeRaf = null;
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+    const PARTICLE_COUNT = reduceMotion ? 0 : Math.floor((compactViewport ? 34 : 70) * intensity);
+    const BUBBLE_COUNT = reduceMotion ? 0 : Math.floor((compactViewport ? 8 : 18) * intensity);
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    const resize = (rescale = true) => {
+      const nextWidth = window.innerWidth;
+      const nextHeight = window.innerHeight;
+
+      if (
+        compactViewport &&
+        canvasWidth &&
+        nextWidth === canvasWidth &&
+        Math.abs(nextHeight - canvasHeight) < 96
+      ) {
+        return;
+      }
+
+      const previousWidth = canvasWidth || nextWidth;
+      const previousHeight = canvasHeight || nextHeight;
+      canvasWidth = nextWidth;
+      canvasHeight = nextHeight;
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+
+      if (!rescale || !particles.length) return;
+
+      const scaleX = nextWidth / previousWidth;
+      const scaleY = nextHeight / previousHeight;
+      particles = particles.map((particle) => ({
+        ...particle,
+        x: particle.x * scaleX,
+        y: particle.y * scaleY,
+      }));
+      bubbles = bubbles.map((bubble) => ({
+        ...bubble,
+        x: bubble.x * scaleX,
+        y: bubble.y * scaleY,
+      }));
     };
-    resize();
+    resize(false);
 
     const spawnParticles = () => {
       particles = Array.from({ length: PARTICLE_COUNT }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: Math.random() * canvasWidth,
+        y: Math.random() * canvasHeight,
         r: Math.random() * 1.6 + 0.3,
         vx: (Math.random() - 0.5) * 0.18,
         vy: (Math.random() - 0.5) * 0.18 - 0.05,
@@ -58,8 +94,8 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       }));
     };
     const spawnBubble = (forceTop = false) => ({
-      x: Math.random() * canvas.width,
-      y: forceTop ? canvas.height + Math.random() * 60 : Math.random() * canvas.height,
+      x: Math.random() * canvasWidth,
+      y: forceTop ? canvasHeight + Math.random() * 60 : Math.random() * canvasHeight,
       r: Math.random() * 6 + 2,
       vy: -(Math.random() * 0.4 + 0.2),
       sway: Math.random() * Math.PI * 2,
@@ -72,16 +108,21 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     spawnParticles();
     spawnBubbles();
 
-    const onResize = () => { resize(); spawnParticles(); spawnBubbles(); };
+    const onResize = () => {
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => resize(true));
+    };
     const onMouse = (e) => {
       mouseRef.current.tx = (e.clientX / window.innerWidth - 0.5) * 30;
       mouseRef.current.ty = (e.clientY / window.innerHeight - 0.5) * 30;
     };
-    window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', onMouse);
+    window.addEventListener('resize', onResize, { passive: true });
+    if (!compactViewport && !reduceMotion) {
+      window.addEventListener('mousemove', onMouse, { passive: true });
+    }
 
     const step = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
       // ease parallax
       mouseRef.current.x += (mouseRef.current.tx - mouseRef.current.x) * 0.04;
@@ -89,8 +130,8 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
 
       // gradient overlay - use theme colors
       const grad = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height * 0.4, 0,
-        canvas.width / 2, canvas.height * 0.4, Math.max(canvas.width, canvas.height) * 0.7
+        canvasWidth / 2, canvasHeight * 0.4, 0,
+        canvasWidth / 2, canvasHeight * 0.4, Math.max(canvasWidth, canvasHeight) * 0.7
       );
       // parse tint to get base color for gradient
       const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -107,17 +148,17 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
         grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
       }
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
       // particles
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
         p.life += p.pulse;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
+        if (p.x < 0) p.x = canvasWidth;
+        if (p.x > canvasWidth) p.x = 0;
+        if (p.y < 0) p.y = canvasHeight;
+        if (p.y > canvasHeight) p.y = 0;
         const alpha = 0.20 + Math.abs(Math.sin(p.life)) * 0.55;
         const offX = mouseRef.current.x * p.depth;
         const offY = mouseRef.current.y * p.depth;
@@ -158,12 +199,15 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
         ctx.fill();
       }
 
-      animRef.current = requestAnimationFrame(step);
+      if (!reduceMotion) {
+        animRef.current = requestAnimationFrame(step);
+      }
     };
     step();
 
     return () => {
       cancelAnimationFrame(animRef.current);
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouse);
     };

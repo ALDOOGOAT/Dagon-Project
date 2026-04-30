@@ -1,78 +1,68 @@
-# GEMINI.md - Dagon Project Context
+# GEMINI.md - Dagon Project Context (Documentación Técnica Completa)
 
-## Project Overview
-Dagon is a modern, interactive educational platform designed for learning SQL and PostgreSQL database administration. It features a gamified experience with XP, streaks, and certificates, supported by an AI tutor named **Clawbot** (or Dagonbot).
+## 1. Visión General del Sistema
+Dagon es un LMS (Learning Management System) gamificado para aprender SQL/PostgreSQL con una estética "Abyss & Crimson" (oscuro, glassmorphism, pulpo rojo).
 
-### Key Technologies
-- **Backend:** Java 21, Spring Boot 4.0.3, PostgreSQL.
-- **Frontend:** React 19, Tailwind CSS, Shadcn/UI, Framer Motion, Monaco Editor.
-- **Analytics Service:** Python 3.10+, Flask, `mpi4py` (Parallel processing).
-- **AI Integration:** Supports Gemini API, Groq, and local Ollama (Qwen2.5-coder:7b).
+**Flujo Principal:**
+USUARIO → Frontend (React) → Backend (Spring Boot) → PostgreSQL
+                     ↓
+                Clawbot IA (Gemini) ────→ Microservicio MPI (Analytics)
 
----
+**Módulos Clave:**
+- Registro/Login con JWT.
+- 5 niveles progresivos de SQL (SELECT, WHERE, JOIN, GROUP BY, DDL).
+- Tutor IA (Clawbot) con retroalimentación socrática.
+- Leaderboard global y rachas diarias.
+- Analytics con programación paralela (MPI).
+- Modos alternativos: Drag & Drop, Diagramas ER, Consola Interactiva Transaccional (Módulo 15).
 
-## Architecture
-The project follows a microservices-like architecture with three main components:
-1.  `backend/`: Core logic, user management, and SQL validation.
-2.  `frontend/`: Interactive UI for exercises, theory, and dashboard.
-3.  `mpi_service/`: Specialized service for parallel analytical tasks.
+## 2. Arquitectura y Patrones de Diseño
+El proyecto emplea una arquitectura MVC y microservicios-lite con los siguientes patrones:
+- **Patrón MVC:** View (React Pages), Controller (Backend Controllers como `UsuarioController`, `NivelController`), Model (Entidades JPA).
+- **Patrón Repository (Spring Data JPA):** Interfaces que extienden `JpaRepository` para auto-generación de queries (ej. `findByEmail`).
+- **Patrón DTO (Data Transfer Object):** Separación de entidades JPA y objetos de respuesta (`EjercicioDTO`, `NivelDTO`).
+- **Inyección de Dependencias (Spring IoC):** Uso intensivo de `@Autowired` para inyectar servicios y repositorios.
+- **Patrón Filter Chain (Seguridad):** `JwtAuthenticationFilter` intercepta cada petición bajo `/api/**` (excepto `/login`, `/registro`, `/clawbot/**`) para validar el token JWT. `SecurityConfig` maneja las políticas de CORS.
 
-**Note:** The root `README.md` is currently outdated (describing a FastAPI/MongoDB stack). Refer to `REQUERIMIENTOS_TECNICOS.md` for the most accurate technical specifications.
+## 3. Tecnologías Clave y Estructura
+- **Backend (`backend/`):** Java 21, Spring Boot 4.0.3, PostgreSQL. Dependencias en `pom.xml` incluyen `jjwt`, `spring-boot-starter-data-jpa`, `lombok`. Uso de Maven Wrapper (`./mvnw`).
+- **Frontend (`frontend/`):** React 19, React Router v7, Tailwind CSS 3.4, Shadcn/UI, Framer Motion, Monaco Editor. Se usa `yarn` (NO `npm`) y `Craco` para el build.
+- **Analytics Service (`mpi_service/`):** Python 3.10+, Flask (`server.py`), `mpi4py` (`analytics_mpi.py`). Implementa paralelismo real con scatter/reduce.
+- **AI Integration:** Clawbot usa Gemini API (configurado en `application.properties`).
 
----
+## 4. Base de Datos (PostgreSQL)
+El sistema divide la información en esquemas. **NUNCA usar ddl-auto=update**. La fuente de verdad es `BaseDeDatosZaca.sql`.
+- `lms_core`: Datos del sistema (usuarios, módulos, ejercicios_practicos, v_ranking_alumnos).
+- `lms_sandbox`: Tablas interactivas (aventureros, misiones). El motor SQL usa `search_path = 'lms_sandbox'`.
+- `lms_sandbox_template`: Molde para reiniciar el sandbox.
+- `sandbox_usuario_{uuid}`: Esquema aislado dinámico para DDL de cada usuario.
 
-## Building and Running
+## 5. Motor de Validación SQL (EjercicioService)
+El motor de validación ejecuta el código SQL del alumno en un entorno seguro (`app_sandbox_user`) y lo compara:
+1. **Seguridad (Escudo de Dagon):** Bloquea comandos destructivos (DROP DATABASE, TRUNCATE) y previene acceso a `lms_core`.
+2. **DML (INSERT/UPDATE/DELETE):**
+   - Ejecuta la `queryMaestra` en el sandbox con auto-rollback (`conn.setAutoCommit(false)`).
+   - Ejecuta la `queryUsuario` en el sandbox con auto-rollback.
+   - Compara los resultados ignorando columnas ID autogeneradas. Inyecta `RETURNING *;` si falta.
+3. **DDL (CREATE/ALTER):** Ejecuta en un esquema aislado (`sandbox_usuario_{uuid}`) de manera persistente.
+4. **Pedagogía Adaptativa:** Si detecta errores comunes (ej. "multiple primary keys"), lanza intervención pedagógica automática (`isPedagogicalIntervention: true`).
+5. **Transacciones (Módulo 15):** Simula concurrencia (Sesión A vs Sesión B) evaluando aislamiento en tiempo real (BEGIN, COMMIT, ROLLBACK).
 
-### Prerequisites
-- Java 21
-- Node.js LTS + Yarn 1.22.22
-- Python 3.10+ & Open MPI
-- PostgreSQL
+## 6. API Endpoints Principales
+- **Autenticación:** `POST /api/usuarios/login`, `POST /api/usuarios/registro`
+- **Usuarios:** `GET /api/usuarios/{id}/stats`, `GET /api/usuarios/ranking`
+- **Ejercicios:** `GET /api/levels`, `POST /api/exercises/{id}/validate`
+- **Clawbot:** `POST /api/clawbot/chat`, `POST /api/clawbot/analyze`
+- **Analytics MPI:** `GET /api/analytics/mpi` (Redirige a `http://127.0.0.1:5001/analytics`)
 
-### Backend
-```bash
-cd backend
-./mvnw spring-boot:run
-```
-*Configured via `backend/src/main/resources/application.properties`.*
+## 7. Comandos de Ejecución
+- **Backend:** `cd backend && ./mvnw spring-boot:run` (`http://localhost:8080`)
+- **Frontend:** `cd frontend && yarn install && yarn start` (`http://localhost:3000`)
+- **MPI Service:** `cd mpi_service && ./run_mpi.sh` (`http://localhost:5001`)
 
-### Frontend
-```bash
-cd frontend
-yarn install
-yarn start
-```
-*Uses `craco` for build/start. Environment variables `REACT_APP_API_URL` and `REACT_APP_BACKEND_URL` should be set to the backend URL.*
-
-### MPI Service
-```bash
-cd mpi_service
-pip install -r requirements.txt
-./run_mpi.sh
-```
-
----
-
-## Development Conventions
-
-### Coding Style
-- **Backend:** Standard Spring Boot patterns. Uses Lombok for boilerplate reduction.
-- **Frontend:** Functional components with React Hooks. Styling via Tailwind utility classes and Shadcn/UI components.
-
-### Database Management
-- The system uses a real PostgreSQL database with a sandbox environment for user queries.
-- SQL scripts for database structure and migration are located in the root (`dagon_db_estructura.sql`, `migracion_dagon.sql`).
-- **DDL Auto:** Set to `none` in production to prevent schema modification from JPA.
-
-### Testing
-- Backend tests are located in `backend/src/test`.
-- Frontend tests can be run via `yarn test`.
-
----
-
-## Important Files
-- `REQUERIMIENTOS_TECNICOS.md`: Primary source of technical truth.
-- `ESTADO_PROYECTO.md`: Recent updates and pending tasks.
-- `backend/src/main/resources/application.properties`: Backend configuration and secrets.
-- `frontend/src/services/apiService.js`: API client configuration.
-- `para dilman/`: Directory containing database backups and specialized scripts.
+## 8. Consideraciones Generales y UI
+- **Idioma:** Comentarios, UI y commits en ESPAÑOL.
+- **Estilos:** NO usar emojis en UI (usar Lucide React). Emplear clases Tailwind/CSS como `glass-card`, `neon-glow`, `cyber-bg`, animaciones (`animate-float`).
+- **Fuentes:** Inter (UI) y JetBrains Mono (código).
+- **Seguridad:** NUNCA hacer commit de `application.properties` (contiene secretos).
+- **Conexión Frontend/Backend:** Usar `apiService.js`. El frontend incluye Axios enviando el Bearer Token global gestionado por `AuthContext`.

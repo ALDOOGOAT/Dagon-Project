@@ -18,8 +18,8 @@ const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
 const VennRelationalAlgebra = lazy(() => import('./VennRelationalAlgebra'));
 
 const CodeBox = ({ code, label }) => (
-  <div className="rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
-    <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
+  <div className="theory-code-box rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
+    <div className="theory-code-header bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
       <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
@@ -27,15 +27,15 @@ const CodeBox = ({ code, label }) => (
         {label || 'query.sql'}
       </span>
     </div>
-    <pre className="bg-slate-950 p-4 overflow-x-auto text-sm font-mono text-emerald-300 leading-relaxed">
+    <pre className="theory-code-body bg-slate-950 p-4 overflow-x-auto text-sm font-mono text-emerald-300 leading-relaxed">
       <code>{code}</code>
     </pre>
   </div>
 );
 
 const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [] }) => (
-  <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-950/80 max-w-md mx-auto shadow-xl">
-    <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
+  <div className="theory-data-table rounded-2xl overflow-hidden border border-white/10 bg-slate-950/80 max-w-md mx-auto shadow-xl">
+    <div className="theory-table-header bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <Grid3x3 className="w-3 h-3 text-cyan-300" />
       <span className="text-[10px] font-mono text-slate-400 tracking-widest uppercase">{title}</span>
     </div>
@@ -87,7 +87,7 @@ const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [
 
 const SlideHeader = ({ slide, isSpeaking, onSpeak }) => (
   <div className="flex items-start gap-5 mb-6">
-    <div className={`shrink-0 w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-300 ${isSpeaking ? 'animate-bounce' : ''}`}>
+    <div className={`theory-slide-icon shrink-0 w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-cyan-300 ${isSpeaking ? 'animate-bounce' : ''}`}>
       {slide.emoji}
     </div>
     <div className="flex-1 min-w-0">
@@ -103,7 +103,7 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
   <>
     <SlideHeader slide={slide} isSpeaking={isSpeaking} onSpeak={onSpeak} />
     {slide.bullets && (
-      <ul className="space-y-2 mb-5">
+      <ul className="theory-bullet-list space-y-2 mb-5">
         {slide.bullets.map((b, i) => (
           <li key={i} className="flex items-start gap-3 text-slate-200 font-gameui">
             <span className="mt-1.5 w-2 h-2 rounded-full bg-cyan-400 shrink-0 shadow-[0_0_8px_rgba(34,211,238,0.7)]" />
@@ -163,7 +163,7 @@ const SlideContent = ({ slide, isSpeaking, onSpeak }) => (
       <div className="space-y-3 max-w-lg mx-auto mb-5">
         {slide.chat.map((msg, i) => (
           <div key={i} className={`flex ${msg.from === 'tu' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] rounded-2xl p-3 text-sm font-gameui ${msg.from === 'tu' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-100 border border-white/10'}`}>
+            <div className={`theory-chat-bubble max-w-[80%] rounded-2xl p-3 text-sm font-gameui ${msg.from === 'tu' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-100 border border-white/10'}`}>
               {msg.text}
             </div>
           </div>
@@ -1482,14 +1482,14 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto scroll-fancy">
+    <div className="theory-shell w-full h-full overflow-y-auto scroll-fancy">
       <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div className="flex-1">
-            <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
+            <p className="theory-kicker text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
               {theory.subtitle}
             </p>
-            <h1 className="font-display text-2xl lg:text-3xl font-black text-white">
+            <h1 className="theory-page-title font-display text-2xl lg:text-3xl font-black text-white">
               {theory.title}
             </h1>
           </div>
@@ -1536,7 +1536,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="glass-card-apple rounded-3xl p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
+            className="theory-main-card glass-card-apple rounded-3xl p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
           >
             <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
             <div className="relative z-10">

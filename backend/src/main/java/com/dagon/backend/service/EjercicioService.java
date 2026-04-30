@@ -288,35 +288,35 @@ public class EjercicioService {
         return tabla;
     }
 
-    public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
-        Map<String, Object> respuesta = new HashMap<>();
+public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
+    Map<String, Object> respuesta = new HashMap<>();
 
-        // --- CAPA DE SEGURIDAD (ESCUDO DE DAGON) ---
-        String queryClean = queryUsuario.trim().toLowerCase();
+    // --- 1. INTERCEPCIÓN ESTRATÉGICA (Antes del Escudo) ---
+    EjercicioPractico ejercicioActual = repository.findById(ejercicioId).orElse(null);
+
+    // Verificamos si este ejercicio tiene el pase VIP (Validación Textual)
+    if (ejercicioActual != null && ejercicioActual.getConfiguracionExtra() != null) {
+        String configExtra = ejercicioActual.getConfiguracionExtra().toString(); // O el método que uses para leer ese JSON
         
-        // Bloqueo de comandos administrativos y peligrosos con Regex
-        String[] blackList = {
-            "drop\\s+database", "drop\\s+schema", "truncate", "alter\\s+role", "create\\s+role", 
-            "grant", "revoke", "pg_sleep", "copy\\s+", "drop\\s+table", "create\\s+schema"
-        };
-        
-        for (String regex : blackList) {
-            java.util.regex.Pattern p = java.util.regex.Pattern.compile(".*\\b" + regex + "\\b.*", java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE);
-            if (p.matcher(queryClean).matches()) {
+        if (configExtra.contains("\"tipo_validacion\":\"TEXTUAL\"")) {
+            // Limpiamos espacios extra para no castigar por un doble espacio accidental
+            String queryMaestra = ejercicioActual.getQueryMaestra().trim().toLowerCase().replaceAll("\\s+", " ");
+            String cleanUsuario = queryUsuario.trim().toLowerCase().replaceAll("\\s+", " ");
+
+            if (cleanUsuario.equals(queryMaestra)) {
+                respuesta.put("success", true);
+                respuesta.put("message", "¡Excelente! Has destruido la tabla correctamente sin dañar el reino.");
+                // Aquí podrías agregar la lógica de XP si la manejas en este punto
+            } else {
                 respuesta.put("success", false);
-                respuesta.put("message", "🚫 ¡Acción Prohibida! Los comandos de administración o destrucción están bloqueados por el Escudo de Dagon.");
-                // Datos para retroalimentación IA
-                EjercicioPractico ejSeg = repository.findById(ejercicioId).orElse(null);
-                if (ejSeg != null) {
-                    respuesta.put("descripcion", ejSeg.getEnunciado());
-                    respuesta.put("queryMaestra", ejSeg.getQueryMaestra());
-                    respuesta.put("queryAlumno", queryUsuario);
-                    respuesta.put("errorDb", "Comando prohibido: el alumno intentó usar una instrucción destructiva o administrativa.");
-                }
-                return respuesta;
+                respuesta.put("message", "La sintaxis no coincide con el comando destructor esperado. Revisa tu DROP.");
             }
+            
+            // ¡HUIDA TEMPRANA! Retornamos aquí y el Escudo de Dagon de abajo NUNCA se ejecuta.
+            return respuesta; 
         }
-
+    }// Elimina comentarios de una línea (-- ...) y saltos de línea al inicio, luego quita espacios
+        String queryClean = queryUsuario.replaceAll("(?m)^--.*", "").trim().toLowerCase();
         // 2. Prevenir que intenten acceder a esquemas internos
         if (queryClean.contains("lms_core") || queryClean.contains("information_schema") || queryClean.contains("pg_catalog")) {
             if (!queryClean.startsWith("select")) { // Permitir solo lectura si es necesario para el juego
@@ -519,17 +519,66 @@ public class EjercicioService {
                     return respuesta;
                 }
 
-                // 🌟 LEER CONFIGURACIÓN PARA VALIDACIÓN DDL/SECUENCIAS
+                // 🌟 LEER CONFIGURACIÓN PARA VALIDACIÓN DDL/SECUENCIAS Y TEXTUAL
                 boolean isDdlValidation = false;
+                boolean isTextualValidation = false;
+                String expectedRegex = null;
+
                 String configExtra = ejercicio.getConfiguracionExtra();
                 if (configExtra != null && !configExtra.trim().isEmpty()) {
                     try {
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode config = mapper.readTree(configExtra);
-                        if (config.has("tipo_validacion") && "ddl".equals(config.get("tipo_validacion").asText())) {
-                            isDdlValidation = true;
+                        if (config.has("tipo_validacion")) {
+                            String tipoVal = config.get("tipo_validacion").asText();
+                            if ("ddl".equalsIgnoreCase(tipoVal)) {
+                                isDdlValidation = true;
+                            } else if ("TEXTUAL".equalsIgnoreCase(tipoVal)) {
+                                isTextualValidation = true;
+                                if (config.has("regex_esperado")) {
+                                    expectedRegex = config.get("regex_esperado").asText();
+                                }
+                            }
                         }
                     } catch (Exception ignored) {}
+                }
+
+                // 🌟 LÓGICA DE VALIDACIÓN TEXTUAL ESTÁTICA (Para DROP/ALTER destructivos)
+                if (isTextualValidation) {
+                    String cleanUsuario = queryUsuario.trim().toUpperCase().replaceAll("\\s+", " ");
+                    String cleanMaestra = ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra().trim().toUpperCase().replaceAll("\\s+", " ") : "";
+                    
+                    boolean match = false;
+                    if (expectedRegex != null && !expectedRegex.isEmpty()) {
+                        java.util.regex.Pattern p = java.util.regex.Pattern.compile(expectedRegex, java.util.regex.Pattern.CASE_INSENSITIVE);
+                        match = p.matcher(queryUsuario.trim()).matches();
+                    } else {
+                        match = cleanUsuario.equals(cleanMaestra);
+                    }
+                    
+                    if (match) {
+                        respuesta.put("success", true);
+                        respuesta.put("message", "¡Excelente! Comprendes cómo ejecutar esta instrucción de forma segura.");
+                        respuesta.put("xp_gained", ejercicio.getDificultad() != null ? ejercicio.getDificultad() * 10 : 50);
+                        
+                        try {
+                            if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+                                String insertSql = "INSERT INTO lms_core.intentos (id_usuario, id_ejercicio, query_enviada, es_correcto) VALUES (?::uuid, ?, ?, true)";
+                                jdbcTemplate.update(insertSql, usuarioId, ejercicio.getIdEjercicio(), queryUsuario);
+                                usuarioService.registrarPracticaDiaria(usuarioId);
+                            }
+                        } catch (Exception ignored) {}
+                        
+                        return respuesta;
+                    } else {
+                        respuesta.put("success", false);
+                        respuesta.put("message", "Sintaxis incorrecta. Revisa tu instrucción con cuidado.");
+                        respuesta.put("descripcion", ejercicio.getEnunciado());
+                        respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                        respuesta.put("queryAlumno", queryUsuario);
+                        respuesta.put("errorDb", "Validación textual fallida: La instrucción no coincide con la sintaxis esperada.");
+                        return respuesta;
+                    }
                 }
 
                 // Determinar si es DML (Cambio de datos) - 🌟 LÓGICA CURADA (REGEX OPTIMIZADO)

@@ -129,7 +129,7 @@ const title = titleFor(userXP);
       }
     };
     fetchRealXP();
-  }, [token, user?.idUsuario]);
+  }, [token, user?.idUsuario, updateUserXP]);
 
   useEffect(() => {
     const fetchModulos = async () => {
@@ -195,9 +195,9 @@ const title = titleFor(userXP);
 
   if (loadingModulos) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+      <div className="min-h-dvh flex flex-col items-center justify-center gap-6 px-4 text-center">
         <div className="relative">
-          <div className="absolute -inset-6 rounded-full blur-2xl animate-pulse" style={{ backgroundColor: `${colors.primary}20` }} />
+          <div className="absolute -inset-6 rounded-full blur-2xl motion-safe:animate-pulse" style={{ backgroundColor: `${colors.primary}20` }} />
           <DagonMascot size="large" mood="thinking" />
         </div>
         <div className="flex flex-col items-center gap-3">
@@ -219,7 +219,7 @@ const title = titleFor(userXP);
   const moduleProgress = totalCount ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <div className="min-h-screen" data-testid="dashboard-page">
+    <div className="min-h-dvh" data-testid="dashboard-page">
       <TutorialOverlay isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
       <WelcomeCard />
       {showQuickPractice && (
@@ -232,14 +232,14 @@ const title = titleFor(userXP);
         />
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 py-5 sm:py-8 max-w-7xl">
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-8 gap-4 flex-wrap">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px]">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-6 sm:mb-8 gap-4">
+          <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className="w-full min-w-0 lg:flex-1">
             <p className="text-xs font-bold tracking-[0.4em] uppercase mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
-            <h1 className="font-display text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-tight sm:leading-none break-words" style={{ color: headingColor }}>
               Hola, <span className="text-gradient-abyss">{user?.nombre || 'aventurero'}</span>
             </h1>
             <p className="mt-3 font-gameui" style={{ color: mutedColor }}>
@@ -247,7 +247,7 @@ const title = titleFor(userXP);
             </p>
           </motion.div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <TourTrigger onClick={() => setShowTutorial(true)} />
             <Button
               onClick={() => navigate('/profile')}
@@ -295,19 +295,21 @@ const title = titleFor(userXP);
 
         {/* PLAYER HERO CARD */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="glass-card-apple rounded-3xl p-6 lg:p-8 border mb-8 holo-border relative overflow-hidden"
+          initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
+          className="glass-card-apple rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border mb-6 sm:mb-8 holo-border relative overflow-hidden"
           style={{ borderColor: colors.border }}
         >
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }} />
           <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(37,99,235,0.15)' }} />
 
-          <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
-            <div className="flex items-center gap-5">
+          <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr_auto] lg:gap-8 items-center">
+            <div className="flex items-center justify-center lg:justify-start gap-5">
               <div className="relative">
                 <div className={`absolute -inset-3 rounded-[54px] ${tierRing(title.tier)}`} />
-                <div className={`relative w-44 h-56 rounded-[48px] bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
-                  <DagonMascot size="large" mood={dashboardMood} />
+                <div className={`relative w-36 h-44 sm:w-44 sm:h-56 rounded-[36px] sm:rounded-[48px] bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
+                  <div className="scale-[0.78] sm:scale-100">
+                    <DagonMascot size="large" mood={dashboardMood} />
+                  </div>
                 </div>
                 <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-4 py-2 rounded-xl border border-yellow-300 animate-badge-pulse shadow-xl">
                   Lvl {userLevel}
@@ -353,13 +355,13 @@ const title = titleFor(userXP);
               </div>
             </div>
 
-            <div className="text-right">
-              <p className="font-display text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
+            <div className="text-center lg:text-right">
+              <p className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {userXP}
               </p>
               <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP Totales</p>
               {userStreak > 0 && (
-                <div className="flex items-center gap-1 mt-3 justify-end">
+                <div className="flex items-center gap-1 mt-3 justify-center lg:justify-end">
                   <Flame className="w-4 h-4 animate-pulse" style={{ color: isLight ? '#ea580c' : '#fb923c' }} />
                   <span className="font-display font-black" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>x{userStreak}</span>
                 </div>
@@ -370,7 +372,7 @@ const title = titleFor(userXP);
 
         {/* STATS QUICK BAR */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          initial={false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
         >
           <button
@@ -467,7 +469,7 @@ const title = titleFor(userXP);
                     sounds.playClick();
                     setCursoActivoId(curso.id_curso);
                   }}
-                  className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
+                  className={`p-4 sm:p-6 rounded-2xl border-2 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group ${
                       cursoActivoId === curso.id_curso 
                         ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]' 
                         : 'border-white/10 hover:border-slate-500'
@@ -477,7 +479,7 @@ const title = titleFor(userXP);
                     borderColor: cursoActivoId === curso.id_curso ? colors.primary : colors.border
                   }}
                 >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors`}
                           style={{
                             backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}33` : colors.surface,
@@ -486,8 +488,8 @@ const title = titleFor(userXP);
                         >
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
                         </div>
-                        <div className="text-left">
-                            <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoActivoId === curso.id_curso ? headingColor : mutedColor }}>
+                        <div className="text-left min-w-0">
+                            <h3 className="font-display font-black text-lg sm:text-xl transition-colors break-words" style={{ color: cursoActivoId === curso.id_curso ? headingColor : mutedColor }}>
                                 {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
                             </h3>
                             <p className={`text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors`}
@@ -504,9 +506,9 @@ const title = titleFor(userXP);
         </div>
 
         {/* MAIN GRID */}
-        <div className="grid lg:grid-cols-[1fr_320px] gap-8">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-6 lg:gap-8">
           {/* SENDERO DE NIVELES DEL CURSO ACTIVO */}
-          <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
+          <div className="glass-card-apple rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border relative overflow-hidden min-w-0" style={{ borderColor: colors.border }}>
             <div className="absolute -top-32 -right-32 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.10)' : 'rgba(59,130,246,0.10)' }} />
 
             <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
@@ -515,7 +517,7 @@ const title = titleFor(userXP);
                   {cursoActivoId === 1 ? <Swords className="w-6 h-6" style={{ color: colors.primary }} /> : <Hammer className="w-6 h-6" style={{ color: colors.primary }} />}
                 </div>
                 <div>
-                  <h2 className="font-display text-3xl font-black" style={{ color: headingColor }}>{cursoActivo.titulo}</h2>
+                  <h2 className="font-display text-2xl sm:text-3xl font-black break-words" style={{ color: headingColor }}>{cursoActivo.titulo}</h2>
                   <p className="text-sm font-gameui" style={{ color: mutedColor }}>Conquista las misiones para graduarte de esta Senda</p>
                 </div>
               </div>
@@ -568,7 +570,7 @@ const title = titleFor(userXP);
                         <div key={mod.id_modulo} className={`flex items-center gap-4 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
                             <button
                             onClick={() => handleModuloClick(mod)}
-                            className={`flex-1 p-5 rounded-2xl border transition-all duration-300 text-left flex items-center gap-4 group relative overflow-hidden ${
+                            className={`flex-1 min-w-0 p-4 sm:p-5 rounded-2xl border transition-all duration-300 text-left flex flex-col sm:flex-row sm:items-center gap-4 group relative overflow-hidden ${
                                 mod.bloqueado
                                 ? 'bg-slate-900/30 border-slate-800/60 opacity-70 cursor-not-allowed grayscale'
                                 : 'glass-card-apple border-white/10 hover:border-blue-400/60 hover:shadow-[0_15px_40px_-15px_rgba(59,130,246,0.5)] hover:-translate-y-1'
@@ -583,7 +585,7 @@ const title = titleFor(userXP);
                                     Módulo {String(index + 1).padStart(2, '0')}
                                 </span>
                                 </div>
-                                <h3 className={`font-display text-xl font-black mb-1 ${mod.bloqueado ? 'text-slate-500' : 'text-white'}`}>
+                                <h3 className={`font-display text-lg sm:text-xl font-black mb-1 break-words ${mod.bloqueado ? 'text-slate-500' : 'text-white'}`}>
                                 {mod.titulo}
                                 </h3>
                                 <p className={`text-sm font-gameui ${mod.bloqueado ? 'text-slate-600' : 'text-slate-400'}`}>
@@ -592,12 +594,12 @@ const title = titleFor(userXP);
                             </div>
                             <div className="relative z-10">
                                 {mod.bloqueado ? (
-                                <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-2 rounded-lg">
+                                <div className="flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-2 rounded-lg w-full sm:w-auto">
                                     <Lock className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">{mod.xp_requerida} XP</span>
                                 </div>
                                 ) : (
-                                <span className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/40 px-4 py-2 rounded-xl text-sm font-display font-black group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                <span className="inline-flex items-center justify-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/40 px-4 py-2 rounded-xl text-sm font-display font-black group-hover:bg-blue-500 group-hover:text-white transition-all w-full sm:w-auto">
                                     Entrar <Play className="w-3 h-3 fill-current" />
                                 </span>
                                 )}
@@ -626,7 +628,7 @@ const title = titleFor(userXP);
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
           <aside className="space-y-6">
-            <motion.div className="glass-card-apple rounded-3xl p-6 border border-white/10 relative overflow-hidden holo-border">
+            <motion.div className="glass-card-apple rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-white/10 relative overflow-hidden holo-border">
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
                 <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
@@ -647,8 +649,8 @@ const title = titleFor(userXP);
             
             {/* Mini leaderboard (RESTAURADO) */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl p-6 border"
+              initial={false} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}
+              className="glass-card-apple rounded-2xl sm:rounded-3xl p-5 sm:p-6 border"
               style={{ borderColor: colors.border }}
             >
               <div className="flex items-center justify-between mb-4">
@@ -703,8 +705,8 @@ const title = titleFor(userXP);
 
             {/* Botón Créditos / Equipo Dagon */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="glass-card-apple rounded-3xl p-6 border cursor-pointer group"
+              initial={false} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18 }}
+              className="glass-card-apple rounded-2xl sm:rounded-3xl p-5 sm:p-6 border cursor-pointer group"
               style={{ borderColor: colors.border }}
               onClick={() => navigate('/credits')}
             >

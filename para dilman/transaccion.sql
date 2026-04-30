@@ -55,3 +55,31 @@ COMMIT;
 -- FROM lms_core.ejercicios_practicos
 -- WHERE id_modulo = 15
 -- ORDER BY orden;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ id_ejercicio | orden |     titulo_corto      |                                                                                                                                 query_maestra                                                                                                                                 
+--------------+-------+-----------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+           80 |     1 | 15.1: Insert y Commit | BEGIN; INSERT INTO aventureros (nombre, clase, nivel) VALUES ('Temporal1', 'Guerrero', 50); COMMIT; SELECT * FROM aventureros WHERE nombre = 'Temporal1';
+           81 |     2 | 15.2: ROLLBACK        | BEGIN; INSERT INTO aventureros (nombre, clase) VALUES ('Desechado', 'Mago'); ROLLBACK; SELECT COUNT(*) FROM aventureros WHERE nombre = 'Desechado';
+           82 |     3 | 15.3: SAVEPOINT       | BEGIN; INSERT INTO aventureros (nombre, clase) VALUES ('Primero', 'Guerrero'); SAVEPOINT sp1; INSERT INTO aventureros (nombre, clase) VALUES ('Segundo', 'Mago'); ROLLBACK TO SAVEPOINT sp1; COMMIT; SELECT COUNT(*) FROM aventureros WHERE nombre IN ('Primero', 'Segundo');
+(3 filas)
+
+~
+~
+~
+~
+~
+~
+
