@@ -331,13 +331,4 @@ export const TourTrigger = ({ onClick }) => {
       </span>
     </Button>
   );
-};  className="relative overflow-hidden group border-fuchsia-500/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 hover:border-fuchsia-500/50 transition-all rounded-full px-4"
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500/0 via-fuchsia-500/10 to-fuchsia-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-      <span className="flex items-center gap-2 text-fuchsia-300 font-medium text-xs tracking-wide">
-        <PlayCircle className="w-4 h-4" />
-        Tour
-      </span>
-    </Button>
-  );
 };
