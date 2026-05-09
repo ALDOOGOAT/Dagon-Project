@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -6,7 +6,7 @@ import { sounds } from '../lib/SoundEngine';
 import { DagonMascot } from '../components/DagonMascot';
 import {
   ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
-  Sparkles, Crown, Shield, Zap, Camera, Upload, ChevronRight
+  Sparkles, Crown, Shield, Zap, Camera, ChevronRight
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
@@ -44,6 +44,66 @@ const getDifficultyStyles = (level) => ({
   5: { name: 'Maestro',    color: 'bg-rose-500',    text: 'text-rose-400',    glow: 'shadow-rose-500/40' },
 }[level] || { name: `Nivel ${level}`, color: 'bg-slate-500', text: 'text-slate-400', glow: '' });
 
+const MAX_AVATAR_SOURCE_BYTES = 12 * 1024 * 1024;
+const AVATAR_CANVAS_SIZE = 720;
+const AVATAR_UPLOAD_QUALITY = 0.82;
+const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
+
+const buildImageUrl = (fotoUrl) => {
+  if (!fotoUrl) return '';
+  const fullUrl = fotoUrl.startsWith('http') ? fotoUrl : `${API_BASE}${fotoUrl}`;
+  const separator = fullUrl.includes('?') ? '&' : '?';
+  return `${fullUrl}${separator}v=${Date.now()}`;
+};
+
+const canvasToBlob = (canvas, type, quality) => new Promise((resolve) => {
+  canvas.toBlob(resolve, type, quality);
+});
+
+const compressAvatarImage = async (file) => {
+  if (!file.type?.startsWith('image/')) {
+    throw new Error('Selecciona una imagen válida.');
+  }
+
+  if (/heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name || '')) {
+    throw new Error('Ese formato no es compatible. En tu galería elige JPG, PNG o WebP.');
+  }
+
+  if (file.size > MAX_AVATAR_SOURCE_BYTES) {
+    throw new Error('La imagen es demasiado pesada. Usa una foto menor a 12 MB.');
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('No pude leer la imagen. Intenta con otra foto.'));
+      img.src = objectUrl;
+    });
+
+    const scale = Math.min(1, AVATAR_CANVAS_SIZE / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await canvasToBlob(canvas, 'image/jpeg', AVATAR_UPLOAD_QUALITY);
+    if (!blob) {
+      throw new Error('No pude preparar la imagen para subirla.');
+    }
+
+    return new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
 export const ProfilePage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
@@ -56,6 +116,7 @@ export const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const avatarInputRef = useRef(null);
 
   const userLevel = Math.floor(stats.xp / 100) + 1;
   const xpInLevel = stats.xp % 100;
@@ -100,7 +161,7 @@ export const ProfilePage = () => {
     const fetchProfileStats = async () => {
       if (!user?.idUsuario) return;
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/stats`, {
+        const response = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/stats`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -122,12 +183,12 @@ export const ProfilePage = () => {
       }
       
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/foto`, {
+        const res = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/foto`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (data.fotoUrl) {
-          const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
+          const fullUrl = buildImageUrl(data.fotoUrl);
           setAvatarUrl(fullUrl);
           localStorage.setItem('userAvatar', fullUrl);
         } else {
@@ -139,30 +200,46 @@ export const ProfilePage = () => {
   }, [user, token]);
 
   const handleAvatarUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file || !user?.idUsuario) return;
 
     setUploading(true);
     try {
+      const avatarFile = await compressAvatarImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', avatarFile);
 
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${user.idUsuario}/foto`, {
+      const res = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/foto`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-      const data = await res.json();
+
+      const text = await res.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { message: text };
+      }
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || text || 'El servidor rechazó la imagen.');
+      }
+
       if (data.success) {
-        const fullUrl = data.fotoUrl.startsWith('http') ? data.fotoUrl : `${process.env.REACT_APP_API_URL}` + data.fotoUrl;
+        const fullUrl = buildImageUrl(data.fotoUrl);
         setAvatarUrl(fullUrl);
         localStorage.setItem('userAvatar', fullUrl);
-        toast.success('Foto de perfil actualizada!');
+        toast.success('Foto de perfil actualizada');
+      } else {
+        throw new Error(data.message || 'No se pudo actualizar la foto.');
       }
     } catch (err) {
-      toast.error('Error al subir imagen');
+      toast.error(err.message || 'Error al subir imagen');
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -297,12 +374,25 @@ export const ProfilePage = () => {
                 ) : (
                   <DagonMascot size="medium" mood={profileMood} />
                 )}
-                <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploading} />
+                <label
+                  aria-label="Cambiar foto de perfil"
+                  className="absolute inset-0 bg-black/55 flex flex-col items-center justify-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                  />
                   {uploading ? (
                     <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Camera className="w-8 h-8 text-white" />
+                    <>
+                      <Camera className="w-7 h-7 text-white" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-white">Cambiar</span>
+                    </>
                   )}
                 </label>
               </div>

@@ -13,7 +13,7 @@ import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Calendar, Award, Heart
+  User, Calendar, Award, Heart, BookOpen, Terminal
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -367,6 +367,57 @@ const title = titleFor(userXP);
             </div>
           </div>
         </motion.div>
+
+        {/* ACADEMIA POSTGRESQL */}
+        <motion.button
+          type="button"
+          onClick={() => {
+            sounds.playClick();
+            navigate('/postgres');
+          }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="w-full glass-card-apple rounded-3xl p-5 sm:p-6 border mb-8 text-left group relative overflow-hidden"
+          style={{ borderColor: `${colors.primary}3d` }}
+        >
+          <div className="absolute inset-y-0 right-0 w-1/2 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}14, ${colors.secondary}12)` }} />
+          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4 min-w-0">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center border shrink-0 group-hover:scale-105 transition-transform"
+                style={{
+                  borderColor: `${colors.primary}40`,
+                  background: `linear-gradient(135deg, ${colors.primary}22, ${colors.secondary}18)`
+                }}
+              >
+                <Database className="w-7 h-7" style={{ color: colors.primary }} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.32em]" style={{ color: colors.primary }}>
+                    Nuevo modulo teorico
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: mutedColor, borderColor: `${colors.primary}26` }}>
+                    <BookOpen className="w-3 h-3" />
+                    PostgreSQL
+                  </span>
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl font-black" style={{ color: headingColor }}>
+                  Aprende PostgreSQL con Dagon
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm sm:text-base font-gameui" style={{ color: mutedColor }}>
+                  Historia, usos reales y comandos basicos, medios y avanzados en una experiencia cinematica e interactiva.
+                </p>
+              </div>
+            </div>
+            <div className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl px-5 py-3 font-display font-black text-white transition-all group-hover:translate-x-1" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+              <Terminal className="w-4 h-4" />
+              Entrar a la academia
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </div>
+        </motion.button>
 
         {/* STATS QUICK BAR */}
         <motion.div

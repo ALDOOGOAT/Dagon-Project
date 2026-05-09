@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
 import { GraduationPage } from './pages/GraduationPage';
 import { CreditsPage } from './pages/CreditsPage';
+import { PostgresAcademyPage } from './pages/PostgresAcademyPage';
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -117,6 +118,14 @@ const AppRoutes = () => {
             element={
               <ProtectedRoute>
                 <AnimatedPage><GraduationPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/postgres"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><PostgresAcademyPage /></AnimatedPage>
               </ProtectedRoute>
             }
           />

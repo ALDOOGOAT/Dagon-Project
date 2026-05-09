@@ -97,17 +97,17 @@ export const COLOR_PALETTES = {
   aurora: {
     name: 'Aurora Gold',
     mode: 'light',
-    primary: '#c67a1d',
-    secondary: '#e6c76a',
-    accent: '#d99a4e',
-    background: '#fffaf4',
-    surface: '#fff8ee',
-    surfaceAlt: '#f4e2bb',
-    text: '#2d241b',
-    textMuted: '#836b52',
-    border: '#dec7a0',
-    gradient: 'from-amber-600 via-yellow-300 to-orange-300',
-    gradientAlt: 'from-amber-100/70 via-white/28 to-orange-100/58',
+    primary: '#a85f12',
+    secondary: '#d9a441',
+    accent: '#b86f1f',
+    background: '#fffaf2',
+    surface: '#fff7e8',
+    surfaceAlt: '#eed7aa',
+    text: '#2a2118',
+    textMuted: '#6f5842',
+    border: '#d7b983',
+    gradient: 'from-amber-700 via-yellow-500 to-orange-500',
+    gradientAlt: 'from-amber-100/82 via-white/40 to-orange-100/68',
   },
 };
 
@@ -250,19 +250,19 @@ const applyPalette = (paletteName) => {
   root.style.setProperty('--color-text-muted', colors.textMuted);
   root.style.setProperty('--color-border', colors.border);
   root.style.setProperty('--glass-surface', isLight
-    ? (isAurora ? 'rgba(255, 248, 238, 0.78)' : 'rgba(255, 251, 240, 0.72)')
+    ? (isAurora ? 'rgba(255, 249, 239, 0.86)' : 'rgba(255, 251, 240, 0.72)')
     : 'rgba(255, 255, 255, 0.05)');
   root.style.setProperty('--glass-surface-strong', isLight
-    ? (isAurora ? 'rgba(255, 244, 226, 0.9)' : 'rgba(255, 248, 230, 0.88)')
+    ? (isAurora ? 'rgba(255, 247, 232, 0.94)' : 'rgba(255, 248, 230, 0.88)')
     : 'rgba(30, 41, 59, 0.4)');
   root.style.setProperty('--glass-border', isLight
-    ? (isAurora ? 'rgba(217, 119, 6, 0.16)' : 'rgba(245, 158, 11, 0.18)')
+    ? (isAurora ? 'rgba(168, 95, 18, 0.22)' : 'rgba(245, 158, 11, 0.18)')
     : 'rgba(255, 255, 255, 0.18)');
   root.style.setProperty('--glass-highlight', isLight
-    ? (isAurora ? 'rgba(255, 255, 255, 0.72)' : 'rgba(255, 255, 255, 0.92)')
+    ? (isAurora ? 'rgba(255, 255, 255, 0.82)' : 'rgba(255, 255, 255, 0.92)')
     : 'rgba(255, 255, 255, 0.15)');
   root.style.setProperty('--glass-shadow', isLight
-    ? (isAurora ? '0 30px 80px -34px rgba(180, 83, 9, 0.24)' : '0 25px 60px -25px rgba(217, 119, 6, 0.22)')
+    ? (isAurora ? '0 30px 82px -38px rgba(133, 77, 14, 0.28)' : '0 25px 60px -25px rgba(217, 119, 6, 0.22)')
     : '0 8px 32px 0 rgba(0, 0, 0, 0.37)');
   root.style.setProperty('--grid-opacity', isLight ? (isAurora ? '0.055' : '0.09') : '0.05');
   root.style.setProperty('--theme-orb-a', isLight ? rgba(colors.primary, 0.16) : rgba(colors.primary, 0.18));
@@ -309,7 +309,7 @@ const applyPalette = (paletteName) => {
   document.body.style.backgroundColor = colors.background;
   document.body.style.backgroundImage = isLight
     ? (isAurora
-      ? 'radial-gradient(circle at top, rgba(255,255,255,0.98) 0%, rgba(255,248,236,0.95) 34%, rgba(245,226,191,0.86) 74%, rgba(232,205,163,0.72) 100%), linear-gradient(135deg, rgba(255,255,255,0.84) 0%, rgba(255,248,240,0.62) 40%, rgba(243,224,188,0.28) 100%)'
+      ? 'radial-gradient(circle at top, rgba(255,255,255,0.98) 0%, rgba(255,249,239,0.96) 34%, rgba(245,228,196,0.88) 74%, rgba(231,204,158,0.72) 100%), linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(255,248,237,0.68) 40%, rgba(238,216,174,0.30) 100%)'
       : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,220,0.92) 55%, rgba(255,243,199,0.88) 100%)')
     : '';
 };
