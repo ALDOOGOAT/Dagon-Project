@@ -29,6 +29,13 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background: var(--color-background);
     color: var(--color-text);
+    overflow-x: hidden;
+}
+
+html,
+body,
+#root {
+    min-height: 100%;
 }
 
 code {
@@ -77,6 +84,20 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @layer utilities {
+    .touch-drag-none {
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+
+    .mobile-safe-bottom {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    .mobile-safe-top {
+        padding-top: max(1rem, env(safe-area-inset-top));
+    }
+
     .cyber-bg {
         background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
     }

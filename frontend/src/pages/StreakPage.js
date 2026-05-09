@@ -344,8 +344,8 @@ export const StreakPage = () => {
             <EmberField amount={22} color={isLight ? '#ea580c' : '#fb923c'} />
             <FireEffect intensity={stats.racha > 0 ? Math.min(1.35, 0.7 + stats.racha * 0.06) : 0.35} />
 
-            <div className="relative z-10 p-8 lg:p-12">
-              <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-20">
+            <div className="relative z-10 p-5 sm:p-8 lg:p-12">
+              <div className="flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-20">
                 <div className="relative">
                   <motion.div
                     className="absolute -inset-10 rounded-full blur-3xl"
@@ -393,7 +393,7 @@ export const StreakPage = () => {
                     transition={{ delay: 0.1 }}
                   >
                     <div
-                      className="inline-flex items-center gap-4 px-6 py-4 rounded-2xl border backdrop-blur-xl"
+                      className="inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border backdrop-blur-xl"
                       style={{
                         background: isLight
                           ? 'linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,237,213,0.48))'
@@ -412,7 +412,7 @@ export const StreakPage = () => {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', delay: 0.3, stiffness: 500 }}
-                        className="font-display text-8xl lg:text-9xl font-black text-gradient-fire"
+                        className="font-display text-6xl sm:text-8xl lg:text-9xl font-black text-gradient-fire"
                       >
                         {stats.racha}
                       </motion.span>
@@ -495,20 +495,20 @@ export const StreakPage = () => {
           >
             <div className="rounded-3xl border p-6 overflow-hidden relative" style={panelStyle}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent 35%)' : 'linear-gradient(180deg, rgba(251,146,60,0.05), transparent 35%)' }} />
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5" style={{ color: accentFire }} />
                   <h3 className="font-display text-xl font-black uppercase tracking-wide" style={{ color: headingText }}>Calendario de fuego</h3>
                 </div>
                 
-                <div className="flex items-center gap-1 rounded-xl p-1" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.54)' : 'rgba(30,41,59,0.5)' }}>
+                <div className="flex items-center gap-1 rounded-xl p-1 self-start sm:self-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.54)' : 'rgba(30,41,59,0.5)' }}>
                   <button
                     onClick={mesAnterior}
                     className="p-2 rounded-lg transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5" style={{ color: helperText }} />
                   </button>
-                  <span className="px-4 font-display font-black min-w-[160px] text-center" style={{ color: accentFire }}>
+                  <span className="px-3 sm:px-4 font-display font-black min-w-[136px] sm:min-w-[160px] text-center text-sm sm:text-base" style={{ color: accentFire }}>
                     {MESES[mesActual.getMonth()]} {mesActual.getFullYear()}
                   </span>
                   <button

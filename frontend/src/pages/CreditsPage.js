@@ -74,7 +74,7 @@ export const CreditsPage = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-4xl w-full text-center relative z-10"
+        className="max-w-5xl w-full text-center relative z-10"
       >
         {/* MASCOTA */}
         <motion.div variants={itemVariants} className="mb-6">
@@ -86,7 +86,7 @@ export const CreditsPage = () => {
 
         {/* TÍTULO PRINCIPAL con gradiente mejorado */}
         <motion.div variants={itemVariants} className="mb-4">
-          <h1 className="font-display text-5xl lg:text-7xl font-black tracking-tight" style={{ color: headingColor }}>
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight" style={{ color: headingColor }}>
             SALÓN DE LA <span className="text-gradient-abyss">FAMA</span>
           </h1>
           <div className="flex items-center justify-center gap-3 mt-3">
@@ -100,7 +100,7 @@ export const CreditsPage = () => {
         <motion.div variants={itemVariants} className="grid md:grid-cols-2 gap-6 mb-10">
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-[40px] opacity-50 group-hover:opacity-100 transition-opacity blur" />
-            <div className="relative p-8 rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: cardSurface, border: `1px solid ${cardBorder}` }}>
+            <div className="relative p-5 sm:p-8 rounded-[32px] sm:rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: cardSurface, border: `1px solid ${cardBorder}` }}>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
                   <Code className="w-7 h-7 text-white" />
@@ -109,7 +109,7 @@ export const CreditsPage = () => {
                 <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" style={{ animationDelay: '0.2s' }} />
               </div>
               <p className="text-cyan-400 text-[10px] font-black uppercase tracking-[0.35em] mb-3 text-left">✨ Desarrollador Legendario</p>
-              <h3 className="font-display text-2xl lg:text-3xl font-black text-left leading-tight" style={{ color: headingColor }}>
+              <h3 className="font-display text-xl sm:text-2xl lg:text-3xl font-black text-left leading-tight" style={{ color: headingColor }}>
                 DILHAN JARED<br/>MORA LÓPEZ
               </h3>
               <p className="text-cyan-300/70 text-xs mt-2 text-left">Frontend Developer</p>
@@ -118,7 +118,7 @@ export const CreditsPage = () => {
 
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-fuchsia-500 to-rose-600 rounded-[40px] opacity-50 group-hover:opacity-100 transition-opacity blur" />
-            <div className="relative p-8 rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: cardSurface, border: `1px solid ${cardBorder}` }}>
+            <div className="relative p-5 sm:p-8 rounded-[32px] sm:rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: cardSurface, border: `1px solid ${cardBorder}` }}>
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-rose-600 flex items-center justify-center shadow-lg">
                   <Code className="w-7 h-7 text-white" />
@@ -127,7 +127,7 @@ export const CreditsPage = () => {
                 <div className="w-3 h-3 rounded-full bg-rose-400 animate-pulse" style={{ animationDelay: '0.3s' }} />
               </div>
               <p className="text-fuchsia-400 text-[10px] font-black uppercase tracking-[0.35em] mb-3 text-left">✨ Desarrollador Legendario</p>
-              <h3 className="font-display text-2xl lg:text-3xl font-black text-left leading-tight" style={{ color: headingColor }}>
+              <h3 className="font-display text-xl sm:text-2xl lg:text-3xl font-black text-left leading-tight" style={{ color: headingColor }}>
                 ALDO FABIO<br/>CONTRERAS MARROQUÍN
               </h3>
               <p className="text-fuchsia-300/70 text-xs mt-2 text-left">Backend Developer</p>
@@ -139,18 +139,18 @@ export const CreditsPage = () => {
         <motion.div variants={itemVariants} className="mb-10">
           <div className="relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 via-pink-500 to-cyan-500 rounded-[40px] opacity-40 blur" />
-            <div className="relative p-8 lg:p-10 rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: isLight ? 'rgba(255,252,245,0.92)' : 'rgba(15,23,42,0.90)', border: `1px solid ${isLight ? 'rgba(245,158,11,0.24)' : 'rgba(244,63,94,0.30)'}` }}>
+            <div className="relative p-5 sm:p-8 lg:p-10 rounded-[32px] sm:rounded-[40px] backdrop-blur-xl" style={{ backgroundColor: isLight ? 'rgba(255,252,245,0.92)' : 'rgba(15,23,42,0.90)', border: `1px solid ${isLight ? 'rgba(245,158,11,0.24)' : 'rgba(244,63,94,0.30)'}` }}>
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-rose-500 rounded-full">
                 <span className="text-white text-xs font-bold uppercase tracking-wider">✨ Agradecimiento ✨</span>
               </div>
-              <p className="font-gameui text-lg lg:text-xl leading-relaxed mt-2" style={{ color: headingColor }}>
+              <p className="font-gameui text-base sm:text-lg lg:text-xl leading-relaxed mt-2" style={{ color: headingColor }}>
                 Querido jugador, hicimos este bonito juego tipo duolingo interactivo, 
                 poniendo nuestros esfuerzos y dedicación en ello, sabemos que la carrera 
                 puede ser muy agotadora y difícil pero solo <span className="text-rose-400 font-bold">no te rindas</span>, 
                 cree de corazón en ti mismo ya que hoy por hoy te encuentras aquí, 
                 y <span className="text-pink-400 font-bold">siéntete muy orgulloso</span> por ello.
               </p>
-              <p className="font-gameui text-lg lg:text-xl leading-relaxed mt-4" style={{ color: headingColor }}>
+              <p className="font-gameui text-base sm:text-lg lg:text-xl leading-relaxed mt-4" style={{ color: headingColor }}>
                 El equipo Dagon te agradece profundamente el estar aquí 🙏
               </p>
               <div className="mt-6 flex items-center justify-center gap-2">
@@ -185,7 +185,7 @@ export const CreditsPage = () => {
               sounds.playClick();
               navigate('/dashboard');
             }}
-            className="border px-10 py-6 rounded-2xl font-display font-black tracking-widest text-sm hover:scale-105 transition-all shadow-lg"
+            className="border w-full sm:w-auto px-6 sm:px-10 py-5 sm:py-6 rounded-2xl font-display font-black tracking-[0.2em] sm:tracking-widest text-sm hover:scale-105 transition-all shadow-lg"
             style={{
               backgroundColor: isLight ? 'rgba(255,250,240,0.72)' : 'rgba(255,255,255,0.10)',
               color: headingColor,

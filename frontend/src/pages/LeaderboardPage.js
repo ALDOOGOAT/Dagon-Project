@@ -443,14 +443,14 @@ export const LeaderboardPage = () => {
         <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
           <div className="absolute -bottom-32 -right-32 w-72 h-72 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(217,70,239,0.10)' }} />
 
-          <div className="flex justify-between items-center px-4 py-3 mb-3 border-b text-[10px] font-bold uppercase tracking-[0.3em]" style={{ borderColor: isLight ? 'rgba(217,119,6,0.10)' : 'rgba(255,255,255,0.05)', color: mutedColor }}>
-            <div className="w-16 text-center">Rango</div>
-            <div className="flex-1">Aventurero</div>
+          <div className="flex justify-between items-center px-3 sm:px-4 py-3 mb-3 border-b text-[10px] font-bold uppercase tracking-[0.24em] sm:tracking-[0.3em]" style={{ borderColor: isLight ? 'rgba(217,119,6,0.10)' : 'rgba(255,255,255,0.05)', color: mutedColor }}>
+            <div className="w-12 sm:w-16 text-center">Rango</div>
+            <div className="flex-1 min-w-0">Aventurero</div>
             <div className="w-32 hidden md:block">Liga</div>
             <div className="w-32 text-right hidden sm:flex justify-end items-center gap-1">
               <Target className="w-3 h-3" /> Misiones
             </div>
-            <div className="w-32 text-right">Puntos XP</div>
+            <div className="w-auto sm:w-32 text-right">XP</div>
           </div>
 
           {leaderboardData.length === 0 ? (
@@ -482,23 +482,31 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                       className="absolute inset-y-0 left-0 opacity-10 pointer-events-none"
                       style={{ width: `${xpPct}%`, backgroundColor: colors.primary }}
                     />
-                    <div className="relative z-10 w-16 flex justify-center">
-                      <div className="w-10 h-10 flex items-center justify-center rounded-xl border font-display font-black" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
+                    <div className="relative z-10 w-12 sm:w-16 flex justify-center shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border font-display font-black text-sm sm:text-base" style={{ backgroundColor: colors.background, borderColor: colors.border, color: colors.text }}>
                         {p.rango <= 3 ? <Medal className={`w-5 h-5 ${
                           p.rango === 1 ? 'text-yellow-300' :
                           p.rango === 2 ? 'text-slate-200' : 'text-amber-500'
                         }`} /> : `#${p.rango}`}
                       </div>
                     </div>
-                    <div className="relative z-10 flex-1 flex items-center gap-3 px-3 min-w-0">
-                      <span className="font-display font-black truncate" style={{ color: me ? colors.primary : headingColor }}>
-                        {p.nombre}
-                      </span>
-                      {me && (
-                        <span className="text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md" style={{ backgroundColor: colors.primary }}>
-                          Tú
-                        </span>
-                      )}
+                    <div className="relative z-10 flex-1 flex items-center gap-3 px-2 sm:px-3 min-w-0">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-display font-black truncate block" style={{ color: me ? colors.primary : headingColor }}>
+                            {p.nombre}
+                          </span>
+                          {me && (
+                            <span className="text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md shrink-0" style={{ backgroundColor: colors.primary }}>
+                              Tú
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide md:hidden">
+                          <span className={lg.text}>Liga {lg.name}</span>
+                          <span style={{ color: mutedColor }}>{p.misionesResueltas} misiones</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="relative z-10 w-32 hidden md:flex">
                       <span className={`text-xs font-bold tracking-widest uppercase ${lg.text}`}>{lg.name}</span>
@@ -507,8 +515,8 @@ className={`relative flex items-center px-4 py-3 rounded-2xl border transition-a
                       <Target className="w-4 h-4" style={{ color: mutedColor }} />
                       {p.misionesResueltas}
                     </div>
-                    <div className="relative z-10 w-32 text-right flex items-center justify-end gap-2">
-                      <span className="font-display font-black text-xl" style={{ color: me ? colors.primary : headingColor }}>
+                    <div className="relative z-10 w-auto sm:w-32 text-right flex items-center justify-end gap-1 sm:gap-2 shrink-0">
+                      <span className="font-display font-black text-lg sm:text-xl" style={{ color: me ? colors.primary : headingColor }}>
                         {p.xp}
                       </span>
                       <Zap className="w-4 h-4" style={{ color: me ? colors.primary : (isLight ? '#d97706' : '#fde047') }} />

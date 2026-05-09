@@ -293,7 +293,7 @@ export const Clawbot = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         data-testid="clawbot-fab"
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full transition-all duration-300 flex items-center justify-center group animate-pulse-glow hover:scale-110 z-50 border"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-14 h-14 sm:w-16 sm:h-16 rounded-full transition-all duration-300 flex items-center justify-center group animate-pulse-glow hover:scale-110 z-50 border"
         style={{
           background: isLight
             ? 'linear-gradient(145deg, rgba(255,248,238,0.96) 0%, rgba(240,219,182,0.94) 100%)'
@@ -305,10 +305,10 @@ export const Clawbot = () => {
         }}
       >
         {isOpen ? (
-          <X className="w-8 h-8 transition-transform duration-300 rotate-90" style={{ color: isLight ? '#6f4b22' : '#ffffff' }} />
+          <X className="w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-300 rotate-90" style={{ color: isLight ? '#6f4b22' : '#ffffff' }} />
         ) : (
           <div className="relative">
-            <Sparkles className="w-8 h-8 transition-transform duration-300 group-hover:scale-110" style={{ color: isLight ? '#7c5318' : '#ffffff' }} />
+            <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-300 group-hover:scale-110" style={{ color: isLight ? '#7c5318' : '#ffffff' }} />
             <div
               className="absolute -top-1 -right-1 w-4 h-4 rounded-full animate-pulse"
               style={{
@@ -321,9 +321,16 @@ export const Clawbot = () => {
       </button>
 
       {isOpen && (
+        <>
+        <button
+          type="button"
+          aria-label="Cerrar Dagonbot"
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-[2px] sm:bg-slate-950/30"
+        />
         <div
           data-testid="clawbot-panel"
-          className="fixed bottom-24 right-6 w-[450px] h-[720px] rounded-3xl shadow-2xl flex flex-col border overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300"
+          className="fixed inset-x-3 top-4 bottom-20 sm:inset-x-auto sm:top-auto sm:bottom-24 sm:right-6 sm:w-[450px] sm:h-[720px] sm:max-h-[calc(100dvh-8rem)] rounded-[28px] sm:rounded-3xl shadow-2xl flex flex-col border overflow-hidden animate-in slide-in-from-bottom-5 fade-in duration-300 z-50 mobile-safe-bottom"
           style={{
             backgroundColor: isLight ? 'rgba(255, 250, 242, 0.94)' : colors.background,
             borderColor: colors.border,
@@ -338,13 +345,13 @@ export const Clawbot = () => {
               : `linear-gradient(to bottom, ${colors.primary}20, transparent, ${colors.secondary}20)` 
           }} />
           
-          <div className="relative z-10 p-4 flex items-center gap-4 border-b" style={{ 
+          <div className="relative z-10 p-3 sm:p-4 flex items-center gap-3 sm:gap-4 border-b" style={{ 
             background: isLight ? 'linear-gradient(180deg, rgba(255,248,238,0.98), rgba(255,244,227,0.9))' : colors.surface, 
             borderColor: colors.border 
           }}>
             <div className="relative">
               <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg border"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shadow-lg border"
                 style={{
                   background: isLight
                     ? 'linear-gradient(145deg, rgba(250,235,210,1) 0%, rgba(231,205,156,1) 100%)'
@@ -364,7 +371,7 @@ export const Clawbot = () => {
               />
             </div>
             <div>
-              <h3 className="font-black text-xl tracking-wide flex items-center gap-2" style={{ color: isLight ? '#352517' : '#ffffff' }}>
+              <h3 className="font-black text-lg sm:text-xl tracking-wide flex items-center gap-2" style={{ color: isLight ? '#352517' : '#ffffff' }}>
                 Dagonbot <span className="text-xs" style={{ color: isLight ? '#a16207' : '#34d399' }}>AI</span>
               </h3>
               <p className="text-xs font-semibold flex items-center gap-2" style={{ color: isLight ? '#8b6f4e' : '#94a3b8' }}>
@@ -374,14 +381,14 @@ export const Clawbot = () => {
             </div>
           </div>
 
-          <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-3" style={{ backgroundColor: isLight ? 'rgba(255,250,244,0.55)' : `${colors.background}80` }} data-testid="chat-messages">
+          <div className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-3" style={{ backgroundColor: isLight ? 'rgba(255,250,244,0.55)' : `${colors.background}80` }} data-testid="chat-messages">
             {messages.map((msg, index) => (
               <div
                 key={index}
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 fade-in duration-200`}
               >
                 <div
-                  className={`max-w-[92%] p-4 rounded-2xl shadow-lg ${
+                  className={`max-w-[96%] sm:max-w-[92%] p-3 sm:p-4 rounded-2xl shadow-lg ${
                     msg.role === 'user'
                       ? 'text-white font-medium rounded-br-md'
                       : 'border rounded-bl-md'
@@ -429,7 +436,7 @@ export const Clawbot = () => {
           </div>
 
           {messages.length <= 1 && (
-            <div className="px-4 pb-2">
+            <div className="px-3 sm:px-4 pb-1 sm:pb-2">
               <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: isLight ? '#8b6f4e' : '#64748b' }}>Sugerencias</p>
               <div className="flex flex-wrap gap-2">
                 {suggestedQuestions.map((sq, i) => (
@@ -451,15 +458,15 @@ export const Clawbot = () => {
             </div>
           )}
 
-          <div className="relative z-10 p-4 border-t shadow-[0_-10px_30px_rgba(0,0,0,0.3)]" style={{ backgroundColor: isLight ? 'rgba(255,248,238,0.96)' : colors.background, borderColor: colors.border }}>
-            <div className="flex gap-3 relative">
+          <div className="relative z-10 p-3 sm:p-4 border-t shadow-[0_-10px_30px_rgba(0,0,0,0.3)]" style={{ backgroundColor: isLight ? 'rgba(255,248,238,0.96)' : colors.background, borderColor: colors.border }}>
+            <div className="flex items-end gap-2 sm:gap-3">
               <Input
                 data-testid="chat-input"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Preguntame sobre SQL..."
-                className="h-12 rounded-xl shadow-inner font-medium"
+                className="h-12 flex-1 rounded-xl shadow-inner font-medium"
                 style={{
                   backgroundColor: isLight ? 'rgba(255,255,255,0.8)' : colors.surface,
                   borderColor: colors.border,
@@ -471,7 +478,7 @@ export const Clawbot = () => {
                 onClick={handleSendMessage}
                 data-testid="send-message-button"
                 disabled={loading || !inputMessage.trim()}
-                className="absolute right-1 top-1 bottom-1 text-white rounded-lg px-4 transition-all duration-300 shadow-md h-10 disabled:opacity-50"
+                className="h-12 shrink-0 text-white rounded-xl px-3 sm:px-4 transition-all duration-300 shadow-md disabled:opacity-50"
                 style={{
                   background: isLight
                     ? 'linear-gradient(135deg, #b8731d 0%, #d6b45a 100%)'
@@ -483,6 +490,7 @@ export const Clawbot = () => {
             </div>
           </div>
         </div>
+        </>
       )}
     </>
   );

@@ -288,7 +288,7 @@ export const ProfilePage = () => {
             style={heroOrbStyle}
           />
 
-          <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
+          <div className="relative z-10 grid gap-6 lg:grid-cols-[auto_1fr_auto] items-center">
             <div className="relative group">
               <div className={`absolute -inset-3 rounded-3xl ${tierRing(title.tier)}`} />
               <div className={`relative w-28 h-28 rounded-2xl bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
@@ -311,8 +311,8 @@ export const ProfilePage = () => {
               </div>
             </div>
 
-            <div>
-              <h1 className="font-display text-3xl lg:text-4xl font-black mb-2" style={{ color: headingColor }}>
+            <div className="text-center lg:text-left">
+              <h1 className="font-display text-3xl lg:text-4xl font-black mb-2 break-words" style={{ color: headingColor }}>
                 {user?.nombre || user?.email}
               </h1>
               <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -339,8 +339,8 @@ export const ProfilePage = () => {
               </div>
             </div>
 
-            <div className="text-right">
-              <p className="font-display text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
+            <div className="text-center lg:text-right">
+              <p className="font-display text-5xl sm:text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {stats.xp}
               </p>
               <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP totales</p>
@@ -359,7 +359,7 @@ export const ProfilePage = () => {
               <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
                 <Target /> Resumen de batalla
               </h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { icon: <BookOpen className="w-5 h-5" />, label: 'Completados', value: stats.ejercicios_completados, hover: 'hover:border-emerald-500/30' },
                   { icon: <Code className="w-5 h-5" />, label: 'Consultas', value: stats.consultas_totales, hover: 'hover:border-blue-500/30' },
@@ -425,7 +425,7 @@ export const ProfilePage = () => {
           <div>
             <motion.div
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 sticky top-8"
+              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 lg:sticky lg:top-8"
               style={{ borderColor: colors.border }}
             >
               <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
@@ -491,10 +491,10 @@ export const ProfilePage = () => {
                   background: `linear-gradient(90deg, ${colors.primary}10, transparent)`
                 }}
               >
-                <div className="flex items-center justify-between w-full px-4">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between w-full px-2 sm:px-4 gap-3">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                     <div 
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-110 transition-transform"
+                      className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center border group-hover:scale-110 transition-transform shrink-0"
                       style={{ 
                         backgroundColor: `${colors.primary}20`,
                         borderColor: `${colors.primary}40`
@@ -502,12 +502,12 @@ export const ProfilePage = () => {
                     >
                       <Trophy className="w-6 h-6" style={{ color: colors.primary }} />
                     </div>
-                    <div className="text-left">
+                    <div className="text-left min-w-0">
                       <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.primary }}>Descubre a los creadores</p>
-                      <h3 className="font-display text-xl font-black" style={{ color: headingColor }}>SALÓN DE LA FAMA</h3>
+                      <h3 className="font-display text-lg sm:text-xl font-black" style={{ color: headingColor }}>SALÓN DE LA FAMA</h3>
                     </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 group-hover:transition-colors" style={{ color: colors.primary, opacity: 0.5 }} />
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:transition-colors shrink-0" style={{ color: colors.primary, opacity: 0.5 }} />
                 </div>
               </Button>
             </motion.div>

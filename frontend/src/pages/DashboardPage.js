@@ -129,7 +129,7 @@ const title = titleFor(userXP);
       }
     };
     fetchRealXP();
-  }, [token, user?.idUsuario]);
+  }, [token, user?.idUsuario, updateUserXP]);
 
   useEffect(() => {
     const fetchModulos = async () => {
@@ -239,7 +239,7 @@ const title = titleFor(userXP);
             <p className="text-xs font-bold tracking-[0.4em] uppercase mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
-            <h1 className="font-display text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
+            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
               Hola, <span className="text-gradient-abyss">{user?.nombre || 'aventurero'}</span>
             </h1>
             <p className="mt-3 font-gameui" style={{ color: mutedColor }}>
@@ -247,11 +247,11 @@ const title = titleFor(userXP);
             </p>
           </motion.div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <TourTrigger onClick={() => setShowTutorial(true)} />
             <Button
               onClick={() => navigate('/profile')}
-              className="border font-display font-black text-sm"
+              className="border font-display font-black text-sm w-full sm:w-auto justify-center"
               style={{ backgroundColor: warmSurface, borderColor: softBorder, color: headingColor }}
             >
               <User className="w-4 h-4 mr-2" />
@@ -260,7 +260,7 @@ const title = titleFor(userXP);
             {userStreak > 0 ? (
               <Button
                 onClick={() => navigate('/streak')}
-                className="border font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm"
+                className="border font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm w-full sm:w-auto justify-center"
                 style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, borderColor: 'rgba(251,146,60,0.35)', color: isLight ? '#1f2937' : '#ffffff' }}
               >
                 <Flame className="w-4 h-4 mr-2 animate-pulse" />
@@ -270,7 +270,7 @@ const title = titleFor(userXP);
               <Button
                 onClick={() => navigate('/streak')}
                 variant="ghost"
-                className="text-sm"
+                className="text-sm w-full sm:w-auto justify-center"
                 style={{ color: isLight ? '#b45309' : '#fdba74' }}
               >
                 <Calendar className="w-4 h-4 mr-2" />
@@ -279,14 +279,14 @@ const title = titleFor(userXP);
             )}
             <Button
               onClick={() => setShowQuickPractice(true)}
-              className="font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm"
+              className="font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm w-full sm:w-auto justify-center"
               style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, color: isLight ? '#1f2937' : '#ffffff' }}
             >
               <Target className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Práctica Rápida</span>
               <span className="sm:hidden">Práctica</span>
             </Button>
-            <Button onClick={handleLogout} variant="ghost" className="text-sm" style={{ color: mutedColor }}>
+            <Button onClick={handleLogout} variant="ghost" className="text-sm w-full sm:w-auto justify-center" style={{ color: mutedColor }}>
               <LogOut className="w-5 h-5 mr-2" />
               <span className="hidden sm:inline">Salir</span>
             </Button>
@@ -302,11 +302,11 @@ const title = titleFor(userXP);
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }} />
           <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(37,99,235,0.15)' }} />
 
-          <div className="relative z-10 grid lg:grid-cols-[auto_1fr_auto] gap-8 items-center">
-            <div className="flex items-center gap-5">
+          <div className="relative z-10 grid gap-6 md:gap-8 lg:grid-cols-[auto_1fr_auto] items-center">
+            <div className="flex items-center justify-center lg:justify-start gap-5">
               <div className="relative">
                 <div className={`absolute -inset-3 rounded-[54px] ${tierRing(title.tier)}`} />
-                <div className={`relative w-44 h-56 rounded-[48px] bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
+                <div className={`relative w-32 h-40 sm:w-40 sm:h-52 lg:w-44 lg:h-56 rounded-[40px] sm:rounded-[48px] bg-gradient-to-br ${tierGradient(title.tier)} flex items-center justify-center shadow-2xl overflow-hidden`}>
                   <DagonMascot size="large" mood={dashboardMood} />
                 </div>
                 <div className="absolute -bottom-3 -right-3 badge-shine text-yellow-950 text-xs font-display font-black px-4 py-2 rounded-xl border border-yellow-300 animate-badge-pulse shadow-xl">
@@ -315,7 +315,7 @@ const title = titleFor(userXP);
               </div>
             </div>
 
-            <div className="min-w-0">
+            <div className="min-w-0 text-center lg:text-left">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 {userStreak > 0 && (
                   <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.16)' : 'rgba(249,115,22,0.20)', borderColor: 'rgba(251,146,60,0.30)' }}>
@@ -353,8 +353,8 @@ const title = titleFor(userXP);
               </div>
             </div>
 
-            <div className="text-right">
-              <p className="font-display text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
+            <div className="text-center lg:text-right">
+              <p className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
                 {userXP}
               </p>
               <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP Totales</p>
@@ -565,10 +565,10 @@ const title = titleFor(userXP);
                     {modulos.map((mod, index) => {
                         const isLeft = index % 2 === 0;
                         return (
-                        <div key={mod.id_modulo} className={`flex items-center gap-4 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
+                        <div key={mod.id_modulo} className={`flex items-stretch gap-4 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
                             <button
                             onClick={() => handleModuloClick(mod)}
-                            className={`flex-1 p-5 rounded-2xl border transition-all duration-300 text-left flex items-center gap-4 group relative overflow-hidden ${
+                            className={`flex-1 p-4 sm:p-5 rounded-2xl border transition-all duration-300 text-left flex flex-col sm:flex-row sm:items-center gap-4 group relative overflow-hidden ${
                                 mod.bloqueado
                                 ? 'bg-slate-900/30 border-slate-800/60 opacity-70 cursor-not-allowed grayscale'
                                 : 'glass-card-apple border-white/10 hover:border-blue-400/60 hover:shadow-[0_15px_40px_-15px_rgba(59,130,246,0.5)] hover:-translate-y-1'
@@ -578,7 +578,7 @@ const title = titleFor(userXP);
                                 <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-blue-500/15 to-transparent pointer-events-none" />
                             )}
                             <div className="flex-1 relative z-10">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="text-[10px] font-bold tracking-[0.3em] uppercase text-cyan-400">
                                     Módulo {String(index + 1).padStart(2, '0')}
                                 </span>
@@ -590,14 +590,14 @@ const title = titleFor(userXP);
                                 {mod.descripcion}
                                 </p>
                             </div>
-                            <div className="relative z-10">
+                            <div className="relative z-10 w-full sm:w-auto">
                                 {mod.bloqueado ? (
-                                <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-2 rounded-lg">
+                                <div className="flex items-center justify-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-2 rounded-lg">
                                     <Lock className="w-4 h-4" />
                                     <span className="text-xs font-bold uppercase tracking-widest">{mod.xp_requerida} XP</span>
                                 </div>
                                 ) : (
-                                <span className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/40 px-4 py-2 rounded-xl text-sm font-display font-black group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                <span className="inline-flex w-full sm:w-auto items-center justify-center gap-2 bg-blue-500/20 text-blue-200 border border-blue-400/40 px-4 py-2 rounded-xl text-sm font-display font-black group-hover:bg-blue-500 group-hover:text-white transition-all">
                                     Entrar <Play className="w-3 h-3 fill-current" />
                                 </span>
                                 )}

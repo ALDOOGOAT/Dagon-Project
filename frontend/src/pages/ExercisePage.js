@@ -884,7 +884,7 @@ export const ExercisePage = () => {
       setClawbotMessage(null);
       setShowHint(false);
     }
-  }, [currentExerciseIndex, exercises]);
+  }, [currentExerciseIndex, exercises, levelId, shownSubTopics]);
 
   const handleDragEnd = (result) => {
     if (!result.destination) return;
@@ -1173,30 +1173,32 @@ export const ExercisePage = () => {
 
       {/* HEADER */}
       <header className="border-b backdrop-blur-md z-10 shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,252,245,0.90)' : 'rgba(2,6,23,0.90)', borderColor: isLight ? 'rgba(245,158,11,0.14)' : '#1e293b' }}>
-        <div className="px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: mutedColor }}>
+        <div className="px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:min-w-0">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="px-2 sm:px-3 shrink-0" style={{ color: mutedColor }}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
-            <div className="h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
+            <div className="hidden sm:block h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
             <Button 
               variant="ghost" 
               onClick={handleResetSandbox} 
+              className="px-2 sm:px-3 shrink-0"
               title="🔄 Restablecer tabla: Borra todos tus cambios y vuelve a los datos originales del ejercicio. Útil si cometiste muchos errores o quieres empezar de nuevo."
               style={{ color: mutedColor }}
             >
-              <RotateCcw className="w-4 h-4 mr-2" /> Restablecer
+              <RotateCcw className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Restablecer</span>
             </Button>
-            <div className="h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
-            <h1 className="font-display text-base font-black flex items-center gap-2" style={{ color: headingColor }}>
+            </div>
+            <h1 className="font-display text-sm sm:text-base font-black flex items-center gap-2 min-w-0" style={{ color: headingColor }}>
               <Database className="w-4 h-4" style={{ color: colors.primary }} />
               Módulo {levelId}
-              <span className="text-sm font-gameui ml-1" style={{ color: mutedColor }}>
+              <span className="text-xs sm:text-sm font-gameui ml-1 truncate" style={{ color: mutedColor }}>
                 · Misión {currentExerciseIndex + 1}/{exercises.length}
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto max-w-[40%] scrollbar-none bg-slate-900 border-slate-700">
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto scrollbar-none bg-slate-900 border-slate-700 w-full lg:w-auto lg:max-w-[40%]">
             {exercises.map((_, i) => {
               const isCompleted = i < currentExerciseIndex;
               const isCurrent = i === currentExerciseIndex;
@@ -1223,7 +1225,7 @@ export const ExercisePage = () => {
               );
             })}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-end lg:self-auto">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : '#0f172a', borderColor: isLight ? 'rgba(245,158,11,0.18)' : '#334155' }}>
               <Zap className="w-4 h-4" style={{ color: isLight ? '#d97706' : '#fde047' }} />
               <span className="font-display font-black text-sm" style={{ color: isLight ? '#b45309' : '#fef08a' }}>{user?.xp || 0}</span>
@@ -1248,7 +1250,7 @@ export const ExercisePage = () => {
       </header>
 
       {/* MAIN */}
-      <main className="flex-1 overflow-y-auto scroll-fancy">
+      <main className="flex-1 overflow-y-auto scroll-fancy pb-24 sm:pb-8">
         {showTheory ? (
           <LevelTheory
             levelId={levelId}
@@ -1261,7 +1263,7 @@ export const ExercisePage = () => {
             }}
           />
         ) : (
-          <div className={`max-w-5xl mx-auto px-4 py-6 space-y-5 ${shake ? 'animate-shake-x' : ''}`}>
+          <div className={`max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-5 sm:space-y-6 ${shake ? 'animate-shake-x' : ''}`}>
 
             {/* MASCOTA + INSTRUCCIONES */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
@@ -1269,7 +1271,7 @@ export const ExercisePage = () => {
               style={{ borderColor: colors.border }}
             >
               <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${colors.primary}12` }} />
-              <div className="relative z-10 flex items-start gap-5">
+              <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
                 <div className="shrink-0">
                   <div className="relative">
                     <div className={`absolute -inset-4 rounded-full blur-xl transition-colors duration-500 ${
@@ -1450,12 +1452,12 @@ export const ExercisePage = () => {
               className="glass-card-apple rounded-3xl border border-white/10 overflow-hidden relative"
             >
               {/* Barra superior */}
-              <div className="bg-slate-900/80 px-5 py-3 flex items-center justify-between border-b border-white/5">
-                <div className="flex items-center gap-2">
+              <div className="bg-slate-900/80 px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="w-3 h-3 rounded-full bg-rose-500/70" />
                   <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
                   <span className="w-3 h-3 rounded-full bg-emerald-500/70" />
-                  <span className="ml-3 text-xs font-mono text-slate-400">
+                  <span className="ml-3 text-xs font-mono text-slate-400 truncate">
                     {isDiagram ? 'Diseña el Modelo Entidad-Relación' : isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
                   </span>
                 </div>
@@ -1465,7 +1467,7 @@ export const ExercisePage = () => {
                     handleValidate();
                   }}
                   disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
-                  className="bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
+                  className="w-full sm:w-auto justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
                 >
                   {validating || clawbotThinking
                     ? <Loader className="w-4 h-4 animate-spin mr-2" />
@@ -1476,9 +1478,9 @@ export const ExercisePage = () => {
               </div>
 
               {/* Contenedor Principal (Diagrama / Editor / Drag-drop) */}
-              <div className="p-5">
+              <div className="p-4 sm:p-5">
                 {isDiagram ? (
-                  <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                  <div className="h-[360px] sm:h-[420px] lg:h-[500px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
                     <MerDiagramBuilder 
                       onChangeData={(graphData) => {
                         setEditorCode(JSON.stringify(graphData)); 
@@ -1487,15 +1489,20 @@ export const ExercisePage = () => {
                   </div>
                 ) : isDragDrop ? (
                   <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="space-y-5">
+                    <div className="space-y-4 sm:space-y-5">
                       {/* Zona de armado */}
                       <div>
-                        <p className="text-xs text-cyan-300 uppercase tracking-[0.3em] font-bold mb-2">Tu consulta:</p>
+                        <div className="flex flex-col gap-1 mb-2">
+                          <p className="text-xs text-cyan-300 uppercase tracking-[0.3em] font-bold">Tu consulta:</p>
+                          <p className="text-[11px] font-gameui text-slate-400">
+                            En teléfono, mantén presionado un bloque y arrástralo con el dedo hasta la zona de armado.
+                          </p>
+                        </div>
                         <Droppable droppableId="dropZone" direction="horizontal">
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef} {...provided.droppableProps}
-                              className={`min-h-[80px] rounded-2xl border-2 border-dashed p-4 flex flex-wrap gap-2 items-start content-start transition-all ${
+                              className={`min-h-[120px] sm:min-h-[92px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-wrap gap-2.5 sm:gap-3 items-start content-start transition-all ${
                                 snapshot.isDraggingOver ? 'border-cyan-400' : 'border-slate-600'
                               }`}
                               style={{
@@ -1503,7 +1510,7 @@ export const ExercisePage = () => {
                               }}
                             >
                               {droppedWords.length === 0 && (
-                                <span className="text-slate-500 font-mono text-sm italic w-full text-center py-4">
+                                <span className="text-slate-500 font-mono text-xs sm:text-sm italic w-full text-center py-4">
                                   Arrastra los bloques aquí para armar tu SQL...
                                 </span>
                               )}
@@ -1518,9 +1525,11 @@ export const ExercisePage = () => {
                                         style={{
                                           ...prov.draggableProps.style,
                                           userSelect: 'none',
+                                          WebkitUserSelect: 'none',
+                                          touchAction: 'none',
                                           pointerEvents: 'auto',
                                         }}
-                                        className={`bg-emerald-900/90 border-2 border-emerald-400/60 text-emerald-200 px-4 py-2 rounded-xl font-mono font-bold cursor-grab active:cursor-grabbing ${
+                                        className={`touch-drag-none bg-emerald-900/90 border-2 border-emerald-400/60 text-emerald-200 px-3 py-3 sm:px-4 sm:py-2 rounded-xl font-mono font-bold text-sm sm:text-base cursor-grab active:cursor-grabbing min-h-[52px] flex items-center ${
                                           snap.isDragging ? 'shadow-[0_0_40px_rgba(16,185,129,0.6)] scale-110 z-[9999] border-white ring-4 ring-emerald-400/20' : 'hover:bg-emerald-800'
                                         }`}
                                       >
@@ -1546,7 +1555,7 @@ export const ExercisePage = () => {
                         <Droppable droppableId="wordBank" direction="horizontal">
                           {(provided, snapshot) => (
                             <div ref={provided.innerRef} {...provided.droppableProps}
-                              className={`min-h-[100px] rounded-2xl border-2 p-4 flex flex-wrap gap-3 items-start content-start transition-all duration-300 ${
+                              className={`min-h-[132px] sm:min-h-[100px] rounded-2xl border-2 p-3 sm:p-4 flex flex-wrap gap-2.5 sm:gap-3 items-start content-start transition-all duration-300 ${
                                 snapshot.isDraggingOver ? 'border-cyan-500/50 bg-slate-800/60 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]' : 'border-white/5 bg-slate-900/30'
                               }`}
                             >
@@ -1561,9 +1570,11 @@ export const ExercisePage = () => {
                                         style={{
                                           ...prov.draggableProps.style,
                                           userSelect: 'none',
+                                          WebkitUserSelect: 'none',
+                                          touchAction: 'none',
                                           pointerEvents: 'auto',
                                         }}
-                                        className={`bg-slate-800 border-2 border-slate-600 text-slate-200 px-4 py-2 rounded-xl font-mono font-medium cursor-grab active:cursor-grabbing flex items-center gap-2 ${
+                                        className={`touch-drag-none bg-slate-800 border-2 border-slate-600 text-slate-200 px-3 py-3 sm:px-4 sm:py-2 rounded-xl font-mono font-medium text-sm sm:text-base cursor-grab active:cursor-grabbing flex items-center gap-2 min-h-[52px] ${
                                           snap.isDragging ? 'shadow-[0_0_40px_rgba(34,211,238,0.6)] scale-110 border-cyan-400 z-[9999] bg-slate-700 ring-4 ring-cyan-400/20' : 'hover:bg-slate-700 hover:-translate-y-1 hover:border-cyan-400/40'
                                         }`}
                                       >
@@ -1587,7 +1598,7 @@ export const ExercisePage = () => {
                     </div>
                   </DragDropContext>
                 ) : (
-                  <div className="h-[280px] rounded-2xl overflow-hidden border border-white/10">
+                  <div className="h-[320px] sm:h-[360px] rounded-2xl overflow-hidden border border-white/10">
                     <Editor
                       height="100%"
                       defaultLanguage="sql"
@@ -1621,7 +1632,7 @@ export const ExercisePage = () => {
                         : 'glass-card-apple border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]'
                   }`}
                 >
-                  <div className={`px-5 py-4 flex items-center gap-3 border-b ${
+                  <div className={`px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 border-b ${
                     executionResult.isWarning 
                       ? 'border-amber-500/30 bg-amber-500/10'
                       : executionResult.success 
@@ -1764,7 +1775,7 @@ export const ExercisePage = () => {
                             navigate(`/graduation/${levelId}`);
                           }
                         }}
-                        className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-black py-4 rounded-2xl text-lg shadow-[0_10px_30px_rgba(59,130,246,0.4)] hover:scale-[1.01] transition-transform"
+                        className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-black py-4 rounded-2xl text-base sm:text-lg shadow-[0_10px_30px_rgba(59,130,246,0.4)] hover:scale-[1.01] transition-transform"
                       >
                         {currentExerciseIndex < exercises.length - 1
                           ? <>Siguiente misión <ChevronRight className="w-5 h-5 ml-1 inline" /></>

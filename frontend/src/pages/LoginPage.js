@@ -78,7 +78,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`} data-testid="login-page">
+    <div className={`min-h-screen flex flex-col lg:flex-row relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`} data-testid="login-page">
       {/* Lado izquierdo: cinemático */}
 <div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden" style={{ backgroundColor: colors.background }}>
           <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at 50% 50%, ${colors.primary}40, transparent 70%)` }} />
@@ -155,22 +155,22 @@ export const LoginPage = () => {
       </div>
 
       {/* Lado derecho: formulario */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative">
+      <div className="flex-1 flex items-start sm:items-center justify-center p-4 sm:p-6 lg:p-12 pt-6 sm:pt-10 lg:pt-12 relative">
         <motion.div
           initial={{ x: 30, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-md space-y-8"
+          className="w-full max-w-md space-y-5 sm:space-y-8"
         >
           <div className="text-center lg:hidden mb-4">
             <div className="inline-block animate-float">
               <DagonMascot size="medium" mood="happy" />
             </div>
-            <h1 className="font-display text-5xl font-black text-gradient-abyss mt-3">DAGON</h1>
+            <h1 className="font-display text-4xl sm:text-5xl font-black text-gradient-abyss mt-3">DAGON</h1>
           </div>
 
           <div
-            className="glass-card-apple rounded-3xl p-8 space-y-6 border holo-border"
+            className="glass-card-apple rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 border holo-border"
             style={{
               borderColor: colors.border,
               boxShadow: isLight ? '0 30px 80px -20px rgba(245, 158, 11, 0.22)' : '0 30px 80px -20px rgba(0,0,0,0.6)'
@@ -181,7 +181,7 @@ export const LoginPage = () => {
                 <Database className="w-3 h-3" />
                 {isLogin ? 'Acceso de aventurero' : 'Nuevo aventurero'}
               </span>
-              <h2 className="font-display text-3xl font-black mb-2" style={{ color: headingColor }}>
+              <h2 className="font-display text-2xl sm:text-3xl font-black mb-2" style={{ color: headingColor }}>
                 {isLogin ? 'Vuelve al abismo' : 'Forja tu leyenda'}
               </h2>
               <p className="font-gameui text-sm" style={{ color: mutedColor }}>
@@ -267,7 +267,7 @@ export const LoginPage = () => {
                 type="submit"
                 data-testid="submit-button"
                 disabled={loading}
-                className="w-full font-display font-black text-lg tracking-wide py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+                className="w-full font-display font-black text-base sm:text-lg tracking-wide py-5 sm:py-6 rounded-xl transition-all duration-300 hover:scale-[1.02]"
                 style={{ 
                   background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})`,
                   boxShadow: `0 10px 40px ${colors.primary}60`,
