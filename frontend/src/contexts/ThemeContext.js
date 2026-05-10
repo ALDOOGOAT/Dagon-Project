@@ -114,6 +114,7 @@ export const COLOR_PALETTES = {
 const DEFAULT_PALETTE = 'dagon';
 const THEME_ROOT_CLASSES = ['theme-dark', 'theme-light'];
 const getUserPaletteKey = (userId) => `userPalette:${userId}`;
+let themeTransitionScheduled = false;
 
 const getValidPalette = (paletteName) => {
   return COLOR_PALETTES[paletteName] ? paletteName : DEFAULT_PALETTE;
@@ -233,13 +234,6 @@ const applyPalette = (paletteName) => {
   const isLight = colors.mode === 'light';
   const isAurora = safePalette === 'aurora';
 
-  // Añadir transición suave para todos los cambios de color
-  if (!root.style.transition) {
-    setTimeout(() => {
-      root.style.transition = 'background-color 0.5s ease, color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease';
-    }, 100);
-  }
-
   root.style.setProperty('--color-primary', colors.primary);
   root.style.setProperty('--color-secondary', colors.secondary);
   root.style.setProperty('--color-accent', colors.accent);
@@ -312,6 +306,16 @@ const applyPalette = (paletteName) => {
       ? 'radial-gradient(circle at top, rgba(255,255,255,0.98) 0%, rgba(255,249,239,0.96) 34%, rgba(245,228,196,0.88) 74%, rgba(231,204,158,0.72) 100%), linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(255,248,237,0.68) 40%, rgba(238,216,174,0.30) 100%)'
       : 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,248,220,0.92) 55%, rgba(255,243,199,0.88) 100%)')
     : '';
+
+  if (!themeTransitionScheduled) {
+    themeTransitionScheduled = true;
+    const scheduleFrame = typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame
+      : (callback) => setTimeout(callback, 0);
+    scheduleFrame(() => {
+      root.classList.add('theme-transitions-ready');
+    });
+  }
 };
 
 export default ThemeContext;

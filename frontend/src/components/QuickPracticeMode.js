@@ -9,6 +9,7 @@ import {
   ArrowUp, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 import { sounds } from '../lib/SoundEngine';
 
 const QUERY_TEMPLATES = {
@@ -104,7 +105,7 @@ export const QuickPracticeMode = ({
     const fetchCompletedLevels = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/completados`, {
+        const response = await fetch(apiUrl('/api/modulos/completados'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {

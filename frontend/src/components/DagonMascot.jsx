@@ -1,6 +1,7 @@
 import React from 'react';
 
 export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, showFire = false }) => {
+  const instanceId = React.useId().replace(/:/g, '');
   const sizeMap = {
     small: 80,
     medium: 120,
@@ -82,7 +83,7 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
       case 'angry':
         return 'animate-dagon-angry';
       case 'speaking':
-        return 'animate-pulse-glow';
+        return 'animate-dagon-speaking';
       case 'sad':
       case 'disappointed':
         return 'animate-breathe-slow';
@@ -91,7 +92,7 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
       case 'afraid':
         return 'animate-dagon-shake';
       default:
-        return 'animate-float';
+        return 'animate-dagon-idle';
     }
   };
   
@@ -115,34 +116,40 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
   const colors = getMoodColors();
   const eyeState = getEyeState();
   const glowClass = getGlowEffect();
+  const animationClass = getAnimation();
+  const bodyGradientId = `dagonBodyGradient-${instanceId}`;
+  const eyeGlowId = `dagonEyeGlow-${instanceId}`;
+  const glowId = `dagonGlow-${instanceId}`;
+  const innerShadowId = `innerShadow-${instanceId}`;
+  const angryBrowId = `angryBrow-${instanceId}`;
 
   return (
-    <div className={`relative inline-block ${animated ? 'animate-float' : ''}`} data-testid="dagon-mascot">
+    <div className={`relative inline-block dagon-mascot-shell ${animated ? animationClass : ''}`} data-testid="dagon-mascot">
       <svg
         width={actualSize}
         height={actualSize * 0.85}
         viewBox="0 0 120 100"
         xmlns="http://www.w3.org/2000/svg"
-        className={`animate-breathe ${glowClass}`}
+        className={`dagon-mascot-svg ${animated ? 'animate-dagon-breathe' : ''} ${glowClass}`}
       >
         <defs>
-          <radialGradient id="dagonBodyGradient" cx="50%" cy="40%">
+          <radialGradient id={bodyGradientId} cx="50%" cy="40%">
             <stop offset="0%" stopColor={colors.primary} />
             <stop offset="50%" stopColor={colors.secondary} />
             <stop offset="100%" stopColor={colors.glow} />
           </radialGradient>
-          <radialGradient id="dagonEyeGlow" cx="50%" cy="50%">
+          <radialGradient id={eyeGlowId} cx="50%" cy="50%">
             <stop offset="0%" stopColor={colors.glow} />
             <stop offset="100%" stopColor="transparent" stopOpacity="0" />
           </radialGradient>
-          <filter id="dagonGlow">
+          <filter id={glowId}>
             <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
             <feMerge>
               <feMergeNode in="coloredBlur"/>
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
-          <filter id="innerShadow">
+          <filter id={innerShadowId}>
             <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
             <feOffset dx="0" dy="2" result="offsetblur"/>
             <feComponentTransfer>
@@ -153,7 +160,7 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
-          <filter id="angryBrow">
+          <filter id={angryBrowId}>
             <feGaussianBlur stdDeviation="1.5"/>
           </filter>
         </defs>
@@ -177,20 +184,21 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
         
         <path
           d="M 10 85 Q 10 25, 60 15 Q 110 25, 110 85 L 10 85 Z"
-          fill="url(#dagonBodyGradient)"
-          filter="url(#dagonGlow)"
+          fill={`url(#${bodyGradientId})`}
+          filter={`url(#${glowId})`}
         />
         
         <path
           d="M 15 85 Q 15 30, 60 20 Q 105 30, 105 85 L 15 85 Z"
-          fill="url(#innerShadow)"
+          fill={colors.secondary}
+          filter={`url(#${innerShadowId})`}
           opacity="0.15"
         />
         
         {mood === 'angry' && (
           <g stroke={colors.accent} strokeWidth="3" strokeLinecap="round" opacity="0.9">
-            <line x1="22" y1="28" x2="45" y2="38" filter="url(#angryBrow)" />
-            <line x1="98" y1="28" x2="75" y2="38" filter="url(#angryBrow)" />
+            <line x1="22" y1="28" x2="45" y2="38" filter={`url(#${angryBrowId})`} />
+            <line x1="98" y1="28" x2="75" y2="38" filter={`url(#${angryBrowId})`} />
           </g>
         )}
         
@@ -208,7 +216,7 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
             rx="14"
             ry="18"
             fill={colors.primary}
-            filter="url(#dagonGlow)"
+            filter={`url(#${glowId})`}
           />
           <ellipse
             cx="0"
@@ -232,7 +240,7 @@ export const DagonMascot = ({ mood = 'happy', size = 'medium', animated = true, 
             rx="14"
             ry="18"
             fill={colors.primary}
-            filter="url(#dagonGlow)"
+            filter={`url(#${glowId})`}
           />
           <ellipse
             cx="0"

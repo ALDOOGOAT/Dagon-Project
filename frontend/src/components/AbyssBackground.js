@@ -40,15 +40,19 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     const BUBBLE_COUNT = Math.floor(18 * intensity);
 
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.floor(window.innerWidth * pixelRatio);
+      canvas.height = Math.floor(window.innerHeight * pixelRatio);
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     };
     resize();
 
     const spawnParticles = () => {
       particles = Array.from({ length: PARTICLE_COUNT }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
         r: Math.random() * 1.6 + 0.3,
         vx: (Math.random() - 0.5) * 0.18,
         vy: (Math.random() - 0.5) * 0.18 - 0.05,
@@ -58,8 +62,8 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       }));
     };
     const spawnBubble = (forceTop = false) => ({
-      x: Math.random() * canvas.width,
-      y: forceTop ? canvas.height + Math.random() * 60 : Math.random() * canvas.height,
+      x: Math.random() * window.innerWidth,
+      y: forceTop ? window.innerHeight + Math.random() * 60 : Math.random() * window.innerHeight,
       r: Math.random() * 6 + 2,
       vy: -(Math.random() * 0.4 + 0.2),
       sway: Math.random() * Math.PI * 2,
@@ -81,6 +85,8 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     window.addEventListener('mousemove', onMouse);
 
     const step = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // ease parallax
@@ -89,8 +95,8 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
 
       // gradient overlay - use theme colors
       const grad = ctx.createRadialGradient(
-        canvas.width / 2, canvas.height * 0.4, 0,
-        canvas.width / 2, canvas.height * 0.4, Math.max(canvas.width, canvas.height) * 0.7
+        width / 2, height * 0.4, 0,
+        width / 2, height * 0.4, Math.max(width, height) * 0.7
       );
       // parse tint to get base color for gradient
       const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -107,17 +113,17 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
         grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
       }
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, width, height);
 
       // particles
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
         p.life += p.pulse;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
+        if (p.x < 0) p.x = window.innerWidth;
+        if (p.x > window.innerWidth) p.x = 0;
+        if (p.y < 0) p.y = window.innerHeight;
+        if (p.y > window.innerHeight) p.y = 0;
         const alpha = 0.20 + Math.abs(Math.sin(p.life)) * 0.55;
         const offX = mouseRef.current.x * p.depth;
         const offY = mouseRef.current.y * p.depth;
@@ -194,9 +200,9 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       <div className="absolute inset-0" style={{ backgroundImage: `${radialLightA}, ${radialLightB}, ${radialLightC}` }} />
       <div className={`absolute inset-0 grid-pattern ${shellGridOpacity}`} />
       <canvas ref={canvasRef} className="absolute inset-0" />
-      <div className="absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full blur-[130px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(primary, 0.18) : rgba(primary, 0.2) }} />
-      <div className="absolute -bottom-24 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] animate-pulse-slower" style={{ backgroundColor: isLight ? rgba(secondary, 0.16) : rgba(secondary, 0.18) }} />
-      <div className="absolute top-[28%] left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full blur-[150px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(accent, 0.13) : rgba(accent, 0.12) }} />
+      <div className="ambient-orb absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full blur-[130px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(primary, 0.18) : rgba(primary, 0.2) }} />
+      <div className="ambient-orb absolute -bottom-24 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] animate-pulse-slower" style={{ backgroundColor: isLight ? rgba(secondary, 0.16) : rgba(secondary, 0.18) }} />
+      <div className="ambient-orb absolute top-[28%] left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full blur-[150px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(accent, 0.13) : rgba(accent, 0.12) }} />
       {isLight && <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 12%, rgba(255,255,255,0.48), transparent 42%)' }} />}
       <div className="absolute inset-0" style={{ background: vignette }} />
     </div>

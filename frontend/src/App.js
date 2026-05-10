@@ -37,6 +37,7 @@ const AnimatedPage = ({ children }) => (
     exit="out"
     variants={pageVariants}
     transition={pageTransition}
+    className="page-transition-surface"
   >
     {children}
   </motion.div>

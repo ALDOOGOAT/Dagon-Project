@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Download, CheckCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
+import { apiUrl } from '../config/api';
 
 const generarCertificadoPNG = (datos, cursoId) => {
   const canvas = document.createElement('canvas');
@@ -273,7 +274,7 @@ export const useCertificado = (token) => {
     if (!token) return;
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/cursos-completados`, {
+      const response = await fetch(apiUrl('/api/modulos/cursos-completados'), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -291,7 +292,7 @@ export const useCertificado = (token) => {
     if (!token) return null;
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/certificado/${cursoId}`, {
+      const response = await fetch(apiUrl(`/api/modulos/certificado/${cursoId}`), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {

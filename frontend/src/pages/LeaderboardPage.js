@@ -24,8 +24,8 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { DagonMascot } from '../components/DagonMascot';
+import { API_BASE } from '../config/api';
 
-const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
 const numberFormatter = new Intl.NumberFormat('es-MX');
 
 const toNumber = (value, fallback = 0) => {

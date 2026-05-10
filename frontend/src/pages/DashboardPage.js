@@ -9,6 +9,7 @@ import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import { CertificateModal, useCertificado } from '../components/CertificateModal';
+import { apiUrl } from '../config/api';
 import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
@@ -115,7 +116,7 @@ const title = titleFor(userXP);
       try {
         const miUsuarioId = user?.idUsuario;
         if (!miUsuarioId) return;
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${miUsuarioId}/stats`, {
+        const response = await fetch(apiUrl(`/api/usuarios/${miUsuarioId}/stats`), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -134,7 +135,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchModulos = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos`, {
+        const response = await fetch(apiUrl('/api/modulos'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -156,7 +157,7 @@ const title = titleFor(userXP);
   useEffect(() => {
     const fetchTop = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/leaderboard`, {
+        const response = await fetch(apiUrl('/api/leaderboard'), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (response.ok) {
@@ -236,13 +237,13 @@ const title = titleFor(userXP);
         {/* HEADER */}
         <div className="flex justify-between items-start mb-8 gap-4 flex-wrap">
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px]">
-            <p className="text-xs font-bold tracking-[0.4em] uppercase mb-2" style={{ color: colors.accent }}>
+            <p className="arcane-kicker text-xs font-bold mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
+            <h1 className="text-arcane-title arcane-rune-line font-display text-4xl sm:text-5xl lg:text-6xl font-black leading-none" style={{ color: headingColor }}>
               Hola, <span className="text-gradient-abyss">{user?.nombre || 'aventurero'}</span>
             </h1>
-            <p className="mt-3 font-gameui" style={{ color: mutedColor }}>
+            <p className="text-arcane-body mt-5 font-gameui" style={{ color: mutedColor }}>
               Selecciona tu senda y desciende a las profundidades.
             </p>
           </motion.div>

@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
+import { apiUrl } from '../config/api';
 
 const formatAIMessage = (text, theme = {}) => {
   if (!text) return null;
@@ -838,7 +839,7 @@ export const ExercisePage = () => {
   useEffect(() => {
     const fetchExercises = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${levelId}`, {
+        const response = await fetch(apiUrl(`/api/exercises/${levelId}`), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
@@ -915,7 +916,7 @@ export const ExercisePage = () => {
     console.log("Invocando Clawbot analyze con:", errorData);
     setClawbotThinking(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clawbot/analyze`, {
+      const response = await fetch(apiUrl('/api/clawbot/analyze'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json'
@@ -951,7 +952,7 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${exercise.id}/validate`, {
+      const response = await fetch(apiUrl(`/api/exercises/${exercise.id}/validate`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ query, usuarioId: user?.idUsuario })
@@ -1083,7 +1084,7 @@ export const ExercisePage = () => {
     if (!confirmed) return;
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/modulos/reset-sandbox`, {
+      const response = await fetch(apiUrl('/api/modulos/reset-sandbox'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json', 

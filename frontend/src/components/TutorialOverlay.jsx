@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
 import { ChevronRight, X, Volume2, VolumeX, Database, Code, Trophy, Sparkles, BookOpen, Target, PlayCircle } from 'lucide-react';
@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const tutorialSteps = [
   {
     id: 'welcome',
-    title: "¡Bienvenido a Dagon! 🎯",
+    title: "Bienvenido a Dagon",
     content: "Soy Dagon, tu mentor épico en este viaje hacia el dominio de SQL. Prepárate para una experiencia de aprendizaje impulsada por IA.",
     icon: Sparkles,
     voice: "¡Bienvenido a Dagon! Soy tu mentor. Juntos dominarás SQL desde cero hasta nivel profesional. ¡Prepárate para una aventura épica!",
@@ -17,7 +17,7 @@ const tutorialSteps = [
   },
   {
     id: 'what-is-sql',
-    title: "¿Qué es SQL? 💾",
+    title: "¿Qué es SQL?",
     content: "SQL es el lenguaje universal para comunicarte con bases de datos. Es como dar instrucciones precisas para encontrar, guardar y organizar la información del mundo.",
     icon: Code,
     voice: "SQL es el lenguaje universal para hablar con bases de datos. Imagina que es como dar instrucciones precisas para encontrar cualquier información que necesites en el Abismo.",
@@ -27,7 +27,7 @@ const tutorialSteps = [
   },
   {
     id: 'why-postgres',
-    title: "¿Por qué PostgreSQL? 🐘",
+    title: "¿Por qué PostgreSQL?",
     content: "Es el motor de base de datos más robusto y confiable del mundo open-source. Lo usan gigantes tecnológicos como Uber, Netflix e Instagram.",
     icon: Database,
     voice: "Elegimos PostgreSQL porque es el motor más robusto del mundo. Lo usan gigantes como Uber y Netflix. Es potente, confiable y totalmente gratuito para nosotros.",
@@ -37,7 +37,7 @@ const tutorialSteps = [
   },
   {
     id: 'mission',
-    title: "Nuestra Misión 🎯",
+    title: "Nuestra misión",
     content: "Revolucionar cómo aprendes SQL. Nada de clases aburridas ni teoría seca. Aquí aprenderás jugando, practicando y conquistando retos reales en el Abismo.",
     icon: Target,
     voice: "Nuestra misión es revolucionar cómo aprendes SQL. Nada de clases aburridas. Aquí aprenderás jugando, practicando y divirtiéndote en el Abismo.",
@@ -47,7 +47,7 @@ const tutorialSteps = [
   },
   {
     id: 'levels',
-    title: "Niveles de Poder 📊",
+    title: "Niveles de poder",
     content: "Desbloquearás 5 niveles progresivos. Empezarás con comandos básicos y llegarás hasta el diseño arquitectónico de bases de datos completas.",
     icon: Trophy,
     voice: "Desbloquearás 5 niveles épicos. Empezarás con comandos básicos y llegarás hasta diseñar bases de datos completas. Cada nivel te dará nuevos superpoderes SQL.",
@@ -57,7 +57,7 @@ const tutorialSteps = [
   },
   {
     id: 'features',
-    title: "Tus Herramientas 🛠️",
+    title: "Tus herramientas",
     content: "Tendrás un editor SQL profesional, modo visual para principiantes, diagramas ER interactivos y tu propio tutor de Inteligencia Artificial.",
     icon: BookOpen,
     voice: "Tendrás un editor SQL profesional, diagramas visuales y tu tutor personal de inteligencia artificial que responderá todas tus dudas en tiempo real.",
@@ -67,7 +67,7 @@ const tutorialSteps = [
   },
   {
     id: 'ready',
-    title: "¡Inicia la Aventura! 🚀",
+    title: "Inicia la aventura",
     content: "El abismo te espera. Recuerda: la práctica constante es el secreto de los grandes Arquitectos de Software. ¡Forja tu destino!",
     icon: Sparkles,
     voice: "¡Estás listo! Recuerda: la práctica hace al maestro. Gana experiencia, sube de nivel y diviértete conquistando el Abismo de los Datos. ¡Iniciemos!",
@@ -77,12 +77,32 @@ const tutorialSteps = [
   }
 ];
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const createTourParticles = () => Array.from({ length: 15 }, (_, index) => {
+  const angle = index * 2.399963229728653;
+  const radius = 18 + (index % 5) * 9;
+  const left = clamp(50 + Math.cos(angle) * radius, 5, 95);
+  const top = clamp(50 + Math.sin(angle) * radius * 0.82, 8, 92);
+
+  return {
+    id: `tour-particle-${index}`,
+    left: `${left}%`,
+    top: `${top}%`,
+    drift: 82 + (index % 6) * 18,
+    duration: 4.2 + (index % 4) * 0.7,
+    delay: (index % 5) * 0.32,
+    scale: 1 + (index % 3) * 0.22,
+  };
+});
+
 export const TutorialOverlay = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
   const utteranceRef = useRef(null);
+  const particles = useMemo(() => createTourParticles(), []);
 
   useEffect(() => {
     if (isOpen) {
@@ -95,7 +115,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
   const step = tutorialSteps[currentStep];
 
-  const speak = (text) => {
+  const speak = useCallback((text) => {
     if (!voiceEnabled || !isOpen) return;
     
     synthRef.current.cancel();
@@ -118,22 +138,23 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     
     utteranceRef.current = utterance;
     synthRef.current.speak(utterance);
-  };
+  }, [isOpen, voiceEnabled]);
 
   useEffect(() => {
     if (isOpen && step?.voice && voiceEnabled) {
       const timer = setTimeout(() => speak(step.voice), 600);
       return () => clearTimeout(timer);
     }
-  }, [currentStep, isOpen, voiceEnabled]);
+  }, [currentStep, isOpen, speak, step?.voice, voiceEnabled]);
 
   useEffect(() => {
-    const loadVoices = () => synthRef.current.getVoices();
+    const synth = synthRef.current;
+    const loadVoices = () => synth.getVoices();
     loadVoices();
-    if (synthRef.current.onvoiceschanged !== undefined) {
-      synthRef.current.onvoiceschanged = loadVoices;
+    if (synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = loadVoices;
     }
-    return () => synthRef.current.cancel();
+    return () => synth.cancel();
   }, []);
 
   const handleNext = () => {
@@ -160,49 +181,46 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     setVoiceEnabled(!voiceEnabled);
   };
 
-  if (!isOpen) return null;
-
   const StepIcon = step.icon;
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4"
-      >
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(15)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1.5 h-1.5 bg-fuchsia-400/30 rounded-full blur-[1px]"
-              initial={{
-                x: Math.random() * window.innerWidth,
-                y: Math.random() * window.innerHeight,
-              }}
-              animate={{
-                y: [0, -150, 0],
-                opacity: [0, 1, 0],
-                scale: [1, 1.5, 1]
-              }}
-              transition={{
-                duration: 4 + Math.random() * 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
-            />
-          ))}
-        </div>
-
+      {isOpen && (
         <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, rotateX: 10, y: 40, scale: 0.95 }}
-          animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
-          exit={{ opacity: 0, rotateX: -10, y: -40, scale: 0.95 }}
-          transition={{ type: 'spring', stiffness: 250, damping: 25 }}
-          className={`relative w-full max-w-3xl bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+          className="tour-overlay-shell fixed inset-0 z-[100] bg-black/60 backdrop-blur-xl flex items-center justify-center p-4"
         >
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {particles.map((particle) => (
+              <motion.div
+                key={particle.id}
+                className="tour-particle absolute w-1.5 h-1.5 bg-fuchsia-400/30 rounded-full blur-[1px]"
+                style={{ left: particle.left, top: particle.top }}
+                animate={{
+                  y: [0, -particle.drift, 0],
+                  opacity: [0, 1, 0],
+                  scale: [1, particle.scale, 1]
+                }}
+                transition={{
+                  duration: particle.duration,
+                  repeat: Infinity,
+                  delay: particle.delay,
+                  ease: 'easeInOut',
+                }}
+              />
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, rotateX: 8, y: 34, scale: 0.96 }}
+            animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+            exit={{ opacity: 0, rotateX: -6, y: -24, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+            className={`tour-panel relative w-full max-w-3xl bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden`}
+          >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
           <div className="absolute top-6 right-6 flex gap-3 z-20">
@@ -256,10 +274,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
               >
-                <h2 className="text-3xl md:text-4xl font-display font-black bg-gradient-to-br from-white via-white/90 to-white/50 bg-clip-text text-transparent mb-4 tracking-tight leading-tight">
+                <h2 className="text-arcane-title text-3xl md:text-4xl font-display font-black bg-gradient-to-br from-white via-white/90 to-white/50 bg-clip-text text-transparent mb-4 leading-tight">
                   {step.title}
                 </h2>
-                <p className="text-base md:text-lg text-slate-300 leading-relaxed mb-8">
+                <p className="text-arcane-body text-base md:text-lg text-slate-300 mb-8">
                   {step.content}
                 </p>
               </motion.div>
@@ -309,9 +327,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

@@ -11,6 +11,7 @@ import {
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { API_BASE } from '../config/api';
 
 const TITLES = [
   { min: 0,    name: 'Novato del SELECT',     tier: 'bronze' },
@@ -47,8 +48,6 @@ const getDifficultyStyles = (level) => ({
 const MAX_AVATAR_SOURCE_BYTES = 12 * 1024 * 1024;
 const AVATAR_CANVAS_SIZE = 720;
 const AVATAR_UPLOAD_QUALITY = 0.82;
-const API_BASE = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
-
 const buildImageUrl = (fotoUrl) => {
   if (!fotoUrl) return '';
   const fullUrl = fotoUrl.startsWith('http') ? fotoUrl : `${API_BASE}${fotoUrl}`;

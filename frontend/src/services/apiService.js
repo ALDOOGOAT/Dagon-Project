@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { apiUrl } from '../config/api';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${API_URL}/api`;
+const API = apiUrl('/api');
 
 export const apiService = {
   getLevels: async () => {

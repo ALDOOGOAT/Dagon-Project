@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { apiUrl } from '../config/api';
 
 const AuthContext = createContext(null);
-
-const API_URL = process.env.REACT_APP_API_URL;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -28,7 +27,7 @@ useEffect(() => {
           const userId = payload.sub; 
 
           // ¡NUEVO! Le mostramos el pasaporte a Java en la petición GET
-          const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/usuarios/${userId}/profile`, {
+          const response = await axios.get(apiUrl(`/api/usuarios/${userId}/profile`), {
             headers: {
               Authorization: `Bearer ${token}`
             }
@@ -53,9 +52,9 @@ useEffect(() => {
 
 const login = async (email, password) => {
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/usuarios/login`, { 
-        email: email, 
-        passwordHash: password 
+      const response = await axios.post(apiUrl('/api/usuarios/login'), {
+        email: email,
+        passwordHash: password
       });
       
       // ¡Ahora Java nos manda el token real y el user!
@@ -74,10 +73,10 @@ const login = async (email, password) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/usuarios/registro`, { 
-        nombre: name, 
-        email: email, 
-        passwordHash: password 
+      const response = await axios.post(apiUrl('/api/usuarios/registro'), {
+        nombre: name,
+        email: email,
+        passwordHash: password
       });
       
       // ¡Ahora Java nos manda el token real y el user!

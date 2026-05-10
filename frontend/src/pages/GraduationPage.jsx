@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiUrl } from '../config/api';
 
 const Confetti = () => {
   const colors = ['#facc15', '#22d3ee', '#10b981', '#f97316', '#a855f7', '#ec4899'];
@@ -146,7 +147,7 @@ export const GraduationPage = () => {
   useEffect(() => {
     const fetchModuleData = async () => {
       try {
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/exercises/${levelId}`, {
+        const response = await fetch(apiUrl(`/api/exercises/${levelId}`), {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();

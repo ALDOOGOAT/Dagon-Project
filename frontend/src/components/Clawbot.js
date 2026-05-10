@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { X, Send, Code, Sparkles, BookOpen, Database, HelpCircle, Copy, Check, ChevronRight, FileCode, Lightbulb, AlertCircle } from 'lucide-react';
 import { DagonMascot } from './DagonMascot';
+import { apiUrl } from '../config/api';
 
 export const Clawbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -254,7 +255,7 @@ export const Clawbot = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/clawbot/chat`, {
+      const response = await fetch(apiUrl('/api/clawbot/chat'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

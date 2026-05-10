@@ -50,6 +50,16 @@ export const LoginPage = () => {
     backgroundColor: isLight ? 'rgba(250, 204, 21, 0.12)' : 'rgba(6, 182, 212, 0.10)',
     borderColor: isLight ? 'rgba(245, 158, 11, 0.24)' : `${colors.primary}4d`,
   };
+  const loginShellStyle = {
+    '--login-primary': colors.primary,
+    '--login-secondary': colors.secondary,
+    '--login-accent': colors.accent,
+    '--login-bg': colors.background,
+    '--login-surface': colors.surface,
+    '--login-border': colors.border,
+    '--login-text': colors.text,
+    '--login-muted': colors.textMuted,
+  };
 
   useEffect(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => setIsPageReady(true)));
@@ -78,60 +88,69 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col lg:flex-row relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`} data-testid="login-page">
-      {/* Lado izquierdo: cinemático */}
-<div className="hidden lg:flex lg:w-1/2 items-center justify-center relative overflow-hidden" style={{ backgroundColor: colors.background }}>
-          <div className="absolute inset-0 opacity-20" style={{ background: `radial-gradient(circle at 50% 50%, ${colors.primary}40, transparent 70%)` }} />
+    <div
+      className={`login-shell min-h-screen flex flex-col lg:flex-row relative overflow-hidden transition-opacity duration-500 ${isPageReady ? 'opacity-100' : 'opacity-0'}`}
+      style={loginShellStyle}
+      data-testid="login-page"
+    >
+      <div className="login-mobile-atmosphere lg:hidden" />
 
-        <div className="relative z-10 text-center space-y-8 px-12">
+      <section className="login-cinematic-panel hidden lg:flex lg:w-[56%] items-center justify-center relative overflow-hidden">
+        <div className="login-rune-grid" />
+        <div className="login-orbit login-orbit-one" />
+        <div className="login-orbit login-orbit-two" />
+
+        <div className="relative z-10 w-full max-w-2xl px-12 text-center">
           <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
+            initial={{ y: 28, opacity: 0, scale: 0.96 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="relative mx-auto mb-8 flex h-72 items-center justify-center"
           >
-            <div className="relative inline-block">
-              <div className="absolute -inset-12 rounded-full blur-3xl animate-pulse-glow" style={{ backgroundColor: `${colors.primary}30` }} />
-              <div className="relative animate-float">
-                <DagonMascot size="large" mood="excited" />
-              </div>
+            <div className="login-dagon-aura" />
+            <div className="login-dagon-ring" />
+            <DagonMascot size="large" mood="excited" />
+          </motion.div>
+
+          <motion.div
+            initial={{ y: 18, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.18, duration: 0.65 }}
+            className="space-y-5"
+          >
+            <p className="arcane-kicker text-xs font-black" style={{ color: colors.accent }}>
+              Academia SQL inmersiva
+            </p>
+            <h1 className="text-arcane-title font-display text-7xl xl:text-8xl font-black leading-none text-gradient-abyss drop-shadow-[0_4px_30px_rgba(99,102,241,0.35)]">
+              DAGON
+            </h1>
+            <div className="mx-auto h-16 max-w-lg">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={taglineIdx}
+                  initial={{ y: 14, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -14, opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-arcane-body text-xl font-gameui font-semibold"
+                  style={{ color: mutedColor }}
+                >
+                  {TAGLINES[taglineIdx]}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </motion.div>
 
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
-            className="font-display text-7xl font-black text-gradient-abyss drop-shadow-[0_4px_30px_rgba(99,102,241,0.35)] tracking-tight"
-          >
-            DAGON
-          </motion.h1>
-
-          <div className="h-14 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={taglineIdx}
-                initial={{ y: 14, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -14, opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="text-xl font-gameui font-medium max-w-md mx-auto"
-                style={{ color: mutedColor }}
-              >
-                {TAGLINES[taglineIdx]}
-              </motion.p>
-            </AnimatePresence>
-          </div>
-
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-            className="flex items-center justify-center gap-3 flex-wrap"
+            transition={{ delay: 0.45, duration: 0.6 }}
+            className="mt-8 grid grid-cols-3 gap-3"
           >
             {HIGHLIGHTS.map((h, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card-apple text-sm font-bold hover:scale-105 transition-all"
+                className="login-feature-chip inline-flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold"
                 style={chipStyle}
               >
                 <span style={{ color: colors.primary }}>{h.icon}</span>
@@ -143,34 +162,37 @@ export const LoginPage = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.9, duration: 0.6 }}
-            className="flex items-center justify-center gap-2 text-xs font-gameui font-bold uppercase tracking-[0.4em] pt-4"
+            transition={{ delay: 0.75, duration: 0.6 }}
+            className="arcane-kicker mt-8 flex items-center justify-center gap-3 text-xs font-black"
             style={{ color: mutedColor }}
           >
-            <Sparkles className="w-3 h-3" style={{ color: colors.primary }} />
+            <Sparkles className="w-3.5 h-3.5" style={{ color: colors.primary }} />
             <span>Tutor IA Clawbot incluido</span>
-            <Sparkles className="w-3 h-3" style={{ color: colors.primary }} />
+            <Sparkles className="w-3.5 h-3.5" style={{ color: colors.primary }} />
           </motion.div>
         </div>
-      </div>
+      </section>
 
-      {/* Lado derecho: formulario */}
-      <div className="flex-1 flex items-start sm:items-center justify-center p-4 sm:p-6 lg:p-12 pt-6 sm:pt-10 lg:pt-12 relative">
+      <section className="login-auth-side flex min-h-screen flex-1 items-start justify-center px-4 py-6 sm:px-6 sm:py-10 lg:w-[44%] lg:items-center lg:px-12 lg:py-12">
         <motion.div
-          initial={{ x: 30, opacity: 0 }}
+          initial={{ x: 26, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="w-full max-w-md space-y-5 sm:space-y-8"
+          className="relative z-10 w-full max-w-md space-y-5 sm:space-y-7"
         >
-          <div className="text-center lg:hidden mb-4">
-            <div className="inline-block animate-float">
+          <div className="text-center lg:hidden">
+            <div className="relative mx-auto inline-flex h-36 w-36 items-center justify-center">
+              <div className="login-dagon-aura" />
               <DagonMascot size="medium" mood="happy" />
             </div>
-            <h1 className="font-display text-4xl sm:text-5xl font-black text-gradient-abyss mt-3">DAGON</h1>
+            <p className="arcane-kicker mt-2 text-[10px] font-black" style={{ color: colors.accent }}>
+              Academia SQL inmersiva
+            </p>
+            <h1 className="text-arcane-title font-display text-5xl font-black text-gradient-abyss mt-2">DAGON</h1>
           </div>
 
           <div
-            className="glass-card-apple rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 border holo-border"
+            className="login-auth-card glass-card-apple rounded-3xl p-5 sm:p-8 space-y-5 sm:space-y-6 border holo-border"
             style={{
               borderColor: colors.border,
               boxShadow: isLight ? '0 30px 80px -20px rgba(245, 158, 11, 0.22)' : '0 30px 80px -20px rgba(0,0,0,0.6)'
@@ -181,10 +203,10 @@ export const LoginPage = () => {
                 <Database className="w-3 h-3" />
                 {isLogin ? 'Acceso de aventurero' : 'Nuevo aventurero'}
               </span>
-              <h2 className="font-display text-2xl sm:text-3xl font-black mb-2" style={{ color: headingColor }}>
+              <h2 className="text-arcane-title font-display text-2xl sm:text-3xl font-black mb-2" style={{ color: headingColor }}>
                 {isLogin ? 'Vuelve al abismo' : 'Forja tu leyenda'}
               </h2>
-              <p className="font-gameui text-sm" style={{ color: mutedColor }}>
+              <p className="text-arcane-body font-gameui text-sm" style={{ color: mutedColor }}>
                 {isLogin ? 'Continúa tu viaje de aprendizaje SQL' : 'Crea tu cuenta y empieza a ganar XP'}
               </p>
             </div>
@@ -209,7 +231,7 @@ export const LoginPage = () => {
                       placeholder="Tu nombre"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="h-12 rounded-xl"
+                      className="login-input h-12 rounded-xl"
                       style={{
                         backgroundColor: `${colors.surface}b3`,
                         borderColor: colors.border,
@@ -232,7 +254,7 @@ export const LoginPage = () => {
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 rounded-xl"
+                  className="login-input h-12 rounded-xl"
                       style={{
                         backgroundColor: `${colors.surface}b3`,
                         borderColor: colors.border,
@@ -253,7 +275,7 @@ export const LoginPage = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 rounded-xl"
+                  className="login-input h-12 rounded-xl"
                       style={{
                         backgroundColor: `${colors.surface}b3`,
                         borderColor: colors.border,
@@ -302,7 +324,7 @@ export const LoginPage = () => {
             </div>
           </div>
         </motion.div>
-      </div>
+      </section>
     </div>
   );
 };
