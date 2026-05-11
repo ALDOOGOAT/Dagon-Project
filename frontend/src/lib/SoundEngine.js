@@ -6,6 +6,17 @@ class SoundEngine {
     this.bgMusicNodes = null;
     this.gameMusicNodes = null;
     this.twinkleTimeout = null;
+    this.assetCooldown = new Map();
+    this.assetBase = `${process.env.PUBLIC_URL || ''}/assets/sounds/kenney-interface`;
+    this.assetMap = {
+      cinematic: 'open_001.ogg',
+      confirm: 'confirmation_001.ogg',
+      error: 'error_001.ogg',
+      question: 'question_001.ogg',
+      select: 'select_001.ogg',
+      switch: 'switch_001.ogg',
+      tick: 'tick_001.ogg',
+    };
   }
 
   async init() {
@@ -48,17 +59,57 @@ class SoundEngine {
     } catch (e) {}
   }
 
+  playAsset(name, volume = 0.38) {
+    if (!this.enabled || typeof Audio === 'undefined') return false;
+    const file = this.assetMap[name];
+    if (!file) return false;
+
+    const now = Date.now();
+    const lastPlayed = this.assetCooldown.get(name) || 0;
+    if (now - lastPlayed < 120) return true;
+    this.assetCooldown.set(name, now);
+
+    try {
+      const audio = new Audio(`${this.assetBase}/${file}`);
+      audio.volume = volume;
+      audio.play().catch(() => {});
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // --- EFECTOS DE SONIDO ---
-  playClick() { this.playTone(1200, 0.07, 'sine', 0.25); }
-  playStep() { this.playTone(220, 0.1, 'triangle', 0.3); }
+  playClick() { if (!this.playAsset('select', 0.22)) this.playTone(1200, 0.07, 'sine', 0.25); }
+  playStep() { if (!this.playAsset('switch', 0.24)) this.playTone(220, 0.1, 'triangle', 0.3); }
   playHover() { this.playTone(900, 0.03, 'sine', 0.12); }
 
+  setEnabled(enabled) {
+    this.enabled = enabled;
+    if (!enabled) {
+      this.stopBackgroundMusic();
+      this.stopGameMusic();
+      return;
+    }
+    if (this.initialized) {
+      this.startBackgroundMusic();
+    }
+  }
+
+  toggleEnabled() {
+    const next = !this.enabled;
+    this.setEnabled(next);
+    return next;
+  }
+
   playError() {
+    this.playAsset('error', 0.30);
     this.playTone(150, 0.4, 'sawtooth', 0.15);
     setTimeout(() => this.playTone(100, 0.5, 'sawtooth', 0.1), 250);
   }
 
   playSuccess() {
+    this.playAsset('confirm', 0.34);
     const notes = [523.25, 659.25, 783.99, 987.77];
     notes.forEach((freq, i) => {
       setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.1), i * 60);
@@ -88,7 +139,7 @@ class SoundEngine {
   }
 
   playSelect() {
-    this.playTone(600, 0.1, 'sine', 0.15);
+    if (!this.playAsset('select', 0.22)) this.playTone(600, 0.1, 'sine', 0.15);
   }
 
   playCountdown(t) {
@@ -106,6 +157,46 @@ class SoundEngine {
 
   playTimeWarning() {
     this.playTone(200, 0.5, 'sawtooth', 0.1);
+  }
+
+  playSoftWarning() {
+    this.playAsset('question', 0.24);
+    this.playTone(330, 0.12, 'triangle', 0.08);
+    setTimeout(() => this.playTone(260, 0.18, 'triangle', 0.06), 120);
+  }
+
+  playUnlock() {
+    this.playAsset('confirm', 0.36);
+    [392.0, 523.25, 659.25, 783.99].forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.16, 'sine', 0.09), i * 75);
+    });
+  }
+
+  playMissionStart() {
+    this.playTone(246.94, 0.18, 'triangle', 0.08);
+    setTimeout(() => this.playTone(369.99, 0.2, 'sine', 0.07), 120);
+    setTimeout(() => this.playTone(493.88, 0.24, 'sine', 0.06), 240);
+  }
+
+  playCinematicPulse() {
+    this.playAsset('cinematic', 0.28);
+    this.playTone(130.81, 0.22, 'sine', 0.06);
+    setTimeout(() => this.playTone(261.63, 0.28, 'triangle', 0.045), 160);
+    setTimeout(() => this.playTone(392.0, 0.18, 'sine', 0.035), 360);
+  }
+
+  playCinematicCue(cue = 'mystic') {
+    const assetByCue = {
+      build: 'switch',
+      challenge: 'question',
+      focus: 'tick',
+      mystic: 'cinematic',
+      risk: 'question',
+      safe: 'confirm',
+    };
+    const asset = assetByCue[cue] || 'cinematic';
+    const played = this.playAsset(asset, cue === 'risk' ? 0.22 : 0.26);
+    if (!played) this.playCinematicPulse();
   }
 
   // --- NUEVOS MÉTODOS REQUERIDOS ---

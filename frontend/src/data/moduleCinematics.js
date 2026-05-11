@@ -1,0 +1,263 @@
+const scene = (kicker, title, body, extra = {}) => ({
+  kicker,
+  title,
+  body,
+  duration: 7600,
+  mood: 'thinking',
+  visual: 'database',
+  prompt: 'Observa la idea central antes de escribir SQL.',
+  ...extra,
+});
+
+const checkpoint = (question, correct, distractors = []) => ({
+  question,
+  options: [
+    { label: correct, correct: true, feedback: 'Correcto. Esa es la idea que debes llevar al editor.' },
+    ...distractors.map((label) => ({ label, correct: false, feedback: 'Cerca, pero esa opcion no captura el objetivo principal de este modulo.' })),
+  ],
+});
+
+export const MODULE_CINEMATICS = {
+  1: {
+    title: 'Teoria de Conjuntos',
+    subtitle: 'Pensar SQL como grupos de datos',
+    accent: 'from-cyan-500 to-blue-600',
+    ambient: 'mystic',
+    scenes: [
+      scene('Escena 1', 'Todo empieza con un conjunto', 'Una tabla puede imaginarse como un conjunto: un grupo completo de filas que comparten estructura. Antes de filtrar, primero entiendes el universo de datos.', { visual: 'set', mood: 'happy', code: 'SELECT *\nFROM aventureros;' }),
+      scene('Escena 2', 'Filtrar es elegir subconjuntos', 'WHERE no es una palabra magica: es la regla que decide que filas entran y que filas quedan fuera.', { visual: 'filter', code: "SELECT *\nFROM aventureros\nWHERE clase = 'Mago';" }),
+      scene('Escena 3', 'Unir condiciones cambia el grupo', 'AND reduce el conjunto; OR lo expande. Esta diferencia es la base para no confundirte cuando una consulta parece correcta pero devuelve demasiadas filas.', { visual: 'relation', mood: 'determined', prompt: 'Predice si tu condicion agranda o reduce el resultado.' }),
+    ],
+    checkpoint: checkpoint('Si usas OR entre dos clases, que pasa con el resultado?', 'Incluye filas que cumplan cualquiera de las dos clases.', ['Solo deja las filas que cumplen ambas clases.', 'Borra las filas duplicadas automaticamente.']),
+  },
+  2: {
+    title: 'Manipulacion de Datos',
+    subtitle: 'CRUD con responsabilidad',
+    accent: 'from-rose-500 to-red-600',
+    ambient: 'risk',
+    scenes: [
+      scene('Escena 1', 'Cambiar datos tiene consecuencias', 'INSERT, UPDATE y DELETE modifican la historia de la base. Por eso cada cambio debe tener intencion, condicion y comprobante.', { visual: 'shield', mood: 'determined', code: "UPDATE aventureros\nSET nivel = 20\nWHERE nombre = 'Loya'\nRETURNING *;" }),
+      scene('Escena 2', 'RETURNING es tu comprobante', 'En PostgreSQL puedes pedir que la misma instruccion te devuelva lo que acaba de cambiar. Eso ayuda a aprender porque ves causa y efecto.', { visual: 'code', mood: 'happy' }),
+      scene('Escena 3', 'DELETE sin WHERE es peligro', 'El problema no es borrar; el problema es borrar sin limite. Antes de ejecutar, pregunta: que filas exactas van a cambiar?', { visual: 'warning', mood: 'nervous', prompt: 'Si vas a modificar datos, primero identifica la condicion.' }),
+    ],
+    checkpoint: checkpoint('Que hace RETURNING en un INSERT, UPDATE o DELETE?', 'Devuelve las filas afectadas para verificar el cambio.', ['Cancela automaticamente el cambio.', 'Ordena los resultados por fecha.']),
+  },
+  3: {
+    title: 'El Arquitecto y los Vinculos',
+    subtitle: 'Relaciones, DDL y JOINs',
+    accent: 'from-violet-500 to-fuchsia-600',
+    ambient: 'build',
+    scenes: [
+      scene('Escena 1', 'Las tablas no viven solas', 'Un sistema real conecta entidades: aventureros con equipamiento, huespedes con reservas, habitaciones con precios. Las claves crean esas conexiones.', { visual: 'relation', mood: 'happy', code: 'SELECT a.nombre, e.item\nFROM aventureros a\nJOIN equipamiento e ON a.id_aventurero = e.id_aventurero;' }),
+      scene('Escena 2', 'DDL construye el escenario', 'CREATE TABLE y ALTER TABLE no consultan datos: definen el mundo donde despues vas a consultar.', { visual: 'database', mood: 'determined' }),
+      scene('Escena 3', 'JOIN responde preguntas compuestas', 'Si una pregunta necesita columnas de dos tablas, necesitas pensar en la relacion antes de pensar en el SELECT.', { visual: 'code', prompt: 'Ubica primero la columna que une ambas tablas.' }),
+    ],
+    checkpoint: checkpoint('Que parte de un JOIN explica como se conectan dos tablas?', 'La condicion ON.', ['La palabra SELECT.', 'El ORDER BY.']),
+  },
+  4: {
+    title: 'La Prueba de Dagon',
+    subtitle: 'Diseñar, construir y consultar',
+    accent: 'from-amber-500 to-orange-600',
+    ambient: 'challenge',
+    scenes: [
+      scene('Escena 1', 'Primero diseñas el mapa', 'Un reto completo empieza con entidades y relaciones. Si el modelo esta mal, las consultas despues se vuelven confusas.', { visual: 'diagram', mood: 'thinking' }),
+      scene('Escena 2', 'Despues construyes reglas', 'Las tablas, claves y restricciones convierten tu idea en una estructura que PostgreSQL puede proteger.', { visual: 'shield', code: 'CREATE TABLE habitaciones (\n  id SERIAL PRIMARY KEY,\n  numero INTEGER,\n  precio NUMERIC\n);' }),
+      scene('Escena 3', 'Finalmente haces preguntas', 'Cuando el modelo ya existe, JOIN, filtros y agrupaciones convierten datos guardados en respuestas utiles.', { visual: 'relation', mood: 'excited' }),
+    ],
+    checkpoint: checkpoint('En un proyecto de base de datos, que conviene hacer primero?', 'Diseñar entidades y relaciones antes de consultar.', ['Escribir JOINs sin conocer tablas.', 'Borrar datos para empezar limpio.']),
+  },
+  5: {
+    title: 'Los Sellos Sagrados',
+    subtitle: 'Constraints y secuencias',
+    accent: 'from-emerald-500 to-teal-600',
+    ambient: 'safe',
+    scenes: [
+      scene('Escena 1', 'La base tambien debe defenderse', 'Las restricciones evitan que entren datos imposibles, duplicados o incompletos. No todo debe depender de recordar hacerlo bien.', { visual: 'shield', code: 'ALTER TABLE aventureros\nADD CHECK (nivel > 0);' }),
+      scene('Escena 2', 'Una regla clara evita errores silenciosos', 'CHECK, UNIQUE y PRIMARY KEY convierten reglas de negocio en reglas verificables por PostgreSQL.', { visual: 'code' }),
+      scene('Escena 3', 'Las secuencias dan identidad', 'SERIAL y las secuencias ayudan a crear identificadores sin inventarlos manualmente.', { visual: 'sequence', mood: 'happy' }),
+    ],
+    checkpoint: checkpoint('Para que sirve un CHECK?', 'Para impedir valores que no cumplen una regla.', ['Para unir dos tablas.', 'Para convertir texto en numeros.']),
+  },
+  6: {
+    title: 'Sellos de Validacion',
+    subtitle: 'UNIQUE, CHECK y DEFAULT',
+    accent: 'from-lime-500 to-emerald-600',
+    ambient: 'safe',
+    scenes: [
+      scene('Escena 1', 'DEFAULT completa lo esperado', 'Un valor por defecto evita pedirle al usuario datos obvios o repetitivos, como una fecha actual o un estado inicial.', { visual: 'spark', code: 'INSERT INTO habitaciones (numero, tipo)\nVALUES (999, \'Especial\')\nRETURNING *;' }),
+      scene('Escena 2', 'UNIQUE protege identidades', 'Si un dato debe ser irrepetible, no basta con prometerlo en la interfaz. La base debe hacerlo cumplir.', { visual: 'shield' }),
+      scene('Escena 3', 'CHECK valida la logica', 'CHECK expresa condiciones simples: niveles positivos, precios mayores a cero o estados permitidos.', { visual: 'filter' }),
+    ],
+    checkpoint: checkpoint('Que ventaja tiene DEFAULT?', 'Permite que PostgreSQL complete un valor si no lo envias.', ['Elimina filas incompletas.', 'Hace JOIN automaticamente.']),
+  },
+  7: {
+    title: 'El Generador de IDs',
+    subtitle: 'SERIAL, BIGSERIAL y secuencias',
+    accent: 'from-sky-500 to-cyan-600',
+    ambient: 'build',
+    scenes: [
+      scene('Escena 1', 'Un ID debe ser confiable', 'Los identificadores permiten reconocer una fila aunque otros datos cambien. Por eso no conviene depender solo del nombre.', { visual: 'sequence', code: "SELECT nextval('aventureros_id_aventurero_seq');" }),
+      scene('Escena 2', 'SERIAL usa una secuencia detras', 'Cuando insertas una fila, PostgreSQL puede pedir el siguiente numero disponible y asignarlo automaticamente.', { visual: 'database' }),
+      scene('Escena 3', 'No confundas identidad con descripcion', 'Un nombre puede repetirse; un ID primario no deberia repetirse dentro de su tabla.', { visual: 'shield', mood: 'determined' }),
+    ],
+    checkpoint: checkpoint('Por que usamos IDs automaticos?', 'Para identificar filas de forma estable y unica.', ['Para ordenar alfabeticamente.', 'Para evitar escribir SELECT.']),
+  },
+  8: {
+    title: 'Los Filtros de Precision',
+    subtitle: 'BETWEEN, IN e IS NULL',
+    accent: 'from-blue-500 to-indigo-600',
+    ambient: 'focus',
+    scenes: [
+      scene('Escena 1', 'No todos los filtros son iguales', 'BETWEEN busca rangos, IN busca opciones permitidas, e IS NULL detecta ausencia real de valor.', { visual: 'filter', code: 'SELECT *\nFROM aventureros\nWHERE nivel BETWEEN 10 AND 30;' }),
+      scene('Escena 2', 'NULL no es cero ni texto vacio', 'NULL significa que no hay valor. Por eso se pregunta con IS NULL, no con igual.', { visual: 'warning' }),
+      scene('Escena 3', 'El filtro correcto evita respuestas falsas', 'Si eliges mal el operador, la consulta puede ejecutarse pero responder otra pregunta.', { visual: 'target', mood: 'determined' }),
+    ],
+    checkpoint: checkpoint('Como se pregunta por valores ausentes?', 'Con IS NULL.', ['Con = NULL.', 'Con ORDER BY NULL.']),
+  },
+  9: {
+    title: 'Las Ventanas Magicas',
+    subtitle: 'Vistas reutilizables',
+    accent: 'from-purple-500 to-indigo-600',
+    ambient: 'mystic',
+    scenes: [
+      scene('Escena 1', 'Una vista guarda una consulta', 'CREATE VIEW permite nombrar una consulta para usarla como si fuera una tabla virtual.', { visual: 'view', code: "CREATE VIEW vista_guerreros AS\nSELECT * FROM aventureros\nWHERE clase = 'Guerrero';" }),
+      scene('Escena 2', 'La vista no duplica necesariamente los datos', 'Una vista ayuda a simplificar consultas y reportes, manteniendo una fuente de verdad.', { visual: 'database' }),
+      scene('Escena 3', 'Tambien debes saber retirarla', 'DROP VIEW elimina el atajo, no la tabla base que consultaba.', { visual: 'warning' }),
+    ],
+    checkpoint: checkpoint('Que es una vista?', 'Una consulta guardada con nombre.', ['Una copia obligatoria de todos los datos.', 'Un usuario nuevo.']),
+  },
+  10: {
+    title: 'Los Planos del Gremio',
+    subtitle: 'information_schema',
+    accent: 'from-slate-400 to-cyan-600',
+    ambient: 'focus',
+    scenes: [
+      scene('Escena 1', 'PostgreSQL puede describirse a si mismo', 'information_schema contiene metadatos: tablas, columnas, constraints y secuencias disponibles.', { visual: 'metadata', code: "SELECT table_name\nFROM information_schema.tables\nWHERE table_schema = current_schema();" }),
+      scene('Escena 2', 'Consultar estructura tambien es SQL', 'No solo preguntas por datos del negocio; tambien puedes preguntar por la forma de la base.', { visual: 'database' }),
+      scene('Escena 3', 'Los metadatos ayudan a depurar', 'Cuando no sabes como se llama una columna o restriccion, los planos del sistema te orientan.', { visual: 'target' }),
+    ],
+    checkpoint: checkpoint('Para que sirve information_schema?', 'Para consultar metadatos de la base.', ['Para insertar usuarios automaticamente.', 'Para iniciar una transaccion.']),
+  },
+  11: {
+    title: 'Patrones de Busqueda',
+    subtitle: 'LIKE y patrones',
+    accent: 'from-pink-500 to-rose-600',
+    ambient: 'focus',
+    scenes: [
+      scene('Escena 1', 'Buscar texto exige patrones', 'LIKE permite encontrar nombres que empiezan, terminan o contienen fragmentos especificos.', { visual: 'search', code: "SELECT *\nFROM aventureros\nWHERE nombre LIKE 'L%';" }),
+      scene('Escena 2', 'El comodin porcentaje cambia todo', 'A% significa empieza con A. %a significa termina con a. %o% significa contiene o.', { visual: 'filter' }),
+      scene('Escena 3', 'NOT LIKE invierte la busqueda', 'Tambien puedes pedir lo contrario: filas que no siguen un patron.', { visual: 'warning' }),
+    ],
+    checkpoint: checkpoint('Que significa % al final en LIKE A%?', 'Que el texto empieza con A y luego puede seguir cualquier cosa.', ['Que termina con A.', 'Que no contiene A.']),
+  },
+  12: {
+    title: 'Los Hechizos Automaticos',
+    subtitle: 'Funciones SQL',
+    accent: 'from-fuchsia-500 to-violet-600',
+    ambient: 'mystic',
+    scenes: [
+      scene('Escena 1', 'Una funcion encapsula una idea', 'Si una operacion se repite, puedes darle nombre y reutilizarla con parametros.', { visual: 'function', code: 'CREATE FUNCTION sumar(a INTEGER, b INTEGER)\nRETURNS INTEGER AS \'\n  SELECT a + b;\n\' LANGUAGE SQL;' }),
+      scene('Escena 2', 'Los parametros hacen flexible la consulta', 'La misma funcion puede responder con diferentes entradas sin reescribir el cuerpo.', { visual: 'code' }),
+      scene('Escena 3', 'Una funcion debe ser predecible', 'Piensa que recibe, que devuelve y que tabla toca. Esa claridad evita errores dificiles.', { visual: 'target' }),
+    ],
+    checkpoint: checkpoint('Que ventaja tiene una funcion?', 'Reutilizar una operacion con nombre y parametros.', ['Eliminar todas las restricciones.', 'Crear un nuevo servidor.']),
+  },
+  13: {
+    title: 'Rituales Programados',
+    subtitle: 'Procedures y bloques de acciones',
+    accent: 'from-orange-500 to-red-600',
+    ambient: 'risk',
+    scenes: [
+      scene('Escena 1', 'Un procedimiento coordina pasos', 'Cuando una accion necesita varias instrucciones, puedes agruparlas para ejecutarlas como un flujo.', { visual: 'function', code: 'BEGIN\n  INSERT INTO aventureros (...);\n  INSERT INTO equipamiento (...);\nEND;' }),
+      scene('Escena 2', 'El orden importa', 'Si primero creas un aventurero y luego su equipo, necesitas capturar el ID generado para conectar los datos.', { visual: 'relation' }),
+      scene('Escena 3', 'Mas poder exige mas cuidado', 'Los procedimientos pueden cambiar datos; por eso deben ser claros, verificables y seguros.', { visual: 'shield' }),
+    ],
+    checkpoint: checkpoint('Cuando conviene agrupar varias instrucciones?', 'Cuando forman un flujo logico que debe ejecutarse junto.', ['Cuando solo quieres ordenar una consulta.', 'Cuando necesitas cambiar el color de la UI.']),
+  },
+  14: {
+    title: 'Los Gatillos Magicos',
+    subtitle: 'Triggers',
+    accent: 'from-red-500 to-pink-600',
+    ambient: 'risk',
+    scenes: [
+      scene('Escena 1', 'Un trigger reacciona automaticamente', 'Un trigger ejecuta una funcion cuando ocurre un evento como INSERT, UPDATE o DELETE.', { visual: 'trigger', code: 'CREATE TRIGGER trg_auditar\nAFTER INSERT ON aventureros\nFOR EACH ROW\nEXECUTE FUNCTION fn_auditar();' }),
+      scene('Escena 2', 'BEFORE valida, AFTER registra', 'BEFORE puede impedir datos invalidos; AFTER suele registrar, auditar o encadenar efectos.', { visual: 'shield' }),
+      scene('Escena 3', 'Lo automatico debe ser visible', 'Si un trigger hace demasiado sin avisar, depurar se vuelve dificil. Su responsabilidad debe ser pequeña.', { visual: 'warning' }),
+    ],
+    checkpoint: checkpoint('Que dispara un trigger?', 'Un evento sobre una tabla, como INSERT o UPDATE.', ['Un boton del navegador.', 'Una consulta SELECT simple siempre.']),
+  },
+  15: {
+    title: 'Viaje Temporal',
+    subtitle: 'BEGIN, COMMIT, ROLLBACK y SAVEPOINT',
+    accent: 'from-cyan-500 to-indigo-700',
+    ambient: 'mystic',
+    scenes: [
+      scene('Escena 1', 'Una transaccion agrupa cambios', 'BEGIN inicia un bloque. COMMIT confirma lo hecho. ROLLBACK vuelve al estado anterior si decides no continuar.', { visual: 'time', code: 'BEGIN;\nINSERT INTO aventureros (...);\nROLLBACK;' }),
+      scene('Escena 2', 'SAVEPOINT crea puntos de retorno', 'Puedes deshacer una parte sin cancelar todo el trabajo pendiente.', { visual: 'target' }),
+      scene('Escena 3', 'Controlar cambios tambien es aprender', 'Ver antes y despues de una transaccion ayuda a entender que significa persistir datos.', { visual: 'database' }),
+    ],
+    checkpoint: checkpoint('Que hace ROLLBACK?', 'Deshace cambios pendientes de una transaccion.', ['Confirma los cambios para siempre.', 'Crea una columna nueva.']),
+  },
+  16: {
+    title: 'Cerrojos de Filas',
+    subtitle: 'FOR UPDATE y bloqueo pesimista',
+    accent: 'from-slate-500 to-blue-700',
+    ambient: 'safe',
+    scenes: [
+      scene('Escena 1', 'A veces debes apartar una fila', 'FOR UPDATE bloquea filas seleccionadas para evitar que dos operaciones sensibles las cambien al mismo tiempo.', { visual: 'lock', code: 'SELECT *\nFROM aventureros\nWHERE id_aventurero = 1\nFOR UPDATE;' }),
+      scene('Escena 2', 'NOWAIT evita quedarse esperando', 'Si una fila ya esta bloqueada, NOWAIT permite fallar rapido en lugar de esperar indefinidamente.', { visual: 'warning' }),
+      scene('Escena 3', 'Bloquear tambien tiene costo', 'Usa bloqueos cuando haya riesgo real de conflicto, no para todas las consultas.', { visual: 'shield' }),
+    ],
+    checkpoint: checkpoint('Para que sirve FOR UPDATE?', 'Para bloquear filas que vas a modificar con seguridad.', ['Para ordenar por fecha.', 'Para eliminar duplicados.']),
+  },
+  17: {
+    title: 'Algebra Relacional',
+    subtitle: 'UNION, INTERSECT y EXCEPT',
+    accent: 'from-teal-500 to-cyan-700',
+    ambient: 'focus',
+    scenes: [
+      scene('Escena 1', 'Tambien puedes operar conjuntos', 'UNION junta resultados compatibles. INTERSECT conserva coincidencias. EXCEPT resta un resultado de otro.', { visual: 'set', code: 'SELECT clase FROM aventureros\nUNION\nSELECT item FROM equipamiento;' }),
+      scene('Escena 2', 'La forma de las columnas debe coincidir', 'Estas operaciones necesitan que ambos SELECT tengan columnas compatibles en cantidad y tipo.', { visual: 'code' }),
+      scene('Escena 3', 'UNION ALL conserva duplicados', 'UNION limpia duplicados; UNION ALL conserva todo. Esa diferencia cambia el significado del reporte.', { visual: 'warning' }),
+    ],
+    checkpoint: checkpoint('Que hace INTERSECT?', 'Devuelve solo elementos que aparecen en ambos resultados.', ['Devuelve todo aunque este duplicado.', 'Borra una tabla.']),
+  },
+  18: {
+    title: 'Roles del Gremio',
+    subtitle: 'CREATE ROLE, GRANT y REVOKE',
+    accent: 'from-yellow-500 to-amber-700',
+    ambient: 'safe',
+    scenes: [
+      scene('Escena 1', 'No todos deben poder hacer todo', 'Los roles definen identidades y permisos. En bases reales, seguridad significa dar solo el acceso necesario.', { visual: 'shield', code: 'GRANT SELECT ON aventureros TO lector;' }),
+      scene('Escena 2', 'GRANT concede, REVOKE retira', 'Los permisos deben poder crecer y reducirse segun la responsabilidad del usuario.', { visual: 'lock' }),
+      scene('Escena 3', 'Ver permisos tambien importa', 'Antes de corregir acceso, primero consulta quien tiene que privilegios.', { visual: 'metadata' }),
+    ],
+    checkpoint: checkpoint('Que hace GRANT?', 'Concede permisos a un rol o usuario.', ['Deshace una transaccion.', 'Agrupa filas.']),
+  },
+  19: {
+    title: 'Seguridad a Nivel de Fila',
+    subtitle: 'Row Level Security',
+    accent: 'from-indigo-500 to-violet-700',
+    ambient: 'safe',
+    scenes: [
+      scene('Escena 1', 'La seguridad puede llegar fila por fila', 'RLS permite que usuarios distintos consulten la misma tabla pero vean filas diferentes segun una politica.', { visual: 'lock' }),
+      scene('Escena 2', 'Una politica expresa una condicion de acceso', 'No basta con tener permiso sobre la tabla; la politica decide que filas cumplen para ese usuario.', { visual: 'filter', code: 'ALTER TABLE datos ENABLE ROW LEVEL SECURITY;' }),
+      scene('Escena 3', 'Esto protege datos compartidos', 'En un LMS, cada alumno podria ver solo su progreso aunque todos vivan en la misma estructura.', { visual: 'shield' }),
+    ],
+    checkpoint: checkpoint('Que controla RLS?', 'Que filas puede ver o modificar cada usuario.', ['El color de las tablas.', 'La velocidad del navegador.']),
+  },
+  20: {
+    title: 'Proyecto Final',
+    subtitle: 'Integracion completa',
+    accent: 'from-amber-400 to-fuchsia-600',
+    ambient: 'challenge',
+    scenes: [
+      scene('Escena 1', 'Ahora unes todo', 'El proyecto final mezcla modelado, constraints, funciones, vistas, transacciones y consultas. Ya no es memorizar: es decidir.', { visual: 'spark', mood: 'excited' }),
+      scene('Escena 2', 'Cada decision tiene motivo', 'Una tabla responde que existe. Una restriccion responde que se permite. Una consulta responde que necesita saber el usuario.', { visual: 'diagram' }),
+      scene('Escena 3', 'Piensa como constructor de sistemas', 'Antes de escribir, identifica datos, reglas, acciones y reportes. Ese orden convierte SQL en herramienta real.', { visual: 'target', code: 'Modelo -> Reglas -> Cambios -> Consultas -> Verificacion' }),
+    ],
+    checkpoint: checkpoint('Que evalua mejor el proyecto final?', 'Integrar decisiones de modelo, reglas y consultas.', ['Recordar una sola palabra SQL.', 'Evitar usar restricciones.']),
+  },
+};
+
+export const getModuleCinematic = (moduleId) => MODULE_CINEMATICS[Number(moduleId)] || null;

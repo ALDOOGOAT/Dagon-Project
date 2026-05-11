@@ -14,7 +14,7 @@ import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Calendar, Award, Heart, BookOpen, Terminal
+  User, Calendar, Award, Heart, BookOpen, Terminal, Volume2, VolumeX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,8 +54,13 @@ export const DashboardPage = () => {
   const pillBg = isLight ? 'rgba(250, 204, 21, 0.14)' : 'rgba(6, 182, 212, 0.10)';
   const pillBorder = isLight ? 'rgba(245, 158, 11, 0.24)' : 'rgba(34, 211, 238, 0.30)';
   const pillText = isLight ? '#92400e' : '#cffafe';
-  const warmSurface = isLight ? 'rgba(255,250,240,0.82)' : `${colors.surface}80`;
-  const softBorder = isLight ? `${colors.border}88` : colors.border;
+  const topActionClass = "border-2 font-display font-black text-sm w-full sm:w-auto justify-center rounded-xl shadow-[0_10px_28px_rgba(2,6,23,0.16)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.24)] transition-all";
+  const topActionStyle = {
+    backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.74)',
+    borderColor: isLight ? 'rgba(245,158,11,0.34)' : 'rgba(148,163,184,0.30)',
+    color: headingColor,
+    boxShadow: isLight ? '0 12px 28px -20px rgba(180,83,9,0.55)' : '0 14px 36px -22px rgba(34,211,238,0.55)'
+  };
 
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
@@ -63,6 +68,7 @@ export const DashboardPage = () => {
   const [certificadoData, setCertificadoData] = useState(null);
   const [certificadoCurso, setCertificadoCurso] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => sounds.enabled);
 
   useEffect(() => {
     if (showQuickPractice) {
@@ -83,7 +89,7 @@ export const DashboardPage = () => {
   const xpInLevel = userXP % 100;
   const xpFaltante = 100 - xpInLevel;
   const userLevel = Math.floor(userXP / 100) + 1;
-const title = titleFor(userXP);
+  const title = titleFor(userXP);
   const [userStreak, setUserStreak] = useState(0);
 
   const dashboardMood = useMemo(() => {
@@ -178,8 +184,20 @@ const title = titleFor(userXP);
       sounds.init();
       return;
     }
-    sounds.playStep();
+    sounds.playMissionStart?.();
     navigate(`/exercise/${mod.id_modulo}`);
+  };
+
+  const handleToggleSound = async () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    if (next) {
+      sounds.setEnabled(true);
+      await sounds.init();
+      sounds.playMagic();
+    } else {
+      sounds.setEnabled(false);
+    }
   };
 
   const handleLogout = () => {
@@ -218,6 +236,23 @@ const title = titleFor(userXP);
   const completedCount = modulos.filter((m) => !m.bloqueado).length;
   const totalCount = modulos.length;
   const moduleProgress = totalCount ? (completedCount / totalCount) * 100 : 0;
+  const unlockedModules = modulos.filter((m) => !m.bloqueado);
+  const recommendedMission = unlockedModules[unlockedModules.length - 1] || modulos[0] || null;
+  const recommendedMissionIndex = recommendedMission
+    ? modulos.findIndex((m) => m.id_modulo === recommendedMission.id_modulo)
+    : -1;
+  const nextLockedMission = modulos.find((m) => m.bloqueado);
+  const xpToUnlockNext = nextLockedMission
+    ? Math.max((nextLockedMission.xp_requerida || 0) - userXP, 0)
+    : 0;
+  const missionFocuses = [
+    'Leer datos con calma antes de escribir SQL completo.',
+    'Filtrar informacion con condiciones simples y verificables.',
+    'Conectar tablas para responder preguntas reales.',
+    'Modificar datos con seguridad y entender sus consecuencias.',
+    'Modelar reglas para proteger la informacion.'
+  ];
+  const recommendedFocus = missionFocuses[Math.max(0, recommendedMissionIndex) % missionFocuses.length] || missionFocuses[0];
 
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
@@ -251,9 +286,19 @@ const title = titleFor(userXP);
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
             <TourTrigger onClick={() => setShowTutorial(true)} />
             <Button
+              onClick={handleToggleSound}
+              variant="ghost"
+              className={topActionClass}
+              style={{ ...topActionStyle, color: soundEnabled ? colors.primary : mutedColor, borderColor: soundEnabled ? `${colors.primary}80` : topActionStyle.borderColor }}
+              title={soundEnabled ? 'Silenciar sonidos' : 'Activar sonidos'}
+            >
+              {soundEnabled ? <Volume2 className="w-4 h-4 mr-2" /> : <VolumeX className="w-4 h-4 mr-2" />}
+              <span className="hidden sm:inline">{soundEnabled ? 'Sonido' : 'Silencio'}</span>
+            </Button>
+            <Button
               onClick={() => navigate('/profile')}
-              className="border font-display font-black text-sm w-full sm:w-auto justify-center"
-              style={{ backgroundColor: warmSurface, borderColor: softBorder, color: headingColor }}
+              className={topActionClass}
+              style={topActionStyle}
             >
               <User className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Mi Perfil</span>
@@ -261,8 +306,8 @@ const title = titleFor(userXP);
             {userStreak > 0 ? (
               <Button
                 onClick={() => navigate('/streak')}
-                className="border font-display font-black shadow-[0_0_20px_rgba(249,115,22,0.3)] text-sm w-full sm:w-auto justify-center"
-                style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, borderColor: 'rgba(251,146,60,0.35)', color: isLight ? '#1f2937' : '#ffffff' }}
+                className={topActionClass}
+                style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, rgba(245,158,11,0.95), rgba(251,146,60,0.95))' : 'rgba(124,45,18,0.34)', borderColor: 'rgba(251,146,60,0.70)', color: isLight ? '#1f2937' : '#ffffff' }}
               >
                 <Flame className="w-4 h-4 mr-2 animate-pulse" />
                 {userStreak} días
@@ -271,8 +316,8 @@ const title = titleFor(userXP);
               <Button
                 onClick={() => navigate('/streak')}
                 variant="ghost"
-                className="text-sm w-full sm:w-auto justify-center"
-                style={{ color: isLight ? '#b45309' : '#fdba74' }}
+                className={topActionClass}
+                style={{ ...topActionStyle, color: isLight ? '#b45309' : '#fdba74', borderColor: 'rgba(251,146,60,0.44)' }}
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Racha</span>
@@ -280,14 +325,14 @@ const title = titleFor(userXP);
             )}
             <Button
               onClick={() => setShowQuickPractice(true)}
-              className="font-display font-black tracking-wide shadow-[0_10px_30px_rgba(249,115,22,0.4)] hover:scale-105 transition-all text-sm w-full sm:w-auto justify-center"
-              style={{ background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : undefined, color: isLight ? '#1f2937' : '#ffffff' }}
+              className={`${topActionClass} tracking-wide hover:scale-[1.03]`}
+              style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, borderColor: isLight ? 'rgba(251,146,60,0.72)' : 'rgba(34,211,238,0.72)', color: isLight ? '#1f2937' : '#ffffff' }}
             >
               <Target className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Práctica Rápida</span>
               <span className="sm:hidden">Práctica</span>
             </Button>
-            <Button onClick={handleLogout} variant="ghost" className="text-sm w-full sm:w-auto justify-center" style={{ color: mutedColor }}>
+            <Button onClick={handleLogout} variant="ghost" className={topActionClass} style={{ ...topActionStyle, color: mutedColor }}>
               <LogOut className="w-5 h-5 mr-2" />
               <span className="hidden sm:inline">Salir</span>
             </Button>
@@ -554,6 +599,83 @@ const title = titleFor(userXP);
                 </button>
             ))}
         </div>
+
+        {recommendedMission && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="glass-card-apple rounded-3xl p-5 sm:p-6 border mb-8 relative overflow-hidden"
+            style={{ borderColor: `${colors.primary}40` }}
+          >
+            <div className="absolute inset-y-0 right-0 w-2/5 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}16)` }} />
+            <div className="relative z-10 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.primary, borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}12` }}>
+                    <Target className="w-3 h-3" />
+                    Siguiente misión recomendada
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: mutedColor, borderColor: colors.border }}>
+                    {completedCount}/{totalCount || 1} disponibles
+                  </span>
+                </div>
+                <h2 className="font-display text-2xl sm:text-3xl font-black" style={{ color: headingColor }}>
+                  {recommendedMission.titulo}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm sm:text-base font-gameui" style={{ color: mutedColor }}>
+                  {recommendedMission.descripcion}
+                </p>
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.55)' }}>
+                    <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: colors.primary }}>Meta clara</p>
+                    <p className="mt-2 text-sm font-gameui" style={{ color: headingColor }}>{recommendedFocus}</p>
+                  </div>
+                  <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(251,146,60,0.30)', backgroundColor: isLight ? 'rgba(255,247,237,0.80)' : 'rgba(124,45,18,0.16)' }}>
+                    <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>Presión sana</p>
+                    <p className="mt-2 text-sm font-gameui" style={{ color: headingColor }}>
+                      {userStreak > 0 ? `Mantén tu racha de ${userStreak} días con una práctica corta.` : 'Empieza una racha resolviendo una misión hoy.'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(16,185,129,0.30)', backgroundColor: isLight ? 'rgba(236,253,245,0.78)' : 'rgba(6,78,59,0.18)' }}>
+                    <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: isLight ? '#047857' : '#6ee7b7' }}>Próximo desbloqueo</p>
+                    <p className="mt-2 text-sm font-gameui" style={{ color: headingColor }}>
+                      {nextLockedMission ? `Faltan ${xpToUnlockNext} XP para ${nextLockedMission.titulo}.` : 'Todas las misiones de esta senda están disponibles.'}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 h-2 rounded-full overflow-hidden border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.78)' : 'rgba(15,23,42,0.80)', borderColor: colors.border }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${moduleProgress}%` }}
+                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                    className="h-full"
+                    style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }}
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 lg:w-64">
+                <Button
+                  onClick={() => handleModuloClick(recommendedMission)}
+                  disabled={recommendedMission.bloqueado}
+                  className="w-full justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black py-6 rounded-2xl shadow-[0_12px_30px_rgba(16,185,129,0.28)]"
+                >
+                  <Play className="w-4 h-4 mr-2 fill-current" />
+                  Entrar ahora
+                </Button>
+                <Button
+                  onClick={() => setShowQuickPractice(true)}
+                  variant="outline"
+                  className="w-full justify-center border font-display font-black rounded-2xl"
+                  style={{ borderColor: `${colors.primary}40`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.50)' }}
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  Entrenar primero
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* MAIN GRID */}
         <div className="grid lg:grid-cols-[1fr_320px] gap-8">

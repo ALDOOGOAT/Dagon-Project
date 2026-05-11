@@ -1545,6 +1545,31 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
           </motion.div>
         </AnimatePresence>
 
+        {isLast && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-emerald-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.28em] font-black text-emerald-300 mb-2">
+                  Punto de control
+                </p>
+                <h3 className="font-display text-xl font-black text-white">
+                  Entra a la práctica con una idea clara
+                </h3>
+                <p className="mt-2 text-sm sm:text-base text-slate-300 font-gameui leading-relaxed">
+                  Antes de ejecutar SQL, di en voz baja que dato quieres obtener, de que tabla sale y que condicion lo limita. Ese habito evita errores de memoria y te obliga a razonar.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={prev} disabled={index === 0} className="text-slate-300 font-display">
             Anterior

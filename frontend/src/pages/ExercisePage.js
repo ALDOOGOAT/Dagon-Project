@@ -8,10 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
+import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield, BookOpen, Target, Film
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -196,6 +197,103 @@ const isTransactionExercise = (exercise, levelId) => {
     .toUpperCase();
 
   return /(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|TRANSAC)/.test(combined);
+};
+
+const SQL_LEARNING_PATTERNS = [
+  {
+    pattern: /(JOIN|FOREIGN KEY|CLAVE FORANEA|RELACION)/,
+    concept: 'Relaciones entre tablas',
+    objective: 'Identifica que tabla aporta cada dato y conecta las filas con una condicion ON.',
+    correction: 'Revisa primero FROM, luego JOIN y al final la condicion que une las claves.'
+  },
+  {
+    pattern: /(WHERE|FILT|CONDICI|LIKE|BETWEEN| IN | IS NULL)/,
+    concept: 'Filtros',
+    objective: 'Reduce la tabla a las filas que cumplen una condicion concreta.',
+    correction: 'Asegura que el campo filtrado exista y que el operador exprese exactamente la condicion.'
+  },
+  {
+    pattern: /(GROUP BY|COUNT|SUM|AVG|MAX|MIN|HAVING|AGRUP)/,
+    concept: 'Agrupaciones',
+    objective: 'Convierte muchas filas en una respuesta resumida usando grupos y funciones.',
+    correction: 'Comprueba que toda columna no agregada aparezca en GROUP BY.'
+  },
+  {
+    pattern: /(INSERT|UPDATE|DELETE|RETURNING|DML|MODIFIC)/,
+    concept: 'Cambios de datos',
+    objective: 'Modifica informacion con una condicion segura y valida el resultado.',
+    correction: 'Antes de cambiar datos, piensa que filas se verian afectadas y usa WHERE cuando aplique.'
+  },
+  {
+    pattern: /(CREATE TABLE|ALTER TABLE|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|DDL|MODELO)/,
+    concept: 'Modelado de datos',
+    objective: 'Define reglas para que la base de datos proteja la informacion.',
+    correction: 'Revisa nombres, tipos de dato y restricciones antes de ejecutar.'
+  },
+  {
+    pattern: /(SELECT|FROM|COLUMNA|CONSULTA)/,
+    concept: 'Consulta basica',
+    objective: 'Pide columnas especificas desde una tabla y observa el resultado.',
+    correction: 'Empieza por SELECT, confirma la tabla en FROM y despues agrega detalle.'
+  }
+];
+
+const inferLearningFocus = (exercise = {}, levelId = '') => {
+  const combined = [
+    exercise.title,
+    exercise.description,
+    exercise.hint,
+    exercise.starterCode,
+    levelId
+  ].filter(Boolean).join(' ').toUpperCase();
+
+  return SQL_LEARNING_PATTERNS.find((item) => item.pattern.test(combined)) || SQL_LEARNING_PATTERNS[SQL_LEARNING_PATTERNS.length - 1];
+};
+
+const buildLocalClawbotFallback = (errorData = {}, exercise = {}) => {
+  const focus = inferLearningFocus(exercise, errorData.nivelId);
+  const attempt = Number(errorData.intentos || 1);
+  const hint = exercise.hint || errorData.errorDb || 'Lee el enunciado y separa el problema en SELECT, FROM y condicion.';
+  const scaffold = attempt >= 2
+    ? 'AYUDA: Escribe primero la estructura minima y deja espacios mentales: SELECT columnas FROM tabla WHERE condicion.'
+    : 'AYUDA: No busques memorizar la respuesta; identifica que parte del enunciado corresponde a cada palabra SQL.';
+
+  return [
+    `CONCEPTO: ${focus.concept}. ${focus.objective}`,
+    `PISTA: ${hint}`,
+    scaffold,
+    `AYUDA: ${focus.correction}`
+  ].join('\n');
+};
+
+const buildLearningFeedback = (result, focus, attempts) => {
+  if (!result) return null;
+  if (result.isWarning) {
+    return {
+      tone: 'warning',
+      title: 'Funcionó, pero conviene revisar el riesgo',
+      message: 'La consulta produjo una respuesta aceptable, aunque hay una advertencia que debes entender antes de avanzar.',
+      next: focus.correction
+    };
+  }
+  if (result.success) {
+    return {
+      tone: 'success',
+      title: `Concepto reforzado: ${focus.concept}`,
+      message: result.xp_gained > 0
+        ? `Ganaste ${result.xp_gained} XP porque tu consulta resolvio el objetivo esperado.`
+        : 'La consulta cumple el objetivo; observa el resultado para entender por que funciona.',
+      next: 'Avanza solo cuando puedas explicar con tus palabras que hizo cada parte de la consulta.'
+    };
+  }
+  return {
+    tone: 'error',
+    title: `Ajusta el concepto: ${focus.concept}`,
+    message: attempts >= 2
+      ? 'Ya hay patron de error. Usa la pista, corrige una parte a la vez y vuelve a ejecutar.'
+      : 'El fallo es parte del entrenamiento. Primero ubica si el problema esta en columnas, tabla, filtro o relacion.',
+    next: focus.correction
+  };
 };
 
 const DataComparisonTable = ({ data, colors, highlight = false, rowMarkers = [], animateRows = false }) => {
@@ -793,6 +891,12 @@ export const ExercisePage = () => {
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
   const mutedColor = colors.textMuted;
+  const headerControlClass = "border-2 rounded-xl font-display font-black shadow-[0_10px_26px_rgba(2,6,23,0.18)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.26)] transition-all";
+  const headerControlStyle = {
+    color: headingColor,
+    backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.76)',
+    borderColor: isLight ? 'rgba(245,158,11,0.34)' : 'rgba(148,163,184,0.30)'
+  };
 
   const [isMounted, setIsMounted] = useState(false);
   const [exercises, setExercises] = useState([]);
@@ -801,6 +905,7 @@ export const ExercisePage = () => {
   const [validating, setValidating] = useState(false);
 
   const [showTheory, setShowTheory] = useState(true);
+  const [showModuleCinematic, setShowModuleCinematic] = useState(true);
   const [currentSubTopic, setCurrentSubTopic] = useState(null);
   const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
@@ -845,6 +950,7 @@ export const ExercisePage = () => {
         const data = await response.json();
         const loaded = data.exercises || [];
         setExercises(loaded);
+        setShowModuleCinematic(true);
 
         // Establecer el subtema inicial basado en el primer ejercicio
         if (loaded.length > 0) {
@@ -932,11 +1038,11 @@ export const ExercisePage = () => {
       } else {
         const errorText = await response.text();
         console.log("Error response:", errorText);
-        setClawbotMessage("Mis circuitos fallaron. Intenta de nuevo.");
+        setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
       }
     } catch (error) {
       console.error("Error invokeClawbot:", error);
-      setClawbotMessage("¡Bzzz! No pude contactar mis servidores.");
+      setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
     } finally {
       setClawbotThinking(false);
     }
@@ -1004,7 +1110,10 @@ export const ExercisePage = () => {
           setTimeout(() => setXpPop(null), 1700);
           const prevLvl = Math.floor(prevXP / 100) + 1;
           const newLvl = Math.floor(newXP / 100) + 1;
-          if (newLvl > prevLvl) setLevelUpData({ newLevel: newLvl });
+          if (newLvl > prevLvl) {
+            setLevelUpData({ newLevel: newLvl });
+            sounds.playUnlock?.();
+          }
           setShowReward(true);
         } else {
           toast.success(result.message);
@@ -1022,7 +1131,7 @@ export const ExercisePage = () => {
           success: true,
           isWarning: true 
         });
-        sounds.playMagic();
+        sounds.playSoftWarning?.();
       } else {
         toast.error(result.message);
         // Limpiar intervención pedagógica si existe
@@ -1044,10 +1153,25 @@ export const ExercisePage = () => {
             nivelId: parseInt(levelId),
             tituloEjercicio: exercise.title,
           });
+        } else {
+          const nuevos = intentosFallidos + 1;
+          setIntentosFallidos(nuevos);
+          setClawbotMessage(buildLocalClawbotFallback({
+            errorDb: result.errorDb || result.message,
+            intentos: nuevos,
+            nivelId: parseInt(levelId),
+            tituloEjercicio: exercise.title,
+          }, exercise));
         }
       }
     } catch (error) {
       toast.error('Error al validar ejercicio');
+      setClawbotMessage(buildLocalClawbotFallback({
+        errorDb: 'No se pudo validar contra el servidor en este momento.',
+        intentos: Math.max(intentosFallidos, 1),
+        nivelId: parseInt(levelId),
+        tituloEjercicio: exercise.title,
+      }, exercise));
     } finally {
       setValidating(false);
     }
@@ -1159,6 +1283,8 @@ export const ExercisePage = () => {
   const isDragDrop = exercise.type === 'drag_drop';
   const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
   const isTransactionLab = isTransactionExercise(exercise, levelId);
+  const learningFocus = inferLearningFocus(exercise, levelId);
+  const learningFeedback = buildLearningFeedback(executionResult, learningFocus, intentosFallidos);
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="exercise-page">
@@ -1176,19 +1302,31 @@ export const ExercisePage = () => {
       <header className="border-b backdrop-blur-md z-10 shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,252,245,0.90)' : 'rgba(2,6,23,0.90)', borderColor: isLight ? 'rgba(245,158,11,0.14)' : '#1e293b' }}>
         <div className="px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:min-w-0">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="px-2 sm:px-3 shrink-0" style={{ color: mutedColor }}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0">
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className={`${headerControlClass} px-2 sm:px-3 shrink-0`} style={headerControlStyle}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
             <div className="hidden sm:block h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
             <Button 
               variant="ghost" 
               onClick={handleResetSandbox} 
-              className="px-2 sm:px-3 shrink-0"
+              className={`${headerControlClass} px-2 sm:px-3 shrink-0`}
               title="🔄 Restablecer tabla: Borra todos tus cambios y vuelve a los datos originales del ejercicio. Útil si cometiste muchos errores o quieres empezar de nuevo."
-              style={{ color: mutedColor }}
+              style={{ ...headerControlStyle, color: mutedColor, borderColor: isLight ? 'rgba(251,146,60,0.42)' : 'rgba(251,146,60,0.34)' }}
             >
               <RotateCcw className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Restablecer</span>
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                sounds.playCinematicPulse?.();
+                setShowModuleCinematic(true);
+              }}
+              className={`${headerControlClass} px-2 sm:px-3 shrink-0`}
+              style={{ ...headerControlStyle, borderColor: isLight ? 'rgba(34,211,238,0.42)' : 'rgba(34,211,238,0.36)', color: isLight ? '#0e7490' : '#67e8f9' }}
+              title="Volver a ver la cinemática de este módulo"
+            >
+              <Film className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Cinemática</span>
             </Button>
             </div>
             <h1 className="font-display text-sm sm:text-base font-black flex items-center gap-2 min-w-0" style={{ color: headingColor }}>
@@ -1199,7 +1337,7 @@ export const ExercisePage = () => {
               </span>
             </h1>
           </div>
-          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border overflow-x-auto scrollbar-none bg-slate-900 border-slate-700 w-full lg:w-auto lg:max-w-[40%]">
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl border-2 overflow-x-auto scrollbar-none w-full lg:w-auto lg:max-w-[40%] shadow-[0_12px_34px_rgba(2,6,23,0.24)]" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.82)', borderColor: isLight ? 'rgba(245,158,11,0.26)' : 'rgba(34,211,238,0.22)' }}>
             {exercises.map((_, i) => {
               const isCompleted = i < currentExerciseIndex;
               const isCurrent = i === currentExerciseIndex;
@@ -1210,10 +1348,10 @@ export const ExercisePage = () => {
                   <button 
                     onClick={() => isUnlocked && handleLevelJump(i)}
                     className={`
-                      w-8 h-8 rounded-lg flex items-center justify-center font-display text-[10px] font-black transition-all duration-300
-                      ${isCurrent ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-white scale-110 shadow-[0_0_20px_rgba(34,211,238,0.5)] z-10' : 
-                        isCompleted ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-white' : 
-                        'bg-slate-800 text-slate-500 hover:bg-slate-700 hover:text-white'}
+                      w-9 h-9 rounded-xl flex items-center justify-center font-display text-[10px] font-black transition-all duration-300 border
+                      ${isCurrent ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-white scale-110 shadow-[0_0_24px_rgba(34,211,238,0.62)] border-cyan-200 z-10' :
+                        isCompleted ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50 hover:bg-emerald-500 hover:text-white' :
+                        'bg-slate-800/80 text-slate-300 border-slate-600 hover:bg-slate-700 hover:border-cyan-400/60 hover:text-white'}
                     `}
                     title={`Misión ${i + 1}`}
                   >
@@ -1227,7 +1365,7 @@ export const ExercisePage = () => {
             })}
           </div>
           <div className="flex items-center gap-3 self-end lg:self-auto">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : '#0f172a', borderColor: isLight ? 'rgba(245,158,11,0.18)' : '#334155' }}>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border-2 shadow-[0_10px_24px_rgba(2,6,23,0.18)]" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : '#0f172a', borderColor: isLight ? 'rgba(245,158,11,0.34)' : 'rgba(250,204,21,0.28)' }}>
               <Zap className="w-4 h-4" style={{ color: isLight ? '#d97706' : '#fde047' }} />
               <span className="font-display font-black text-sm" style={{ color: isLight ? '#b45309' : '#fef08a' }}>{user?.xp || 0}</span>
             </div>
@@ -1252,7 +1390,16 @@ export const ExercisePage = () => {
 
       {/* MAIN */}
       <main className="flex-1 overflow-y-auto scroll-fancy pb-24 sm:pb-8">
-        {showTheory ? (
+        {showModuleCinematic ? (
+          <ModuleCinematic
+            moduleId={levelId}
+            exercises={exercises}
+            onComplete={() => {
+              setShowModuleCinematic(false);
+              setShowTheory(true);
+            }}
+          />
+        ) : showTheory ? (
           <LevelTheory
             levelId={levelId}
             subTopic={currentSubTopic}
@@ -1265,6 +1412,43 @@ export const ExercisePage = () => {
           />
         ) : (
           <div className={`max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-5 sm:space-y-6 ${shake ? 'animate-shake-x' : ''}`}>
+
+            {/* ESTADO PEDAGÓGICO */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="grid gap-3 md:grid-cols-3"
+            >
+              <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.62)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4" style={{ color: colors.primary }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.primary }}>Meta</span>
+                </div>
+                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                  {learningFocus.objective}
+                </p>
+              </div>
+              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(251,146,60,0.30)', backgroundColor: isLight ? 'rgba(255,247,237,0.82)' : 'rgba(124,45,18,0.16)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Flame className="w-4 h-4" style={{ color: isLight ? '#c2410c' : '#fdba74' }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>Presión sana</span>
+                </div>
+                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                  {intentosFallidos > 0
+                    ? `Intento ${intentosFallidos}. Corrige una parte y vuelve a probar.`
+                    : 'Puedes fallar sin perder avance; lo importante es entender el error.'}
+                </p>
+              </div>
+              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(34,211,238,0.30)', backgroundColor: isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.20)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen className="w-4 h-4" style={{ color: isLight ? '#0891b2' : '#67e8f9' }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#0891b2' : '#67e8f9' }}>Concepto</span>
+                </div>
+                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                  {learningFocus.concept}
+                </p>
+              </div>
+            </motion.div>
 
             {/* MASCOTA + INSTRUCCIONES */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
@@ -1657,6 +1841,51 @@ export const ExercisePage = () => {
                     </span>
                     <span className="font-gameui text-sm text-slate-300 ml-2">{executionResult.message}</span>
                   </div>
+
+                  {learningFeedback && (
+                    <div className="p-5 border-b" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)' }}>
+                      <div
+                        className="rounded-2xl border p-4"
+                        style={{
+                          borderColor: learningFeedback.tone === 'success'
+                            ? 'rgba(16,185,129,0.35)'
+                            : learningFeedback.tone === 'warning'
+                              ? 'rgba(245,158,11,0.35)'
+                              : 'rgba(244,63,94,0.32)',
+                          backgroundColor: learningFeedback.tone === 'success'
+                            ? (isLight ? 'rgba(236,253,245,0.80)' : 'rgba(6,78,59,0.18)')
+                            : learningFeedback.tone === 'warning'
+                              ? (isLight ? 'rgba(255,251,235,0.82)' : 'rgba(120,53,15,0.18)')
+                              : (isLight ? 'rgba(255,241,242,0.82)' : 'rgba(127,29,29,0.18)')
+                        }}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.55)' }}>
+                            {learningFeedback.tone === 'success'
+                              ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                              : learningFeedback.tone === 'warning'
+                                ? <Lightbulb className="w-5 h-5 text-amber-300" />
+                                : <XCircle className="w-5 h-5 text-rose-400" />
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: mutedColor }}>
+                              Retroalimentación de aprendizaje
+                            </p>
+                            <h3 className="mt-1 font-display text-lg font-black" style={{ color: headingColor }}>
+                              {learningFeedback.title}
+                            </h3>
+                            <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                              {learningFeedback.message}
+                            </p>
+                            <p className="mt-3 text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                              Siguiente acción: {learningFeedback.next}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {executionResult.transactionSimulation && (
                     <TransactionSimulationPanel simulation={executionResult.transactionSimulation} colors={colors} />

@@ -69,6 +69,23 @@ const DAILY_CHALLENGES = [
   { id: 3, title: 'Racha Perfecta', description: 'Completa 5 sin errores', target: 5, reward: 100, icon: '🔥' },
 ];
 
+const inferPracticeLearning = (query) => {
+  const answer = (query?.answer || '').toUpperCase();
+  if (answer.includes('JOIN')) return 'Relaciones entre tablas';
+  if (answer.includes('GROUP BY') || answer.includes('COUNT') || answer.includes('AVG') || answer.includes('SUM')) return 'Agrupaciones y funciones';
+  if (answer.includes('WHERE') || answer.includes('ORDER BY') || answer.includes('DISTINCT')) return 'Filtros y ordenamiento';
+  if (answer.includes('WITH')) return 'Consultas avanzadas con CTE';
+  return 'Lectura basica con SELECT';
+};
+
+const buildPracticeRecommendation = (query, success) => {
+  const concept = inferPracticeLearning(query);
+  if (success) {
+    return `Refuerza ${concept.toLowerCase()} intentando resolverlo otra vez sin mirar la pista.`;
+  }
+  return `Vuelve a separar la consulta en bloques: SELECT, FROM y la parte de ${concept.toLowerCase()}.`;
+};
+
 export const QuickPracticeMode = ({ 
   userLevel = 'nivel-0', 
   userXP = 0,
@@ -199,13 +216,18 @@ export const QuickPracticeMode = ({
         });
       }, 1000);
     } else if (timer === 0 && isRunning) {
-      handleTimeout();
+      setIsRunning(false);
+      setCombo(0);
+      setQuestionsAnswered(prev => prev + 1);
+      setLastResult({ success: false, timeout: true, correctAnswer: query?.answer || '' });
+      setShowResult(true);
+      sounds.playTimeWarning();
     }
     return () => {
       clearInterval(interval);
       sounds.stopTimerLoop?.();
     };
-  }, [isRunning, timer === 0]); // optimized dependency
+  }, [isRunning, timer, query]);
 
   useEffect(() => {
     localStorage.setItem('dagon_daily_progress', JSON.stringify(dailyProgress));
@@ -286,15 +308,6 @@ export const QuickPracticeMode = ({
     setShowResult(true);
   };
 
-  const handleTimeout = () => {
-    setIsRunning(false);
-    setCombo(0);
-    setQuestionsAnswered(prev => prev + 1);
-    setLastResult({ success: false, timeout: true, correctAnswer: query.answer });
-    setShowResult(true);
-    sounds.playTimeWarning();
-  };
-
   const startChallenge = (challenge) => {
     setCurrentChallenge(challenge);
     setScore(0);
@@ -309,8 +322,11 @@ export const QuickPracticeMode = ({
     startChallenge({ id: 'free', title: 'Práctica Libre', target: Infinity, reward: 0 });
   };
 
+  const accuracy = questionsAnswered > 0 ? Math.round((correctAnswers / questionsAnswered) * 100) : 0;
+
   if (showDifficultySelect) {
     const availableLevels = getAvailableLevels();
+    const recommendedLevelKey = availableLevels[availableLevels.length - 1] || 'nivel-0';
     
     return (
       <motion.div 
@@ -359,6 +375,15 @@ export const QuickPracticeMode = ({
               </div>
             </div>
 
+            <div className="mb-4 sm:mb-6 rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 sm:p-4">
+              <p className="text-[10px] uppercase tracking-[0.24em] font-black text-cyan-300 mb-2">
+                Entrenamiento con presión controlada
+              </p>
+              <p className="text-sm text-slate-300 leading-relaxed">
+                El tiempo sirve para practicar fluidez. Si fallas, el sistema te muestra la respuesta y puedes repetir sin perder tu avance principal.
+              </p>
+            </div>
+
             <div className="mb-4 sm:mb-6">
               <h3 className="text-base sm:text-lg font-semibold text-white mb-3 sm:mb-4 flex items-center gap-2">
                 <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
@@ -368,6 +393,7 @@ export const QuickPracticeMode = ({
                 {availableLevels.map((levelKey) => {
                   const level = LEVEL_NAMES[levelKey] || { name: levelKey, icon: '📚', description: '', color: 'from-gray-500 to-slate-600' };
                   const isUnlocked = true;
+                  const isRecommended = levelKey === recommendedLevelKey;
                   
                   return (
                     <motion.button
@@ -377,7 +403,7 @@ export const QuickPracticeMode = ({
                       onClick={() => handleDifficultySelect(levelKey)}
                       className={`p-3 sm:p-4 rounded-xl border text-left transition-all ${
                         isUnlocked
-                          ? `bg-gradient-to-r ${level.color} border-white/20 hover:border-white/40`
+                          ? `bg-gradient-to-r ${level.color} ${isRecommended ? 'border-yellow-300/80 shadow-[0_0_22px_rgba(250,204,21,0.22)]' : 'border-white/20 hover:border-white/40'}`
                           : 'bg-slate-800/50 border-slate-700 opacity-50'
                       }`}
                     >
@@ -385,7 +411,14 @@ export const QuickPracticeMode = ({
                         <div className="flex items-center gap-2 sm:gap-3">
                           <span className="text-xl sm:text-2xl">{level.icon}</span>
                           <div>
-                            <p className="font-bold text-white text-sm sm:text-base">{level.name}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-bold text-white text-sm sm:text-base">{level.name}</p>
+                              {isRecommended && (
+                                <span className="rounded-full bg-black/25 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-yellow-100">
+                                  Recomendado
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs text-white/70 hidden sm:block">{level.description}</p>
                           </div>
                         </div>
@@ -680,6 +713,29 @@ export const QuickPracticeMode = ({
                   <p className="text-white font-mono text-sm sm:text-lg">{lastResult.correctAnswer}</p>
                 </div>
               )}
+
+              <div className="mt-4 sm:mt-6 rounded-xl border border-white/10 bg-slate-900/50 p-4 text-left">
+                <p className="text-[10px] uppercase tracking-[0.24em] font-black text-cyan-300 mb-3">
+                  Cierre formativo
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg bg-white/5 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500">Precisión</p>
+                    <p className="mt-1 text-lg font-black text-white">{accuracy}%</p>
+                  </div>
+                  <div className="rounded-lg bg-white/5 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500">Concepto</p>
+                    <p className="mt-1 text-sm font-bold text-white">{inferPracticeLearning(query)}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/5 p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500">XP de sesión</p>
+                    <p className="mt-1 text-lg font-black text-yellow-300">{score}</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-slate-300">
+                  {buildPracticeRecommendation(query, lastResult.success)}
+                </p>
+              </div>
               
               <div className="quick-practice-buttons mt-4 sm:mt-6">
                 <Button

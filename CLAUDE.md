@@ -48,6 +48,7 @@ Dagon-Project/
 │       ├── index.css              ← utilidades Tailwind + animaciones
 │       ├── pages/                 ← Login, Dashboard, Exercise, Leaderboard, Profile, Streak, Analytics
 │       ├── components/            ← Clawbot, DagonMascot, AbyssBackground, ui/* (Shadcn)
+│       ├── data/                  ← guiones locales de cinemáticas por módulo
 │       ├── contexts/AuthContext.js
 │       ├── services/apiService.js
 │       └── hooks/ + lib/
@@ -132,6 +133,7 @@ La página `/analytics` en el frontend muestra el resultado con animaciones (Rec
 - **Estética:** clases custom `glass-card`, `glass-card-apple`, `neon-glow`, `neon-glow-red`, `cyber-bg`, `grid-pattern`, animaciones `animate-float`, `animate-breathe`, `animate-pulse-glow`. Reúsalas antes de crear nuevas.
 - **Fonts:** Inter (UI) + JetBrains Mono (código). Ya cargadas en `index.css`.
 - **Iconos:** `lucide-react`. Nunca uses emoji salvo que el usuario pida.
+- **Cinemáticas:** los guiones personalizados por módulo viven en `frontend/src/data/moduleCinematics.js`; los sonidos locales CC0 viven en `frontend/public/assets/sounds/` con licencia documentada.
 
 ## 9. Cosas que NO hacer
 
@@ -144,7 +146,7 @@ La página `/analytics` en el frontend muestra el resultado con animaciones (Rec
 
 - Branch activa: `feature/conexion-niveles`.
 - Último trabajo: integración del script DB, motor de validación nuevo, Clawbot con rachas.
-- Pendiente/WIP: UX del `/analytics` y pulido del `AbyssBackground`.
+- Pendiente/WIP: UX del `/analytics`, pulido del `AbyssBackground` y revisión pedagógica de guiones de cinemáticas por módulo.
 
 ---
 
