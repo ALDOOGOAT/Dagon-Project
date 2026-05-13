@@ -2153,6 +2153,4 @@ Frase final:
    responsabilidades, aislar usuarios, escalar la lógica educativa y explicar el
    sistema por capas de forma mantenible."
 
-================================================================================
-ANEXO HISTÓRICO: DOCUMENTACIÓN ANTERIOR
-================================================================================
+

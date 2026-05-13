@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Download, CheckCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
+import { toast } from 'sonner';
 
 const generarCertificadoPNG = (datos, cursoId) => {
   const canvas = document.createElement('canvas');
@@ -126,14 +127,12 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
       link.download = `Certificado_Dagon_${datosCertificado.curso.replace(/\s+/g, '_')}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (error) {
-      console.error('Error al generar certificado:', error);
+    } catch {
+      toast.error('No se pudo generar el certificado');
     }
     
     setLoading(false);
   };
-
-  if (!isOpen) return null;
 
   const esGuerrero = datosCertificado?.curso?.toLowerCase().includes('guerrero');
 
@@ -270,43 +269,34 @@ export const useCertificado = (token) => {
   const [cursosCompletados, setCursosCompletados] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchCursosCompletados = async () => {
+  const fetchCursosCompletados = useCallback(async () => {
     if (!token) return;
-    
+
     try {
-      const response = await fetch(apiUrl('/api/modulos/cursos-completados'), {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCursosCompletados(data);
-      }
-    } catch (error) {
-      console.error('Error al cargar cursos completados:', error);
+      const response = await apiClient.get('/api/modulos/cursos-completados');
+      const data = response.data;
+      setCursosCompletados(data);
+    } catch {
+      toast.error('Error al cargar cursos completados');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   const generarCertificado = async (cursoId) => {
     if (!token) return null;
-    
+
     try {
-      const response = await fetch(apiUrl(`/api/modulos/certificado/${cursoId}`), {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('Error al generar certificado:', error);
+      const response = await apiClient.get(`/api/modulos/certificado/${cursoId}`);
+      return response.data;
+    } catch {
+      toast.error('Error al generar certificado');
     }
     return null;
   };
 
   useEffect(() => {
     fetchCursosCompletados();
-  }, [token]);
-
+  }, [fetchCursosCompletados]);
   return { cursosCompletados, loading, generarCertificado, refetch: fetchCursosCompletados };
 };

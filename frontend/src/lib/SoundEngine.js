@@ -1,5 +1,8 @@
 class SoundEngine {
   constructor() {
+    this.storageKey = 'dagon_sound_enabled';
+    this.volumeStorageKey = 'dagon_sound_volume';
+    this.changeEvent = 'dagon:soundchange';
     this.audioContext = null;
     this.enabled = this.readStoredEnabled();
     this.initialized = false;
@@ -8,8 +11,7 @@ class SoundEngine {
     this.twinkleTimeout = null;
     this.activeAssets = new Set();
     this.assetCooldown = new Map();
-    this.storageKey = 'dagon_sound_enabled';
-    this.changeEvent = 'dagon:soundchange';
+    this.masterVolume = this.readStoredVolume();
     this.assetBase = `${process.env.PUBLIC_URL || ''}/assets/sounds/kenney-interface`;
     this.assetMap = {
       cinematic: 'open_001.ogg',
@@ -24,25 +26,54 @@ class SoundEngine {
 
   readStoredEnabled() {
     if (typeof window === 'undefined') return true;
-    return window.localStorage.getItem('dagon_sound_enabled') !== 'false';
+    return window.localStorage.getItem(this.storageKey) !== 'false';
+  }
+
+  readStoredVolume() {
+    if (typeof window === 'undefined') return 0.8;
+    const stored = Number(window.localStorage.getItem(this.volumeStorageKey));
+    if (!Number.isFinite(stored)) return 0.8;
+    return Math.min(1, Math.max(0, stored));
   }
 
   persistEnabled() {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('dagon_sound_enabled', this.enabled ? 'true' : 'false');
+    window.localStorage.setItem(this.storageKey, this.enabled ? 'true' : 'false');
+  }
+
+  persistVolume() {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(this.volumeStorageKey, String(this.masterVolume));
   }
 
   emitSoundChange() {
     if (typeof window === 'undefined') return;
-    window.dispatchEvent(new CustomEvent(this.changeEvent, { detail: { enabled: this.enabled } }));
+    window.dispatchEvent(new CustomEvent(this.changeEvent, { detail: { enabled: this.enabled, volume: this.masterVolume } }));
   }
 
   isEnabled() {
     return this.enabled;
   }
 
+  getVolume() {
+    return this.masterVolume;
+  }
+
+  setVolume(volume) {
+    const next = Math.min(1, Math.max(0, Number(volume) || 0));
+    const changed = this.masterVolume !== next;
+    this.masterVolume = next;
+    this.persistVolume();
+
+    if (this.bgMusicNodes?.masterGain && this.audioContext) {
+      this.bgMusicNodes.masterGain.gain.setTargetAtTime(0.06 * this.masterVolume, this.audioContext.currentTime, 0.08);
+    }
+
+    if (changed) this.emitSoundChange();
+  }
+
   speechAllowed() {
-    return this.enabled && typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+    return this.enabled && this.masterVolume > 0 && typeof window !== 'undefined' && Boolean(window.speechSynthesis);
   }
 
   stopSpeech() {
@@ -73,9 +104,7 @@ class SoundEngine {
       if (this.enabled) {
         this.startBackgroundMusic();
       }
-    } catch (e) {
-      console.warn('Audio not supported:', e);
-    }
+    } catch (e) {}
   }
 
   resume() {
@@ -87,7 +116,7 @@ class SoundEngine {
   }
 
   playTone(frequency, duration = 0.1, type = 'sine', volume = 0.15) {
-    if (!this.enabled || !this.audioContext) return;
+    if (!this.enabled || !this.audioContext || this.masterVolume <= 0) return;
     this.resume();
     try {
       const osc = this.audioContext.createOscillator();
@@ -96,7 +125,7 @@ class SoundEngine {
       gain.connect(this.audioContext.destination);
       osc.type = type;
       osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-      gain.gain.setValueAtTime(volume, this.audioContext.currentTime);
+      gain.gain.setValueAtTime(volume * this.masterVolume, this.audioContext.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
       osc.start();
       osc.stop(this.audioContext.currentTime + duration);
@@ -104,7 +133,7 @@ class SoundEngine {
   }
 
   playAsset(name, volume = 0.38) {
-    if (!this.enabled || typeof Audio === 'undefined') return false;
+    if (!this.enabled || this.masterVolume <= 0 || typeof Audio === 'undefined') return false;
     const file = this.assetMap[name];
     if (!file) return false;
 
@@ -115,7 +144,7 @@ class SoundEngine {
 
     try {
       const audio = new Audio(`${this.assetBase}/${file}`);
-      audio.volume = volume;
+      audio.volume = Math.min(1, Math.max(0, volume * this.masterVolume));
       const cleanup = () => this.activeAssets.delete(audio);
       audio.addEventListener('ended', cleanup, { once: true });
       audio.addEventListener('pause', cleanup, { once: true });
@@ -280,7 +309,7 @@ class SoundEngine {
       if (!this.enabled || this.bgMusicNodes) return;
       const masterGain = this.audioContext.createGain();
       masterGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-      masterGain.gain.linearRampToValueAtTime(0.06, this.audioContext.currentTime + 3);
+      masterGain.gain.linearRampToValueAtTime(0.06 * this.masterVolume, this.audioContext.currentTime + 3);
       const compressor = this.audioContext.createDynamicsCompressor();
       masterGain.connect(compressor);
       compressor.connect(this.audioContext.destination);

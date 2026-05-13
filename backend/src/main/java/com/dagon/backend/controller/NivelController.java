@@ -5,6 +5,7 @@ import com.dagon.backend.dto.NivelDTO;
 import com.dagon.backend.service.EjercicioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -13,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class NivelController {
 
     @Autowired
@@ -36,6 +36,7 @@ public class NivelController {
         List<EjercicioDTO> ejercicios = ejercicioService.obtenerEjerciciosPorModulo(levelId);
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("exercises", ejercicios);
+        respuesta.put("module", ejercicioService.obtenerMetadataModulo(levelId));
         return ResponseEntity.ok(respuesta);
     }
 
@@ -52,9 +53,9 @@ public class NivelController {
     // 4. Validar la respuesta del usuario (SQL, Drag&Drop o Diagrama)
     // URL: http://localhost:8080/api/exercises/{id}/validate
     @PostMapping("/exercises/{id}/validate")
-    public ResponseEntity<?> validarEjercicio(@PathVariable Integer id, @RequestBody Map<String, String> request) {
+    public ResponseEntity<?> validarEjercicio(@PathVariable Integer id, @RequestBody Map<String, String> request, Authentication authentication) {
         String queryUsuario = request.get("query");
-        String usuarioId = request.get("usuarioId");
+        String usuarioId = authentication.getName();
 
         // El Service se encarga de decidir si es SQL o JSON de diagrama
         Map<String, Object> resultado = ejercicioService.validarConsulta(id, queryUsuario, usuarioId);

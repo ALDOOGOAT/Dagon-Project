@@ -9,7 +9,7 @@ import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import { CertificateModal, useCertificado } from '../components/CertificateModal';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
 import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
@@ -54,7 +54,7 @@ export const DashboardPage = () => {
   const pillBg = isLight ? 'rgba(250, 204, 21, 0.14)' : 'rgba(6, 182, 212, 0.10)';
   const pillBorder = isLight ? 'rgba(245, 158, 11, 0.24)' : 'rgba(34, 211, 238, 0.30)';
   const pillText = isLight ? '#92400e' : '#cffafe';
-  const topActionClass = "min-h-[44px] border-2 ring-1 ring-white/10 font-display font-black text-sm w-full sm:w-auto justify-center rounded-xl px-4 backdrop-blur-xl shadow-[0_10px_28px_rgba(2,6,23,0.16)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.24)] transition-all";
+  const topActionClass = "a11y-top-action min-h-[44px] border-2 ring-1 ring-white/10 font-display font-black text-sm w-full sm:w-auto justify-center rounded-xl px-4 backdrop-blur-xl shadow-[0_10px_28px_rgba(2,6,23,0.16)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.24)] transition-all";
   const topActionStyle = {
     backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(15,23,42,0.82)',
     borderColor: isLight ? 'rgba(245,158,11,0.48)' : 'rgba(148,163,184,0.44)',
@@ -69,10 +69,12 @@ export const DashboardPage = () => {
   const [certificadoCurso, setCertificadoCurso] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(() => sounds.isEnabled());
+  const [soundVolume, setSoundVolume] = useState(() => sounds.getVolume());
 
   useEffect(() => {
     const syncSoundState = (event) => {
       setSoundEnabled(event?.detail?.enabled ?? sounds.isEnabled());
+      setSoundVolume(event?.detail?.volume ?? sounds.getVolume());
     };
     window.addEventListener('dagon:soundchange', syncSoundState);
     syncSoundState();
@@ -138,17 +140,15 @@ export const DashboardPage = () => {
       try {
         const miUsuarioId = user?.idUsuario;
         if (!miUsuarioId) return;
-        const response = await fetch(apiUrl(`/api/usuarios/${miUsuarioId}/stats`), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get(`/api/usuarios/${miUsuarioId}/stats`);
+        const data = response.data;
         if (data.success) {
           updateUserXP(data.xp);
           setUserRank(data.posicion);
           setUserStreak(data.racha);
         }
-      } catch (error) {
-        console.error("Error al cargar la XP del servidor", error);
+      } catch {
+        toast.error('No se pudo actualizar tu XP');
       }
     };
     fetchRealXP();
@@ -157,17 +157,12 @@ export const DashboardPage = () => {
   useEffect(() => {
     const fetchModulos = async () => {
       try {
-        const response = await fetch(apiUrl('/api/modulos'), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-           const data = await response.json();
-           setCursos(data);
-           // Si el curso 2 no existe (raro), seteamos el primero
-           if(data.length > 0 && !data.find(c => c.id_curso === 2)) setCursoActivoId(data[0].id_curso);
-        }
-      } catch (error) {
-        console.error("Error al cargar los módulos:", error);
+        const response = await apiClient.get('/api/modulos');
+        const data = response.data;
+        setCursos(data);
+        // Si el curso 2 no existe (raro), seteamos el primero
+        if(data.length > 0 && !data.find(c => c.id_curso === 2)) setCursoActivoId(data[0].id_curso);
+      } catch {
         toast.error('Error al cargar misiones');
       } finally {
         setLoadingModulos(false);
@@ -179,13 +174,9 @@ export const DashboardPage = () => {
   useEffect(() => {
     const fetchTop = async () => {
       try {
-        const response = await fetch(apiUrl('/api/leaderboard'), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setTopPlayers(data.slice(0, 5));
-        }
+        const response = await apiClient.get('/api/leaderboard');
+        const data = response.data;
+        setTopPlayers(data.slice(0, 5));
       } catch (e) {
         // silencioso
       }
@@ -210,6 +201,17 @@ export const DashboardPage = () => {
     if (next) {
       await sounds.init();
       sounds.playMagic();
+    }
+  };
+
+  const handleVolumeChange = async (event) => {
+    const nextVolume = Number(event.target.value) / 100;
+    sounds.setVolume(nextVolume);
+    setSoundVolume(nextVolume);
+    if (!sounds.isEnabled() && nextVolume > 0) {
+      sounds.setEnabled(true, { restart: false });
+      setSoundEnabled(true);
+      await sounds.init();
     }
   };
 
@@ -317,15 +319,33 @@ export const DashboardPage = () => {
               className={topActionClass}
               style={{ ...topActionStyle, color: soundEnabled ? colors.primary : mutedColor, borderColor: soundEnabled ? `${colors.primary}80` : topActionStyle.borderColor }}
               title={soundEnabled ? 'Silenciar sonidos' : 'Activar sonidos'}
+              aria-label={soundEnabled ? 'Silenciar sonidos de Dagon' : 'Activar sonidos de Dagon'}
             >
               {soundEnabled ? <Volume2 className="w-4 h-4 mr-2" /> : <VolumeX className="w-4 h-4 mr-2" />}
               <span className="hidden sm:inline">{soundEnabled ? 'Sonido' : 'Silencio'}</span>
             </Button>
+            <label
+              className="a11y-top-action flex min-h-[44px] w-full items-center gap-3 rounded-xl border-2 px-4 text-xs font-display font-black sm:w-[178px]"
+              style={{ ...topActionStyle, color: mutedColor }}
+            >
+              <Volume2 className="h-4 w-4 shrink-0" style={{ color: soundEnabled ? colors.primary : mutedColor }} />
+              <span className="sr-only">Volumen general</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(soundVolume * 100)}
+                onChange={handleVolumeChange}
+                className="dagon-volume-slider"
+                aria-label="Volumen general de música, efectos y narración"
+              />
+            </label>
             <Button
               data-tour="profile"
               onClick={() => navigate('/profile')}
               className={topActionClass}
               style={topActionStyle}
+              aria-label="Abrir mi perfil"
             >
               <User className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Mi Perfil</span>
@@ -336,6 +356,7 @@ export const DashboardPage = () => {
                 onClick={() => navigate('/streak')}
                 className={topActionClass}
                 style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, rgba(245,158,11,0.95), rgba(251,146,60,0.95))' : 'rgba(124,45,18,0.34)', borderColor: 'rgba(251,146,60,0.70)', color: isLight ? '#1f2937' : '#ffffff' }}
+                aria-label={`Abrir racha actual de ${userStreak} días`}
               >
                 <Flame className="w-4 h-4 mr-2 animate-pulse" />
                 {userStreak} días
@@ -347,6 +368,7 @@ export const DashboardPage = () => {
                 variant="ghost"
                 className={topActionClass}
                 style={{ ...topActionStyle, color: isLight ? '#b45309' : '#fdba74', borderColor: 'rgba(251,146,60,0.44)' }}
+                aria-label="Abrir rachas"
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Racha</span>
@@ -357,12 +379,13 @@ export const DashboardPage = () => {
               onClick={() => setShowQuickPractice(true)}
               className={`${topActionClass} tracking-wide hover:scale-[1.03]`}
               style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, borderColor: isLight ? 'rgba(251,146,60,0.72)' : 'rgba(34,211,238,0.72)', color: isLight ? '#1f2937' : '#ffffff' }}
+              aria-label="Abrir práctica rápida"
             >
               <Target className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Práctica Rápida</span>
               <span className="sm:hidden">Práctica</span>
             </Button>
-            <Button onClick={handleLogout} variant="ghost" className={topActionClass} style={{ ...topActionStyle, color: mutedColor }}>
+            <Button onClick={handleLogout} variant="ghost" className={topActionClass} style={{ ...topActionStyle, color: mutedColor }} aria-label="Cerrar sesión">
               <LogOut className="w-5 h-5 mr-2" />
               <span className="hidden sm:inline">Salir</span>
             </Button>

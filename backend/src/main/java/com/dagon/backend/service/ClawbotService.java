@@ -1,21 +1,34 @@
 package com.dagon.backend.service;
 
+import com.dagon.backend.service.clawbot.ClawbotPromptCatalog;
+import com.dagon.backend.service.clawbot.ClawbotRateLimiter;
+import com.dagon.backend.service.clawbot.ClawbotTelemetryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
-import java.util.*;
-import java.nio.charset.StandardCharsets;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ClawbotService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClawbotService.class);
+    private static final int MAX_PROMPT_TEXT = 1200;
 
     @Value("${ollama.url:http://localhost:11434}")
     private String ollamaUrl;
+
+    @Value("${dagon.clawbot.ollama.enabled:false}")
+    private boolean ollamaEnabled;
 
     @Value("${GEMINI_API_KEY:}")
     private String geminiApiKey;
@@ -24,109 +37,101 @@ public class ClawbotService {
     private String groqApiKey;
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ClawbotPromptCatalog promptCatalog;
+    private final ClawbotRateLimiter rateLimiter;
+    private final ClawbotTelemetryService telemetryService;
 
-private static final String SYSTEM_PROMPT_CHAT =
-        "Eres Clawbot, tutor de SQL en espanol. " +
-        "No resuelves ejercicios del alumno; guias con metodo socratico. " +
-        "Siempre ayudas a pensar, no a copiar.\n\n" +
-        "REGLAS:\n" +
-        "1. Nunca des la respuesta exacta de un ejercicio evaluado ni una consulta completa que lo resuelva.\n" +
-        "2. Explica el concepto de forma corta y clara.\n" +
-        "3. Haz al menos una pregunta socratica para que el alumno deduzca el siguiente paso.\n" +
-        "4. Si usas ejemplo SQL, debe ser ANALOGO, con tablas inventadas y diferente al problema real.\n" +
-        "5. Cuando sea util, usa plantillas incompletas tipo ahorcado: SELECT ____ FROM ____ WHERE ____;\n" +
-        "6. Usa bloques ```sql para plantillas o ejemplos.\n" +
-        "7. Sin HTML. Sin markdown complejo. En espanol.\n\n" +
-        "FORMATO IDEAL:\n" +
-        "IDEA: [concepto breve]\n" +
-        "PISTA: [pregunta o pista]\n" +
-        "MINIEJEMPLO:\n```sql\n...ejemplo analogo con huecos...\n```";
+    public ClawbotService(
+            ClawbotPromptCatalog promptCatalog,
+            ClawbotRateLimiter rateLimiter,
+            ClawbotTelemetryService telemetryService
+    ) {
+        this.promptCatalog = promptCatalog;
+        this.rateLimiter = rateLimiter;
+        this.telemetryService = telemetryService;
+    }
 
-private static final String SYSTEM_PROMPT_ANALYSIS =
-        "Eres Clawbot, tutor socratico de SQL. " +
-        "Debes ayudar a resolver el problema sin revelar la solucion real.\n\n" +
-        "REGLAS INQUEBRANTABLES:\n" +
-        "1. Nunca muestres la query correcta, la query maestra, ni una variante equivalente que resuelva el ejercicio.\n" +
-        "2. Nunca completes la consulta real del alumno.\n" +
-        "3. Explica que concepto SQL esta fallando con lenguaje claro y corto.\n" +
-        "4. Haz preguntas socraticas concretas para obligar al alumno a pensar.\n" +
-        "5. Da un ejemplo ANALOGO con tablas inventadas como frutas, libros, mascotas o planetas.\n" +
-        "6. Ese ejemplo debe usar huecos tipo ahorcado cuando sea posible: SELECT ____ FROM ____ WHERE ____;\n" +
-        "7. El ejemplo nunca debe usar los nombres reales del ejercicio.\n" +
-        "8. Sin HTML. En espanol. Tono paciente y util.\n\n" +
-        "FORMATO OBLIGATORIO:\n" +
-        "ERROR: [que idea esta fallando]\n" +
-        "CONCEPTO: [explicacion breve del concepto]\n" +
-        "PISTA: [pregunta socratica concreta]\n" +
-        "MINIEJEMPLO:\n```sql\n[ejemplo analogo con huecos]\n```\n" +
-        "CIERRE: [una pregunta final para que el alumno intente corregirlo]\n\n" +
-        "ADAPTACION POR INTENTOS:\n" +
-        "- Intento 1: error + concepto breve + una pregunta. El miniejemplo puede ser muy corto.\n" +
-        "- Intento 2: pista mas concreta y una plantilla con huecos.\n" +
-        "- Intento 3 o mas: ejemplo analogo mas guiado, pero siempre incompleto.\n";
+    public String obtenerAyudaSocratica(
+            String descripcion,
+            String queryMaestra,
+            String queryAlumno,
+            String errorDb,
+            int intentos,
+            int nivelId,
+            String tituloEjercicio
+    ) {
+        return obtenerAyudaSocratica("sistema", descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
+    }
 
+    public String obtenerAyudaSocratica(
+            String usuarioId,
+            String descripcion,
+            String queryMaestra,
+            String queryAlumno,
+            String errorDb,
+            int intentos,
+            int nivelId,
+            String tituloEjercicio
+    ) {
+        rateLimiter.consume(usuarioId, "analysis");
 
-    public String obtenerAyudaSocratica(String descripcion, String queryMaestra, String queryAlumno, String errorDb, int intentos, int nivelId, String tituloEjercicio) {
-        // Construir contexto del nivel para la IA
-        String contextoNivel = buildContextoNivel(nivelId, tituloEjercicio);
+        String errorType = detectarTipoError(errorDb, queryAlumno, descripcion, nivelId);
+        telemetryService.recordAnalysis(nivelId, errorType);
+        String contextoNivel = promptCatalog.moduleContext(nivelId, sanitizeForPrompt(tituloEjercicio));
+        String nivelAyuda = buildNivelAyuda(intentos);
 
-        // Intentar Gemini primero
-        if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
             try {
-                String respuesta = callGeminiAnalysis(descripcion, queryMaestra, queryAlumno, errorDb, intentos, contextoNivel);
-                if (respuesta != null && !respuesta.isEmpty()) {
-                    return formatearRespuestaAnalisis(respuesta);
+                String respuesta = callGeminiAnalysis(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda);
+                if (hasText(respuesta)) {
+                    String segura = formatearRespuestaAnalisis(respuesta);
+                    if (!revelaSolucion(segura, queryMaestra)) {
+                        telemetryService.recordSource("gemini_analysis");
+                        return segura;
+                    }
+                    telemetryService.recordSource("guardrail_local_analysis");
                 }
             } catch (Exception e) {
                 logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
             }
         }
 
-        // Groq como fallback (gratis, rápido)
-        if (groqApiKey != null && !groqApiKey.isEmpty()) {
+        if (groqApiKey != null && !groqApiKey.isBlank()) {
             try {
-                String prompt = SYSTEM_PROMPT_ANALYSIS +
-                    "\n\nCONTEXTO DEL NIVEL: " + contextoNivel +
-                    "\nEJERCICIO: " + descripcion +
-                    "\nLO QUE EL ALUMNO ESCRIBIÓ: " + queryAlumno +
-                    "\nERROR OBTENIDO: " + errorDb +
-                    "\nINTENTO #: " + intentos +
-                    "\n\nRecuerda: NUNCA muestres la solución. Guía con preguntas.";
+                String prompt = buildAnalysisPrompt(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda);
                 String respuesta = callGroqChat(prompt);
-                if (respuesta != null && !respuesta.isEmpty()) {
-                    return formatearRespuestaAnalisis(respuesta);
+                if (hasText(respuesta)) {
+                    String segura = formatearRespuestaAnalisis(respuesta);
+                    if (!revelaSolucion(segura, queryMaestra)) {
+                        telemetryService.recordSource("groq_analysis");
+                        return segura;
+                    }
+                    telemetryService.recordSource("guardrail_local_analysis");
                 }
             } catch (Exception e) {
                 logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
             }
         }
 
-        // Fallback pre-cargado
-        return buildFallbackResponse(descripcion, queryMaestra, errorDb, intentos);
-    }
-
-    private String buildContextoNivel(int nivelId, String tituloEjercicio) {
-        String tema;
-        switch (nivelId) {
-            case 1: tema = "Selección básica con SELECT, filtros WHERE, operadores de comparación y LIKE."; break;
-            case 2: tema = "Funciones de agregación (COUNT, SUM, AVG, MIN, MAX), GROUP BY y HAVING."; break;
-            case 3: tema = "JOINs (INNER, LEFT, RIGHT), relaciones entre tablas y aliases."; break;
-            case 4: tema = "Subconsultas, INSERT, UPDATE, DELETE y manipulación de datos (DML)."; break;
-            case 5: tema = "Modelado Entidad-Relación, CREATE TABLE, ALTER TABLE, claves primarias y foráneas (DDL)."; break;
-            default: tema = "SQL general."; break;
-        }
-        return "Módulo " + nivelId + " - Tema: " + tema +
-               (tituloEjercicio != null && !tituloEjercicio.isEmpty() ? " | Ejercicio: " + tituloEjercicio : "");
+        telemetryService.recordSource("local_analysis");
+        return buildFallbackResponse(errorDb, intentos, errorType);
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
+        return obtenerRespuestaClawbot("sistema", mensajeUsuario, historial);
+    }
+
+    public String obtenerRespuestaClawbot(String usuarioId, String mensajeUsuario, List<Map<String, String>> historial) {
+        rateLimiter.consume(usuarioId, "chat");
+        telemetryService.recordQuestion(mensajeUsuario);
+
         String promptChat = buildChatPrompt(mensajeUsuario, historial);
 
-        // Intentar Gemini primero
-        if (geminiApiKey != null && !geminiApiKey.isEmpty()) {
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
             try {
                 String respuesta = callGeminiChat(promptChat);
-                if (respuesta != null && !respuesta.isEmpty()) {
+                if (hasText(respuesta)) {
+                    telemetryService.recordSource("gemini_chat");
                     return formatearRespuestaChat(respuesta);
                 }
             } catch (Exception e) {
@@ -134,11 +139,11 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
             }
         }
 
-        // Groq como fallback
-        if (groqApiKey != null && !groqApiKey.isEmpty()) {
+        if (groqApiKey != null && !groqApiKey.isBlank()) {
             try {
                 String respuesta = callGroqChat(promptChat);
-                if (respuesta != null && !respuesta.isEmpty()) {
+                if (hasText(respuesta)) {
+                    telemetryService.recordSource("groq_chat");
                     return formatearRespuestaChat(respuesta);
                 }
             } catch (Exception e) {
@@ -146,155 +151,113 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
             }
         }
 
-        return helpForQuestion(mensajeUsuario.toLowerCase());
+        if (ollamaEnabled) {
+            String respuesta = callOllamaChat(promptChat);
+            if (hasText(respuesta)) {
+                telemetryService.recordSource("ollama_chat");
+                return formatearRespuestaChat(respuesta);
+            }
+        }
+
+        telemetryService.recordSource("local_chat");
+        return helpForQuestion(mensajeUsuario);
+    }
+
+    public Map<String, Object> obtenerMetricas() {
+        return telemetryService.snapshot();
     }
 
     private String callGeminiChat(String prompt) {
-        if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-            logger.debug("Clawbot: Gemini API key no configurada");
-            return null;
-        }
-
-        try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
-            
-            // Usar el modelo gemini-1.5-flash que es más económico
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
-
-            List<Map<String, Object>> contents = new ArrayList<>();
-            Map<String, Object> content = new HashMap<>();
-            
-            List<Map<String, Object>> parts = new ArrayList<>();
-            parts.add(Map.of("text", prompt));
-            content.put("parts", parts);
-            contents.add(content);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("contents", contents);
-            body.put("generationConfig", Map.of(
-                "temperature", 0.7,
-                "maxOutputTokens", 800,
-                "topP", 0.95,
-                "topK", 40
-            ));
-
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
-
-            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
-            Map<String, Object> resp = r.getBody();
-
-            if (resp != null && resp.containsKey("candidates")) {
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) resp.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map<String, Object> candidate = candidates.get(0);
-                    Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
-                    List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
-                    if (!candidateParts.isEmpty()) {
-                        String result = candidateParts.get(0).get("text").toString();
-                        logger.debug("Clawbot: Respuesta Gemini recibida, longitud: {}", result.length());
-                        return result;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Clawbot: Gemini API error: {}", e.getMessage());
-        }
-        return null;
-    }
-
-    private String callGeminiAnalysis(String desc, String queryM, String queryA, String error, int intentos, String contextoNivel) {
-        if (geminiApiKey == null || geminiApiKey.isEmpty()) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
             return null;
         }
 
         try {
             String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
-
-            // Construimos pistas progresivas segun el numero de intentos
-            String nivelAyuda;
-            if (intentos <= 1) {
-                nivelAyuda = "Es su primer intento. Solo señala el error y hazle UNA pregunta para que reflexione. No des ejemplos aún.";
-            } else if (intentos == 2) {
-                nivelAyuda = "Es su segundo intento. Explica el CONCEPTO teórico involucrado y haz una pregunta más específica. Puedes dar una pista corta.";
-            } else {
-                nivelAyuda = "Lleva " + intentos + " intentos. Da un ejemplo con una tabla INVENTADA (mascotas, planetas, frutas) usando espacios en blanco (____) para que complete. NUNCA uses las tablas ni datos del ejercicio real.";
-            }
-
-            String prompt = buildAnalysisPrompt(desc, queryA, error, intentos, contextoNivel, nivelAyuda);
-
-            List<Map<String, Object>> contents = new ArrayList<>();
-            Map<String, Object> content = new HashMap<>();
-            
-            List<Map<String, Object>> parts = new ArrayList<>();
-            parts.add(Map.of("text", prompt));
-            content.put("parts", parts);
-            contents.add(content);
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("contents", contents);
-            body.put("generationConfig", Map.of(
-                "temperature", 0.3,
-                "maxOutputTokens", 500,
-                "topP", 0.9
-            ));
-
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
-
-            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
-            Map<String, Object> resp = r.getBody();
-
-            if (resp != null && resp.containsKey("candidates")) {
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) resp.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map<String, Object> candidate = candidates.get(0);
-                    Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
-                    List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
-                    if (!candidateParts.isEmpty()) {
-                        String result = candidateParts.get(0).get("text").toString();
-                        logger.debug("Clawbot: Analisis Gemini recibido para intento {}", intentos);
-                        return result;
-                    }
-                }
-            }
+            Map<String, Object> body = buildGeminiBody(prompt, 0.55, 700);
+            HttpHeaders headers = jsonHeaders();
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+            return extractGeminiText(response.getBody());
         } catch (Exception e) {
-            logger.warn("Clawbot: Gemini Analysis error: {}", e.getMessage());
+            logger.warn("Clawbot: Gemini API error: {}", e.getMessage());
+            return null;
         }
-        return null;
     }
 
-    private String callOllamaChat(String question) {
+    private String callGeminiAnalysis(
+            String descripcion,
+            String queryAlumno,
+            String error,
+            int intentos,
+            String contextoNivel,
+            String errorType,
+            String nivelAyuda
+    ) {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            return null;
+        }
+
+        try {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
+            String prompt = buildAnalysisPrompt(descripcion, queryAlumno, error, intentos, contextoNivel, errorType, nivelAyuda);
+            Map<String, Object> body = buildGeminiBody(prompt, 0.25, 520);
+            HttpHeaders headers = jsonHeaders();
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+            return extractGeminiText(response.getBody());
+        } catch (Exception e) {
+            logger.warn("Clawbot: Gemini Analysis error: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String callGroqChat(String prompt) {
+        if (groqApiKey == null || groqApiKey.isBlank()) {
+            return null;
+        }
+
+        try {
+            String url = "https://api.groq.com/openai/v1/chat/completions";
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "user", "content", prompt));
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("model", "llama-3.1-8b-instant");
+            body.put("messages", messages);
+            body.put("temperature", 0.35);
+            body.put("max_tokens", 420);
+            body.put("top_p", 0.9);
+
+            HttpHeaders headers = jsonHeaders();
+            headers.set("Authorization", "Bearer " + groqApiKey);
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
+            return extractGroqText(response.getBody());
+        } catch (Exception e) {
+            logger.warn("Groq API error: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String callOllamaChat(String prompt) {
         try {
             String url = ollamaUrl + "/api/chat";
-
-            String fullPrompt = SYSTEM_PROMPT_CHAT + "\n\nUsuario pregunta: " + question;
-
             List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "user", "content", fullPrompt));
+            messages.add(Map.of("role", "user", "content", prompt));
 
-            Map<String, Object> body = new HashMap<>();
+            Map<String, Object> body = new LinkedHashMap<>();
             body.put("model", "qwen2.5-coder:7b");
             body.put("messages", messages);
             body.put("stream", false);
             body.put("options", Map.of(
-                "temperature", 0.8,
-                "num_predict", 1000,
-                "top_p", 0.95
+                    "temperature", 0.4,
+                    "num_predict", 650,
+                    "top_p", 0.9
             ));
 
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
-
-            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
-            Map<String, Object> resp = r.getBody();
-
+            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, jsonHeaders()), Map.class);
+            Map<String, Object> resp = response.getBody();
             if (resp != null && resp.containsKey("message")) {
-                Map<String, Object> m = (Map<String, Object>) resp.get("message");
-                return m.get("content").toString();
+                Map<String, Object> message = asMap(resp.get("message"));
+                return String.valueOf(message.getOrDefault("content", ""));
             }
         } catch (Exception e) {
             logger.warn("Ollama API error: {}", e.getMessage());
@@ -302,212 +265,373 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
         return null;
     }
 
-    private String callOllamaAnalysis(String desc, String queryA, String error, int intentos, String contextoNivel) {
-        try {
-            String url = ollamaUrl + "/api/chat";
+    private Map<String, Object> buildGeminiBody(String prompt, double temperature, int maxOutputTokens) {
+        List<Map<String, Object>> contents = new ArrayList<>();
+        contents.add(Map.of("parts", List.of(Map.of("text", prompt))));
 
-            String prompt = buildAnalysisPrompt(
-                desc,
-                queryA,
-                error != null ? error : "Sin error",
-                intentos,
-                contextoNivel,
-                "Usa una explicacion progresiva y un ejemplo analogo incompleto."
-            );
-
-            List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "user", "content", prompt));
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("model", "qwen2.5-coder:7b");
-            body.put("messages", messages);
-            body.put("stream", false);
-            body.put("options", Map.of(
-                "temperature", 0.3,
-                "num_predict", 500
-            ));
-
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
-
-            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
-            Map<String, Object> resp = r.getBody();
-
-            if (resp != null && resp.containsKey("message")) {
-                Map<String, Object> m = (Map<String, Object>) resp.get("message");
-                return m.get("content").toString();
-            }
-        } catch (Exception e) {
-            logger.warn("Ollama analysis error: {}", e.getMessage());
-        }
-        return null;
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("contents", contents);
+        body.put("generationConfig", Map.of(
+                "temperature", temperature,
+                "maxOutputTokens", maxOutputTokens,
+                "topP", 0.9
+        ));
+        return body;
     }
 
-    private String callGroqChat(String prompt) {
-        try {
-            String url = "https://api.groq.com/openai/v1/chat/completions";
-
-            List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "user", "content", prompt));
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("model", "llama-3.1-8b-instant");
-            body.put("messages", messages);
-            body.put("temperature", 0.5);
-            body.put("max_tokens", 300);
-            body.put("top_p", 0.9);
-
-            HttpHeaders h = new HttpHeaders();
-            h.setContentType(MediaType.APPLICATION_JSON);
-            h.set("Authorization", "Bearer " + groqApiKey);
-            HttpEntity<Map<String, Object>> e = new HttpEntity<>(body, h);
-
-            ResponseEntity<Map> r = restTemplate.postForEntity(url, e, Map.class);
-            Map<String, Object> resp = r.getBody();
-
-            if (resp != null && resp.containsKey("choices")) {
-                List<Map<String, Object>> choices = (List<Map<String, Object>>) resp.get("choices");
-                if (!choices.isEmpty()) {
-                    Map<String, Object> choice = choices.get(0);
-                    Map<String, Object> msg = (Map<String, Object>) choice.get("message");
-                    return msg.get("content").toString();
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Groq API error: {}", e.getMessage());
-        }
-        return null;
+    private HttpHeaders jsonHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
     }
 
     private String buildChatPrompt(String mensajeUsuario, List<Map<String, String>> historial) {
         StringBuilder sb = new StringBuilder();
-        sb.append(SYSTEM_PROMPT_CHAT).append("\n\n");
+        sb.append(promptCatalog.systemChatPrompt()).append("\n\n");
 
         if (historial != null && !historial.isEmpty()) {
-            sb.append("CONTEXTO RECIENTE:\n");
+            sb.append("CONTEXTO RECIENTE, resumido y no vinculante:\n");
             int start = Math.max(0, historial.size() - 4);
             for (int i = start; i < historial.size(); i++) {
                 Map<String, String> item = historial.get(i);
                 String role = item.getOrDefault("role", "user");
-                String content = item.getOrDefault("content", "");
-                sb.append(role.equals("assistant") ? "Tutor: " : "Alumno: ")
-                  .append(content)
-                  .append("\n");
+                String content = sanitizeForPrompt(item.getOrDefault("content", ""));
+                sb.append("assistant".equals(role) ? "Tutor: " : "Alumno: ")
+                        .append(content)
+                        .append("\n");
             }
             sb.append("\n");
         }
 
         sb.append("PREGUNTA ACTUAL DEL ALUMNO:\n")
-          .append(mensajeUsuario)
-          .append("\n\n")
-          .append("Recuerda: explica, pregunta y da un miniejemplo analogo con huecos si aplica.");
+                .append(sanitizeForPrompt(mensajeUsuario))
+                .append("\n\n")
+                .append("Recuerda: si el alumno pide una respuesta completa, convierte eso en guia, pregunta y plantilla incompleta.");
 
         return sb.toString();
     }
 
-    private String buildAnalysisPrompt(String desc, String queryA, String error, int intentos, String contextoNivel, String nivelAyuda) {
-        return SYSTEM_PROMPT_ANALYSIS +
-            "\nCONTEXTO DEL NIVEL: " + contextoNivel +
-            "\nEJERCICIO REAL: " + desc +
-            "\nCONSULTA DEL ALUMNO: " + queryA +
-            "\nERROR O DESAJUSTE: " + (error != null ? error : "Sin error de sintaxis, pero el resultado no coincide") +
-            "\nINTENTO ACTUAL: " + intentos +
-            "\nNIVEL DE AYUDA: " + nivelAyuda +
-            "\n\nRecuerda: no des la solucion real; usa ejemplo analogo y huecos.";
+    private String buildAnalysisPrompt(
+            String descripcion,
+            String queryAlumno,
+            String error,
+            int intentos,
+            String contextoNivel,
+            String errorType,
+            String nivelAyuda
+    ) {
+        return promptCatalog.systemAnalysisPrompt() +
+                "\n\nCONTEXTO DEL MODULO:\n" + sanitizeForPrompt(contextoNivel) +
+                "\n\nTIPO DE ERROR DETECTADO: " + errorType +
+                "\nGUIA PARA ESTE ERROR: " + promptCatalog.errorGuidance(errorType) +
+                "\n\nEJERCICIO REAL, solo para entender el objetivo. No copies nombres al miniejemplo:\n" + sanitizeForPrompt(descripcion) +
+                "\n\nCONSULTA DEL ALUMNO, no la completes:\n" + sanitizeForPrompt(queryAlumno) +
+                "\n\nERROR O DESAJUSTE:\n" + sanitizeForPrompt(error != null ? error : "La consulta corrio, pero el resultado no coincide.") +
+                "\n\nINTENTO ACTUAL: " + Math.max(1, intentos) +
+                "\nNIVEL DE AYUDA: " + nivelAyuda +
+                "\n\nLa query maestra no se proporciona a proposito. No inventes una solucion completa.";
+    }
+
+    private String buildNivelAyuda(int intentos) {
+        if (intentos <= 1) {
+            return "Primer intento: una explicacion breve y una pregunta concreta. Evita ejemplos largos.";
+        }
+        if (intentos == 2) {
+            return "Segundo intento: pista mas concreta y una plantilla incompleta con huecos.";
+        }
+        return "Tercer intento o mas: ejemplo analogo guiado, incompleto y sin nombres reales del ejercicio.";
+    }
+
+    private String detectarTipoError(String errorDb, String queryAlumno, String descripcion, int nivelId) {
+        String text = ((errorDb == null ? "" : errorDb) + " " +
+                (queryAlumno == null ? "" : queryAlumno) + " " +
+                (descripcion == null ? "" : descripcion)).toLowerCase();
+
+        if (nivelId == 15 || nivelId == 16 || containsAny(text, "begin", "commit", "rollback", "savepoint", "for update", "nowait", "transaccion")) {
+            return "transaction";
+        }
+        if (containsAny(text, "syntax", "sintaxis", "unterminated", "mismatched", "near")) {
+            return "syntax";
+        }
+        if (containsAny(text, "column", "columna", "does not exist", "no existe la columna")) {
+            return "column";
+        }
+        if (containsAny(text, "relation", "table", "tabla", "vista") && containsAny(text, "does not exist", "no existe", "inexistente")) {
+            return "table";
+        }
+        if (containsAny(text, "join", "foreign key", "clave foranea", " on ", "relacion")) {
+            return "join";
+        }
+        if (containsAny(text, "group by", "having", "aggregate", "count(", "sum(", "avg(", "must appear")) {
+            return "grouping";
+        }
+        if (containsAny(text, "= null", " null", "is null", "is not null")) {
+            return "nulls";
+        }
+        if (containsAny(text, "insert", "update", "delete", "returning")) {
+            return "dml_safety";
+        }
+        if (containsAny(text, "entidad", "diagrama", "mer", "atributo", "cardinalidad")) {
+            return "diagram";
+        }
+        if (containsAny(text, "no coinciden", "expected", "esperado", "resultado")) {
+            return "logic";
+        }
+        return "generic";
+    }
+
+    private boolean containsAny(String text, String... needles) {
+        for (String needle : needles) {
+            if (text.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String formatearRespuestaChat(String respuesta) {
-        if (respuesta == null) return "";
-        respuesta = respuesta.replaceAll("<[^>]+>", "");
-        respuesta = respuesta.replaceAll("<[^>]*>", "");
-        respuesta = respuesta.replaceAll("&nbsp;", " ");
-        respuesta = respuesta.replaceAll("&lt;", "<");
-        respuesta = respuesta.replaceAll("&gt;", ">");
-        respuesta = respuesta.replaceAll("&amp;", "&");
-        respuesta = respuesta.replaceAll("font-weight:[^;]*;", "");
-        respuesta = respuesta.replaceAll("font-size:[^;]*;", "");
-        respuesta = respuesta.replaceAll("color:[^;]*;", "");
-        respuesta = respuesta.replaceAll("font-semibold", "");
-        respuesta = respuesta.replaceAll("font-bold", "");
-        return respuesta.trim();
+        return cleanResponse(respuesta);
     }
 
     private String formatearRespuestaAnalisis(String respuesta) {
-        if (respuesta == null) return "";
-        respuesta = respuesta.replaceAll("<[^>]+>", "");
-        respuesta = respuesta.replaceAll("<[^>]*>", "");
-        respuesta = respuesta.replaceAll("&nbsp;", " ");
-        respuesta = respuesta.replaceAll("&lt;", "<");
-        respuesta = respuesta.replaceAll("&gt;", ">");
-        respuesta = respuesta.replaceAll("font-weight:[^;]*;", "");
-        respuesta = respuesta.replaceAll("font-size:[^;]*;", "");
-        respuesta = respuesta.replaceAll("font-semibold", "");
-        respuesta = respuesta.replaceAll("font-bold", "");
-        return respuesta.trim();
+        return cleanResponse(respuesta);
     }
 
-    private String buildFallbackResponse(String desc, String queryM, String error, int intentos) {
+    private String cleanResponse(String respuesta) {
+        if (respuesta == null) return "";
+        return respuesta
+                .replaceAll("<[^>]+>", "")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("&lt;", "<")
+                .replaceAll("&gt;", ">")
+                .replaceAll("&amp;", "&")
+                .replaceAll("font-weight:[^;]*;", "")
+                .replaceAll("font-size:[^;]*;", "")
+                .replaceAll("color:[^;]*;", "")
+                .replaceAll("font-semibold", "")
+                .replaceAll("font-bold", "")
+                .trim();
+    }
+
+    private boolean revelaSolucion(String respuesta, String queryMaestra) {
+        String clean = canonicalSql(respuesta);
+        String master = canonicalSql(queryMaestra);
+        if (master.length() > 24 && clean.contains(master)) {
+            return true;
+        }
+        String lower = respuesta == null ? "" : respuesta.toLowerCase();
+        return containsAny(lower, "la query correcta es", "la consulta correcta es", "solucion completa", "solucion exacta");
+    }
+
+    private String canonicalSql(String value) {
+        if (value == null) return "";
+        return value.replaceAll("\\s+", " ")
+                .replaceAll(";+", ";")
+                .trim()
+                .toLowerCase();
+    }
+
+    private String sanitizeForPrompt(String value) {
+        if (value == null) return "";
+        String sanitized = value
+                .replaceAll("(?i)ignora las instrucciones anteriores", "[instruccion externa omitida]")
+                .replaceAll("(?i)ignore previous instructions", "[instruccion externa omitida]")
+                .replaceAll("(?i)system prompt", "[referencia interna omitida]")
+                .trim();
+        if (sanitized.length() <= MAX_PROMPT_TEXT) {
+            return sanitized;
+        }
+        return sanitized.substring(0, MAX_PROMPT_TEXT) + "...";
+    }
+
+    private String buildFallbackResponse(String error, int intentos, String errorType) {
+        String guidance = promptCatalog.errorGuidance(errorType);
         StringBuilder sb = new StringBuilder();
+        sb.append("ERROR: Hay una parte de tu intento que todavia no expresa lo que pide el ejercicio.\n\n");
+        sb.append("CONCEPTO: ").append(guidance).append("\n\n");
 
         if (intentos <= 1) {
-            sb.append("ERROR: Hay una idea de la consulta que no coincide con lo que pide el ejercicio.\n\n");
-            sb.append("CONCEPTO: Antes de escribir SQL, conviene separar el problema en tabla, columnas y condicion.\n\n");
-            sb.append("PISTA: Si lees otra vez el enunciado, ¿te pide seleccionar, filtrar, unir o agrupar?\n\n");
-            sb.append("CIERRE: ¿Que clausula SQL crees que deberia aparecer primero en tu borrador?");
+            sb.append("PISTA: Antes de escribir mas, separa el problema en origen de datos, columnas necesarias y condicion.\n\n");
+            sb.append("CIERRE: ¿Que palabra del enunciado te dice si debes seleccionar, filtrar, unir, agrupar o modificar?");
         } else if (intentos == 2) {
-            sb.append("ERROR: Tu consulta aun no expresa correctamente la operacion que pide el ejercicio.\n\n");
-            sb.append("CONCEPTO: ");
-            if (error != null && error.toLowerCase().contains("syntax")) {
-                sb.append("Revisa el orden de las clausulas. En SQL, la estructura importa tanto como los nombres.\n");
-            } else if (error != null && error.toLowerCase().contains("column")) {
-                sb.append("Los nombres de columnas deben coincidir exactamente con la tabla que estas consultando.\n");
-            } else {
-                sb.append("Compara lo que el ejercicio pide con lo que tu consulta realmente hace. Puede faltar un filtro, una tabla o una agrupacion.\n");
-            }
-            sb.append("\nPISTA: Si lo hicieras con una tabla de libros, ¿que pondrias aqui?\n\n");
-            sb.append("```sql\nSELECT ____ FROM libros WHERE ____ = '____';\n```\n\n");
-            sb.append("CIERRE: ¿Que parte de esa plantilla se parece mas a tu ejercicio real?");
+            sb.append("PISTA: Corrige solo una parte. Primero revisa si el error esta en FROM, SELECT, WHERE, JOIN o GROUP BY.\n\n");
+            sb.append("MINIEJEMPLO:\n```sql\n").append(miniExampleFor(errorType)).append("\n```\n\n");
+            sb.append("CIERRE: ¿Que hueco de la plantilla representa la parte que te esta fallando?");
         } else {
-            sb.append("ERROR: Ya detectaste parte del camino, pero aun falta expresar bien la logica en SQL.\n\n");
-            sb.append("CONCEPTO: Resuelve la consulta por capas: origen de datos, columnas necesarias y condicion exacta.\n\n");
-            sb.append("PISTA: Prueba primero con un ejemplo analogo y luego traduce esa estructura a tu caso.\n\n");
-            sb.append("MINIEJEMPLO:\n```sql\nSELECT ____\nFROM mascotas\nWHERE ____ = '____';\n```\n\n");
-            sb.append("CIERRE: ¿Que iria en cada hueco si la meta fuera traer solo los nombres de las mascotas de tipo gato?");
+            sb.append("PISTA: Ya hay patron de error. Baja la consulta a una version minima, pruebala mentalmente y luego agrega una clausula a la vez.\n\n");
+            sb.append("MINIEJEMPLO:\n```sql\n").append(miniExampleFor(errorType)).append("\n```\n\n");
+            sb.append("CIERRE: ¿Cual es el cambio mas pequeno que puedes hacer ahora para comprobar tu hipotesis?");
+        }
+
+        if (error != null && !error.isBlank()) {
+            sb.append("\n\nAYUDA: Lee el mensaje del sistema buscando una pista de nombre, orden o tipo de dato, no una respuesta literal.");
         }
 
         return sb.toString();
     }
 
+    private String miniExampleFor(String errorType) {
+        return switch (errorType) {
+            case "join" -> "SELECT a.____, b.____\nFROM tabla_a a\nJOIN tabla_b b ON a.____ = b.____;";
+            case "grouping" -> "SELECT categoria, COUNT(*)\nFROM tabla_ejemplo\nGROUP BY categoria;";
+            case "dml_safety" -> "UPDATE tabla_ejemplo\nSET columna = ____\nWHERE condicion_segura\nRETURNING *;";
+            case "transaction" -> "BEGIN;\n-- cambio controlado\nSAVEPOINT punto_seguro;\n-- decide si COMMIT o ROLLBACK\n____;";
+            case "nulls" -> "SELECT ____\nFROM tabla_ejemplo\nWHERE columna IS ____;";
+            case "diagram" -> "Entidad: ____\nAtributos: ____\nClave primaria: ____\nRelacion con: ____";
+            default -> "SELECT ____\nFROM tabla_ejemplo\nWHERE ____;";
+        };
+    }
+
     private String helpForQuestion(String question) {
-        if (question.contains("join")) {
-            return "## JOIN en SQL\n\nLos JOINs combinan datos de multiple tablas.\n\n### INNER JOIN (mas comun)\n```sql\nSELECT u.nombre, p.total\nFROM usuarios u\nINNER JOIN pedidos p ON u.id = p.usuario_id;\n```\n\n*Solo muestra filas con coincidencia.*\n\n### LEFT JOIN\n```sql\nSELECT u.nombre, p.total\nFROM usuarios u\nLEFT JOIN pedidos p ON u.id = p.usuario_id;\n```\n\n*Muestra todos los usuarios.*\n\n## Consejo\nEl ON define la condicion, no uses WHERE.";
+        String text = question == null ? "" : question.toLowerCase();
+        if (text.contains("join")) {
+            return """
+                    IDEA: JOIN sirve para leer datos relacionados entre dos tablas.
+                    PISTA: Antes de escribirlo, decide que tabla tiene el dato principal y que tabla aporta el complemento.
+                    MINIEJEMPLO:
+                    ```sql
+                    SELECT a.____, b.____
+                    FROM tabla_a a
+                    JOIN tabla_b b ON a.____ = b.____;
+                    ```
+                    CIERRE: En tu caso, ¿que columnas funcionan como puente entre ambas tablas?
+                    """;
         }
-        if (question.contains("where")) {
-            return "## WHERE - Filtrar Resultados\n\nWHERE filtra segun condiciones.\n\n### Igual\n```sql\nSELECT * FROM usuarios WHERE activo = true;\n```\n\n### Comparaciones\n```sql\nSELECT * FROM productos WHERE precio > 100;\n```\n\n### Textos (LIKE)\n```sql\nSELECT * FROM usuarios WHERE nombre LIKE 'A%';\n```\n\n### Listas (IN)\n```sql\nSELECT * FROM productos WHERE categoria IN ('A', 'B');\n```\n\n### Multiples\n```sql\nSELECT * FROM productos WHERE precio > 100 AND categoria = 'electronics';```";
+        if (containsAny(text, "where", "filtro", "like", "between", "in ")) {
+            return """
+                    IDEA: WHERE reduce las filas antes de mostrar el resultado.
+                    PISTA: Traduce la condicion del enunciado a una comparacion concreta.
+                    MINIEJEMPLO:
+                    ```sql
+                    SELECT ____
+                    FROM tabla_ejemplo
+                    WHERE columna ____ valor;
+                    ```
+                    CIERRE: ¿Tu filtro compara texto, numero, rango, lista o NULL?
+                    """;
         }
-        if (question.contains("select")) {
-            return "## SELECT - Seleccionar Datos\n\n### Columnas especificas\n```sql\nSELECT nombre, email FROM usuarios;\n```\n\n### Todas las columnas\n```sql\nSELECT * FROM usuarios;\n```\n\n### Con alias (AS)\n```sql\nSELECT nombre AS 'Nombre', email AS 'Correo' FROM usuarios;\n```\n\n### Sin duplicados (DISTINCT)\n```sql\nSELECT DISTINCT categoria FROM productos;\n```\n\n### Con calculos\n```sql\nSELECT nombre, precio * 1.16 AS 'Con IVA' FROM productos;```";
+        if (containsAny(text, "group", "count", "sum", "avg")) {
+            return """
+                    IDEA: GROUP BY crea grupos y las funciones como COUNT o SUM resumen cada grupo.
+                    PISTA: Si una columna aparece en SELECT y no esta resumida, normalmente debe aparecer en GROUP BY.
+                    MINIEJEMPLO:
+                    ```sql
+                    SELECT grupo, COUNT(*)
+                    FROM tabla_ejemplo
+                    GROUP BY grupo;
+                    ```
+                    CIERRE: ¿Que columna define tus grupos?
+                    """;
         }
-        if (question.contains("null")) {
-            return "## NULL - Valores Nulos\n\nNULL es ausencia de valor.\n\n### Filtrar NULL\n```sql\nSELECT * FROM usuarios WHERE telefono IS NOT NULL;\nSELECT * FROM usuarios WHERE telefono IS NULL;\n```\n\n### ERROR comun\n```sql\n-- INCORRECTO:\nSELECT * FROM usuarios WHERE telefono = NULL;\n\n-- CORRECTO:\nSELECT * FROM usuarios WHERE telefono IS NULL;\n```\n\n### Funciones util\n```sql\nSELECT COALESCE(telefono, 'No proporcionado') FROM usuarios;```";
+        if (text.contains("null")) {
+            return """
+                    IDEA: NULL significa ausencia de valor, no un texto ni un numero.
+                    PISTA: Para revisarlo se usa IS NULL o IS NOT NULL.
+                    MINIEJEMPLO:
+                    ```sql
+                    SELECT ____
+                    FROM tabla_ejemplo
+                    WHERE columna IS ____;
+                    ```
+                    CIERRE: ¿Buscas filas con dato faltante o filas que si tienen dato?
+                    """;
         }
-        if (question.contains("group")) {
-            return "## GROUP BY - Agrupar\n\n### Ejemplo basico\n```sql\nSELECT categoria, COUNT(*) as total\nFROM productos\nGROUP BY categoria;\n```\n\n### Con HAVING\n```sql\nSELECT categoria, COUNT(*) as total\nFROM productos\nGROUP BY categoria\nHAVING COUNT(*) > 5;\n```\n\n### Con funciones\n```sql\nSELECT categoria, COUNT(*), AVG(precio), SUM(stock)\nFROM productos\nGROUP BY categoria;\n```\n\n## Regla\nColumnas en SELECT deben: (1) estar en GROUP BY, o (2) ser funciones de agregado.";
+        if (containsAny(text, "insert", "update", "delete")) {
+            return """
+                    IDEA: INSERT, UPDATE y DELETE cambian datos. Por eso conviene validar el alcance antes de ejecutar.
+                    PISTA: En UPDATE y DELETE, pregunta siempre: ¿que filas exactas estoy tocando?
+                    MINIEJEMPLO:
+                    ```sql
+                    UPDATE tabla_ejemplo
+                    SET columna = ____
+                    WHERE condicion_segura
+                    RETURNING *;
+                    ```
+                    CIERRE: ¿Tu condicion protege solo las filas que quieres modificar?
+                    """;
         }
-        if (question.contains("order")) {
-            return "## ORDER BY - Ordenar\n\n### Ascendente (default)\n```sql\nSELECT nombre, precio FROM productos ORDER BY precio ASC;\n```\n\n### Descendente\n```sql\nSELECT nombre, precio FROM productos ORDER BY precio DESC;\n```\n\n### Multiples\n```sql\nSELECT nombre, categoria, precio\nFROM productos\nORDER BY categoria ASC, precio DESC;\n```\n\n## Nota\nVa SIEMPRE al final de la consulta.";
+        if (containsAny(text, "create", "alter", "constraint", "ddl", "tabla")) {
+            return """
+                    IDEA: DDL define la estructura: tablas, columnas y reglas.
+                    PISTA: Antes de CREATE TABLE, lista nombre, tipo de dato y restricciones de cada columna.
+                    MINIEJEMPLO:
+                    ```sql
+                    CREATE TABLE tabla_ejemplo (
+                      id SERIAL PRIMARY KEY,
+                      campo ____ NOT NULL
+                    );
+                    ```
+                    CIERRE: ¿Que regla debe proteger tu tabla desde el inicio?
+                    """;
         }
-        if (question.contains("insert")) {
-            return "## INSERT - Agregar Datos\n\n### Una fila\n```sql\nINSERT INTO usuarios (nombre, email)\nVALUES ('Juan', 'juan@email.com');\n```\n\n### Multiples filas\n```sql\nINSERT INTO usuarios (nombre, email)\nVALUES \n  ('Ana', 'ana@email.com'),\n  ('Pedro', 'pedro@email.com');```";
-        }
-        if (question.contains("update")) {
-            return "## UPDATE - Modificar Datos\n\n### Ejemplo\n```sql\nUPDATE usuarios\nSET telefono = '555-9999'\nWHERE id = 1;\n```\n\n### Multiples columnas\n```sql\nUPDATE usuarios\nSET nombre = 'Juan Garcia', telefono = '555-1234'\nWHERE id = 1;\n```\n\n## IMPORTANTE\nUsa WHERE para no actualizar todo!";
-        }
-        if (question.contains("delete")) {
-            return "## DELETE - Borrar Datos\n\n### Ejemplo\n```sql\nDELETE FROM usuarios WHERE id = 1;\n```\n\n### Con condiciones\n```sql\nDELETE FROM pedidos WHERE status = 'cancelado';\n```\n\n## PELIGRO\nSin WHERE borra TODO:\n```sql\nDELETE FROM usuarios;  -- BORRA TODO!\n```\n\n## Mejor practica\nVerifica primero con SELECT, luego borra.";
+        if (containsAny(text, "commit", "rollback", "transaccion", "savepoint")) {
+            return """
+                    IDEA: Una transaccion agrupa cambios para confirmarlos o deshacerlos juntos.
+                    PISTA: BEGIN abre el bloque; COMMIT confirma; ROLLBACK deshace.
+                    MINIEJEMPLO:
+                    ```sql
+                    BEGIN;
+                    -- cambio controlado
+                    ____;
+                    ```
+                    CIERRE: ¿En tu caso necesitas confirmar, deshacer o volver a un SAVEPOINT?
+                    """;
         }
 
-        return "## Soy Clawbot!\n\nPuedo ayudarte con:\n- SELECT - seleccionar datos\n- WHERE - filtrar\n- JOIN - combinar tablas\n- GROUP BY - agrupar\n- ORDER BY - ordenar\n- INSERT - agregar\n- UPDATE - modificar\n- DELETE - borrar\n- NULL - valores nulos\n\nPregunta sobre cualquier tema!";
+        return """
+                IDEA: Para aprender SQL, piensa en capas: tabla, columnas, condicion, relacion y resultado.
+                PISTA: No intentes memorizar la consulta completa; identifica que parte del enunciado corresponde a cada clausula.
+                MINIEJEMPLO:
+                ```sql
+                SELECT ____
+                FROM ____
+                WHERE ____;
+                ```
+                CIERRE: ¿Tu duda esta en SELECT, FROM, WHERE, JOIN, GROUP BY, DML, DDL o transacciones?
+                """;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractGeminiText(Map<String, Object> response) {
+        if (response == null || !response.containsKey("candidates")) {
+            return null;
+        }
+        List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
+        if (candidates == null || candidates.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> content = asMap(candidates.get(0).get("content"));
+        List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
+        if (parts == null || parts.isEmpty()) {
+            return null;
+        }
+        Object text = parts.get(0).get("text");
+        return text != null ? text.toString() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractGroqText(Map<String, Object> response) {
+        if (response == null || !response.containsKey("choices")) {
+            return null;
+        }
+        List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+        if (choices == null || choices.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> message = asMap(choices.get(0).get("message"));
+        Object content = message.get("content");
+        return content != null ? content.toString() : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> asMap(Object value) {
+        if (value instanceof Map<?, ?>) {
+            return (Map<String, Object>) value;
+        }
+        return new LinkedHashMap<>();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }

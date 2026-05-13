@@ -12,101 +12,16 @@ import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield, BookOpen, Target, Film
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield, BookOpen, Target, Film, Award, TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
-import { apiUrl } from '../config/api';
-
-const formatAIMessage = (text, theme = {}) => {
-  if (!text) return null;
-  const isLight = theme.mode === 'light';
-  
-  let cleaned = text
-    .replace(/\\n/g, '\n')
-    .replace(/\\t/g, ' ')
-    .replace(/\\"/g, '"')
-    .replace(/\\\\/g, '\\')
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/__(.+?)__/g, '$1')
-    .replace(/`{3}sql\n?([\s\S]*?)`{3}/g, '\n$1\n')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/<[^>]*>/g, '')
-    .replace(/font-weight:[^;]*;/g, '')
-    .replace(/font-semibold/g, '')
-    .replace(/font-bold/g, '');
-
-  const parts = [];
-  const lines = cleaned.split('\n');
-  
-  lines.forEach((line, idx) => {
-    line = line.trim();
-    if (!line) return;
-    
-if (line.match(/^(ERROR|Error|error):/i)) {
-      parts.push({ type: 'error', text: line.replace(/^(ERROR|Error|error):\s*/i, '') });
-    } else if (line.match(/^(CONCEPTO|Concepto|concepto):/i)) {
-      parts.push({ type: 'concepto', text: line.replace(/^(CONCEPTO|Concepto|concepto):\s*/i, '') });
-    } else if (line.match(/^(AYUDA|Ayuda|ayuda):/i)) {
-      parts.push({ type: 'ayuda', text: line.replace(/^(AYUDA|Ayuda|ayuda):\s*/i, '') });
-    } else if (line.match(/^(PISTA|Pista|pista):/i)) {
-      parts.push({ type: 'pista', text: line.replace(/^(PISTA|Pista|pista):\s*/i, '') });
-    } else if (line.match(/^(sql|SQL)/i)) {
-      parts.push({ type: 'code', text: line.replace(/^(sql|SQL)\s*/i, '') });
-    } else if (line.startsWith('## ') || line.startsWith('### ')) {
-      parts.push({ type: 'heading', text: line.replace(/^#+\s*/, '') });
-    } else if (line.match(/^SELECT|^FROM|^WHERE|^INSERT|^UPDATE|^DELETE|^JOIN|^ORDER|^GROUP/i)) {
-      parts.push({ type: 'code', text: line });
-    } else if (line.includes('|') && line.match(/\|/)) {
-      parts.push({ type: 'table', text: line });
-    } else {
-      parts.push({ type: 'text', text: line });
-    }
-  });
-  
-  return parts.map((part, i) => {
-    if (part.type === 'heading') {
-      return <h4 key={i} className="mt-4 mb-2 text-lg font-bold" style={{ color: theme.primary || '#10b981' }}>{part.text}</h4>;
-    }
-    if (part.type === 'error') {
-      return <div key={i} className="mt-3 mb-2 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderLeft: '4px solid #f87171', color: isLight ? '#b91c1c' : '#fca5a5' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">❌ Error</span>
-        <p className="mt-1 font-semibold">{part.text}</p>
-      </div>;
-    }
-    if (part.type === 'concepto') {
-      return <div key={i} className="mt-2 mb-2 px-4 py-3 rounded-xl text-sm" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15))', borderLeft: '4px solid #22c55e', color: isLight ? '#166534' : '#86efac' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">💡 Concepto</span>
-        <p className="mt-1 font-semibold">{part.text}</p>
-      </div>;
-    }
-    if (part.type === 'ayuda') {
-      return <div key={i} className="mt-2 mb-3 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.15)', borderLeft: '3px solid #fbbf24', color: isLight ? '#92400e' : '#fcd34d' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">🔧 Ayuda</span>
-        <p className="mt-1">{part.text}</p>
-      </div>;
-    }
-    if (part.type === 'pista') {
-      return <div key={i} className="mt-2 mb-2 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(34,211,238,0.1)', borderLeft: '3px solid #22d3ee', color: isLight ? '#155e75' : '#67e8f9' }}>
-        <span className="text-xs uppercase tracking-wider opacity-70">💡 Pista</span>
-        <p className="mt-1">{part.text}</p>
-      </div>;
-    }
-    if (part.type === 'porque') {
-      return <div key={i} className="mt-2 mb-3 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(251,191,36,0.1)', borderLeft: '3px solid #fbbf24', color: isLight ? '#92400e' : '#fcd34d' }}>{part.text}</div>;
-    }
-    if (part.type === 'code') {
-      return <code key={i} className="block my-2 px-4 py-3 rounded-lg text-sm font-mono overflow-x-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : '#0f172a', color: isLight ? '#b45309' : '#6ee7b7', border: `1px solid ${isLight ? 'rgba(245,158,11,0.14)' : '#1e293b'}` }}>{part.text}</code>;
-    }
-    if (part.type === 'table') {
-      return <div key={i} className="my-3 p-3 rounded-lg overflow-x-auto text-xs font-mono" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : '#1e293b', color: isLight ? '#6b7280' : '#94a3b8' }}>{part.text}</div>;
-    }
-    return <p key={i} className="mt-2 mb-1 text-sm" style={{ color: isLight ? '#374151' : '#e2e8f0' }}>{part.text}</p>;
-  });
-};
+import apiClient from '../services/apiClient';
+import { formatAIMessage, buildRowSignature, buildTransactionDiff, isTransactionExercise, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
+import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
+import { DataComparisonTable, CompactSection, TransactionPedagogyCard, TransactionSimulationPanel, TransactionOutcomePanel } from '../components/TransactionPanels';
 
 const XPPop = ({ amount }) => (
   <div className="pointer-events-none fixed inset-0 z-[9990] flex items-center justify-center">
@@ -137,752 +52,6 @@ const SuccessBurst = () => (
   </div>
 );
 
-const buildRowSignature = (row = {}) => {
-  const normalized = Object.keys(row)
-    .sort()
-    .reduce((acc, key) => {
-      if (!String(key).toLowerCase().startsWith('id')) {
-        acc[key] = row[key];
-      }
-      return acc;
-    }, {});
-
-  const effective = Object.keys(normalized).length > 0 ? normalized : row;
-  return JSON.stringify(effective);
-};
-
-const buildTransactionDiff = (beforeData = [], afterData = []) => {
-  const beforeCounts = new Map();
-  const afterCounts = new Map();
-
-  beforeData.forEach((row) => {
-    const sig = buildRowSignature(row);
-    beforeCounts.set(sig, (beforeCounts.get(sig) || 0) + 1);
-  });
-
-  afterData.forEach((row) => {
-    const sig = buildRowSignature(row);
-    afterCounts.set(sig, (afterCounts.get(sig) || 0) + 1);
-  });
-
-  const beforeMarkers = beforeData.map((row) => {
-    const sig = buildRowSignature(row);
-    const inAfter = afterCounts.get(sig) || 0;
-    return inAfter > 0 ? 'stable' : 'removed';
-  });
-
-  const tempBeforeCounts = new Map();
-  const afterMarkers = afterData.map((row) => {
-    const sig = buildRowSignature(row);
-    const seen = tempBeforeCounts.get(sig) || 0;
-    tempBeforeCounts.set(sig, seen + 1);
-    const inBefore = beforeCounts.get(sig) || 0;
-    return seen < inBefore ? 'stable' : 'added';
-  });
-
-  return { beforeMarkers, afterMarkers };
-};
-
-const isTransactionExercise = (exercise, levelId) => {
-  if (String(levelId) === '15') return true;
-  if (exercise?.pedagogia?.modo === 'terminal_transaccional') return true;
-
-  const combined = [
-    exercise?.title,
-    exercise?.description,
-    exercise?.starterCode
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toUpperCase();
-
-  return /(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|TRANSAC)/.test(combined);
-};
-
-const SQL_LEARNING_PATTERNS = [
-  {
-    pattern: /(JOIN|FOREIGN KEY|CLAVE FORANEA|RELACION)/,
-    concept: 'Relaciones entre tablas',
-    objective: 'Identifica que tabla aporta cada dato y conecta las filas con una condicion ON.',
-    correction: 'Revisa primero FROM, luego JOIN y al final la condicion que une las claves.'
-  },
-  {
-    pattern: /(WHERE|FILT|CONDICI|LIKE|BETWEEN| IN | IS NULL)/,
-    concept: 'Filtros',
-    objective: 'Reduce la tabla a las filas que cumplen una condicion concreta.',
-    correction: 'Asegura que el campo filtrado exista y que el operador exprese exactamente la condicion.'
-  },
-  {
-    pattern: /(GROUP BY|COUNT|SUM|AVG|MAX|MIN|HAVING|AGRUP)/,
-    concept: 'Agrupaciones',
-    objective: 'Convierte muchas filas en una respuesta resumida usando grupos y funciones.',
-    correction: 'Comprueba que toda columna no agregada aparezca en GROUP BY.'
-  },
-  {
-    pattern: /(INSERT|UPDATE|DELETE|RETURNING|DML|MODIFIC)/,
-    concept: 'Cambios de datos',
-    objective: 'Modifica informacion con una condicion segura y valida el resultado.',
-    correction: 'Antes de cambiar datos, piensa que filas se verian afectadas y usa WHERE cuando aplique.'
-  },
-  {
-    pattern: /(CREATE TABLE|ALTER TABLE|PRIMARY KEY|UNIQUE|CHECK|CONSTRAINT|DDL|MODELO)/,
-    concept: 'Modelado de datos',
-    objective: 'Define reglas para que la base de datos proteja la informacion.',
-    correction: 'Revisa nombres, tipos de dato y restricciones antes de ejecutar.'
-  },
-  {
-    pattern: /(SELECT|FROM|COLUMNA|CONSULTA)/,
-    concept: 'Consulta basica',
-    objective: 'Pide columnas especificas desde una tabla y observa el resultado.',
-    correction: 'Empieza por SELECT, confirma la tabla en FROM y despues agrega detalle.'
-  }
-];
-
-const inferLearningFocus = (exercise = {}, levelId = '') => {
-  const combined = [
-    exercise.title,
-    exercise.description,
-    exercise.hint,
-    exercise.starterCode,
-    levelId
-  ].filter(Boolean).join(' ').toUpperCase();
-
-  return SQL_LEARNING_PATTERNS.find((item) => item.pattern.test(combined)) || SQL_LEARNING_PATTERNS[SQL_LEARNING_PATTERNS.length - 1];
-};
-
-const buildLocalClawbotFallback = (errorData = {}, exercise = {}) => {
-  const focus = inferLearningFocus(exercise, errorData.nivelId);
-  const attempt = Number(errorData.intentos || 1);
-  const hint = exercise.hint || errorData.errorDb || 'Lee el enunciado y separa el problema en SELECT, FROM y condicion.';
-  const scaffold = attempt >= 2
-    ? 'AYUDA: Escribe primero la estructura minima y deja espacios mentales: SELECT columnas FROM tabla WHERE condicion.'
-    : 'AYUDA: No busques memorizar la respuesta; identifica que parte del enunciado corresponde a cada palabra SQL.';
-
-  return [
-    `CONCEPTO: ${focus.concept}. ${focus.objective}`,
-    `PISTA: ${hint}`,
-    scaffold,
-    `AYUDA: ${focus.correction}`
-  ].join('\n');
-};
-
-const buildLearningFeedback = (result, focus, attempts) => {
-  if (!result) return null;
-  if (result.isWarning) {
-    return {
-      tone: 'warning',
-      title: 'Funcionó, pero conviene revisar el riesgo',
-      message: 'La consulta produjo una respuesta aceptable, aunque hay una advertencia que debes entender antes de avanzar.',
-      next: focus.correction
-    };
-  }
-  if (result.success) {
-    return {
-      tone: 'success',
-      title: `Concepto reforzado: ${focus.concept}`,
-      message: result.xp_gained > 0
-        ? `Ganaste ${result.xp_gained} XP porque tu consulta resolvio el objetivo esperado.`
-        : 'La consulta cumple el objetivo; observa el resultado para entender por que funciona.',
-      next: 'Avanza solo cuando puedas explicar con tus palabras que hizo cada parte de la consulta.'
-    };
-  }
-  return {
-    tone: 'error',
-    title: `Ajusta el concepto: ${focus.concept}`,
-    message: attempts >= 2
-      ? 'Ya hay patron de error. Usa la pista, corrige una parte a la vez y vuelve a ejecutar.'
-      : 'El fallo es parte del entrenamiento. Primero ubica si el problema esta en columnas, tabla, filtro o relacion.',
-    next: focus.correction
-  };
-};
-
-const DataComparisonTable = ({ data, colors, highlight = false, rowMarkers = [], animateRows = false }) => {
-  if (!data || data.length === 0) {
-    return <div className="p-4 text-xs italic" style={{ color: colors.textMuted }}>Tabla vacía</div>;
-  }
-  const isLight = colors.mode === 'light';
-  const columns = Object.keys(data[0]);
-  const getRowStyle = (marker) => {
-    if (marker === 'added') {
-      return {
-        backgroundColor: isLight ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.10)',
-        boxShadow: 'inset 3px 0 0 rgba(16,185,129,0.95)'
-      };
-    }
-    if (marker === 'removed') {
-      return {
-        backgroundColor: isLight ? 'rgba(244,63,94,0.10)' : 'rgba(244,63,94,0.08)',
-        boxShadow: 'inset 3px 0 0 rgba(244,63,94,0.90)'
-      };
-    }
-    return {};
-  };
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[11px] text-left border-collapse">
-        <thead>
-          <tr style={{ backgroundColor: isLight ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.05)' }}>
-            {columns.map(col => (
-              <th key={col} className="px-3 py-2 font-bold uppercase tracking-tighter border-b" style={{ color: colors.textMuted, borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)' }}>{col}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <motion.tr
-              key={`${i}-${buildRowSignature(row)}`}
-              initial={animateRows ? { opacity: 0, y: 10, scale: 0.985 } : false}
-              animate={animateRows ? { opacity: 1, y: 0, scale: 1 } : false}
-              transition={animateRows ? { duration: 0.28, delay: i * 0.05 } : undefined}
-              className={`${highlight ? 'hover:bg-emerald-500/10' : ''}`}
-              style={{
-                borderBottom: `1px solid ${isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)'}`,
-                ...getRowStyle(rowMarkers[i])
-              }}
-            >
-              {Object.values(row).map((val, j) => (
-                <td key={j} className="px-3 py-1.5 font-mono" style={{ color: isLight ? '#374151' : '#cbd5e1' }}>
-                  <div className="flex items-center gap-2">
-                    {j === 0 && rowMarkers[i] === 'added' && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">Nuevo</span>
-                    )}
-                    {j === 0 && rowMarkers[i] === 'removed' && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">Revertido</span>
-                    )}
-                    <span>{String(val)}</span>
-                  </div>
-                </td>
-              ))}
-            </motion.tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-const CompactSection = ({ title, subtitle, defaultOpen = true, colors, accentColor, children, countLabel = null }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const isLight = colors.mode === 'light';
-
-  return (
-    <div
-      className="rounded-2xl border overflow-hidden"
-      style={{
-        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
-        backgroundColor: isLight ? 'rgba(255,255,255,0.80)' : 'rgba(15,23,42,0.62)'
-      }}
-    >
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left"
-      >
-        <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: accentColor || colors.textMuted }}>
-            {title}
-          </p>
-          {subtitle && (
-            <p className="mt-1 text-xs font-gameui" style={{ color: colors.textMuted }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-        <div className="shrink-0 flex items-center gap-2">
-          {countLabel && (
-            <span
-              className="px-2 py-1 rounded-full text-[10px] font-mono"
-              style={{
-                color: colors.text,
-                backgroundColor: isLight ? 'rgba(255,248,235,0.94)' : 'rgba(2,6,23,0.82)'
-              }}
-            >
-              {countLabel}
-            </span>
-          )}
-          {isOpen ? <ChevronUp className="w-4 h-4" style={{ color: colors.textMuted }} /> : <ChevronDown className="w-4 h-4" style={{ color: colors.textMuted }} />}
-        </div>
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-const TransactionPedagogyCard = ({ pedagogia, colors }) => {
-  if (!pedagogia || pedagogia.modo !== 'terminal_transaccional') return null;
-
-  const isLight = colors.mode === 'light';
-  const focusItems = Array.isArray(pedagogia.foco) ? pedagogia.foco : [];
-  const panels = Array.isArray(pedagogia.paneles) ? pedagogia.paneles : [];
-
-  return (
-    <div
-      className="mt-5 rounded-3xl border p-5 overflow-hidden relative"
-      style={{
-        borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(34,211,238,0.18)',
-        background: isLight
-          ? 'linear-gradient(135deg, rgba(255,251,235,0.92), rgba(255,255,255,0.84))'
-          : 'linear-gradient(135deg, rgba(8,15,32,0.92), rgba(15,23,42,0.84))'
-      }}
-    >
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}, ${colors.secondary}, transparent)` }}
-      />
-      <div className="flex flex-wrap items-start gap-4 justify-between">
-        <div className="space-y-2">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-[0.28em]"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(34,211,238,0.16)',
-              color: colors.accent,
-              backgroundColor: isLight ? 'rgba(255,255,255,0.76)' : 'rgba(15,23,42,0.56)'
-            }}
-          >
-            <Database className="w-3 h-3" />
-            Laboratorio PostgreSQL
-          </div>
-          <p className="text-sm font-gameui leading-relaxed max-w-2xl" style={{ color: colors.text }}>
-            {pedagogia.mensaje_terminal || 'Esta misión se resuelve como si trabajaras en una terminal real, con transacciones visibles y dos sesiones observando el mismo problema.'}
-          </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            {focusItems.map((item) => (
-              <span
-                key={item}
-                className="px-3 py-1 rounded-full text-[11px] font-mono border"
-                style={{
-                  color: colors.text,
-                  borderColor: isLight ? 'rgba(217,119,6,0.16)' : 'rgba(34,211,238,0.16)',
-                  backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.72)'
-                }}
-              >
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div
-          className="min-w-[250px] rounded-2xl border overflow-hidden"
-          style={{
-            borderColor: isLight ? 'rgba(245,158,11,0.14)' : 'rgba(51,65,85,0.9)',
-            backgroundColor: isLight ? 'rgba(255,255,255,0.86)' : 'rgba(2,6,23,0.92)'
-          }}
-        >
-          <div
-            className="px-4 py-2 border-b flex items-center gap-2"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-              backgroundColor: isLight ? 'rgba(255,248,235,0.94)' : 'rgba(15,23,42,0.96)'
-            }}
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-400/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-            <span className="ml-2 text-[10px] tracking-[0.25em] uppercase font-mono" style={{ color: colors.textMuted }}>
-              prompts activos
-            </span>
-          </div>
-          <div className="p-4 space-y-3 font-mono text-sm">
-            <div style={{ color: colors.text }}>
-              <span style={{ color: colors.primary }}>{pedagogia.terminal_prompt_base || 'dagon=#'}</span> BEGIN;
-            </div>
-            <div style={{ color: colors.text }}>
-              <span style={{ color: colors.secondary }}>{pedagogia.terminal_prompt_tx || 'dagon=*#'}</span> UPDATE cuentas SET saldo = saldo - 100;
-            </div>
-            <div style={{ color: colors.text }}>
-              <span style={{ color: colors.secondary }}>{pedagogia.terminal_prompt_tx || 'dagon=*#'}</span> SAVEPOINT mitad;
-            </div>
-            <div style={{ color: colors.text }}>
-              <span style={{ color: colors.primary }}>{pedagogia.terminal_prompt_base || 'dagon=#'}</span> COMMIT;
-            </div>
-          </div>
-        </div>
-      </div>
-      {panels.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {panels.map((panel) => (
-            <div
-              key={panel}
-              className="rounded-2xl border px-4 py-3"
-              style={{
-                borderColor: isLight ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.06)',
-                backgroundColor: isLight ? 'rgba(255,255,255,0.76)' : 'rgba(15,23,42,0.56)'
-              }}
-            >
-              <p className="text-[10px] uppercase tracking-[0.24em] font-bold" style={{ color: colors.textMuted }}>
-                {panel.replaceAll('_', ' ')}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const TransactionSimulationPanel = ({ simulation, colors }) => {
-  if (!simulation) return null;
-
-  const isLight = colors.mode === 'light';
-  const timeline = Array.isArray(simulation.timeline) ? simulation.timeline : [];
-  const focus = Array.isArray(simulation.focus) ? simulation.focus : [];
-
-  return (
-    <div
-      className="p-4 md:p-5 space-y-4 border-b"
-      style={{
-        borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-        background: isLight
-          ? 'linear-gradient(180deg, rgba(255,251,235,0.84), rgba(255,255,255,0.84))'
-          : 'linear-gradient(180deg, rgba(8,15,32,0.90), rgba(15,23,42,0.78))'
-      }}
-    >
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)] gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.34em] font-black mb-2" style={{ color: colors.accent }}>
-            Simulación transaccional
-          </p>
-          <h3 className="font-display text-xl font-black" style={{ color: colors.text }}>
-            {simulation.headline || 'Dos sesiones en paralelo'}
-          </h3>
-          <p className="mt-2 text-sm font-gameui max-w-2xl" style={{ color: colors.textMuted }}>
-            {simulation.summary || simulation.message || 'La traza compara lo que ve la Sesión A con lo que todavía puede leer la Sesión B.'}
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
-          <div
-            className="rounded-2xl border px-4 py-3"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
-            }}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión A</p>
-                <p className="mt-2 font-mono text-sm" style={{ color: colors.primary }}>{simulation.basePrompt || 'dagon=#'}</p>
-                <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente que ejecuta la transacción.</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.26em] font-bold" style={{ color: colors.textMuted }}>Sesión B</p>
-                <p className="mt-2 font-mono text-sm" style={{ color: colors.secondary }}>{simulation.basePrompt || 'dagon=#'}</p>
-                <p className="mt-1 text-xs" style={{ color: colors.textMuted }}>Cliente paralelo que intenta leer.</p>
-              </div>
-            </div>
-          </div>
-          {focus.length > 0 && (
-            <CompactSection
-              title="Focos pedagógicos"
-              subtitle="Ideas clave de esta ejecución"
-              colors={colors}
-              accentColor={colors.accent}
-              defaultOpen={false}
-              countLabel={`${focus.length} ideas`}
-            >
-              <div className="grid grid-cols-1 gap-2">
-                {focus.map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-xl border px-3 py-2"
-                    style={{
-                      borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                      backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.54)'
-                    }}
-                  >
-                    <p className="text-sm font-gameui" style={{ color: colors.text }}>{item}</p>
-                  </div>
-                ))}
-              </div>
-            </CompactSection>
-          )}
-        </div>
-      </div>
-
-      {timeline.length > 0 && (
-        <CompactSection
-          title="Línea de tiempo"
-          subtitle="Pasos de la ejecución en dos sesiones"
-          colors={colors}
-          accentColor={colors.accent}
-          defaultOpen={true}
-          countLabel={`${timeline.length} pasos`}
-        >
-          <div className="max-h-[26rem] overflow-y-auto pr-1 space-y-3 scroll-fancy">
-            {timeline.map((event) => (
-              <motion.div
-                key={`${event.step}-${event.statement}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: event.step * 0.03 }}
-                className="rounded-2xl border p-3 md:p-4"
-                style={{
-                  borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-                  backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.74)'
-                }}
-              >
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <span
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black"
-                    style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
-                  >
-                    {event.step}
-                  </span>
-                  <span
-                    className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-[0.22em] font-bold"
-                    style={{ backgroundColor: `${colors.secondary}18`, color: colors.secondary }}
-                  >
-                    {event.concept}
-                  </span>
-                </div>
-                <div
-                  className="rounded-2xl border px-3 py-3 font-mono text-xs md:text-sm overflow-x-auto"
-                  style={{
-                    borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
-                    backgroundColor: isLight ? 'rgba(255,250,240,0.92)' : 'rgba(2,6,23,0.92)',
-                    color: colors.text
-                  }}
-                >
-                  <span style={{ color: event.prompt === simulation.txPrompt ? colors.secondary : colors.primary }}>
-                    {event.prompt || simulation.basePrompt || 'dagon=#'}
-                  </span>{' '}
-                  {event.statement}
-                </div>
-                <div className="mt-3 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_220px] gap-3">
-                  <div>
-                    <p className="text-sm font-gameui" style={{ color: colors.text }}>
-                      {event.effect}
-                    </p>
-                    <div
-                      className="mt-3 rounded-2xl border px-3 py-2"
-                      style={{
-                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                        backgroundColor: isLight ? 'rgba(254,243,199,0.42)' : 'rgba(34,211,238,0.08)'
-                      }}
-                    >
-                      <p className="text-xs font-gameui" style={{ color: colors.textMuted }}>
-                        {event.visibilityHint}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
-                    <div
-                      className="rounded-2xl border px-3 py-2"
-                      style={{
-                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                        backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
-                      }}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>A ve</p>
-                      <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionAVisibleRows}</p>
-                    </div>
-                    <div
-                      className="rounded-2xl border px-3 py-2"
-                      style={{
-                        borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.05)',
-                        backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(8,15,32,0.58)'
-                      }}
-                    >
-                      <p className="text-[10px] uppercase tracking-[0.24em] font-bold mb-1" style={{ color: colors.textMuted }}>B ve</p>
-                      <p className="font-mono text-sm" style={{ color: colors.text }}>{event.sessionBVisibleRows}</p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </CompactSection>
-      )}
-    </div>
-  );
-};
-
-const TransactionOutcomePanel = ({ result, colors }) => {
-  if (!result?.isTransactionVisual && !result?.transactionOutcome) return null;
-
-  const isLight = colors.mode === 'light';
-  const outcome = result.transactionOutcome || {};
-  const type = outcome.type || 'commit';
-  const accent = type === 'rollback' ? '#fb7185' : type === 'savepoint' ? '#f59e0b' : colors.primary;
-  const beforeData = Array.isArray(result.beforeData) ? result.beforeData : [];
-  const afterData = Array.isArray(result.afterData) ? result.afterData : [];
-  const { beforeMarkers, afterMarkers } = buildTransactionDiff(beforeData, afterData);
-  const flowLabel = type === 'rollback'
-    ? 'ROLLBACK aplicado'
-    : type === 'savepoint'
-      ? 'SAVEPOINT conservado'
-      : 'COMMIT publicado';
-  const flowDescription = type === 'rollback'
-    ? 'El cambio pendiente se descartó y el estado confirmado se mantuvo.'
-    : type === 'savepoint'
-      ? 'Solo sobrevivió la parte anterior al savepoint; lo demás volvió atrás.'
-      : 'La transacción hizo visibles sus cambios para el resto de sesiones.';
-
-  return (
-    <div
-      className="p-5 space-y-5 border-b"
-      style={{
-        borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-        background: isLight
-          ? 'linear-gradient(180deg, rgba(255,255,255,0.88), rgba(255,250,240,0.88))'
-          : 'linear-gradient(180deg, rgba(15,23,42,0.82), rgba(8,15,32,0.82))'
-      }}
-    >
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.34em] font-black mb-2" style={{ color: accent }}>
-            Estado confirmado en la BD
-          </p>
-          <h3 className="font-display text-xl font-black" style={{ color: colors.text }}>
-            {outcome.headline || 'Resultado transaccional'}
-          </h3>
-          <p className="mt-2 text-sm font-gameui max-w-2xl" style={{ color: colors.textMuted }}>
-            {outcome.explanation || 'Así quedó la tabla afectada después del desenlace de la transacción.'}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div
-            className="rounded-2xl border px-4 py-3 min-w-[130px]"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.24em] font-bold" style={{ color: colors.textMuted }}>Antes</p>
-            <p className="mt-2 font-mono text-lg" style={{ color: colors.text }}>{outcome.beforeCount ?? beforeData.length}</p>
-          </div>
-          <div
-            className="rounded-2xl border px-4 py-3 min-w-[130px]"
-            style={{
-              borderColor: isLight ? 'rgba(245,158,11,0.10)' : 'rgba(255,255,255,0.06)',
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.24em] font-bold" style={{ color: colors.textMuted }}>Después</p>
-            <p className="mt-2 font-mono text-lg" style={{ color: colors.text }}>{outcome.afterCount ?? afterData.length}</p>
-          </div>
-          <div
-            className="rounded-2xl border px-4 py-3 min-w-[160px]"
-            style={{
-              borderColor: `${accent}33`,
-              backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(15,23,42,0.68)'
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.24em] font-bold" style={{ color: colors.textMuted }}>Plantilla mental</p>
-            <p className="mt-2 font-mono text-xs leading-relaxed" style={{ color: accent }}>{outcome.queryPattern}</p>
-          </div>
-        </div>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, scaleX: 0.96 }}
-        animate={{ opacity: 1, scaleX: 1 }}
-        transition={{ duration: 0.3, delay: 0.08 }}
-        className="rounded-3xl border px-5 py-4 overflow-hidden relative"
-        style={{
-          borderColor: `${accent}33`,
-          background: isLight
-            ? `linear-gradient(90deg, ${accent}10, rgba(255,255,255,0.9), ${accent}14)`
-            : `linear-gradient(90deg, rgba(15,23,42,0.92), ${accent}12, rgba(15,23,42,0.92))`
-        }}
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-black mb-1" style={{ color: accent }}>
-              Flujo transaccional
-            </p>
-            <p className="font-display text-lg font-black" style={{ color: colors.text }}>
-              {flowLabel}
-            </p>
-            <p className="mt-1 text-sm font-gameui" style={{ color: colors.textMuted }}>
-              {flowDescription}
-            </p>
-          </div>
-          <div className="flex items-center gap-3 min-w-[280px]">
-            <div className="flex-1 rounded-full h-2 overflow-hidden" style={{ backgroundColor: isLight ? 'rgba(216,180,120,0.18)' : 'rgba(51,65,85,0.85)' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '100%' }}
-                transition={{ duration: 0.9, ease: 'easeOut' }}
-                className="h-full rounded-full"
-                style={{ background: `linear-gradient(90deg, ${colors.primary}, ${accent}, ${colors.secondary})` }}
-              />
-            </div>
-            <motion.div
-              initial={{ x: -18, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.45, delay: 0.25 }}
-              className="px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.18em]"
-              style={{ backgroundColor: `${accent}22`, color: accent }}
-            >
-              {type}
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
-
-      {result.targetTable && (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <motion.div
-          initial={{ opacity: 0, x: -14 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="space-y-2"
-        >
-          <CompactSection
-            title={`Estado previo de ${result.targetTable}`}
-            subtitle="Así estaba la tabla antes de ejecutar"
-            defaultOpen={false}
-            colors={colors}
-            countLabel={`${beforeData.length} filas`}
-          >
-            <div className="max-h-[20rem] overflow-auto scroll-fancy">
-              <DataComparisonTable data={beforeData} colors={colors} rowMarkers={beforeMarkers} animateRows />
-            </div>
-          </CompactSection>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, x: 14 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.08 }}
-          className="space-y-2"
-        >
-          <CompactSection
-            title="Estado final confirmado"
-            subtitle="Lo que quedó persistido tras el desenlace"
-            defaultOpen={true}
-            colors={colors}
-            accentColor={accent}
-            countLabel={`${afterData.length} filas`}
-          >
-            <div
-              className="max-h-[20rem] overflow-auto scroll-fancy rounded-xl"
-              style={{ boxShadow: `0 0 24px ${accent}1a` }}
-            >
-              <DataComparisonTable data={afterData} colors={colors} highlight rowMarkers={afterMarkers} animateRows />
-            </div>
-          </CompactSection>
-        </motion.div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
@@ -891,7 +60,7 @@ export const ExercisePage = () => {
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
   const mutedColor = colors.textMuted;
-  const headerControlClass = "border-2 rounded-xl font-display font-black shadow-[0_10px_26px_rgba(2,6,23,0.18)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.26)] transition-all";
+  const headerControlClass = "a11y-top-action border-2 rounded-xl font-display font-black shadow-[0_10px_26px_rgba(2,6,23,0.18)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.26)] transition-all";
   const headerControlStyle = {
     color: headingColor,
     backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.76)',
@@ -904,8 +73,11 @@ export const ExercisePage = () => {
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
 
+  const cinematicSeenKey = useMemo(() => `dagon_module_cinematic_seen_${user?.idUsuario || 'local'}_${levelId}`, [levelId, user?.idUsuario]);
+  const [moduleMetadata, setModuleMetadata] = useState(null);
   const [showTheory, setShowTheory] = useState(true);
   const [showModuleCinematic, setShowModuleCinematic] = useState(true);
+  const [resumeTheoryAfterCinematic, setResumeTheoryAfterCinematic] = useState(true);
   const [currentSubTopic, setCurrentSubTopic] = useState(null);
   const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
@@ -922,6 +94,9 @@ export const ExercisePage = () => {
   const [clawbotThinking, setClawbotThinking] = useState(false);
   const [clawbotMessage, setClawbotMessage] = useState(null);
   const [intentosFallidos, setIntentosFallidos] = useState(0);
+  const [learningProgressEvent, setLearningProgressEvent] = useState(null);
+  const [progressiveHint, setProgressiveHint] = useState(null);
+  const [reinforcementPlan, setReinforcementPlan] = useState(null);
 
   const [combo, setCombo] = useState(0);
   const [shake, setShake] = useState(false);
@@ -944,13 +119,15 @@ export const ExercisePage = () => {
   useEffect(() => {
     const fetchExercises = async () => {
       try {
-        const response = await fetch(apiUrl(`/api/exercises/${levelId}`), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get(`/api/exercises/${levelId}`);
+        const data = response.data;
         const loaded = data.exercises || [];
+        const alreadySeen = localStorage.getItem(cinematicSeenKey) === 'true';
         setExercises(loaded);
-        setShowModuleCinematic(true);
+        setModuleMetadata(data.module || null);
+        setResumeTheoryAfterCinematic(true);
+        setShowModuleCinematic(!alreadySeen);
+        setShowTheory(true);
 
         // Establecer el subtema inicial basado en el primer ejercicio
         if (loaded.length > 0) {
@@ -967,7 +144,7 @@ export const ExercisePage = () => {
       }
     };
     if (token && levelId) fetchExercises();
-  }, [levelId, token]);
+  }, [cinematicSeenKey, levelId, token]);
 
   useEffect(() => {
     if (exercises.length > 0) {
@@ -990,6 +167,8 @@ export const ExercisePage = () => {
       setExecutionResult(null);
       setClawbotMessage(null);
       setShowHint(false);
+      setProgressiveHint(null);
+      setReinforcementPlan(null);
     }
   }, [currentExerciseIndex, exercises, levelId, shownSubTopics]);
 
@@ -1021,25 +200,47 @@ export const ExercisePage = () => {
   const invokeClawbot = async (errorData) => {
     setClawbotThinking(true);
     try {
-      const response = await fetch(apiUrl('/api/clawbot/analyze'), {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(errorData)
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
-      } else {
-        setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
-      }
+      const response = await apiClient.post('/api/clawbot/analyze', errorData);
+      const data = response.data;
+      setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
     } catch {
       setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
     } finally {
       setClawbotThinking(false);
     }
+  };
+
+  const registerGamifiedAttempt = ({ exercise, success, attempts }) => {
+    const focus = inferLearningFocus(exercise, levelId);
+    const event = recordLearningAttempt({
+      userId: user?.idUsuario || 'local',
+      moduleId: levelId,
+      exercise,
+      success,
+      attempts,
+      focus,
+    });
+
+    setLearningProgressEvent(event);
+    setProgressiveHint(success ? null : event.progressiveHint);
+    setReinforcementPlan(success ? null : event.reinforcement);
+
+    if (event.unlockedBadges.length > 0) {
+      event.unlockedBadges.forEach((badge) => {
+        toast.success(`Insignia desbloqueada: ${badge.badge}`);
+      });
+      sounds.playUnlock?.();
+    }
+
+    if (event.constancy.attempts === 1) {
+      toast.success('Constancia registrada: practicaste SQL hoy.');
+    } else if (!success && event.constancy.attempts === 3) {
+      toast.message('Refuerzo activado', {
+        description: 'Aunque no haya salido perfecto, ya reuniste practica suficiente para detectar patrones.',
+      });
+    }
+
+    return event;
   };
 
   const handleValidate = async () => {
@@ -1052,12 +253,8 @@ export const ExercisePage = () => {
         ? droppedWords.map(w => w.word).join(' ')
         : editorCode;
 
-      const response = await fetch(apiUrl(`/api/exercises/${exercise.id}/validate`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ query, usuarioId: user?.idUsuario })
-      });
-      const result = await response.json();
+      const response = await apiClient.post(`/api/exercises/${exercise.id}/validate`, { query });
+      const result = response.data;
 
       if (result.success) {
         // === INTERVENCIÓN PEDAGÓGICA ===
@@ -1114,12 +311,14 @@ export const ExercisePage = () => {
         }
         // Guardamos TODO el resultado para que el componente tenga acceso a isDML, beforeData, etc.
         setExecutionResult({ ...result });
+        registerGamifiedAttempt({ exercise, success: true, attempts: intentosFallidos + 1 });
         setBurst(true);        setTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
         setCombo(c => c + 1);
         sounds.playSuccess();
       } else if (result.isWarning) {
         toast.warning(result.message);
+        registerGamifiedAttempt({ exercise, success: true, attempts: intentosFallidos + 1 });
         setExecutionResult({ 
           ...result,
           success: true,
@@ -1135,12 +334,12 @@ export const ExercisePage = () => {
         setTimeout(() => setShake(false), 500);
         setCombo(0);
         sounds.playError();
-        if (result.descripcion && result.queryMaestra) {
+        if (result.descripcion) {
           const nuevos = intentosFallidos + 1;
           setIntentosFallidos(nuevos);
+          registerGamifiedAttempt({ exercise, success: false, attempts: nuevos });
           invokeClawbot({
             descripcion: result.descripcion,
-            queryMaestra: result.queryMaestra,
             queryAlumno: result.queryAlumno,
             errorDb: result.errorDb || result.message,
             intentos: nuevos,
@@ -1150,6 +349,7 @@ export const ExercisePage = () => {
         } else {
           const nuevos = intentosFallidos + 1;
           setIntentosFallidos(nuevos);
+          registerGamifiedAttempt({ exercise, success: false, attempts: nuevos });
           setClawbotMessage(buildLocalClawbotFallback({
             errorDb: result.errorDb || result.message,
             intentos: nuevos,
@@ -1166,6 +366,7 @@ export const ExercisePage = () => {
         nivelId: parseInt(levelId),
         tituloEjercicio: exercise.title,
       }, exercise));
+      registerGamifiedAttempt({ exercise, success: false, attempts: Math.max(intentosFallidos + 1, 1) });
     } finally {
       setValidating(false);
     }
@@ -1202,14 +403,8 @@ export const ExercisePage = () => {
     if (!confirmed) return;
     
     try {
-      const response = await fetch(apiUrl('/api/modulos/reset-sandbox'), {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${token}` 
-        }
-      });
-      if (response.ok) {
+      const response = await apiClient.post('/api/modulos/reset-sandbox');
+      if (response.status >= 200 && response.status < 300) {
         toast.success('✅ ¡Base de datos restablecida!\n\nTus tablas ahora tienen los datos originales.');
         sounds.playMagic();
         setExecutionResult(null);
@@ -1279,6 +474,17 @@ export const ExercisePage = () => {
   const isTransactionLab = isTransactionExercise(exercise, levelId);
   const learningFocus = inferLearningFocus(exercise, levelId);
   const learningFeedback = buildLearningFeedback(executionResult, learningFocus, intentosFallidos);
+  const activeConceptKey = learningProgressEvent?.conceptKey || inferConceptKey(exercise, levelId);
+  const activeConcept = LEARNING_CONCEPTS[activeConceptKey] || LEARNING_CONCEPTS.select;
+  const conceptMasteryValue = learningProgressEvent?.mastery || 0;
+  const applyReinforcementScaffold = () => {
+    if (isDragDrop || isDiagram || !reinforcementPlan?.scaffold) return;
+    setEditorCode(reinforcementPlan.scaffold);
+    sounds.playSelect?.();
+    toast.message('Plantilla de refuerzo cargada', {
+      description: 'Completa los nombres reales de columnas, tablas y condiciones antes de validar.',
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="exercise-page">
@@ -1297,7 +503,7 @@ export const ExercisePage = () => {
         <div className="px-4 py-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4 min-w-0">
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className={`${headerControlClass} px-2 sm:px-3 shrink-0`} style={headerControlStyle}>
+            <Button variant="ghost" onClick={() => navigate('/dashboard')} className={`${headerControlClass} px-2 sm:px-3 shrink-0`} style={headerControlStyle} aria-label="Volver al dashboard">
               <ArrowLeft className="w-4 h-4 mr-2" /> Volver
             </Button>
             <div className="hidden sm:block h-6 w-px" style={{ backgroundColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(255,255,255,0.10)' }} />
@@ -1307,6 +513,7 @@ export const ExercisePage = () => {
               className={`${headerControlClass} px-2 sm:px-3 shrink-0`}
               title="🔄 Restablecer tabla: Borra todos tus cambios y vuelve a los datos originales del ejercicio. Útil si cometiste muchos errores o quieres empezar de nuevo."
               style={{ ...headerControlStyle, color: mutedColor, borderColor: isLight ? 'rgba(251,146,60,0.42)' : 'rgba(251,146,60,0.34)' }}
+              aria-label="Restablecer tabla del sandbox"
             >
               <RotateCcw className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Restablecer</span>
             </Button>
@@ -1314,11 +521,13 @@ export const ExercisePage = () => {
               variant="ghost"
               onClick={() => {
                 sounds.playCinematicPulse?.();
+                setResumeTheoryAfterCinematic(showTheory);
                 setShowModuleCinematic(true);
               }}
               className={`${headerControlClass} px-2 sm:px-3 shrink-0`}
               style={{ ...headerControlStyle, borderColor: isLight ? 'rgba(34,211,238,0.42)' : 'rgba(34,211,238,0.36)', color: isLight ? '#0e7490' : '#67e8f9' }}
               title="Volver a ver la cinemática de este módulo"
+              aria-label="Volver a ver la cinemática de este módulo"
             >
               <Film className="w-4 h-4 mr-2" /> <span className="hidden sm:inline">Cinemática</span>
             </Button>
@@ -1341,6 +550,8 @@ export const ExercisePage = () => {
                 <div key={i} className="flex items-center shrink-0">
                   <button 
                     onClick={() => isUnlocked && handleLevelJump(i)}
+                    aria-label={`Ir a la misión ${i + 1}`}
+                    aria-current={isCurrent ? 'step' : undefined}
                     className={`
                       w-9 h-9 rounded-xl flex items-center justify-center font-display text-[10px] font-black transition-all duration-300 border
                       ${isCurrent ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-white scale-110 shadow-[0_0_24px_rgba(34,211,238,0.62)] border-cyan-200 z-10' :
@@ -1387,10 +598,12 @@ export const ExercisePage = () => {
         {showModuleCinematic ? (
           <ModuleCinematic
             moduleId={levelId}
+            moduleMetadata={moduleMetadata}
             exercises={exercises}
             onComplete={() => {
+              localStorage.setItem(cinematicSeenKey, 'true');
               setShowModuleCinematic(false);
-              setShowTheory(true);
+              setShowTheory(resumeTheoryAfterCinematic);
             }}
           />
         ) : showTheory ? (
@@ -1411,7 +624,7 @@ export const ExercisePage = () => {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid gap-3 md:grid-cols-3"
+              className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"
             >
               <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.62)' }}>
                 <div className="flex items-center gap-2 mb-2">
@@ -1440,6 +653,15 @@ export const ExercisePage = () => {
                 </div>
                 <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
                   {learningFocus.concept}
+                </p>
+              </div>
+              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(168,85,247,0.30)', backgroundColor: isLight ? 'rgba(250,245,255,0.78)' : 'rgba(88,28,135,0.18)' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="w-4 h-4" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }}>Dominio</span>
+                </div>
+                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                  {activeConcept.label}: {conceptMasteryValue}% · {activeConcept.badge}
                 </p>
               </div>
             </motion.div>
@@ -1484,6 +706,7 @@ export const ExercisePage = () => {
                   {exercise.hint && !clawbotMessage && (
                     <button
                       onClick={() => setShowHint(!showHint)}
+                      aria-expanded={showHint}
                       className="mt-3 text-xs font-bold flex items-center gap-1 transition-colors"
                       style={{ color: isLight ? '#b45309' : '#fcd34d' }}
                     >
@@ -1501,6 +724,44 @@ export const ExercisePage = () => {
                       </motion.p>
                     )}
                   </AnimatePresence>
+
+                  {progressiveHint && !executionResult?.success && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-4 rounded-2xl border p-4"
+                      style={{
+                        borderColor: progressiveHint.level >= 3 ? 'rgba(244,63,94,0.34)' : 'rgba(245,158,11,0.34)',
+                        backgroundColor: progressiveHint.level >= 3
+                          ? (isLight ? 'rgba(255,241,242,0.82)' : 'rgba(127,29,29,0.16)')
+                          : (isLight ? 'rgba(255,251,235,0.86)' : 'rgba(120,53,15,0.18)')
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <TrendingUp className="mt-0.5 w-5 h-5 shrink-0" style={{ color: progressiveHint.level >= 3 ? '#fb7185' : '#fbbf24' }} />
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: mutedColor }}>
+                            Pista progresiva nivel {progressiveHint.level}
+                          </p>
+                          <h3 className="mt-1 font-display text-base font-black" style={{ color: headingColor }}>
+                            {progressiveHint.title}
+                          </h3>
+                          <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                            {progressiveHint.message}
+                          </p>
+                          {progressiveHint.action.includes('\n') ? (
+                            <pre className="mt-3 overflow-x-auto rounded-xl border p-3 text-xs font-mono" style={{ borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(2,6,23,0.62)', color: isLight ? '#92400e' : '#fde68a' }}>
+                              {progressiveHint.action}
+                            </pre>
+                          ) : (
+                            <p className="mt-3 text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                              {progressiveHint.action}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
@@ -1548,6 +809,40 @@ export const ExercisePage = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {reinforcementPlan && !executionResult?.success && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 rounded-2xl border p-4"
+                  style={{
+                    borderColor: 'rgba(34,211,238,0.30)',
+                    backgroundColor: isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.20)'
+                  }}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: isLight ? '#0891b2' : '#67e8f9' }}>
+                        Práctica de refuerzo
+                      </p>
+                      <h3 className="mt-1 font-display text-lg font-black" style={{ color: headingColor }}>
+                        {reinforcementPlan.title}
+                      </h3>
+                      <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                        {reinforcementPlan.reason}
+                      </p>
+                    </div>
+                    {!isDragDrop && !isDiagram && (
+                      <Button
+                        onClick={applyReinforcementScaffold}
+                        className="shrink-0 rounded-xl bg-cyan-500 px-4 font-display font-black text-slate-950 hover:bg-cyan-300"
+                      >
+                        Cargar plantilla
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
 
               {/* === INTERVENCIÓN PEDAGÓGICA DE DAGON === */}
               <AnimatePresence>
@@ -1613,6 +908,7 @@ export const ExercisePage = () => {
                                 setDagonShowPostMessage(false);
                                 setExecutionResult(null);
                               }}
+                              aria-label="Ejecutar mi consulta original"
                               className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors"
                             >
                               Ejecutar mi query →
@@ -1647,6 +943,7 @@ export const ExercisePage = () => {
                   }}
                   disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
                   className="w-full sm:w-auto justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
+                  aria-label="Ejecutar y validar la respuesta del ejercicio"
                 >
                   {validating || clawbotThinking
                     ? <Loader className="w-4 h-4 animate-spin mr-2" />
@@ -1991,6 +1288,8 @@ export const ExercisePage = () => {
                           setIntentosFallidos(0);
                           setClawbotMessage(null);
                           setEditorCode('');
+                          setProgressiveHint(null);
+                          setReinforcementPlan(null);
                           
                           if (currentExerciseIndex < exercises.length - 1) {
                             setCurrentExerciseIndex(prev => prev + 1);

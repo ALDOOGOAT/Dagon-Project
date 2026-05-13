@@ -21,6 +21,19 @@ Este archivo sirve para entender rapido como funciona la base de datos cada vez 
 
 > Importante: este respaldo contiene datos reales o de prueba de usuarios y valores en `password_hash`. No debe publicarse ni compartirse sin sanitizar.
 
+## Ruta Limpia de Instalacion
+
+Desde la Fase 4, el respaldo bruto ya no debe usarse como script principal para ambientes nuevos.
+
+Orden recomendado:
+
+1. `scripts/00_instalacion_limpia.sql`: estructura oficial limpia, roles tecnicos, vistas, triggers, `lms_sandbox_template`, `lms_sandbox` e indices base.
+2. `scripts/01_datos_semilla.sql`: datos semilla seguros sin usuarios reales ni intentos.
+3. `scripts/02_ejercicios_semilla.sql`: ejercicios educativos separados del respaldo bruto.
+4. `scripts/migraciones/*.sql`: cambios incrementales manuales en orden cronologico.
+
+Detalles operativos y checklist de respaldos: `scripts/guia_bd_fase4.md`.
+
 ## Esquemas
 
 ### `lms_core`

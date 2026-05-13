@@ -19,6 +19,7 @@ import {
   Compass,
   HelpCircle,
   Monitor,
+  RotateCcw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sounds } from '../lib/SoundEngine';
@@ -217,8 +218,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState(null);
   const [soundEnabled, setSoundEnabled] = useState(() => sounds.isEnabled());
+  const [soundVolume, setSoundVolume] = useState(() => sounds.getVolume());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const panelRef = useRef(null);
   const particles = useMemo(() => createTourParticles(), []);
   const step = tutorialSteps[currentStep];
   const StepIcon = step.icon;
@@ -260,7 +263,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     utterance.lang = 'es-MX';
     utterance.rate = 0.94;
     utterance.pitch = 1.05;
-    utterance.volume = 0.95;
+    utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
 
     const voices = synth.getVoices();
     const spanishVoice = voices.find((voice) => voice.lang.includes('es-MX')) || voices.find((voice) => voice.lang.startsWith('es')) || voices[0];
@@ -277,6 +280,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     const syncSound = (event) => {
       const enabled = event?.detail?.enabled ?? sounds.isEnabled();
       setSoundEnabled(enabled);
+      setSoundVolume(event?.detail?.volume ?? sounds.getVolume());
       if (!enabled) cancelSpeech();
     };
 
@@ -293,7 +297,33 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
     setCurrentStep(0);
     sounds.playCinematicCue?.('cinematic');
+    const focusFrame = window.requestAnimationFrame(() => panelRef.current?.focus());
+    return () => window.cancelAnimationFrame(focusFrame);
   }, [isOpen, cancelSpeech]);
+
+  const handleClose = useCallback(() => {
+    cancelSpeech();
+    localStorage.setItem('dagon_tutorial_completed', 'true');
+    localStorage.removeItem('dagon_tutorial_pending');
+    localStorage.removeItem('dagon_first_login');
+    onClose?.();
+  }, [cancelSpeech, onClose]);
+
+  const handleNext = useCallback(() => {
+    sounds.playStep();
+    cancelSpeech();
+    if (currentStep < tutorialSteps.length - 1) {
+      setCurrentStep((value) => value + 1);
+      return;
+    }
+    handleClose();
+  }, [cancelSpeech, currentStep, handleClose]);
+
+  const handlePrevious = useCallback(() => {
+    sounds.playSelect();
+    cancelSpeech();
+    setCurrentStep((value) => Math.max(0, value - 1));
+  }, [cancelSpeech]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -319,14 +349,30 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     if (!isOpen) return undefined;
 
     const handleViewportChange = () => updateTargetRect();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        handleClose();
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        handleNext();
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        handlePrevious();
+      }
+    };
+
     window.addEventListener('resize', handleViewportChange);
     window.addEventListener('scroll', handleViewportChange, true);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('resize', handleViewportChange);
       window.removeEventListener('scroll', handleViewportChange, true);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, updateTargetRect]);
+  }, [isOpen, updateTargetRect, handleClose, handleNext, handlePrevious]);
 
   useEffect(() => {
     const synth = synthRef.current;
@@ -340,30 +386,6 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     return () => synth.cancel();
   }, []);
 
-  const handleClose = () => {
-    cancelSpeech();
-    localStorage.setItem('dagon_tutorial_completed', 'true');
-    localStorage.removeItem('dagon_tutorial_pending');
-    localStorage.removeItem('dagon_first_login');
-    onClose?.();
-  };
-
-  const handleNext = () => {
-    sounds.playStep();
-    cancelSpeech();
-    if (currentStep < tutorialSteps.length - 1) {
-      setCurrentStep((value) => value + 1);
-      return;
-    }
-    handleClose();
-  };
-
-  const handlePrevious = () => {
-    sounds.playSelect();
-    cancelSpeech();
-    setCurrentStep((value) => Math.max(0, value - 1));
-  };
-
   const toggleVoice = async () => {
     const next = sounds.toggleEnabled({ restart: false });
     setSoundEnabled(next);
@@ -371,6 +393,23 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
       await sounds.init();
       sounds.playMagic();
       speak(step.voice);
+    }
+  };
+
+  const repeatVoice = () => {
+    cancelSpeech();
+    sounds.playSelect?.();
+    speak(step.voice);
+  };
+
+  const handleTutorialVolumeChange = async (event) => {
+    const nextVolume = Number(event.target.value) / 100;
+    sounds.setVolume(nextVolume);
+    setSoundVolume(nextVolume);
+    if (!sounds.isEnabled() && nextVolume > 0) {
+      sounds.setEnabled(true, { restart: false });
+      setSoundEnabled(true);
+      await sounds.init();
     }
   };
 
@@ -383,6 +422,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
           className="tour-overlay-shell fixed inset-0 z-[100] overflow-hidden bg-slate-950/70 backdrop-blur-[14px]"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tour-step-title"
+          aria-describedby="tour-step-description"
         >
           <div className="tour-cinematic-vignette absolute inset-0 pointer-events-none" />
           <div className="tour-scanlines absolute inset-0 pointer-events-none" />
@@ -428,6 +471,8 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
           <div className="relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
             <motion.div
+              ref={panelRef}
+              tabIndex={-1}
               key={step.id}
               initial={{ opacity: 0, y: 36, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -479,14 +524,25 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                         onClick={toggleVoice}
                         className="tour-icon-button"
                         title={soundEnabled ? 'Silenciar tutorial' : 'Activar sonido del tutorial'}
+                        aria-label={soundEnabled ? 'Silenciar tutorial' : 'Activar sonido del tutorial'}
                       >
                         {isSpeaking ? <Volume2 className="h-4 w-4 text-cyan-200" /> : soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={repeatVoice}
+                        className="tour-icon-button"
+                        title="Repetir narración"
+                        aria-label="Repetir narración del paso actual"
+                      >
+                        <RotateCcw className="h-4 w-4" />
                       </button>
                       <button
                         type="button"
                         onClick={handleClose}
                         className="tour-icon-button hover:border-rose-300/50 hover:text-rose-200"
                         title="Cerrar tutorial"
+                        aria-label="Cerrar tutorial"
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -498,10 +554,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.12, duration: 0.35 }}
                   >
-                    <h2 className="text-arcane-title max-w-4xl font-display text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
+                    <h2 id="tour-step-title" className="text-arcane-title max-w-4xl font-display text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
                       {step.title}
                     </h2>
-                    <p className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                    <p id="tour-step-description" className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-300 sm:text-lg">
                       {step.content}
                     </p>
                   </motion.div>
@@ -512,11 +568,25 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                       {targetRect ? 'Elemento señalado en pantalla' : 'Escena introductoria'}
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <label className="flex h-12 min-w-[170px] items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs font-display font-black text-slate-300">
+                        <Volume2 className="h-4 w-4 text-cyan-200" />
+                        <span className="sr-only">Volumen del tutorial</span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={Math.round(soundVolume * 100)}
+                          onChange={handleTutorialVolumeChange}
+                          className="dagon-volume-slider"
+                          aria-label="Volumen del tutorial"
+                        />
+                      </label>
                       <Button
                         onClick={handleClose}
                         variant="ghost"
                         className="h-12 rounded-xl border border-white/10 px-5 font-display font-black text-slate-300 hover:bg-white/5 hover:text-white"
+                        aria-label="Omitir tutorial"
                       >
                         Omitir
                       </Button>
@@ -525,6 +595,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                         disabled={currentStep === 0}
                         variant="outline"
                         className="h-12 rounded-xl border-white/15 bg-white/[0.03] px-5 font-display font-black text-white disabled:opacity-40"
+                        aria-label="Volver al paso anterior del tutorial"
                       >
                         <ChevronLeft className="mr-2 h-4 w-4" />
                         Atrás
@@ -532,6 +603,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                       <Button
                         onClick={handleNext}
                         className="h-12 rounded-xl bg-white px-6 font-display font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.24)] transition-all hover:bg-cyan-100"
+                        aria-label={currentStep === tutorialSteps.length - 1 ? 'Comenzar a usar Dagon' : 'Avanzar al siguiente paso del tutorial'}
                       >
                         {currentStep === tutorialSteps.length - 1 ? 'Comenzar' : 'Siguiente'}
                         <ChevronRight className="ml-2 h-4 w-4" />
@@ -556,6 +628,7 @@ export const TourTrigger = ({ onClick }) => {
       variant="outline"
       size="sm"
       className="group relative min-h-[44px] overflow-hidden rounded-xl border-2 border-cyan-300/70 bg-cyan-400/10 px-4 font-display font-black shadow-[0_12px_30px_rgba(34,211,238,0.22)] ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-400/20"
+      aria-label="Abrir tutorial interactivo"
     >
       <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-cyan-300/0 via-cyan-200/18 to-fuchsia-300/0 transition-transform duration-1000 group-hover:translate-x-[100%]" />
       <span className="relative flex items-center gap-2 text-cyan-100">

@@ -24,7 +24,7 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { DagonMascot } from '../components/DagonMascot';
-import { API_BASE } from '../config/api';
+import apiClient from '../services/apiClient';
 
 const numberFormatter = new Intl.NumberFormat('es-MX');
 
@@ -270,20 +270,9 @@ export const LeaderboardPage = () => {
     if (!token) return;
     setMpiLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/analytics/mpi`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        setMpiAnalytics(await response.json());
-      } else {
-        setMpiAnalytics({
-          ok: false,
-          estado: 'offline',
-          error: 'El backend no pudo consultar el servicio MPI.'
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching MPI analytics:", error);
+      const response = await apiClient.get('/api/analytics/mpi');
+      setMpiAnalytics(response.data);
+    } catch {
       setMpiAnalytics({
         ok: false,
         estado: 'offline',
@@ -297,13 +286,9 @@ export const LeaderboardPage = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await fetch(`${API_BASE}/api/leaderboard`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) setLeaderboardData(await response.json());
-        else toast.error("Error al cargar el Salón de la Fama");
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error);
+        const response = await apiClient.get('/api/leaderboard');
+        setLeaderboardData(response.data);
+      } catch {
         toast.error("Error de conexión con el servidor");
       } finally {
         setLoading(false);
