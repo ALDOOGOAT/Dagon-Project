@@ -3,6 +3,7 @@ package com.dagon.backend.service.validation;
 import com.dagon.backend.model.EjercicioPractico;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,18 +15,22 @@ import java.util.Optional;
 public class EjercicioValidationRouter {
 
     private final List<ValidadorEjercicio> validadores;
+    private final SqlExerciseGuard sqlExerciseGuard;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public EjercicioValidationRouter(List<ValidadorEjercicio> validadores) {
+        this(validadores, new SqlExerciseGuard());
+    }
+
+    @Autowired
+    public EjercicioValidationRouter(List<ValidadorEjercicio> validadores, SqlExerciseGuard sqlExerciseGuard) {
         this.validadores = validadores;
+        this.sqlExerciseGuard = sqlExerciseGuard;
     }
 
     public TipoValidacionEjercicio resolverTipo(EjercicioPractico ejercicio, String queryUsuario) {
         if ("diagram".equalsIgnoreCase(ejercicio.getFormato())) {
             return TipoValidacionEjercicio.DIAGRAMA;
-        }
-        if ("RAPIDA".equalsIgnoreCase(ejercicio.getTipoMision())) {
-            return TipoValidacionEjercicio.PRACTICA_RAPIDA;
         }
         if (esTextual(ejercicio)) {
             return TipoValidacionEjercicio.TEXTUAL;
@@ -34,7 +39,19 @@ public class EjercicioValidationRouter {
             return TipoValidacionEjercicio.TRANSACCION;
         }
 
-        String upper = queryUsuario == null ? "" : queryUsuario.trim().toUpperCase(Locale.ROOT);
+        TipoValidacionEjercicio tipoMaestro = resolverTipoPorSql(ejercicio.getQueryMaestra());
+        if ("RAPIDA".equalsIgnoreCase(ejercicio.getTipoMision()) && tipoMaestro == TipoValidacionEjercicio.SELECT) {
+            return TipoValidacionEjercicio.PRACTICA_RAPIDA;
+        }
+        return tipoMaestro;
+    }
+
+    private TipoValidacionEjercicio resolverTipoPorSql(String sql) {
+        String upper = sql == null ? "" : sql.trim().toUpperCase(Locale.ROOT);
+        if (upper.matches("^\\s*BEGIN\\b[\\s\\S]*")
+                || upper.matches("[\\s\\S]*\\b(COMMIT|ROLLBACK|SAVEPOINT)\\b[\\s\\S]*")) {
+            return TipoValidacionEjercicio.TRANSACCION;
+        }
         if (upper.matches("^\\s*(INSERT|UPDATE|DELETE)\\b[\\s\\S]*")) {
             return TipoValidacionEjercicio.DML;
         }
@@ -47,10 +64,14 @@ public class EjercicioValidationRouter {
     public Optional<Map<String, Object>> prevalidar(EjercicioPractico ejercicio, String queryUsuario, String usuarioId) {
         TipoValidacionEjercicio tipo = resolverTipo(ejercicio, queryUsuario);
         ContextoValidacionEjercicio contexto = new ContextoValidacionEjercicio(ejercicio, queryUsuario, usuarioId, tipo);
-        return validadores.stream()
+        Optional<Map<String, Object>> errorBase = validadores.stream()
                 .filter(validador -> validador.soporta(tipo))
                 .findFirst()
                 .flatMap(validador -> validador.prevalidar(contexto));
+        if (errorBase.isPresent()) {
+            return errorBase;
+        }
+        return sqlExerciseGuard.prevalidar(contexto);
     }
 
     private boolean esTextual(EjercicioPractico ejercicio) {
