@@ -408,12 +408,23 @@ export const StreakPage = () => {
                       </motion.div>
                       
                       <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', delay: 0.3, stiffness: 500 }}
-                        className="font-display text-6xl sm:text-8xl lg:text-9xl font-black text-gradient-fire"
+                        initial={{ scale: 0, rotateZ: -12 }}
+                        animate={{ scale: 1, rotateZ: 0 }}
+                        transition={{ type: 'spring', delay: 0.3, stiffness: 400, damping: 12 }}
+                        className="font-display text-6xl sm:text-8xl lg:text-9xl font-black text-gradient-fire relative"
                       >
-                        {stats.racha}
+                        <motion.span
+                          animate={stats.racha > 0 ? {
+                            textShadow: [
+                              '0 0 20px rgba(251,191,36,0.3)',
+                              '0 0 40px rgba(249,115,22,0.5)',
+                              '0 0 20px rgba(251,191,36,0.3)'
+                            ]
+                          } : {}}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                          {stats.racha}
+                        </motion.span>
                       </motion.span>
                     </div>
                     
@@ -487,9 +498,9 @@ export const StreakPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
+            transition={{ delay: 0.15, type: 'spring', stiffness: 200, damping: 24 }}
             className="lg:col-span-2"
           >
             <div className="rounded-3xl border p-6 overflow-hidden relative" style={panelStyle}>
@@ -539,9 +550,9 @@ export const StreakPage = () => {
                   return (
                     <motion.div
                       key={idx}
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: idx * 0.008 }}
+                      initial={{ opacity: 0, scale: 0.3, y: 12 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ delay: idx * 0.018, type: 'spring', stiffness: 400, damping: 20 }}
                       className={`aspect-square rounded-xl flex items-center justify-center text-sm font-display font-black relative overflow-hidden ${
                         !dia.num ? 'invisible' :
                         esRachaActivo ? '' :
@@ -586,14 +597,19 @@ export const StreakPage = () => {
                       {esRachaActivo && (
                         <motion.div
                           className="absolute inset-0 flex items-center justify-center"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 15, delay: idx * 0.02 }}
                         >
                           <motion.div
-                            animate={{ scale: [0.7, 1, 0.7], rotate: [-2, 2, -2] }}
-                            transition={{ duration: 0.5, repeat: Infinity }}
+                            animate={{
+                              scale: [0.7, 1.15, 0.85, 1],
+                              rotate: [-3, 3, -3],
+                              y: [0, -2, 0]
+                            }}
+                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
                           >
-                            <Flame className="w-4 h-4 text-white fill-current" />
+                            <Flame className="w-4 h-4 text-white fill-current drop-shadow-[0_0_4px_rgba(255,200,50,0.8)]" />
                           </motion.div>
                         </motion.div>
                       )}
@@ -629,9 +645,9 @@ export const StreakPage = () => {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25, type: 'spring', stiffness: 200, damping: 24 }}
             className="space-y-4"
           >
             <div className="rounded-3xl border p-5 relative overflow-hidden" style={panelStyle}>
@@ -646,12 +662,12 @@ export const StreakPage = () => {
               </div>
               <p className="text-sm mb-4" style={{ color: helperText }}>{nextMilestone.reward}</p>
               
-              <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(30,41,59,0.9)' }}>
+              <div className="h-2 rounded-full overflow-hidden relative" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(30,41,59,0.9)' }}>
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${msProgress}%` }}
-                  transition={{ duration: 1, ease: 'easeOut', delay: 0.4 }}
-                  className="h-full"
+                  transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+                  className="h-full relative xp-bar-shine"
                   style={{ background: isLight ? 'linear-gradient(90deg, #ea580c, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #d946ef, #22d3ee)' }}
                 />
               </div>
@@ -689,10 +705,10 @@ export const StreakPage = () => {
                   return (
                     <motion.div
                       key={i}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.05 * i }}
-                      className="w-10 h-12 rounded-2xl border flex items-center justify-center"
+                      initial={{ opacity: 0, y: 20, scale: 0.5, rotateZ: -10 }}
+                      animate={{ opacity: 1, y: 0, scale: 1, rotateZ: 0 }}
+                      transition={{ delay: 0.07 * i, type: 'spring', stiffness: 350, damping: 18 }}
+                      className="w-10 h-12 rounded-2xl border flex items-center justify-center relative overflow-hidden"
                       style={{
                         background: active
                           ? 'linear-gradient(180deg, #fbbf24 0%, #f97316 58%, #ea580c 100%)'
@@ -703,7 +719,28 @@ export const StreakPage = () => {
                         boxShadow: active ? '0 12px 25px -14px rgba(249,115,22,0.65)' : undefined
                       }}
                     >
-                      <Flame className="w-4 h-4" style={{ color: active ? '#fff7ed' : helperText }} />
+                      {active && (
+                        <motion.div
+                          className="absolute inset-0 rounded-2xl"
+                          animate={{
+                            boxShadow: [
+                              '0 0 8px rgba(251,191,36,0.3)',
+                              '0 0 18px rgba(249,115,22,0.6)',
+                              '0 0 8px rgba(251,191,36,0.3)'
+                            ]
+                          }}
+                          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.12 }}
+                        />
+                      )}
+                      <motion.div
+                        animate={active ? {
+                          y: [0, -2, 0],
+                          scale: [1, 1.15, 1],
+                        } : {}}
+                        transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1, ease: 'easeInOut' }}
+                      >
+                        <Flame className="w-4 h-4" style={{ color: active ? '#fff7ed' : helperText }} />
+                      </motion.div>
                     </motion.div>
                   );
                 })}

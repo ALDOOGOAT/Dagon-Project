@@ -78,18 +78,17 @@ export const DidacticCard = ({ onExplore }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10 items-start">
         {didacticTopics.map((topic) => {
           const Icon = topic.icon;
           const isExpanded = expandedTopic === topic.id;
-          
+
           return (
             <motion.div
               key={topic.id}
-              layout
               className={`rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
-                isExpanded 
-                  ? `${topic.borderColor} ${topic.bgColor} ${topic.aiGlow}` 
+                isExpanded
+                  ? `${topic.borderColor} ${topic.bgColor} ${topic.aiGlow}`
                   : ''
               }`}
               style={!isExpanded ? {
