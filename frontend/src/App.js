@@ -17,6 +17,7 @@ import { StreakPage } from './pages/StreakPage';
 import { GraduationPage } from './pages/GraduationPage';
 import { CreditsPage } from './pages/CreditsPage';
 import { PostgresAcademyPage } from './pages/PostgresAcademyPage';
+import { DocentePage } from './pages/DocentePage';
 
 const pageVariants = {
   initial: { opacity: 0, y: 10 },
@@ -58,7 +59,7 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { colors } = useTheme();
   const location = useLocation();
   const isLightTheme = colors?.mode === 'light';
@@ -71,7 +72,7 @@ const AppRoutes = () => {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={
-            token ? <Navigate to="/dashboard" replace /> : 
+            token ? <Navigate to="/dashboard" replace /> :
             <AnimatedPage><LoginPage /></AnimatedPage>
           } />
           <Route
@@ -138,6 +139,14 @@ const AppRoutes = () => {
                </ProtectedRoute>
              }
            />
+          <Route
+            path="/docente"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><DocentePage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
          </Routes>
       </AnimatePresence>
       <Clawbot />

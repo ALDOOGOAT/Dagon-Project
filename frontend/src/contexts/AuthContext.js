@@ -67,32 +67,32 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(newUser);
-      
-      return { success: true };
+
+      return { success: true, user: newUser };
     } catch (error) {
       return { success: false, error: error.response?.data || 'Error de conexión con el servidor' };
     }
   };
 
-  const register = async (name, email, password) => {
+  const register = async (name, email, password, rol = 'alumno') => {
     try {
       const response = await apiClient.post('/api/usuarios/registro', {
         nombre: name,
         email: email,
-        passwordHash: password
+        passwordHash: password,
+        rol: rol
       });
-      
-      // ¡Ahora Java nos manda el token real y el user!
+
       const { token: newToken, user: newUser } = response.data;
-      
+
       localStorage.setItem('token', newToken);
-      localStorage.setItem('dagon_first_login', 'true'); // Marcar primera vez
+      localStorage.setItem('dagon_first_login', 'true');
       localStorage.setItem('dagon_tutorial_pending', 'true');
       localStorage.removeItem('dagon_tutorial_completed');
       setToken(newToken);
       setUser(newUser);
-      
-      return { success: true };
+
+      return { success: true, user: newUser };
     } catch (error) {
       return { success: false, error: error.response?.data || 'Error al registrarse en el servidor' };
     }

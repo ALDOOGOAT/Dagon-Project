@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Zap, Trophy, Flame, Database, Mail, Lock, User } from 'lucide-react';
+import { Sparkles, Zap, Trophy, Flame, Database, Mail, Lock, User, BookOpen, GraduationCap } from 'lucide-react';
 import { sounds } from '../lib/SoundEngine';
 
 const TAGLINES = [
@@ -29,6 +29,7 @@ export const LoginPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rol, setRol] = useState('alumno');
   const [loading, setLoading] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
   const [taglineIdx, setTaglineIdx] = useState(0);
@@ -72,7 +73,7 @@ export const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = isLogin ? await login(email, password) : await register(name, email, password);
+      const result = isLogin ? await login(email, password) : await register(name, email, password, rol);
       if (result.success) {
         sounds.playSuccess();
         toast.success('¡Bienvenido a las profundidades del conocimiento!');
@@ -239,6 +240,34 @@ export const LoginPage = () => {
                       }}
                       required
                     />
+                    <div className="space-y-2 pt-1">
+                      <Label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                        <GraduationCap className="w-3 h-3" style={{ color: colors.primary }} /> Tipo de cuenta
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { value: 'alumno', label: 'Alumno', icon: <User className="w-4 h-4" /> },
+                          { value: 'docente', label: 'Docente', icon: <BookOpen className="w-4 h-4" /> },
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setRol(opt.value)}
+                            className="flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-bold transition-all"
+                            style={{
+                              borderColor: rol === opt.value ? colors.primary : colors.border,
+                              backgroundColor: rol === opt.value
+                                ? `${colors.primary}20`
+                                : `${colors.surface}b3`,
+                              color: rol === opt.value ? colors.primary : mutedColor,
+                              boxShadow: rol === opt.value ? `0 0 12px ${colors.primary}30` : 'none',
+                            }}
+                          >
+                            {opt.icon} {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

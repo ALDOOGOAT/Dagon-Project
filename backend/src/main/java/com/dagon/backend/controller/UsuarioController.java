@@ -36,11 +36,17 @@ public class UsuarioController {
 
     // PUERTA 1: REGISTRO
     @PostMapping("/registro")
-    public ResponseEntity<?> registrarUsuario(@RequestBody Usuario nuevoUsuario) {
+    public ResponseEntity<?> registrarUsuario(@RequestBody Map<String, Object> body) {
         try {
-            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario);
+            Usuario nuevoUsuario = new Usuario();
+            nuevoUsuario.setNombre((String) body.get("nombre"));
+            nuevoUsuario.setEmail((String) body.get("email"));
+            nuevoUsuario.setPasswordHash((String) body.get("passwordHash"));
 
-            // ¡MAGIA! Generamos su primer pasaporte oficial
+            String rol = (String) body.getOrDefault("rol", "alumno");
+
+            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, rol);
+
             String token = jwtUtil.generarToken(usuarioGuardado.getIdUsuario().toString());
 
             return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuarioGuardado)));

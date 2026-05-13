@@ -138,15 +138,17 @@ Nota Fase 3: el endpoint legacy `/api/usuarios/ranking` ahora delega al mismo `L
 
 ## Fase 10: Panel Docente
 
-- [ ] Crear vista para profesor.
-- [ ] Mostrar progreso por alumno.
-- [ ] Mostrar ejercicios más fallados.
-- [ ] Mostrar módulos con mayor abandono.
-- [ ] Mostrar tiempo promedio por módulo.
-- [ ] Exportar progreso en CSV o PDF.
-- [ ] Permitir revisar intentos de alumnos.
-- [ ] Crear dashboard de analítica educativa.
-- [ ] Agregar filtros por grupo, módulo, curso y fecha.
+- [x] Crear vista para profesor.
+- [x] Mostrar progreso por alumno.
+- [x] Mostrar ejercicios más fallados.
+- [x] Mostrar módulos con mayor abandono.
+- [x] Mostrar tiempo promedio por módulo.
+- [x] Exportar progreso en CSV o PDF.
+- [x] Permitir revisar intentos de alumnos.
+- [x] Crear dashboard de analítica educativa.
+- [x] Agregar filtros por grupo, módulo, curso y fecha.
+
+Nota Fase 10: el panel docente vive en `/docente` y requiere `id_rol=2` (docente) o `id_rol=3` (admin) en la tabla `usuarios`. `JwtAuthenticationFilter` ahora carga el rol desde la DB y lo asigna como `GrantedAuthority`. El backend expone 7 endpoints bajo `/api/docente` (`resumen`, `alumnos`, `ejercicios-fallados`, `abandono-modulos`, `tiempo-promedio`, `intentos/{alumnoId}`, `exportar/csv`). Todos aceptan filtros opcionales por curso, modulo y rango de fechas. El frontend muestra graficas con Recharts, tablas ordenables, modal de intentos y exportacion CSV/PDF (via impresion del navegador). El boton "Panel Docente" aparece solo para docentes/admin en el DashboardPage.
 ---------------------------------------------------------------------------
 ## Fase 11: MPI Analytics
 
