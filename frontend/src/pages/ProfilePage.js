@@ -11,7 +11,9 @@ import {
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import apiClient from '../services/apiClient';
 import { API_BASE } from '../config/api';
+import { LEARNING_CONCEPTS } from '../lib/learningProgress';
 
 const TITLES = [
   { min: 0,    name: 'Novato del SELECT',     tier: 'bronze' },
@@ -44,6 +46,16 @@ const getDifficultyStyles = (level) => ({
   4: { name: 'Experto',    color: 'bg-orange-500',  text: 'text-orange-400',  glow: 'shadow-orange-500/40' },
   5: { name: 'Maestro',    color: 'bg-rose-500',    text: 'text-rose-400',    glow: 'shadow-rose-500/40' },
 }[level] || { name: `Nivel ${level}`, color: 'bg-slate-500', text: 'text-slate-400', glow: '' });
+
+const CONCEPT_KEY_BY_LABEL = {
+  SELECT: 'select',
+  Filtros: 'filtros',
+  Agregaciones: 'agregaciones',
+  JOIN: 'join',
+  DML: 'dml',
+  DDL: 'ddl',
+  Transacciones: 'transacciones',
+};
 
 const MAX_AVATAR_SOURCE_BYTES = 12 * 1024 * 1024;
 const AVATAR_CANVAS_SIZE = 720;
@@ -160,10 +172,8 @@ export const ProfilePage = () => {
     const fetchProfileStats = async () => {
       if (!user?.idUsuario) return;
       try {
-        const response = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/stats`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get(`/api/usuarios/${user.idUsuario}/stats`);
+        const data = response.data;
         if (data.success) setStats(data);
       } catch (error) {
         toast.error('Error al cargar las estadísticas del perfil');
@@ -182,10 +192,8 @@ export const ProfilePage = () => {
       }
       
       try {
-        const res = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/foto`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
+        const res = await apiClient.get(`/api/usuarios/${user.idUsuario}/foto`);
+        const data = res.data;
         if (data.fotoUrl) {
           const fullUrl = buildImageUrl(data.fotoUrl);
           setAvatarUrl(fullUrl);
@@ -208,23 +216,8 @@ export const ProfilePage = () => {
       const formData = new FormData();
       formData.append('file', avatarFile);
 
-      const res = await fetch(`${API_BASE}/api/usuarios/${user.idUsuario}/foto`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      const text = await res.text();
-      let data = {};
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        data = { message: text };
-      }
-
-      if (!res.ok) {
-        throw new Error(data.message || data.error || text || 'El servidor rechazó la imagen.');
-      }
+      const res = await apiClient.post(`/api/usuarios/${user.idUsuario}/foto`, formData);
+      const data = res.data;
 
       if (data.success) {
         const fullUrl = buildImageUrl(data.fotoUrl);
@@ -235,12 +228,31 @@ export const ProfilePage = () => {
         throw new Error(data.message || 'No se pudo actualizar la foto.');
       }
     } catch (err) {
-      toast.error(err.message || 'Error al subir imagen');
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || err.message || 'Error al subir imagen';
+      toast.error(errorMsg);
     } finally {
       setUploading(false);
       e.target.value = '';
     }
   };
+
+  const conceptRows = stats.dominio_conceptos || [];
+  const conceptAchievements = Object.entries(LEARNING_CONCEPTS).map(([key, concept]) => {
+    const row = conceptRows.find((item) => CONCEPT_KEY_BY_LABEL[item.concepto] === key);
+    const mastery = row?.dominio || 0;
+    const unlocked = Boolean(row?.insignia_desbloqueada);
+    return {
+      id: `concept_${key}`,
+      title: concept.badge,
+      desc: `${concept.label}: ${mastery}% de dominio`,
+      icon: <Award className="w-6 h-6" />,
+      xpReward: unlocked ? 'Dominado' : `${mastery}%`,
+      unlocked,
+      gradient: 'from-cyan-500/30 to-blue-600/10',
+      border: 'border-cyan-500/40',
+      iconColor: 'text-cyan-300',
+    };
+  });
 
   const achievements = [
     {
@@ -278,6 +290,7 @@ export const ProfilePage = () => {
       gradient: 'from-yellow-500/30 to-yellow-600/10', border: 'border-yellow-500/40',
       iconColor: 'text-yellow-400',
     },
+    ...conceptAchievements,
   ];
 
   if (loading) {

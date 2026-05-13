@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
 
 const AuthContext = createContext(null);
 
@@ -9,7 +8,19 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
+  // Escuchar evento global de desautorización desde el apiClient
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('dagon_unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('dagon_unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  useEffect(() => {
     const fetchUser = async () => {
       // Si hay un token y NO es el falso de antes
       if (token && !token.startsWith('token-dagon-')) {
@@ -26,18 +37,11 @@ useEffect(() => {
           const payload = JSON.parse(jsonPayload);
           const userId = payload.sub; 
 
-          // ¡NUEVO! Le mostramos el pasaporte a Java en la petición GET
-          const response = await axios.get(apiUrl(`/api/usuarios/${userId}/profile`), {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          });
+          const response = await apiClient.get(`/api/usuarios/${userId}/profile`);
           
           setUser(response.data); 
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`; // Dejamos el pasaporte listo para el resto de peticiones
           
-        } catch (error) {
-          console.error("Error al validar el token real", error);
+        } catch {
           logout();
         }
       } else if (token) {
@@ -50,20 +54,19 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-const login = async (email, password) => {
+  const login = async (email, password) => {
     try {
-      const response = await axios.post(apiUrl('/api/usuarios/login'), {
+      const response = await apiClient.post('/api/usuarios/login', {
         email: email,
         passwordHash: password
       });
       
       // ¡Ahora Java nos manda el token real y el user!
-      const { token, user } = response.data;
+      const { token: newToken, user: newUser } = response.data;
       
-      localStorage.setItem('token', token);
-      setToken(token);
-      setUser(user);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(newUser);
       
       return { success: true };
     } catch (error) {
@@ -73,22 +76,21 @@ const login = async (email, password) => {
 
   const register = async (name, email, password) => {
     try {
-      const response = await axios.post(apiUrl('/api/usuarios/registro'), {
+      const response = await apiClient.post('/api/usuarios/registro', {
         nombre: name,
         email: email,
         passwordHash: password
       });
       
       // ¡Ahora Java nos manda el token real y el user!
-      const { token, user } = response.data;
+      const { token: newToken, user: newUser } = response.data;
       
-      localStorage.setItem('token', token);
+      localStorage.setItem('token', newToken);
       localStorage.setItem('dagon_first_login', 'true'); // Marcar primera vez
       localStorage.setItem('dagon_tutorial_pending', 'true');
       localStorage.removeItem('dagon_tutorial_completed');
-      setToken(token);
-      setUser(user);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setToken(newToken);
+      setUser(newUser);
       
       return { success: true };
     } catch (error) {
@@ -102,7 +104,6 @@ const login = async (email, password) => {
     localStorage.removeItem('userPalette');
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   const updateUserXP = (newXP) => {

@@ -7,7 +7,7 @@ import { ArrowLeft, Flame, Trophy, Sparkles, Target, ChevronLeft, ChevronRight, 
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
 
 const MILESTONES = [
   { days: 3, label: '3 días', reward: 'Racha de Fuego', icon: Flame },
@@ -173,10 +173,8 @@ export const StreakPage = () => {
     const fetchStreakStats = async () => {
       if (!user?.idUsuario) return;
       try {
-        const response = await fetch(apiUrl(`/api/usuarios/${user.idUsuario}/stats`), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get(`/api/usuarios/${user.idUsuario}/stats`);
+        const data = response.data;
         
         const fechas = data.fechas_actividad || [];
         const diasActivos = new Set(fechas.map(f => {

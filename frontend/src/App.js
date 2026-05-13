@@ -12,7 +12,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { Clawbot } from './components/Clawbot';
 import { AbyssBackground } from './components/AbyssBackground';
 import { Toaster } from 'sonner';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import { StreakPage } from './pages/StreakPage';
 import { GraduationPage } from './pages/GraduationPage';
 import { CreditsPage } from './pages/CreditsPage';
@@ -164,7 +164,9 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <AppRoutes />
+            <MotionConfig reducedMotion="user">
+              <AppRoutes />
+            </MotionConfig>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

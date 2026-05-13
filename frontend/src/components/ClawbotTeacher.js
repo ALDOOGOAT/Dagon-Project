@@ -122,8 +122,7 @@ const DagonTTS = {
       }
       
       utterance.onend = () => resolve();
-      utterance.onerror = (e) => {
-        console.warn('TTS Error:', e);
+      utterance.onerror = () => {
         resolve();
       };
       

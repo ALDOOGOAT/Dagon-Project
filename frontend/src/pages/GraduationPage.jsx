@@ -4,11 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import {
   Trophy, Download, Linkedin, Share2, Crown, Sparkles,
-  ChevronRight, ArrowLeft, Award, Star, Flame
+  ChevronRight, ArrowLeft, Award, Star, Flame, Target
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
+import { getModuleLearningSummary } from '../lib/learningProgress';
 
 const Confetti = () => {
   const colors = ['#facc15', '#22d3ee', '#10b981', '#f97316', '#a855f7', '#ec4899'];
@@ -147,10 +148,8 @@ export const GraduationPage = () => {
   useEffect(() => {
     const fetchModuleData = async () => {
       try {
-        const response = await fetch(apiUrl(`/api/exercises/${levelId}`), {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
+        const response = await apiClient.get(`/api/exercises/${levelId}`);
+        const data = response.data;
         setModuleData(data);
         setShowConfetti(true);
         setTimeout(() => setShowCertificate(true), 1500);
@@ -166,7 +165,7 @@ export const GraduationPage = () => {
 
   const handleShareLinkedIn = () => {
     const text = encodeURIComponent(
-      `¡He completado "${moduleData?.moduleName || 'Módulo'}" en Dagon's Academy! 🐲\n\n` +
+      `¡He completado "${moduleTitle}" en Dagon's Academy! 🐲\n\n` +
       `Aprendí SQL dominando consultas, joins y más. ¡Únete al viaje!\n\n` +
       `#SQL #Aprendizaje #DagonAcademy #Programación`
     );
@@ -193,6 +192,11 @@ export const GraduationPage = () => {
   };
 
   const xpGained = moduleData?.exercises?.reduce((acc, ex) => acc + (ex.dificultad || 1) * 10, 0) || 40;
+  const moduleSummary = getModuleLearningSummary(user?.idUsuario || 'local', levelId);
+  const moduleTitle = moduleData?.module?.titulo || moduleData?.moduleName || 'Módulo completado';
+  const moduleRecommendations = moduleSummary.recommendations?.length > 0
+    ? moduleSummary.recommendations
+    : ['Mantén una práctica corta mañana para convertir este logro en memoria real.'];
 
   if (loading) {
     return (
@@ -275,10 +279,71 @@ export const GraduationPage = () => {
 
             <CertificatePreview
               userName={user?.nombre || 'Aventurero'}
-              moduleTitle={moduleData?.moduleName || 'Módulo completado'}
+              moduleTitle={moduleTitle}
               xpGained={xpGained}
               date={formatDate()}
             />
+
+            <motion.div
+              className="mt-6 grid gap-4 rounded-3xl border border-cyan-300/20 bg-slate-950/72 p-5 text-left shadow-[0_22px_70px_rgba(2,6,23,0.45)]"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.28em] text-cyan-200">
+                  Resumen de aprendizaje
+                </p>
+                <h3 className="mt-1 font-display text-2xl font-black text-white">
+                  Lo que consolidaste en este módulo
+                </h3>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <Trophy className="mb-2 h-5 w-5 text-yellow-300" />
+                  <p className="text-2xl font-display font-black text-white">{moduleSummary.successes || 0}</p>
+                  <p className="text-xs text-slate-400">respuestas correctas registradas</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <Target className="mb-2 h-5 w-5 text-cyan-300" />
+                  <p className="text-2xl font-display font-black text-white">{moduleSummary.attempts || 0}</p>
+                  <p className="text-xs text-slate-400">intentos de práctica</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <Award className="mb-2 h-5 w-5 text-fuchsia-300" />
+                  <p className="text-2xl font-display font-black text-white">{moduleSummary.concepts?.length || 0}</p>
+                  <p className="text-xs text-slate-400">conceptos trabajados</p>
+                </div>
+              </div>
+
+              {moduleSummary.concepts?.length > 0 && (
+                <div className="grid gap-3">
+                  {moduleSummary.concepts.map((concept) => (
+                    <div key={concept.key} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="font-display text-sm font-black text-white">{concept.label}</span>
+                        <span className="text-xs font-black text-cyan-200">{concept.mastery}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                        <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-fuchsia-300" style={{ width: `${concept.mastery}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.24em] text-amber-200">
+                  Recomendación personalizada
+                </p>
+                <ul className="space-y-2 text-sm leading-relaxed text-amber-50">
+                  {moduleRecommendations.slice(0, 3).map((recommendation) => (
+                    <li key={recommendation}>{recommendation}</li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
 
             <motion.div
               className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"

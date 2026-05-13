@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { X, Send, Code, Sparkles, BookOpen, Database, HelpCircle, Copy, Check, ChevronRight, FileCode, Lightbulb, AlertCircle } from 'lucide-react';
 import { DagonMascot } from './DagonMascot';
-import { apiUrl } from '../config/api';
+import apiClient from '../services/apiClient';
 
 export const Clawbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -41,9 +41,7 @@ export const Clawbot = () => {
       await navigator.clipboard.writeText(text);
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      console.error('Error copying:', err);
-    }
+    } catch {}
   };
 
   const cleanText = (text) => {
@@ -246,6 +244,8 @@ export const Clawbot = () => {
     setInputMessage(questions[topic]);
   };
 
+  if (!token) return null;
+
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || loading) return;
 
@@ -255,27 +255,19 @@ export const Clawbot = () => {
     setLoading(true);
     
     try {
-      const response = await fetch(apiUrl('/api/clawbot/chat'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ 
-          mensaje: userMessage,
-          historial: messages 
-        })
+      const response = await apiClient.post('/api/clawbot/chat', {
+        mensaje: userMessage,
+        historial: messages
       });
 
-      if (!response.ok) throw new Error('Error de conexion');
-
-      const data = await response.json();
+      const data = response.data;
       setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
-      
+
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Clawbot no pudo responder ahora. Usa las pistas locales y vuelve a intentar en un momento.';
       setMessages(prev => [
         ...prev,
-        { role: 'assistant', content: 'Ups! Mis circuitos estan procesando algo. Intenta de nuevo en un momento. 😅' }
+        { role: 'assistant', content: errorMessage }
       ]);
     } finally {
       setLoading(false);

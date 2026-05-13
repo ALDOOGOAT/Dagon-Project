@@ -3,6 +3,7 @@ package com.dagon.backend.controller;
 import com.dagon.backend.service.ClawbotService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -11,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/clawbot")
-@CrossOrigin(origins = "*")
 public class ClawbotController {
 
     @Autowired
@@ -21,7 +21,7 @@ public class ClawbotController {
     // ENDPOINT 1: EL CHAT NORMAL
     // ==========================================
     @PostMapping("/chat")
-    public ResponseEntity<?> chatearConClawbot(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> chatearConClawbot(@RequestBody Map<String, Object> payload, Authentication authentication) {
         String mensaje = (String) payload.get("mensaje");
 
         @SuppressWarnings("unchecked")
@@ -31,7 +31,8 @@ public class ClawbotController {
             return ResponseEntity.badRequest().body("El mensaje no puede estar vacío");
         }
 
-        String respuestaIa = clawbotService.obtenerRespuestaClawbot(mensaje, historial);
+        String usuarioId = authentication != null ? authentication.getName() : "anonimo";
+        String respuestaIa = clawbotService.obtenerRespuestaClawbot(usuarioId, mensaje, historial);
 
         Map<String, String> respuesta = new HashMap<>();
         respuesta.put("response", respuestaIa);
@@ -43,7 +44,7 @@ public class ClawbotController {
     // ENDPOINT 2: LA FASE 4 (Pedagogía Adaptativa)
     // ==========================================
     @PostMapping("/analyze")
-    public ResponseEntity<?> analizarError(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> analizarError(@RequestBody Map<String, Object> payload, Authentication authentication) {
 
         // 1. Extraemos los textos
         String descripcion = (String) payload.get("descripcion");
@@ -65,11 +66,17 @@ public class ClawbotController {
         String tituloEjercicio = payload.get("tituloEjercicio") != null ? payload.get("tituloEjercicio").toString() : "";
 
         // 4. Llamamos al servicio con contexto completo
-        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
+        String usuarioId = authentication != null ? authentication.getName() : "anonimo";
+        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(usuarioId, descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
 
         Map<String, String> respuesta = new HashMap<>();
         respuesta.put("mensaje", respuestaClawbot);
 
         return ResponseEntity.ok(respuesta);
+    }
+
+    @GetMapping("/metrics")
+    public ResponseEntity<?> obtenerMetricas() {
+        return ResponseEntity.ok(clawbotService.obtenerMetricas());
     }
 }

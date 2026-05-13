@@ -19,6 +19,7 @@ import {
   Lock,
   Pause,
   Play,
+  RotateCcw,
   Search,
   Shield,
   SkipForward,
@@ -152,13 +153,144 @@ const buildScenes = ({ moduleId, exercises, focus }) => {
   ];
 };
 
-export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
+const parseMaybeJson = (value, fallback) => {
+  if (Array.isArray(value)) return value;
+  if (value && typeof value === 'object') return value;
+  if (typeof value !== 'string') return fallback;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const asArray = (value) => {
+  const parsed = parseMaybeJson(value, []);
+  return Array.isArray(parsed) ? parsed.filter(Boolean).map(String) : [];
+};
+
+const asObject = (value) => {
+  const parsed = parseMaybeJson(value, {});
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+};
+
+const joinHuman = (items, fallback) => {
+  const clean = items.filter(Boolean);
+  if (clean.length === 0) return fallback;
+  if (clean.length === 1) return clean[0];
+  return `${clean.slice(0, -1).join(', ')} y ${clean[clean.length - 1]}`;
+};
+
+const pickCodeExample = (curatedScenes = [], exercises = []) => {
+  const curatedCode = curatedScenes.find((item) => item.code)?.code;
+  if (curatedCode) return curatedCode;
+
+  const exerciseCode = exercises.find((exercise) => exercise.starterCode && !exercise.starterCode.includes('Escribe tu consulta'))?.starterCode;
+  return exerciseCode || 'SELECT columnas\nFROM tabla\nWHERE condicion;';
+};
+
+const buildMetadataCheckpoint = ({ objetivos, erroresComunes, focus }) => ({
+  question: 'Antes de entrar al editor, que debes cuidar en este modulo?',
+  options: [
+    {
+      label: objetivos[0] || `Entender ${focus.title.toLowerCase()} antes de ejecutar.`,
+      correct: true,
+      feedback: 'Correcto. Primero entiende la intencion y luego escribe SQL.',
+    },
+    {
+      label: erroresComunes[0] || 'Ejecutar por impulso sin revisar la condicion.',
+      correct: false,
+      feedback: 'Eso es justo lo que debes evitar. Usa el error como alerta antes de validar.',
+    },
+    {
+      label: 'Memorizar la consulta sin poder explicarla.',
+      correct: false,
+      feedback: 'Memorizar ayuda poco si no puedes explicar que hace cada parte de la consulta.',
+    },
+  ],
+});
+
+const buildPedagogicalScenes = ({ moduleId, exercises, focus, curated, moduleMetadata }) => {
+  const metadata = moduleMetadata || {};
+  const objetivos = asArray(metadata.objetivos);
+  const prerequisitos = asArray(metadata.prerequisitos);
+  const erroresComunes = asArray(metadata.errores_comunes);
+  const cinematicaConfig = asObject(metadata.cinematica_config);
+  const baseScenes = curated?.scenes || buildScenes({ moduleId, exercises, focus });
+  const firstScene = baseScenes[0] || {};
+  const conceptScene = baseScenes[1] || firstScene;
+  const exampleScene = baseScenes.find((item) => item.code) || baseScenes[2] || conceptScene;
+  const checkpointData = curated?.checkpoint || buildMetadataCheckpoint({ objetivos, erroresComunes, focus });
+  const sceneNames = asArray(cinematicaConfig.escenas);
+  const moduleTitle = metadata.titulo || curated?.title || focus.title;
+  const moduleDescription = metadata.descripcion || firstScene.body || focus.script;
+  const objectiveText = joinHuman(objetivos.slice(0, 3), focus.script);
+  const prereqText = joinHuman(prerequisitos.slice(0, 3), 'solo necesitas observar la tabla, leer con calma y probar paso a paso');
+  const errorText = joinHuman(erroresComunes.slice(0, 2), 'ejecutar sin predecir el resultado');
+
+  return [
+    {
+      ...firstScene,
+      kicker: sceneNames[0] || 'Introducción',
+      title: moduleTitle,
+      body: moduleDescription,
+      prompt: `Objetivo de aprendizaje: ${objectiveText}.`,
+      visual: firstScene.visual || focus.visual,
+      mood: firstScene.mood || 'happy',
+      duration: firstScene.duration || 8200,
+    },
+    {
+      ...conceptScene,
+      kicker: sceneNames[1] || 'Concepto clave',
+      title: conceptScene.title || 'La idea que debes entender',
+      body: conceptScene.body || `Antes de escribir, conecta este modulo con lo que ya sabes: ${prereqText}.`,
+      prompt: `Prerequisitos: ${prereqText}.`,
+      visual: conceptScene.visual || focus.visual,
+      mood: conceptScene.mood || 'thinking',
+      duration: conceptScene.duration || 8400,
+    },
+    {
+      ...exampleScene,
+      kicker: sceneNames[2] || 'Ejemplo visual',
+      title: exampleScene.title || 'Mira la idea convertida en SQL',
+      body: exampleScene.body || 'El ejemplo no es para copiarlo: es para ver como una idea se convierte en una consulta verificable.',
+      code: pickCodeExample(baseScenes, exercises),
+      prompt: 'Lee el ejemplo de arriba hacia abajo: comando, tabla, condicion y resultado esperado.',
+      visual: exampleScene.visual || 'code',
+      mood: exampleScene.mood || 'determined',
+      duration: exampleScene.duration || 9200,
+    },
+    {
+      kicker: sceneNames[3] || 'Mini interacción',
+      title: checkpointData.question,
+      body: `Punto de atención: ${errorText}. Elige una respuesta y observa la retroalimentación antes de pasar al cierre.`,
+      prompt: 'Esta interacción no busca castigarte; busca que detectes el error antes de llegar al editor.',
+      visual: 'target',
+      mood: 'thinking',
+      duration: 11000,
+      interaction: checkpointData,
+    },
+    {
+      kicker: sceneNames[4] || 'Cierre',
+      title: 'Listo para practicar con intención',
+      body: `Al terminar este módulo debes poder ${objectiveText.toLowerCase()}. Si algo falla, vuelve a la cinemática o pide una pista progresiva.`,
+      prompt: 'Puedes saltar, pausar o repetir esta cinemática cuando ya tengas claro el mapa mental.',
+      visual: 'spark',
+      mood: 'excited',
+      duration: 7600,
+    },
+  ];
+};
+
+export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [], onComplete }) => {
   const [sceneIndex, setSceneIndex] = useState(0);
   const [muted, setMuted] = useState(() => !sounds.isEnabled());
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [interactionOption, setInteractionOption] = useState(null);
   const curated = useMemo(() => getModuleCinematic(moduleId), [moduleId]);
   const fallbackFocus = useMemo(() => buildModuleFocus(exercises), [exercises]);
   const focus = useMemo(() => {
@@ -171,10 +303,15 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
     };
   }, [curated, fallbackFocus]);
   const scenes = useMemo(() => {
-    if (curated?.scenes?.length) return curated.scenes;
-    return buildScenes({ moduleId, exercises, focus });
-  }, [curated, moduleId, exercises, focus]);
-  const checkpoint = curated?.checkpoint || null;
+    return buildPedagogicalScenes({ moduleId, exercises, focus, curated, moduleMetadata });
+  }, [curated, moduleId, moduleMetadata, exercises, focus]);
+  const metadataObjetivos = useMemo(() => asArray(moduleMetadata?.objetivos), [moduleMetadata]);
+  const metadataErrores = useMemo(() => asArray(moduleMetadata?.errores_comunes), [moduleMetadata]);
+  const checkpoint = useMemo(() => curated?.checkpoint || buildMetadataCheckpoint({
+    objetivos: metadataObjetivos,
+    erroresComunes: metadataErrores,
+    focus,
+  }), [curated, focus, metadataErrores, metadataObjetivos]);
   const scene = scenes[sceneIndex];
   const isLast = sceneIndex === scenes.length - 1;
   const VisualIcon = resolveVisual(scene?.visual || focus.visual);
@@ -185,8 +322,14 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
     setProgress(0);
     setShowCheckpoint(false);
     setSelectedOption(null);
+    setInteractionOption(null);
     setIsPlaying(true);
   }, [moduleId]);
+
+  useEffect(() => {
+    setProgress(0);
+    setInteractionOption(null);
+  }, [sceneIndex]);
 
   useEffect(() => {
     const syncSoundState = (event) => {
@@ -213,6 +356,7 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
     utterance.lang = 'es-MX';
     utterance.rate = 0.94;
     utterance.pitch = 1.02;
+    utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
     utterance.voice = voices.find((voice) => voice.lang.includes('es')) || voices[0];
     window.speechSynthesis.speak(utterance);
 
@@ -222,23 +366,23 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
   useEffect(() => {
     if (!isPlaying || showCheckpoint || !scene) return undefined;
 
-    setProgress(0);
-    const startedAt = Date.now();
+    const tickMs = 120;
     const interval = setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const nextProgress = Math.min(100, (elapsed / sceneDuration) * 100);
-      setProgress(nextProgress);
-      if (nextProgress >= 100) {
-        clearInterval(interval);
-        if (isLast) {
-          window.speechSynthesis?.cancel();
-          setShowCheckpoint(true);
-          setIsPlaying(false);
-        } else {
-          setSceneIndex((current) => current + 1);
+      setProgress((current) => {
+        const nextProgress = Math.min(100, current + (tickMs / sceneDuration) * 100);
+        if (nextProgress >= 100) {
+          clearInterval(interval);
+          if (isLast) {
+            window.speechSynthesis?.cancel();
+            setShowCheckpoint(true);
+            setIsPlaying(false);
+          } else {
+            setSceneIndex((currentScene) => currentScene + 1);
+          }
         }
-      }
-    }, 120);
+        return nextProgress;
+      });
+    }, tickMs);
 
     return () => clearInterval(interval);
   }, [isPlaying, showCheckpoint, scene, sceneDuration, isLast]);
@@ -283,6 +427,29 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
     }
   };
 
+  const repeatScene = () => {
+    sounds.playSelect?.();
+    setProgress(0);
+    setIsPlaying(true);
+    if (!muted && sounds.speechAllowed() && scene) {
+      window.speechSynthesis?.cancel();
+      const voices = window.speechSynthesis.getVoices();
+      const utterance = new SpeechSynthesisUtterance(`${scene.title}. ${scene.body}`);
+      utterance.lang = 'es-MX';
+      utterance.rate = 0.94;
+      utterance.pitch = 1.02;
+      utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
+      utterance.voice = voices.find((voice) => voice.lang.includes('es')) || voices[0];
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleInteractionOption = (option) => {
+    setInteractionOption(option);
+    if (option.correct) sounds.playSuccess();
+    else sounds.playSoftWarning?.();
+  };
+
   const handleCheckpointOption = (option) => {
     setSelectedOption(option);
     if (option.correct) sounds.playSuccess();
@@ -319,6 +486,7 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
               type="button"
               onClick={togglePlayback}
               disabled={showCheckpoint}
+              aria-label={isPlaying ? 'Pausar cinemática' : 'Continuar cinemática'}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-slate-950/70 px-3 text-xs font-bold uppercase tracking-widest text-slate-200 shadow-[0_0_18px_rgba(15,23,42,0.55)] transition hover:border-emerald-300/60 hover:text-white disabled:opacity-50"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -326,7 +494,18 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
             </button>
             <button
               type="button"
+              onClick={repeatScene}
+              disabled={showCheckpoint}
+              aria-label="Repetir escena actual"
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-slate-950/70 px-3 text-xs font-bold uppercase tracking-widest text-slate-200 shadow-[0_0_18px_rgba(15,23,42,0.55)] transition hover:border-fuchsia-300/60 hover:text-white disabled:opacity-50"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Repetir
+            </button>
+            <button
+              type="button"
               onClick={toggleMute}
+              aria-label={muted ? 'Activar audio de cinemática' : 'Silenciar cinemática'}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-slate-950/70 px-3 text-xs font-bold uppercase tracking-widest text-slate-200 shadow-[0_0_18px_rgba(15,23,42,0.55)] transition hover:border-cyan-300/60 hover:text-white"
             >
               {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -335,6 +514,7 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
             <button
               type="button"
               onClick={skip}
+              aria-label="Saltar cinemática e ir al contenido"
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-slate-950/70 px-3 text-xs font-bold uppercase tracking-widest text-slate-200 shadow-[0_0_18px_rgba(15,23,42,0.55)] transition hover:border-amber-300/60 hover:text-white"
             >
               <SkipForward className="w-4 h-4" />
@@ -382,11 +562,13 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
                     setSceneIndex(index);
                     setShowCheckpoint(false);
                     setSelectedOption(null);
+                    setInteractionOption(null);
                     setProgress(0);
                     setIsPlaying(true);
                   }}
                   className={`h-2 rounded-full transition-all ${index === sceneIndex ? 'w-14 bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.8)]' : index < sceneIndex ? 'w-8 bg-emerald-400/80' : 'w-4 bg-slate-700'}`}
                   aria-label={`Escena ${index + 1}`}
+                  aria-current={index === sceneIndex ? 'step' : undefined}
                 />
               ))}
             </div>
@@ -416,6 +598,7 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
                           key={option.label}
                           type="button"
                           onClick={() => handleCheckpointOption(option)}
+                          aria-pressed={selected}
                           className={`rounded-2xl border p-4 text-left text-sm font-gameui transition ${tone}`}
                         >
                           {option.label}
@@ -450,7 +633,10 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
                   <h1 className="font-display text-3xl font-black leading-tight text-white sm:text-5xl">
                     {scene.title}
                   </h1>
-                  <p className="mt-5 text-base leading-relaxed text-slate-300 sm:text-lg font-gameui">
+                  <p className="mt-5 text-[10px] font-black uppercase tracking-[0.28em] text-cyan-200">
+                    Subtítulos
+                  </p>
+                  <p className="mt-2 text-base leading-relaxed text-slate-300 sm:text-lg font-gameui">
                     {scene.body}
                   </p>
 
@@ -458,6 +644,31 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
                     <pre className="mt-5 overflow-x-auto rounded-2xl border border-cyan-400/20 bg-slate-950 p-4 text-sm text-emerald-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.08)]">
                       <code>{scene.code}</code>
                     </pre>
+                  )}
+
+                  {scene.interaction?.options?.length > 0 && (
+                    <div className="mt-5 grid gap-3 rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4">
+                      {scene.interaction.options.map((option) => {
+                        const selected = interactionOption?.label === option.label;
+                        const tone = selected && option.correct ? 'border-emerald-300 bg-emerald-500/15 text-emerald-100' : selected ? 'border-amber-300 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-white/5 text-slate-200 hover:border-cyan-300/50';
+                        return (
+                          <button
+                            key={option.label}
+                            type="button"
+                            onClick={() => handleInteractionOption(option)}
+                            aria-pressed={selected}
+                            className={`rounded-xl border px-4 py-3 text-left text-sm font-gameui transition ${tone}`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                      {interactionOption && (
+                        <p className="rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm leading-relaxed text-cyan-100">
+                          {interactionOption.feedback}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4">

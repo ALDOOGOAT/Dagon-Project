@@ -6,6 +6,9 @@ import com.dagon.backend.dto.EjercicioDTO;
 import com.dagon.backend.dto.NivelDTO;
 import com.dagon.backend.model.EjercicioPractico;
 import com.dagon.backend.repository.EjercicioPracticoRepository;
+import com.dagon.backend.service.validation.EjercicioValidationRouter;
+import com.dagon.backend.service.validation.SandboxSqlPolicy;
+import com.dagon.backend.service.validation.TipoValidacionEjercicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,12 @@ public class EjercicioService {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private EjercicioValidationRouter validationRouter;
+
+    @Autowired
+    private SandboxSqlPolicy sandboxSqlPolicy;
 
     @Value("${dagon.sandbox.url}")
     private String sandboxUrl;
@@ -79,17 +88,29 @@ public class EjercicioService {
             if ("drag_drop".equals(formato)) {
                 dto.setHint("Pista: Arrastra las palabras azules al área de armado. No olvides el punto y coma (;)");
                 String queryReal = ej.getQueryMaestra();
-                if (queryReal != null) {
-                    Set<String> palabras = new HashSet<>(Arrays.asList(queryReal.replaceAll(";", " ;").split("\\s+")));
-                    // Distractores contextuales según el módulo
-                    palabras.addAll(Arrays.asList("WHERE", "JOIN", "ON", "COUNT", "*", "roles", "cursos", "INSERT", "equipamiento"));
-                    if (moduloId == 1) {
-                        palabras.addAll(Arrays.asList("aventureros", "DELETE", "UPDATE", "GROUP", "BY", "HAVING", "ASC", "LIMIT", "ORDER", "LIKE", "DESC", "nombre", "nivel", "clase"));
+                    if (queryReal != null) {
+                        List<String> bancoPalabras = new ArrayList<>();
+
+                        for (String palabra : queryReal.replaceAll(";", " ;").split("\\s+")) {
+                            if (palabra != null && !palabra.trim().isEmpty()) {
+                                bancoPalabras.add(palabra.trim());
+                            }
+                        }
+
+                        bancoPalabras.addAll(Arrays.asList(
+                            "WHERE", "JOIN", "ON", "COUNT", "*", "roles", "cursos", "INSERT", "equipamiento"
+                        ));
+
+                        if (moduloId == 1) {
+                            bancoPalabras.addAll(Arrays.asList(
+                                "aventureros", "DELETE", "UPDATE", "GROUP", "BY", "HAVING",
+                                "ASC", "LIMIT", "ORDER", "LIKE", "DESC", "nombre", "nivel", "clase"
+                            ));
+                        }
+
+                        Collections.shuffle(bancoPalabras);
+                        dto.setWordBank(bancoPalabras);
                     }
-                    List<String> bancoPalabras = new ArrayList<>(palabras);
-                    Collections.shuffle(bancoPalabras);
-                    dto.setWordBank(bancoPalabras);
-                }
             } else if ("diagram".equals(formato)) {
                 dto.setHint("Pista: Arrastra una nueva entidad, ponle nombre y conéctala arrastrando desde el punto cyan hasta el fucsia.");
                 dto.setStarterCode("");
@@ -103,6 +124,54 @@ public class EjercicioService {
             contador++;
         }
         return dtos;
+    }
+
+    public Map<String, Object> obtenerMetadataModulo(Integer moduloId) {
+        String sql = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida, " +
+                "objetivos::text AS objetivos, prerequisitos::text AS prerequisitos, " +
+                "errores_comunes::text AS errores_comunes, cinematica_config::text AS cinematica_config " +
+                "FROM lms_core.modulos WHERE id_modulo = ?";
+
+        try {
+            Map<String, Object> row = jdbcTemplate.queryForMap(sql, moduloId);
+            return construirMetadataModulo(row);
+        } catch (Exception e) {
+            String fallbackSql = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida " +
+                    "FROM lms_core.modulos WHERE id_modulo = ?";
+            try {
+                Map<String, Object> row = jdbcTemplate.queryForMap(fallbackSql, moduloId);
+                return construirMetadataModulo(row);
+            } catch (Exception ignored) {
+                return Map.of("id_modulo", moduloId);
+            }
+        }
+    }
+
+    private Map<String, Object> construirMetadataModulo(Map<String, Object> row) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("id_modulo", row.get("id_modulo"));
+        metadata.put("id_curso", row.get("id_curso"));
+        metadata.put("titulo", row.get("titulo"));
+        metadata.put("descripcion", row.get("descripcion"));
+        metadata.put("orden", row.get("orden"));
+        metadata.put("xp_requerida", row.get("xp_requerida"));
+        metadata.put("objetivos", parseJsonColumn(row.get("objetivos"), List.of()));
+        metadata.put("prerequisitos", parseJsonColumn(row.get("prerequisitos"), List.of()));
+        metadata.put("errores_comunes", parseJsonColumn(row.get("errores_comunes"), List.of()));
+        metadata.put("cinematica_config", parseJsonColumn(row.get("cinematica_config"), Map.of()));
+        return metadata;
+    }
+
+    private Object parseJsonColumn(Object rawValue, Object fallback) {
+        if (rawValue == null) return fallback;
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(rawValue.toString());
+            return mapper.convertValue(node, Object.class);
+        } catch (Exception ignored) {
+            return fallback;
+        }
     }
 
     public List<EjercicioDTO> obtenerEjerciciosPracticaRapida() {
@@ -123,9 +192,18 @@ public class EjercicioService {
 
             String queryReal = (String) ejMap.get("query_maestra");
             if (queryReal != null) {
-                Set<String> palabras = new HashSet<>(Arrays.asList(queryReal.replaceAll(";", " ;").split("\\s+")));
-                palabras.addAll(Arrays.asList("WHERE", "JOIN", "COUNT", "MAX", "MIN", "equipamiento", "INNER"));
-                List<String> bancoPalabras = new ArrayList<>(palabras);
+                List<String> bancoPalabras = new ArrayList<>();
+
+                for (String palabra : queryReal.replaceAll(";", " ;").split("\\s+")) {
+                    if (palabra != null && !palabra.trim().isEmpty()) {
+                        bancoPalabras.add(palabra.trim());
+                    }
+                }
+
+                bancoPalabras.addAll(Arrays.asList(
+                    "WHERE", "JOIN", "COUNT", "MAX", "MIN", "equipamiento", "INNER"
+                ));
+
                 Collections.shuffle(bancoPalabras);
                 dto.setWordBank(bancoPalabras);
             }
@@ -136,6 +214,7 @@ public class EjercicioService {
     }
 
     private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId) throws java.sql.SQLException {
+        sandboxSqlPolicy.validarRolSandbox(sandboxUser);
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
         String user = sandboxUser;
@@ -144,9 +223,7 @@ public class EjercicioService {
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
             conn.setAutoCommit(false); // Iniciar transacción
             try (Statement stmt = conn.createStatement()) {
-                String searchPath = (usuarioId != null && !usuarioId.trim().isEmpty()) 
-                                    ? "sandbox_usuario_" + usuarioId : "lms_sandbox";
-                stmt.execute("SET search_path TO \"" + searchPath + "\"");
+                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
                 
                 boolean tieneResultSet = stmt.execute(query);
                 if (tieneResultSet) {
@@ -170,6 +247,7 @@ public class EjercicioService {
     }
 
     private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId) throws java.sql.SQLException {
+        sandboxSqlPolicy.validarRolSandbox(sandboxUser);
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
         String user = sandboxUser;
@@ -193,18 +271,17 @@ public class EjercicioService {
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
 
-            String searchPath;
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
-                searchPath = "sandbox_usuario_" + usuarioId;
+                String searchPath = sandboxSqlPolicy.resolverSearchPath(usuarioId);
                 // Intentar crear el esquema si no existe (fail-safe)
                 try {
                     stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + searchPath + "\";");
                     stmt.execute("GRANT ALL ON SCHEMA \"" + searchPath + "\" TO app_sandbox_user;");
                 } catch (Exception ignored) {}
                 
-                stmt.execute("SET search_path TO \"" + searchPath + "\"");
+                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
             } else {
-                stmt.execute("SET search_path TO lms_sandbox");
+                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
             }
             
             boolean tieneResultSet = false;
@@ -342,6 +419,13 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             respuesta.put("message", "Error: Ejercicio no encontrado.");
             return respuesta;
         }
+
+        Optional<Map<String, Object>> errorPrevalidacion = validationRouter.prevalidar(ejercicio, queryUsuario, usuarioId);
+        if (errorPrevalidacion.isPresent()) {
+            return errorPrevalidacion.get();
+        }
+        TipoValidacionEjercicio tipoValidacion = validationRouter.resolverTipo(ejercicio, queryUsuario);
+        respuesta.put("validationType", tipoValidacion.name());
 
         int xpGanada = (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10;
         String formato = ejercicio.getFormato();
@@ -742,9 +826,13 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     respuesta.put("xp_gained", xpGanada);
                 }
             } else {
+                if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+                    usuarioService.registrarPracticaDiaria(usuarioId);
+                }
                 respuesta.put("success", false);
                 respuesta.put("message", "La consulta corrió sin errores, pero los datos no coinciden. Revisa tu lógica.");
                 respuesta.put("xp_gained", 0);
+                respuesta.put("constancy_reward", "Practica diaria registrada aunque la respuesta necesite correccion.");
                 respuesta.put("descripcion", ejercicio.getEnunciado());
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
@@ -1176,17 +1264,15 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
     }
 
     private void prepararSearchPath(Statement stmt, String usuarioId) throws java.sql.SQLException {
-        String searchPath;
+        sandboxSqlPolicy.validarRolSandbox(sandboxUser);
         if (usuarioId != null && !usuarioId.trim().isEmpty()) {
-            searchPath = "sandbox_usuario_" + usuarioId;
+            String searchPath = sandboxSqlPolicy.resolverSearchPath(usuarioId);
             try {
                 stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + searchPath + "\";");
                 stmt.execute("GRANT ALL ON SCHEMA \"" + searchPath + "\" TO app_sandbox_user;");
             } catch (Exception ignored) {}
-        } else {
-            searchPath = "lms_sandbox";
         }
-        stmt.execute("SET search_path TO \"" + searchPath + "\"");
+        stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
     }
 
     private List<Map<String, Object>> construirLineaTiempoBasica(String queryUsuario) {
