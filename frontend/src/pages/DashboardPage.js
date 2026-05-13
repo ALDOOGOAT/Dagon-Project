@@ -132,8 +132,15 @@ export const DashboardPage = () => {
 
   // Estructura de Cursos y Selección
   const [cursos, setCursos] = useState([]);
-  const [cursoActivoId, setCursoActivoId] = useState(1); // Inicia en Senda del Guerrero por defecto
+  const [cursoActivoId, setCursoActivoId] = useState(() => {
+    const saved = localStorage.getItem('dagon_active_course');
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [loadingModulos, setLoadingModulos] = useState(true);
+
+  useEffect(() => {
+    localStorage.setItem('dagon_active_course', cursoActivoId);
+  }, [cursoActivoId]);
 
   useEffect(() => {
     const fetchRealXP = async () => {
@@ -160,8 +167,15 @@ export const DashboardPage = () => {
         const response = await apiClient.get('/api/modulos');
         const data = response.data;
         setCursos(data);
-        // Si el curso 2 no existe (raro), seteamos el primero
-        if(data.length > 0 && !data.find(c => c.id_curso === 2)) setCursoActivoId(data[0].id_curso);
+        
+        // Ensure the active course exists in the fetched data.
+        // If not, default to the first available course.
+        setCursoActivoId(currentId => {
+          if (data.length > 0 && !data.find(c => c.id_curso === currentId)) {
+            return data[0].id_curso;
+          }
+          return currentId;
+        });
       } catch {
         toast.error('Error al cargar misiones');
       } finally {

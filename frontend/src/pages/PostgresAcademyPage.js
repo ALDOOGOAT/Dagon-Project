@@ -259,9 +259,7 @@ export const PostgresAcademyPage = () => {
   useEffect(() => {
     sounds.init();
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
+      sounds.stopSpeech();
     };
   }, []);
 
@@ -270,7 +268,9 @@ export const PostgresAcademyPage = () => {
       const enabled = event?.detail?.enabled ?? sounds.isEnabled();
       if (!enabled) {
         setIsMuted(true);
-        window.speechSynthesis?.cancel();
+        sounds.stopSpeech();
+      } else {
+        setIsMuted(false);
       }
     };
 
@@ -283,38 +283,33 @@ export const PostgresAcademyPage = () => {
     setCommandIndex(0);
   }, [tierKey]);
 
+  useEffect(() => {
+    if (!isMuted && chapter?.narration) {
+      sounds.speakTTS(chapter.narration);
+    }
+    return () => sounds.stopSpeech();
+  }, [chapter, isMuted]);
+
   const speak = () => {
     if (!chapter?.narration) return;
     if (!sounds.isEnabled()) {
       sounds.setEnabled(true, { restart: false });
       sounds.init();
     }
-    if (!sounds.speechAllowed()) return;
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(chapter.narration);
-    utterance.lang = 'es-MX';
-    utterance.rate = 0.93;
-    utterance.pitch = 1.02;
-    const voice = window.speechSynthesis.getVoices().find((item) => item.lang.startsWith('es'));
-    if (voice) utterance.voice = voice;
-    speechRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
     setIsMuted(false);
+    sounds.speakTTS(chapter.narration);
   };
 
   const stopVoice = () => {
     sounds.setEnabled(false);
-    if (window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
+    sounds.stopSpeech();
     setIsMuted(true);
   };
 
   const goToChapter = (nextIndex) => {
     const normalized = (nextIndex + CHAPTERS.length) % CHAPTERS.length;
     setChapterIndex(normalized);
-    stopVoice();
+    sounds.stopSpeech();
     sounds.playStep();
   };
 

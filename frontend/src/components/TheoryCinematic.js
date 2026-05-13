@@ -133,7 +133,7 @@ export const TheoryCinematic = ({
       const enabled = event?.detail?.enabled ?? sounds.isEnabled();
       setIsMuted(!enabled);
       if (!enabled) {
-        window.speechSynthesis?.cancel();
+        sounds.stopSpeech();
         setIsSpeaking(false);
       }
     };
@@ -154,31 +154,12 @@ export const TheoryCinematic = ({
       setHighlightedConcept(scene.highlight);
       
       // Speech synthesis with better voice loading
-      if (!isMuted && sounds.speechAllowed()) {
-        window.speechSynthesis.cancel();
-        
-        const speakWithVoice = () => {
-          const voices = window.speechSynthesis.getVoices();
-          const voice = voices.find(v => v.lang.includes('es')) || voices[0];
-          const utterance = new SpeechSynthesisUtterance(scene.text);
-          utterance.lang = 'es-ES';
-          utterance.rate = 0.95;
-          utterance.pitch = 1.05;
-          if (voice) utterance.voice = voice;
-          speechRef.current = utterance;
-          
-          utterance.onstart = () => setIsSpeaking(true);
-          utterance.onend = () => setIsSpeaking(false);
-          utterance.onerror = () => setIsSpeaking(false);
-          
-          window.speechSynthesis.speak(utterance);
-        };
-        
-        if (window.speechSynthesis.getVoices().length > 0) {
-          speakWithVoice();
-        } else {
-          window.speechSynthesis.addEventListener('voiceschanged', speakWithVoice, { once: true });
-        }
+      if (!isMuted) {
+        sounds.speakTTS(scene.text, {
+          onStart: () => setIsSpeaking(true),
+          onEnd: () => setIsSpeaking(false),
+          onError: () => setIsSpeaking(false)
+        });
       }
       
       // Progress bar animation
@@ -207,22 +188,23 @@ export const TheoryCinematic = ({
     
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      sounds.stopSpeech();
     };
   }, [currentScene, isPlaying, isMuted, scene, theoryData.scenes.length]);
 
   const toggleMute = () => {
     const enabled = sounds.toggleEnabled({ restart: false });
     setIsMuted(!enabled);
-    if (!enabled && speechRef.current) {
-      window.speechSynthesis.cancel();
+    if (!enabled) {
+      sounds.stopSpeech();
+      setIsSpeaking(false);
     }
     if (enabled) sounds.init();
   };
 
   const skipToEnd = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    sounds.stopSpeech();
     setShowConcepts(true);
     setIsPlaying(false);
   };

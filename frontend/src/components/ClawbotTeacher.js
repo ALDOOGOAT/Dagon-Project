@@ -62,93 +62,13 @@ const getRandomMessage = (phase) => {
   return messages[Math.floor(Math.random() * messages.length)];
 };
 
-let vozDisponible = null;
-
-const DagonTTS = {
-  synth: null,
-  voices: [],
-  
-  init() {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      this.synth = window.speechSynthesis;
-      this.cargarVoces();
-    }
-  },
-  
-  cargarVoces() {
-    if (!this.synth) return;
-    
-    const voces = this.synth.getVoices();
-    this.voices = voces;
-    
-    const prioridad = [
-      'Google español de España',
-      'Google Español', 
-      'Microsoft Elvira',
-      'Microsoft Montserrat',
-      'Microsoft Pablo'
-    ];
-    
-    for (const nombre of prioridad) {
-      const voz = voces.find(v => v.name.includes(nombre) && v.lang.includes('es'));
-      if (voz) {
-        vozDisponible = voz;
-        break;
-      }
-    }
-    
-    if (!vozDisponible && voces.length > 0) {
-      vozDisponible = voces.find(v => v.lang.includes('es')) || voces[0];
-    }
-  },
-  
-  speak(texto, options = {}) {
-    return new Promise((resolve, reject) => {
-      if (!this.synth || !texto) {
-        resolve();
-        return;
-      }
-      
-      this.synth.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.lang = 'es-ES';
-      utterance.rate = options.rate || 0.9;
-      utterance.pitch = options.pitch || 1.0;
-      utterance.volume = options.volume || 1;
-      
-      if (vozDisponible) {
-        utterance.voice = vozDisponible;
-      }
-      
-      utterance.onend = () => resolve();
-      utterance.onerror = () => {
-        resolve();
-      };
-      
-      this.synth.speak(utterance);
-    });
-  },
-  
-  cancel() {
-    if (this.synth) {
-      this.synth.cancel();
-    }
-  }
-};
-
 export const ClawbotTeacher = ({ 
   currentPhase = 'intro',
   exerciseData = null,
   onPhaseComplete = () => {}
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('dagon_muted') === 'true';
-    }
-    return false;
-  });
+  const [isMuted, setIsMuted] = useState(() => !sounds.isEnabled());
   const [currentMessage, setCurrentMessage] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [showPanel, setShowPanel] = useState(true);
@@ -158,15 +78,22 @@ export const ClawbotTeacher = ({
   const isSpeakingRef = useRef(false);
 
   useEffect(() => {
-    DagonTTS.init();
     setReady(true);
     
-    if (window.speechSynthesis?.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = () => DagonTTS.cargarVoces();
-    }
-    
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setIsMuted(!enabled);
+      if (!enabled) {
+        sounds.stopSpeech();
+        setIsSpeaking(false);
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
     return () => {
-      DagonTTS.cancel();
+      window.removeEventListener('dagon:soundchange', syncSoundState);
+      sounds.stopSpeech();
     };
   }, []);
 
@@ -182,13 +109,17 @@ export const ClawbotTeacher = ({
     for (const chunk of chunks) {
       if (isCancelledRef.current || isMuted) break;
       
-      const opciones = chunk.endsWith('!') || chunk.endsWith('¡') 
-        ? { rate: 1.0, pitch: 1.15, volume: 1 }
-        : chunk.endsWith('.')
-          ? { rate: 0.85, pitch: 0.95, volume: 1 }
-          : { rate: 0.92, pitch: 1.0, volume: 1 };
+      const rate = chunk.endsWith('!') || chunk.endsWith('¡') ? 1.1 : 1.05;
+      const pitch = chunk.endsWith('.') ? 0.98 : 1.02;
       
-      await DagonTTS.speak(chunk, opciones);
+      await new Promise(resolve => {
+        sounds.speakTTS(chunk, {
+          rate,
+          pitch,
+          onEnd: resolve,
+          onError: resolve
+        });
+      });
       
       if (!chunk.match(/[.!?]$/)) {
         await new Promise(r => setTimeout(r, 100));

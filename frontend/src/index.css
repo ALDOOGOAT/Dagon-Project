@@ -1027,13 +1027,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .tour-spotlight {
-    border: 2px solid rgba(125, 211, 252, 0.92);
-    background: linear-gradient(135deg, rgba(125, 211, 252, 0.08), rgba(217, 70, 239, 0.08));
+    border: 3px solid rgba(34, 211, 238, 0.8);
+    background: transparent;
     box-shadow:
-        0 0 0 9999px rgba(2, 6, 23, 0.64),
-        0 0 0 6px rgba(34, 211, 238, 0.14),
-        0 0 34px rgba(34, 211, 238, 0.72),
-        inset 0 0 26px rgba(125, 211, 252, 0.16);
+        0 0 0 9999px rgba(2, 6, 23, 0.85),
+        0 0 0 8px rgba(34, 211, 238, 0.1),
+        0 0 50px rgba(34, 211, 238, 0.6),
+        inset 0 0 40px rgba(2, 6, 23, 0.3);
 }
 
 .tour-cinematic-panel {

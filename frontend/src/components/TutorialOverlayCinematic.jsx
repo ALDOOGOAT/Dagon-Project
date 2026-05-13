@@ -254,26 +254,12 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
   }, []);
 
   const speak = useCallback((text) => {
-    if (!soundEnabled || !sounds.speechAllowed() || !text || !isOpen) return;
-
-    const synth = synthRef.current;
-    synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-MX';
-    utterance.rate = 0.94;
-    utterance.pitch = 1.05;
-    utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
-
-    const voices = synth.getVoices();
-    const spanishVoice = voices.find((voice) => voice.lang.includes('es-MX')) || voices.find((voice) => voice.lang.startsWith('es')) || voices[0];
-    if (spanishVoice) utterance.voice = spanishVoice;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    synth.speak(utterance);
+    if (!soundEnabled || !isOpen) return;
+    sounds.speakTTS(text, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false)
+    });
   }, [isOpen, soundEnabled]);
 
   useEffect(() => {
@@ -418,17 +404,26 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          animate={{ 
+            opacity: 1,
+            backgroundColor: targetRect ? 'transparent' : 'rgba(2, 6, 23, 0.85)'
+          }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="tour-overlay-shell fixed inset-0 z-[100] overflow-hidden bg-slate-950/70 backdrop-blur-[14px]"
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className={`tour-overlay-shell fixed inset-0 z-[100] overflow-hidden ${!targetRect ? 'backdrop-blur-[8px]' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="tour-step-title"
           aria-describedby="tour-step-description"
         >
-          <div className="tour-cinematic-vignette absolute inset-0 pointer-events-none" />
-          <div className="tour-scanlines absolute inset-0 pointer-events-none" />
+          <motion.div 
+            className="tour-cinematic-vignette absolute inset-0 pointer-events-none"
+            animate={{ opacity: targetRect ? 0 : 1 }}
+          />
+          <motion.div 
+            className="tour-scanlines absolute inset-0 pointer-events-none"
+            animate={{ opacity: targetRect ? 0 : 1 }}
+          />
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {particles.map((particle) => (

@@ -82,6 +82,44 @@ class SoundEngine {
     }
   }
 
+  speakTTS(text, options = {}) {
+    if (!this.speechAllowed() || !text) return null;
+    this.stopSpeech();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-MX';
+    utterance.rate = options.rate || 1.05; // Un poco más rápido y fluido
+    utterance.pitch = options.pitch || 1.02; // Tono más natural
+    utterance.volume = Math.min(1, Math.max(0, this.masterVolume));
+
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Retraso si las voces no han cargado (Chrome a veces tarda)
+    if (voices.length === 0) {
+      window.speechSynthesis.addEventListener('voiceschanged', () => {
+        this.speakTTS(text, options);
+      }, { once: true });
+      return null;
+    }
+
+    // Priorizar voces naturales o de alta calidad
+    const bestVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))) 
+                   || voices.find(v => v.lang.includes('es-MX'))
+                   || voices.find(v => v.lang.startsWith('es'))
+                   || voices[0];
+    
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
+
+    if (options.onStart) utterance.onstart = options.onStart;
+    if (options.onEnd) utterance.onend = options.onEnd;
+    if (options.onError) utterance.onerror = options.onError;
+
+    window.speechSynthesis.speak(utterance);
+    return utterance;
+  }
+
   stopActiveAssets() {
     this.activeAssets.forEach((audio) => {
       try {

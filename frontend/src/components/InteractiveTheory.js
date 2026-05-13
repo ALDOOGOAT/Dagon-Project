@@ -45,7 +45,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
       const enabled = event?.detail?.enabled ?? sounds.isEnabled();
       setIsMuted(!enabled);
       if (!enabled) {
-        window.speechSynthesis?.cancel();
+        sounds.stopSpeech();
         setIsSpeaking(false);
       }
     };
@@ -56,36 +56,17 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   }, []);
 
   const speakSlide = (slide) => {
-    if (sounds.speechAllowed() && !isMuted) {
-      window.speechSynthesis.cancel();
-      
+    if (!isMuted) {
       const textToSpeak = `${slide.title}. ${slide.content}. ${slide.detail || ''}`;
       
-      const speakWithVoice = () => {
-        const voices = window.speechSynthesis.getVoices();
-        const voice = voices.find(v => v.lang.includes('es')) || voices[0];
-        
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = 'es-ES';
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        if (voice) utterance.voice = voice;
-        
-        utterance.onstart = () => setIsSpeaking(true);
-        utterance.onend = () => {
+      sounds.speakTTS(textToSpeak, {
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => {
           setIsSpeaking(false);
           setCompletedSlides(prev => new Set([...prev, currentSlide]));
-        };
-        utterance.onerror = () => setIsSpeaking(false);
-
-        window.speechSynthesis.speak(utterance);
-      };
-      
-      if (window.speechSynthesis.getVoices().length > 0) {
-        speakWithVoice();
-      } else {
-        window.speechSynthesis.addEventListener('voiceschanged', speakWithVoice, { once: true });
-      }
+        },
+        onError: () => setIsSpeaking(false)
+      });
     } else {
       setTimeout(() => {
         setCompletedSlides(prev => new Set([...prev, currentSlide]));
@@ -94,6 +75,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   };
 
   const handleNext = () => {
+    sounds.stopSpeech();
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
@@ -102,7 +84,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   };
 
   const handleSkip = () => {
-    window.speechSynthesis.cancel();
+    sounds.stopSpeech();
     setIsSpeaking(false);
     onComplete();
   };
@@ -111,7 +93,7 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
     const enabled = sounds.toggleEnabled({ restart: false });
     setIsMuted(!enabled);
     if (!enabled || isSpeaking) {
-      window.speechSynthesis.cancel();
+      sounds.stopSpeech();
       setIsSpeaking(false);
     }
     if (enabled) sounds.init();

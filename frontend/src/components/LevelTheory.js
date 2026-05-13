@@ -1439,8 +1439,8 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   }, [theoryKey]);
 
   useEffect(() => {
-    window.speechSynthesis.cancel();
-    return () => window.speechSynthesis.cancel();
+    sounds.stopSpeech();
+    return () => sounds.stopSpeech();
   }, []);
 
   useEffect(() => {
@@ -1448,7 +1448,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
       const enabled = event?.detail?.enabled ?? sounds.isEnabled();
       setIsMuted(!enabled);
       if (!enabled) {
-        window.speechSynthesis?.cancel();
+        sounds.stopSpeech();
         setIsSpeaking(false);
       }
     };
@@ -1459,30 +1459,40 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   }, []);
 
   const speak = () => {
-    if (isMuted || !sounds.speechAllowed()) return;
+    if (isMuted) return;
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      sounds.stopSpeech();
       setIsSpeaking(false);
       return;
     }
-    const prepareVoice = () => {
-      const voices = window.speechSynthesis.getVoices();
-      return voices.find(v => v.lang.includes('es')) || voices[0];
-    };
+    
     let fullText = `${slide.headline}. ${slide.lead || ''}`;
     if (slide.bullets) fullText += '. ' + slide.bullets.join('. ');
 
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(fullText);
-    u.lang = 'es-ES';
-    u.voice = prepareVoice();
-    u.onstart = () => setIsSpeaking(true);
-    u.onend = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(u);
+    sounds.speakTTS(fullText, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false)
+    });
   };
 
+  // Autoplay voice on slide change
+  useEffect(() => {
+    if (!isMuted) {
+      let fullText = `${slide.headline}. ${slide.lead || ''}`;
+      if (slide.bullets) fullText += '. ' + slide.bullets.join('. ');
+      
+      sounds.speakTTS(fullText, {
+        onStart: () => setIsSpeaking(true),
+        onEnd: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false)
+      });
+    }
+    return () => sounds.stopSpeech();
+  }, [index, slide, isMuted]);
+
   const next = () => {
-    window.speechSynthesis.cancel();
+    sounds.stopSpeech();
     setIsSpeaking(false);
     sounds.playStep();
     if (isLast) onComplete?.();

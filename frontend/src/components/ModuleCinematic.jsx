@@ -348,19 +348,9 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
   }, [sceneIndex, scene?.sfx, curated?.ambient]);
 
   useEffect(() => {
-    if (muted || showCheckpoint || !sounds.speechAllowed() || !scene) return undefined;
-
-    window.speechSynthesis.cancel();
-    const voices = window.speechSynthesis.getVoices();
-    const utterance = new SpeechSynthesisUtterance(`${scene.title}. ${scene.body}`);
-    utterance.lang = 'es-MX';
-    utterance.rate = 0.94;
-    utterance.pitch = 1.02;
-    utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
-    utterance.voice = voices.find((voice) => voice.lang.includes('es')) || voices[0];
-    window.speechSynthesis.speak(utterance);
-
-    return () => window.speechSynthesis.cancel();
+    if (muted || showCheckpoint || !scene) return undefined;
+    sounds.speakTTS(`${scene.title}. ${scene.body}`);
+    return () => sounds.stopSpeech();
   }, [scene, muted, showCheckpoint]);
 
   useEffect(() => {
@@ -431,16 +421,8 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
     sounds.playSelect?.();
     setProgress(0);
     setIsPlaying(true);
-    if (!muted && sounds.speechAllowed() && scene) {
-      window.speechSynthesis?.cancel();
-      const voices = window.speechSynthesis.getVoices();
-      const utterance = new SpeechSynthesisUtterance(`${scene.title}. ${scene.body}`);
-      utterance.lang = 'es-MX';
-      utterance.rate = 0.94;
-      utterance.pitch = 1.02;
-      utterance.volume = Math.min(1, Math.max(0, sounds.getVolume()));
-      utterance.voice = voices.find((voice) => voice.lang.includes('es')) || voices[0];
-      window.speechSynthesis.speak(utterance);
+    if (!muted && scene) {
+      sounds.speakTTS(`${scene.title}. ${scene.body}`);
     }
   };
 
