@@ -154,7 +154,7 @@ const buildScenes = ({ moduleId, exercises, focus }) => {
 
 export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
   const [sceneIndex, setSceneIndex] = useState(0);
-  const [muted, setMuted] = useState(() => !sounds.enabled);
+  const [muted, setMuted] = useState(() => !sounds.isEnabled());
   const [isPlaying, setIsPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const [showCheckpoint, setShowCheckpoint] = useState(false);
@@ -189,11 +189,23 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
   }, [moduleId]);
 
   useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setMuted(!enabled);
+      if (!enabled) window.speechSynthesis?.cancel();
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
+  useEffect(() => {
     sounds.playCinematicCue?.(scene?.sfx || curated?.ambient || 'mystic');
   }, [sceneIndex, scene?.sfx, curated?.ambient]);
 
   useEffect(() => {
-    if (muted || showCheckpoint || !window.speechSynthesis || !scene) return undefined;
+    if (muted || showCheckpoint || !sounds.speechAllowed() || !scene) return undefined;
 
     window.speechSynthesis.cancel();
     const voices = window.speechSynthesis.getVoices();
@@ -251,13 +263,11 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
   };
 
   const toggleMute = () => {
-    const next = !muted;
-    setMuted(next);
-    if (next) {
+    const enabled = sounds.toggleEnabled({ restart: false });
+    setMuted(!enabled);
+    if (!enabled) {
       window.speechSynthesis?.cancel();
-      sounds.setEnabled(false);
     } else {
-      sounds.setEnabled(true);
       sounds.init();
     }
   };
@@ -267,7 +277,7 @@ export const ModuleCinematic = ({ moduleId, exercises = [], onComplete }) => {
     setIsPlaying(next);
     if (next) {
       sounds.playSelect?.();
-      window.speechSynthesis?.resume?.();
+      if (sounds.speechAllowed()) window.speechSynthesis?.resume?.();
     } else {
       window.speechSynthesis?.pause?.();
     }

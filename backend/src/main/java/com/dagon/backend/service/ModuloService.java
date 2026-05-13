@@ -1,5 +1,7 @@
 package com.dagon.backend.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,8 @@ import java.util.Map;
 
 @Service
 public class ModuloService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ModuloService.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -86,7 +90,7 @@ public class ModuloService {
                 "JOIN lms_core.ejercicios_practicos e ON m.id_modulo = e.id_modulo " +
                 "JOIN lms_core.intentos i ON e.id_ejercicio = i.id_ejercicio " +
                 "JOIN lms_core.usuarios u ON i.id_usuario = u.id_usuario " +
-                "WHERE u.email = ? OR u.id_usuario::varchar = ? " +
+                "WHERE (u.email = ? OR u.id_usuario::varchar = ?) " +
                 "AND i.es_correcto = true " +
                 "GROUP BY c.id_curso, c.titulo, m.id_curso " +
                 "HAVING COUNT(DISTINCT e.id_ejercicio) = (" +
@@ -152,10 +156,10 @@ public class ModuloService {
             if (!ids.isEmpty()) {
                 reiniciarDatosUsuario(ids.get(0).toString());
             } else {
-                System.err.println("No se encontró usuario con identificador: " + identificador);
+                logger.warn("No se encontro usuario con identificador: {}", identificador);
             }
         } catch (Exception e) {
-            System.err.println("Error buscando usuario para reinicio: " + e.getMessage());
+            logger.warn("Error buscando usuario para reinicio: {}", e.getMessage());
         }
     }
 
@@ -178,7 +182,7 @@ public class ModuloService {
                 // Asegurar Ownership
                 jdbcTemplate.execute("ALTER TABLE \"" + esquema + "\".\"" + tabla + "\" OWNER TO app_sandbox_user");
             } catch (Exception e) {
-                System.err.println("Error restaurando tabla " + tabla + ": " + e.getMessage());
+                logger.warn("Error restaurando tabla {}: {}", tabla, e.getMessage());
             }
         }
     }

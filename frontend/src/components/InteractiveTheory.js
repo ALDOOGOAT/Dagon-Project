@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
 import { Volume2, VolumeX, ChevronRight, CheckCircle } from 'lucide-react';
+import { sounds } from '../lib/SoundEngine';
 
 export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => !sounds.isEnabled());
   const [completedSlides, setCompletedSlides] = useState(new Set());
 
   const slides = [
@@ -39,8 +40,23 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
     }
   }, []);
 
+  useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setIsMuted(!enabled);
+      if (!enabled) {
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
   const speakSlide = (slide) => {
-    if (window.speechSynthesis && !isMuted) {
+    if (sounds.speechAllowed() && !isMuted) {
       window.speechSynthesis.cancel();
       
       const textToSpeak = `${slide.title}. ${slide.content}. ${slide.detail || ''}`;
@@ -92,11 +108,13 @@ export const InteractiveTheory = ({ theoryContent, onComplete }) => {
   };
 
   const toggleMute = () => {
-    if (isSpeaking) {
+    const enabled = sounds.toggleEnabled({ restart: false });
+    setIsMuted(!enabled);
+    if (!enabled || isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     }
-    setIsMuted(!isMuted);
+    if (enabled) sounds.init();
   };
 
   const currentSlideData = slides[currentSlide];

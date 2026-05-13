@@ -266,11 +266,30 @@ export const PostgresAcademyPage = () => {
   }, []);
 
   useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      if (!enabled) {
+        setIsMuted(true);
+        window.speechSynthesis?.cancel();
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
+  useEffect(() => {
     setCommandIndex(0);
   }, [tierKey]);
 
   const speak = () => {
-    if (!window.speechSynthesis || !chapter?.narration) return;
+    if (!chapter?.narration) return;
+    if (!sounds.isEnabled()) {
+      sounds.setEnabled(true, { restart: false });
+      sounds.init();
+    }
+    if (!sounds.speechAllowed()) return;
     window.speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(chapter.narration);
@@ -285,6 +304,7 @@ export const PostgresAcademyPage = () => {
   };
 
   const stopVoice = () => {
+    sounds.setEnabled(false);
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }

@@ -1019,7 +1019,6 @@ export const ExercisePage = () => {
   };
 
   const invokeClawbot = async (errorData) => {
-    console.log("Invocando Clawbot analyze con:", errorData);
     setClawbotThinking(true);
     try {
       const response = await fetch(apiUrl('/api/clawbot/analyze'), {
@@ -1029,19 +1028,14 @@ export const ExercisePage = () => {
         },
         body: JSON.stringify(errorData)
       });
-      console.log("Response status:", response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log("Clawbot response:", data);
         setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
       } else {
-        const errorText = await response.text();
-        console.log("Error response:", errorText);
         setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
       }
-    } catch (error) {
-      console.error("Error invokeClawbot:", error);
+    } catch {
       setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
     } finally {
       setClawbotThinking(false);

@@ -914,6 +914,105 @@ h1, h2, h3, h4, h5, h6 {
     backface-visibility: hidden;
 }
 
+.dashboard-shell {
+    width: min(100%, 1560px);
+}
+
+@media (min-width: 1280px) {
+    .dashboard-shell {
+        --dashboard-section-gap: 2.5rem;
+    }
+
+    .dashboard-top-actions {
+        row-gap: 0.85rem;
+    }
+}
+
+.tour-cinematic-vignette {
+    background:
+        linear-gradient(180deg, rgba(2, 6, 23, 0.82), rgba(2, 6, 23, 0.28) 42%, rgba(2, 6, 23, 0.90)),
+        radial-gradient(ellipse at 50% 86%, rgba(34, 211, 238, 0.16), transparent 52%);
+}
+
+.tour-scanlines {
+    opacity: 0.16;
+    background-image: repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.16) 0,
+        rgba(255, 255, 255, 0.16) 1px,
+        transparent 1px,
+        transparent 7px
+    );
+    mix-blend-mode: screen;
+}
+
+.tour-spotlight {
+    border: 2px solid rgba(125, 211, 252, 0.92);
+    background: linear-gradient(135deg, rgba(125, 211, 252, 0.08), rgba(217, 70, 239, 0.08));
+    box-shadow:
+        0 0 0 9999px rgba(2, 6, 23, 0.64),
+        0 0 0 6px rgba(34, 211, 238, 0.14),
+        0 0 34px rgba(34, 211, 238, 0.72),
+        inset 0 0 26px rgba(125, 211, 252, 0.16);
+}
+
+.tour-cinematic-panel {
+    transform: translate3d(0, 0, 0);
+    background-image:
+        linear-gradient(135deg, rgba(14, 165, 233, 0.12), transparent 34%),
+        linear-gradient(315deg, rgba(217, 70, 239, 0.13), transparent 30%);
+}
+
+.tour-cinematic-panel::before,
+.tour-cinematic-panel::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.72);
+    pointer-events: none;
+}
+
+.tour-cinematic-panel::before {
+    top: 0;
+}
+
+.tour-cinematic-panel::after {
+    bottom: 0;
+}
+
+.tour-icon-button {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(226, 232, 240, 0.88);
+    transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.tour-icon-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125, 211, 252, 0.48);
+    background: rgba(125, 211, 252, 0.10);
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .tour-spotlight {
+        border-radius: 18px;
+        box-shadow:
+            0 0 0 9999px rgba(2, 6, 23, 0.70),
+            0 0 0 4px rgba(34, 211, 238, 0.12),
+            0 0 24px rgba(34, 211, 238, 0.58);
+    }
+}
+
 .page-transition-surface {
     min-height: 100vh;
     transform: translate3d(0, 0, 0);

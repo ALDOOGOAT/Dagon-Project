@@ -11,7 +11,6 @@ public class DagonBackendApplication implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String userDir = System.getProperty("user.dir");
-        System.out.println("User dir: " + userDir);
         registry.addResourceHandler("/uploads/**")
             .addResourceLocations("file:" + userDir + "/uploads/");
     }

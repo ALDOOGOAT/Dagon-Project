@@ -980,3 +980,1179 @@ Dagon-Project/
 ================================================================================
   FIN DE DOCUMENTACIÓN
 ================================================================================
+================================================================================
+          VERSIÓN ACTUALIZADA - DEFENSA TÉCNICA PROYECTO DAGON LMS
+          Guía para entrega con profesor - 13 de mayo de 2026
+================================================================================
+
+FUENTE ACTUAL DE BASE DE DATOS:
+  scripts/respaldo_dagon_multiverso.sql
+
+DOCUMENTO DE APOYO GENERADO:
+  scripts/flujo_bd_dagon.md
+
+NOTA:
+  Esta sección actualizada queda al inicio porque refleja el estado más reciente
+  del proyecto. El contenido anterior se conserva debajo como anexo histórico,
+  pero puede mencionar datos viejos como "5 niveles" o "BaseDeDatosZaca.sql".
+  Para la entrega, usar primero esta versión.
+
+================================================================================
+ÍNDICE ACTUALIZADO
+================================================================================
+
+  1. Resumen ejecutivo
+  2. Explicación corta para abrir la defensa
+  3. Stack tecnológico actual
+  4. Arquitectura general por capas
+  5. Patrones de diseño usados y por qué
+  6. Cómo interactúan los patrones entre sí
+  7. Flujo completo de usuario: login, dashboard, módulo y validación
+  8. Frontend: rutas, contextos, cinemáticas, sonido y UX
+  9. Backend: controladores, servicios, repositorios y seguridad
+ 10. Base de datos actual según scripts/respaldo_dagon_multiverso.sql
+ 11. MER principal y MER del sandbox
+ 12. Sandbox SQL por usuario
+ 13. Triggers, funciones, vistas, reglas, secuencias y permisos
+ 14. Motor de validación SQL
+ 15. Clawbot IA: tutor socrático
+ 16. Microservicio MPI: analytics paralelo
+ 17. Endpoints principales
+ 18. Qué mostrar en vivo durante la entrega
+ 19. Riesgos conocidos y mejoras pendientes
+ 20. Preguntas probables del profesor y respuestas
+
+================================================================================
+1. RESUMEN EJECUTIVO
+================================================================================
+
+Dagon es una plataforma LMS gamificada para enseñar SQL/PostgreSQL a estudiantes
+principiantes. El objetivo no es solo mostrar ejercicios, sino crear una experiencia
+educativa completa:
+
+  - El alumno entra a una interfaz React protegida por autenticación.
+  - Ve cursos, módulos, progreso, ranking y recompensas.
+  - Antes de practicar, recibe cinemáticas educativas por módulo.
+  - Practica con formatos graduales: drag and drop, editor SQL, diagramas MER,
+    DDL, DML, transacciones y ejercicios rápidos.
+  - El backend valida sus respuestas en PostgreSQL.
+  - Cada alumno tiene su propio sandbox: un esquema aislado en la BD.
+  - Los intentos se guardan y alimentan XP, ranking, rachas y certificados.
+  - Clawbot da retroalimentación socrática si el alumno falla.
+  - Un microservicio MPI procesa analytics del ranking en paralelo.
+
+Idea central para defender:
+
+  "Dagon enseña SQL ejecutando SQL real, pero lo hace de forma segura porque cada
+   usuario practica dentro de su propio esquema sandbox. La arquitectura separa
+   frontend, backend, base de datos, IA y analytics, y usa patrones de diseño para
+   mantener responsabilidades claras."
+
+================================================================================
+2. EXPLICACIÓN CORTA PARA ABRIR LA DEFENSA
+================================================================================
+
+Puedes decir esto al inicio:
+
+  "Dagon es un LMS gamificado para aprender SQL. El frontend está hecho en React
+   y muestra login, dashboard, módulos, cinemáticas, ejercicios, ranking, perfil,
+   certificados y Clawbot. El backend está hecho en Spring Boot y expone endpoints
+   REST, seguridad JWT, servicios de negocio, validación SQL y conexión con
+   PostgreSQL. La base de datos tiene un esquema principal llamado lms_core, un
+   template de práctica llamado lms_sandbox_template y un esquema por usuario con
+   el patrón sandbox_usuario_<uuid>. Cuando un usuario se registra, un trigger de
+   PostgreSQL crea automáticamente su sandbox clonando el template. Así cada alumno
+   puede hacer SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER o transacciones sin
+   dañar el trabajo de otros. Además, el ranking se calcula con una vista SQL, el
+   tutor Clawbot ayuda con pistas socráticas y el servicio MPI analiza métricas en
+   paralelo usando scatter, gather y reduce."
+
+================================================================================
+3. STACK TECNOLÓGICO ACTUAL
+================================================================================
+
+Frontend:
+  - React 19.
+  - React Router v7.
+  - Tailwind CSS.
+  - Framer Motion.
+  - Shadcn/Radix UI.
+  - Sonner.
+  - Recharts.
+  - @hello-pangea/dnd para drag and drop.
+  - Web Audio API mediante SoundEngine.
+
+Backend:
+  - Java 21.
+  - Spring Boot 4.0.3.
+  - Spring Web MVC.
+  - Spring Security.
+  - JWT con jjwt.
+  - Spring Data JPA.
+  - JdbcTemplate para SQL directo.
+  - PostgreSQL JDBC Driver.
+  - Lombok.
+
+Base de datos:
+  - PostgreSQL.
+  - Esquemas lms_core, lms_sandbox_template y sandbox_usuario_<uuid>.
+  - Extension pgcrypto.
+  - Dominio lms_core.email_valido.
+  - Funciones PL/pgSQL.
+  - Triggers.
+  - Vistas.
+  - Regla de soft delete.
+  - Grants para app_backend_user y app_sandbox_user.
+
+Microservicio académico:
+  - Python.
+  - Flask.
+  - mpi4py.
+  - Open MPI / mpirun.
+
+Comandos principales:
+
+  Backend:
+    cd backend && ./mvnw spring-boot:run
+
+  Frontend:
+    cd frontend && yarn start
+
+  MPI:
+    cd mpi_service && ./run_mpi.sh
+
+  Tests backend:
+    cd backend && ./mvnw test
+
+  Build frontend:
+    cd frontend && yarn build
+
+================================================================================
+4. ARQUITECTURA GENERAL POR CAPAS
+================================================================================
+
+Vista general:
+
+  Alumno / Profesor
+          |
+          v
+  Frontend React
+          |
+          v
+  API Spring Boot
+     |       |        |
+     |       |        +--> Clawbot IA
+     |       +-----------> MPI Analytics Service
+     |
+     v
+  PostgreSQL
+     |-- lms_core
+     |-- lms_sandbox_template
+     |-- sandbox_usuario_<uuid>
+
+Diagrama Mermaid:
+
+```mermaid
+flowchart LR
+    U[Alumno / Profesor] --> F[Frontend React]
+    F --> API[API Spring Boot]
+    API --> CORE[(PostgreSQL lms_core)]
+    API --> SANDBOX[(Sandbox por usuario)]
+    API --> IA[Clawbot IA]
+    API --> MPI[MPI Analytics Service]
+    MPI --> MPIRUN[mpirun + mpi4py]
+```
+
+Capas:
+
+  1. Presentación:
+     - frontend/src/pages
+     - frontend/src/components
+
+  2. API:
+     - backend/.../controller
+
+  3. Negocio:
+     - backend/.../service
+
+  4. Persistencia:
+     - backend/.../model
+     - backend/.../repository
+     - JdbcTemplate
+
+  5. Base de datos:
+     - scripts/respaldo_dagon_multiverso.sql
+     - lms_core
+     - lms_sandbox_template
+     - sandbox_usuario_<uuid>
+
+  6. Servicios externos:
+     - Clawbot IA
+     - MPI analytics
+
+================================================================================
+5. PATRONES DE DISEÑO USADOS Y POR QUÉ
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 MVC / Arquitectura por capas
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - View: React, pages y components.
+  - Controller: clases @RestController.
+  - Model: entidades JPA y tablas PostgreSQL.
+  - Service: lógica de negocio.
+  - Repository: acceso a datos.
+
+Por qué:
+  - Separa responsabilidades.
+  - Permite explicar el proyecto por capas.
+  - Evita que React conozca SQL interno.
+  - Evita que los controladores tengan toda la lógica.
+
+Ejemplo:
+
+  ExercisePage.js
+    -> NivelController
+      -> EjercicioService
+        -> EjercicioPracticoRepository / JdbcTemplate
+          -> PostgreSQL
+
+--------------------------------------------------------------------------------
+5.2 Repository
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - UsuarioRepository extends JpaRepository<Usuario, UUID>
+  - EjercicioPracticoRepository extends JpaRepository<EjercicioPractico, Integer>
+
+Por qué:
+  - Abstrae CRUD.
+  - Spring genera consultas por convención.
+  - Reduce SQL repetitivo.
+
+Ejemplos:
+  - findByEmail(String email)
+  - findByIdModuloOrderByOrdenAsc(Integer idModulo)
+
+Cómo explicarlo:
+  "El repository es una interfaz. Yo declaro lo que necesito y Spring Data genera
+   la implementación, conectándola con Hibernate y PostgreSQL."
+
+--------------------------------------------------------------------------------
+5.3 DTO
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - EjercicioDTO
+  - NivelDTO
+
+Por qué:
+  - La entidad de BD no siempre es lo mismo que necesita el frontend.
+  - El DTO evita exponer campos internos.
+  - Permite transformar un ejercicio SQL en una experiencia educativa.
+
+Ejemplo:
+  - En BD existe query_maestra.
+  - En frontend se envía title, description, type, hint y wordBank.
+
+--------------------------------------------------------------------------------
+5.4 Dependency Injection / IoC
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - @Autowired
+  - @Service
+  - @RestController
+  - @Component
+  - @Configuration
+
+Por qué:
+  - Spring crea y conecta objetos.
+  - Evita crear dependencias manualmente.
+  - Facilita cambiar implementaciones.
+
+Ejemplo:
+  @Autowired private EjercicioService ejercicioService;
+
+--------------------------------------------------------------------------------
+5.5 Filter Chain / Chain of Responsibility
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - SecurityConfig
+  - JwtAuthenticationFilter
+
+Por qué:
+  - Cada petición pasa por filtros.
+  - El filtro JWT valida token antes del controller.
+  - Centraliza seguridad.
+
+Flujo:
+  Request HTTP
+    -> CORS
+    -> JwtAuthenticationFilter
+    -> Controller
+
+--------------------------------------------------------------------------------
+5.6 Guard / Protected Route
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - ProtectedRoute en frontend/src/App.js
+
+Por qué:
+  - Protege rutas frontend.
+  - Si no hay token, redirige al login.
+  - Complementa la seguridad del backend.
+
+--------------------------------------------------------------------------------
+5.7 Context Provider
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - AuthContext
+  - ThemeContext
+
+Por qué:
+  - Comparte usuario, token, login/logout y tema visual.
+  - Evita pasar props por muchos niveles.
+  - Mantiene estado global de sesión.
+
+--------------------------------------------------------------------------------
+5.8 Singleton / Facade para sonido
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - frontend/src/lib/SoundEngine.js
+
+Por qué:
+  - La app necesita un solo motor de sonido.
+  - Encapsula Web Audio API.
+  - Los componentes solo llaman métodos simples.
+
+Ejemplo:
+  sounds.init()
+  sounds.play...
+
+--------------------------------------------------------------------------------
+5.9 Adapter / Proxy para servicios externos
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - ClawbotService adapta Gemini/Groq/Ollama.
+  - AnalyticsController adapta Spring Boot hacia mpi_service.
+  - apiUrl adapta rutas frontend al backend configurado.
+
+Por qué:
+  - Encapsula APIs externas.
+  - Permite fallback.
+  - Evita acoplar toda la app a un proveedor.
+
+--------------------------------------------------------------------------------
+5.10 Strategy implícito para tipos de ejercicio
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - EjercicioService
+  - ExercisePage.js
+  - ejercicios_practicos.formato
+  - ejercicios_practicos.configuracion_extra
+
+Por qué:
+  - No todos los ejercicios se validan igual.
+  - El sistema cambia comportamiento según metadatos.
+
+Tipos:
+  - drag_drop
+  - editor
+  - sql
+  - diagram
+
+Validaciones:
+  - SELECT
+  - DML
+  - DDL
+  - Diagramas MER
+  - Transacciones
+  - Validación textual
+
+Cómo defenderlo:
+  "Hoy funciona como Strategy por metadatos. Una mejora futura sería separarlo en
+   clases SelectValidator, DmlValidator, DdlValidator, DiagramValidator, etc."
+
+--------------------------------------------------------------------------------
+5.11 Observer con triggers
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - trg_desatar_multiverso
+  - trg_auditar_update_ejercicio
+
+Por qué:
+  - La base de datos reacciona automáticamente a eventos.
+  - INSERT usuario -> crear sandbox.
+  - UPDATE query_maestra -> auditar cambio.
+
+--------------------------------------------------------------------------------
+5.12 Factory / Prototype para sandboxes
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - lms_sandbox_template
+  - fn_crear_multiverso()
+
+Por qué:
+  - El template es el prototipo.
+  - La función fabrica un sandbox nuevo por usuario.
+
+Flujo:
+  lms_sandbox_template
+    -> fn_crear_multiverso()
+      -> sandbox_usuario_<uuid>
+
+--------------------------------------------------------------------------------
+5.13 Soft Delete
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - regla_soft_delete_usuarios
+
+Por qué:
+  - Conserva intentos e historial.
+  - No borra físicamente usuarios.
+  - Marca activo = false.
+
+--------------------------------------------------------------------------------
+5.14 Projection / View Object
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - v_ranking_alumnos
+  - v_contenido_modulos
+
+Por qué:
+  - Presenta datos ya calculados.
+  - Evita repetir consultas complejas.
+  - El backend consume una vista como lectura.
+
+--------------------------------------------------------------------------------
+5.15 Scatter / Gather / Reduce
+--------------------------------------------------------------------------------
+
+Dónde está:
+  - mpi_service/analytics_mpi.py
+
+Por qué:
+  - Divide ranking entre procesos MPI.
+  - Cada rank calcula métricas parciales.
+  - Rank 0 junta y consolida resultados.
+
+================================================================================
+6. CÓMO INTERACTÚAN LOS PATRONES ENTRE SÍ
+================================================================================
+
+Diagrama:
+
+```mermaid
+flowchart TD
+    A[ProtectedRoute / AuthContext] --> B[Page React]
+    B --> C[apiUrl / API client]
+    C --> D[Controller REST]
+    D --> E[Service]
+    E --> F[Repository JPA]
+    E --> G[JdbcTemplate]
+    F --> H[(lms_core)]
+    G --> I[(sandbox_usuario_uuid)]
+    H --> J[Views / Triggers / Rules]
+    I --> K[Validación SQL]
+    E --> L[Clawbot Adapter]
+    E --> M[MPI Proxy]
+```
+
+Lectura:
+  1. AuthContext guarda usuario y token.
+  2. ProtectedRoute protege pantallas.
+  3. La pantalla llama al backend con apiUrl.
+  4. Controller recibe HTTP.
+  5. Service decide reglas.
+  6. Repository resuelve CRUD.
+  7. JdbcTemplate resuelve SQL directo.
+  8. PostgreSQL ejecuta triggers, vistas y reglas.
+  9. Clawbot y MPI son servicios externos encapsulados.
+
+================================================================================
+7. FLUJO COMPLETO DE USUARIO
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1 Login
+--------------------------------------------------------------------------------
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as LoginPage/AuthContext
+    participant C as UsuarioController
+    participant S as UsuarioService
+    participant R as UsuarioRepository
+    participant DB as lms_core.usuarios
+    participant JWT as JwtUtil
+
+    U->>F: email + password
+    F->>C: POST /api/usuarios/login
+    C->>S: iniciarSesion(email,passwordHash)
+    S->>R: findByEmail(email)
+    R->>DB: SELECT usuario
+    DB-->>R: Usuario
+    S-->>C: usuario válido
+    C->>JWT: generarToken(idUsuario)
+    JWT-->>C: token
+    C-->>F: token + user
+    F->>F: guarda token y usuario
+```
+
+--------------------------------------------------------------------------------
+7.2 Registro + creación automática de sandbox
+--------------------------------------------------------------------------------
+
+```mermaid
+sequenceDiagram
+    participant F as Register UI
+    participant C as UsuarioController
+    participant S as UsuarioService
+    participant DB as lms_core.usuarios
+    participant T as trg_desatar_multiverso
+    participant FN as fn_crear_multiverso
+    participant SB as sandbox_usuario_uuid
+
+    F->>C: POST /api/usuarios/registro
+    C->>S: registrarUsuario()
+    S->>DB: INSERT usuario
+    DB->>T: AFTER INSERT
+    T->>FN: ejecutar función
+    FN->>SB: CREATE SCHEMA + clonar template
+    DB-->>S: usuario creado
+    S-->>C: usuario
+    C-->>F: registro exitoso
+```
+
+--------------------------------------------------------------------------------
+7.3 Dashboard
+--------------------------------------------------------------------------------
+
+Frontend:
+  - DashboardPage
+  - AuthContext
+  - ThemeContext
+
+Peticiones:
+  - GET /api/usuarios/{id}/stats
+  - GET /api/modulos
+  - GET /api/leaderboard
+
+Backend:
+  - ModuloController
+  - ModuloService
+  - LeaderboardController
+  - LeaderboardService
+
+Base:
+  - lms_core.cursos
+  - lms_core.modulos
+  - lms_core.v_ranking_alumnos
+
+--------------------------------------------------------------------------------
+7.4 Entrada a un módulo
+--------------------------------------------------------------------------------
+
+Flujo:
+  ExercisePage /exercise/:levelId
+    -> muestra ModuleCinematic
+    -> GET /api/exercises/{levelId}
+    -> renderiza según formato
+
+Archivos:
+  - frontend/src/pages/ExercisePage.js
+  - frontend/src/components/ModuleCinematic.jsx
+  - frontend/src/data/moduleCinematics.js
+
+--------------------------------------------------------------------------------
+7.5 Validación
+--------------------------------------------------------------------------------
+
+```mermaid
+sequenceDiagram
+    participant F as ExercisePage
+    participant C as NivelController
+    participant S as EjercicioService
+    participant Core as lms_core
+    participant SB as sandbox_usuario_uuid
+    participant Bot as Clawbot
+
+    F->>C: POST /api/exercises/{id}/validate
+    C->>S: validarConsulta(id, query, usuarioId)
+    S->>Core: lee query_maestra/config_extra
+    S->>SB: SET search_path + ejecuta query alumno
+    S->>SB: ejecuta query maestra/regla esperada
+    S->>S: compara resultados normalizados
+    S->>Core: INSERT INTO intentos
+    alt error o fallo
+        F->>Bot: /api/clawbot/analyze
+        Bot-->>F: pista socrática
+    end
+    S-->>C: resultado
+    C-->>F: correcto/incorrecto + datos
+```
+
+================================================================================
+8. FRONTEND ACTUAL
+================================================================================
+
+Rutas en frontend/src/App.js:
+  - /                 Login o redirección.
+  - /dashboard        Dashboard.
+  - /exercise/:levelId Ejercicios.
+  - /leaderboard      Ranking y MPI.
+  - /profile          Perfil.
+  - /streak           Rachas.
+  - /graduation/:levelId Certificado/cierre.
+  - /postgres         Academia PostgreSQL.
+  - /credits          Créditos.
+
+Componentes clave:
+  - AuthContext: sesión y token.
+  - ThemeContext: tema visual.
+  - ProtectedRoute: protección de rutas.
+  - AbyssBackground: fondo visual.
+  - Clawbot: tutor IA flotante.
+  - ModuleCinematic: cinemática por módulo.
+  - QuickPracticeMode: práctica rápida.
+  - LevelTheory: teoría contextual.
+  - SoundEngine: sonidos y música.
+
+Por qué es importante:
+  - El usuario objetivo puede no saber programar.
+  - La app reduce fricción con teoría, cinemáticas, drag and drop, pistas y feedback.
+
+================================================================================
+9. BACKEND ACTUAL
+================================================================================
+
+Controladores:
+  - UsuarioController
+  - NivelController
+  - ModuloController
+  - LeaderboardController
+  - ClawbotController
+  - AnalyticsController
+
+Servicios:
+  - UsuarioService
+  - EjercicioService
+  - ModuloService
+  - LeaderboardService
+  - ClawbotService
+
+Repositorios:
+  - UsuarioRepository
+  - EjercicioPracticoRepository
+
+Seguridad:
+  - SecurityConfig
+  - JwtAuthenticationFilter
+  - JwtUtil
+
+Rutas públicas actuales:
+  - /api/usuarios/login
+  - /api/usuarios/registro
+  - /api/usuarios/imagen/**
+  - /api/clawbot/**
+  - /api/exercises/*/validate
+  - OPTIONS /**
+
+Nota para producción:
+  Estas rutas están permisivas por desarrollo. Para servidor UNACH conviene:
+  - cerrar CORS,
+  - proteger validación,
+  - proteger o limitar Clawbot,
+  - derivar usuario desde JWT.
+
+================================================================================
+10. BASE DE DATOS ACTUAL
+================================================================================
+
+Dump actual:
+  scripts/respaldo_dagon_multiverso.sql
+
+Resumen:
+  - 7044 líneas.
+  - 24 esquemas.
+  - 130 tablas.
+  - 38 secuencias.
+  - 2 cursos.
+  - 20 módulos.
+  - 94 ejercicios.
+  - 22 usuarios.
+  - 330 intentos.
+  - extension pgcrypto.
+  - dominio lms_core.email_valido.
+
+Esquemas principales:
+
+  lms_core:
+    - usuarios
+    - roles
+    - cursos
+    - modulos
+    - ejercicios_practicos
+    - intentos
+    - auditoria_logs
+    - v_contenido_modulos
+    - v_ranking_alumnos
+
+  lms_sandbox_template:
+    - aventureros
+    - equipamiento
+    - habitaciones
+    - huespedes
+    - reservas
+
+  sandbox_usuario_<uuid>:
+    - copia individual por usuario
+    - puede contener objetos creados por ejercicios
+    - ejemplos: mascotas, pociones, log_cambios, funciones, triggers
+
+================================================================================
+11. MER PRINCIPAL Y MER DEL SANDBOX
+================================================================================
+
+MER principal:
+
+```mermaid
+erDiagram
+    ROLES ||--o{ USUARIOS : "id_rol"
+    CURSOS ||--o{ MODULOS : "id_curso"
+    MODULOS ||--o{ EJERCICIOS_PRACTICOS : "id_modulo"
+    USUARIOS ||--o{ INTENTOS : "id_usuario"
+    EJERCICIOS_PRACTICOS ||--o{ INTENTOS : "id_ejercicio"
+
+    ROLES {
+        integer id_rol PK
+        text nombre UK
+    }
+
+    USUARIOS {
+        uuid id_usuario PK
+        text nombre
+        email_valido email UK
+        text password_hash
+        integer id_rol FK
+        boolean activo
+        timestamp fecha_registro
+        integer racha_actual
+        date ultima_practica
+        integer mejor_racha
+    }
+
+    CURSOS {
+        integer id_curso PK
+        text titulo UK
+    }
+
+    MODULOS {
+        integer id_modulo PK
+        integer id_curso FK
+        text titulo
+        integer orden
+        text descripcion
+        integer xp_requerida
+    }
+
+    EJERCICIOS_PRACTICOS {
+        integer id_ejercicio PK
+        integer id_modulo FK
+        text enunciado
+        text query_maestra
+        integer dificultad
+        jsonb configuracion_extra
+        text titulo
+        integer orden
+        text tipo_mision
+        varchar formato
+    }
+
+    INTENTOS {
+        uuid id_intento PK
+        uuid id_usuario FK
+        integer id_ejercicio FK
+        text query_enviada
+        boolean es_correcto
+        numeric tiempo_ms
+        timestamp fecha_intento
+    }
+```
+
+MER sandbox:
+
+```mermaid
+erDiagram
+    AVENTUREROS ||--o{ EQUIPAMIENTO : "id_aventurero logico"
+    HUESPEDES ||--o{ RESERVAS : "id_huesped"
+    HABITACIONES ||--o{ RESERVAS : "id_habitacion"
+
+    AVENTUREROS {
+        integer id_aventurero PK
+        text nombre
+        text clase
+        integer nivel
+    }
+
+    EQUIPAMIENTO {
+        integer id_equipo PK
+        integer id_aventurero
+        text item
+        integer precio
+    }
+
+    HUESPEDES {
+        integer id PK
+        varchar nombre
+        integer nivel_aventurero
+    }
+
+    HABITACIONES {
+        integer id PK
+        integer numero
+        varchar tipo
+        numeric precio_noche
+    }
+
+    RESERVAS {
+        integer id PK
+        date fecha_entrada
+        integer id_huesped FK
+        integer id_habitacion FK
+    }
+```
+
+================================================================================
+12. SANDBOX SQL POR USUARIO
+================================================================================
+
+Problema:
+  Un alumno puede ejecutar UPDATE, DELETE, INSERT, CREATE o ALTER.
+  Si todos usaran las mismas tablas, romperían los datos de otros alumnos.
+
+Solución:
+  Cada usuario tiene un esquema propio.
+
+Ejemplo:
+  Usuario con id e1eeb361-...
+  usa:
+    sandbox_usuario_e1eeb361-...
+
+El alumno escribe:
+  SELECT * FROM aventureros;
+
+El backend ejecuta:
+  SET search_path TO "sandbox_usuario_<uuid>";
+  SELECT * FROM aventureros;
+
+Resultado:
+  La consulta ocurre dentro de su propio sandbox.
+
+================================================================================
+13. TRIGGERS, FUNCIONES, VISTAS, REGLAS, SECUENCIAS Y PERMISOS
+================================================================================
+
+Funciones:
+  - lms_core.fn_crear_multiverso()
+  - lms_core.fn_auditar_ejercicios()
+
+Triggers:
+  - trg_desatar_multiverso
+      AFTER INSERT ON lms_core.usuarios
+      ejecuta fn_crear_multiverso()
+
+  - trg_auditar_update_ejercicio
+      AFTER UPDATE ON lms_core.ejercicios_practicos
+      audita si cambia query_maestra
+
+Regla:
+  - regla_soft_delete_usuarios
+      convierte DELETE en UPDATE activo = false
+
+Vistas:
+  - v_contenido_modulos
+      lista módulos con ejercicios
+
+  - v_ranking_alumnos
+      calcula ejercicios_resueltos y xp_total
+
+XP:
+  - RAPIDA: 5 XP
+  - Normal: dificultad * 10
+
+Permisos:
+  - app_backend_user: usuario del backend.
+  - app_sandbox_user: usuario de ejecución de ejercicios.
+
+================================================================================
+14. MOTOR DE VALIDACIÓN SQL
+================================================================================
+
+Archivo:
+  backend/src/main/java/com/dagon/backend/service/EjercicioService.java
+
+Responsabilidades:
+  - cargar ejercicios por módulo,
+  - construir DTOs,
+  - detectar formato,
+  - ejecutar consulta del alumno,
+  - comparar con query maestra,
+  - validar DDL/DML/diagramas/transacciones,
+  - guardar intentos,
+  - registrar racha.
+
+Formatos:
+  - drag_drop
+  - editor
+  - sql
+  - diagram
+
+Metadatos en configuracion_extra:
+  - wordBank
+  - tipo_validacion
+  - min_entidades
+  - min_relaciones
+  - entidades_requeridas
+  - paneles transaccionales
+  - regex_esperado
+
+Punto fuerte:
+  No es solo comparar texto. El proyecto puede validar resultados SQL,
+  estructura, metadata, reglas de diagrama y comportamiento de transacciones.
+
+================================================================================
+15. CLAWBOT IA
+================================================================================
+
+Archivos:
+  - ClawbotController.java
+  - ClawbotService.java
+  - frontend/src/components/Clawbot.js
+
+Endpoints:
+  - POST /api/clawbot/chat
+  - POST /api/clawbot/analyze
+
+Reglas:
+  - No dar solución exacta.
+  - Dar pistas socráticas.
+  - Usar ejemplos análogos.
+  - Aumentar ayuda según intentos.
+
+Patrón:
+  Adapter/Facade hacia Gemini, Groq, Ollama o fallback local.
+
+================================================================================
+16. MICROSERVICIO MPI
+================================================================================
+
+Archivos:
+  - mpi_service/server.py
+  - mpi_service/analytics_mpi.py
+  - mpi_service/run_mpi.sh
+
+Flujo:
+
+```mermaid
+flowchart TD
+    A[LeaderboardPage] --> B[GET /api/analytics/mpi]
+    B --> C[AnalyticsController]
+    C --> D[POST mpi_service /analytics]
+    D --> E[server.py crea JSON temporal]
+    E --> F[mpirun -np N analytics_mpi.py]
+    F --> G[scatter usuarios]
+    G --> H[cada rank calcula parcial]
+    H --> I[gather + reduce]
+    I --> J[rank 0 escribe resultado]
+    J --> K[Frontend muestra analítica]
+```
+
+Qué demuestra:
+  - Microservicios.
+  - Paralelismo.
+  - Distribución de carga.
+  - MPI aplicado a datos reales del LMS.
+
+================================================================================
+17. ENDPOINTS PRINCIPALES
+================================================================================
+
+Usuarios:
+  - POST /api/usuarios/registro
+  - POST /api/usuarios/login
+  - GET /api/usuarios/{id}/stats
+  - GET /api/usuarios/{id}/profile
+  - POST /api/usuarios/{id}/foto
+  - GET /api/usuarios/{id}/foto
+  - GET /api/usuarios/imagen/{filename}
+  - GET /api/usuarios/ranking
+
+Módulos:
+  - GET /api/modulos
+  - GET /api/modulos/completados
+  - GET /api/modulos/cursos-completados
+  - GET /api/modulos/certificado/{cursoId}
+  - POST /api/modulos/reset-sandbox
+
+Ejercicios:
+  - GET /api/levels
+  - GET /api/exercises/{levelId}
+  - GET /api/practica-rapida
+  - POST /api/exercises/{id}/validate
+
+Ranking:
+  - GET /api/leaderboard
+
+Clawbot:
+  - POST /api/clawbot/chat
+  - POST /api/clawbot/analyze
+
+MPI:
+  - GET /api/analytics/mpi
+
+================================================================================
+18. QUÉ MOSTRAR EN VIVO DURANTE LA ENTREGA
+================================================================================
+
+Orden recomendado:
+
+  1. Levantar backend.
+  2. Levantar frontend.
+  3. Levantar MPI.
+  4. Login.
+  5. Dashboard.
+  6. Módulos y progreso.
+  7. Entrar a módulo.
+  8. Mostrar cinemática.
+  9. Resolver drag and drop.
+ 10. Resolver SELECT.
+ 11. Fallar ejercicio y mostrar Clawbot.
+ 12. Mostrar ranking.
+ 13. Mostrar MPI analytics.
+ 14. Mostrar dump y MER.
+ 15. Explicar trigger de creación de sandbox.
+
+Archivos para abrir:
+  - frontend/src/App.js
+  - frontend/src/pages/ExercisePage.js
+  - frontend/src/components/ModuleCinematic.jsx
+  - frontend/src/contexts/AuthContext.js
+  - backend/src/main/java/com/dagon/backend/config/SecurityConfig.java
+  - backend/src/main/java/com/dagon/backend/security/JwtAuthenticationFilter.java
+  - backend/src/main/java/com/dagon/backend/service/EjercicioService.java
+  - backend/src/main/java/com/dagon/backend/service/ModuloService.java
+  - backend/src/main/java/com/dagon/backend/service/ClawbotService.java
+  - backend/src/main/java/com/dagon/backend/controller/AnalyticsController.java
+  - mpi_service/analytics_mpi.py
+  - scripts/respaldo_dagon_multiverso.sql
+  - scripts/flujo_bd_dagon.md
+
+Comandos útiles:
+  rg -n "CREATE FUNCTION|CREATE TRIGGER|CREATE VIEW|CREATE RULE" scripts/respaldo_dagon_multiverso.sql
+  rg -n "CREATE TABLE lms_core" scripts/respaldo_dagon_multiverso.sql
+  rg -n "INSERT INTO lms_core.modulos" scripts/respaldo_dagon_multiverso.sql
+  rg -n "fn_crear_multiverso|trg_desatar_multiverso" scripts/respaldo_dagon_multiverso.sql
+
+================================================================================
+19. RIESGOS CONOCIDOS Y MEJORAS PENDIENTES
+================================================================================
+
+Esto se puede explicar como madurez técnica:
+
+  1. CORS está abierto en desarrollo.
+     Mejora: permitir solo localhost y dominio/IP UNACH.
+
+  2. Algunas rutas sensibles están públicas.
+     Mejora: proteger validación y Clawbot con JWT.
+
+  3. El dump contiene datos sensibles.
+     Mejora: sanitizar y separar estructura/semillas/datos.
+
+  4. EjercicioService concentra mucha lógica.
+     Mejora: separar validadores por Strategy real.
+
+  5. El dump mezcla sandboxes de usuarios con estructura limpia.
+     Mejora: dividir scripts SQL.
+
+  6. Revisar secuencia modulos_id_modulo_seq.
+     El dump tiene módulos hasta ID 20 y la secuencia debe quedar encima.
+
+  7. equipamiento.id_aventurero es relación lógica sin FK formal.
+     Mejora: agregar FK si no rompe ejercicios.
+
+================================================================================
+20. PREGUNTAS PROBABLES Y RESPUESTAS
+================================================================================
+
+P: ¿Cuál es el patrón principal?
+R: Arquitectura por capas/MVC: React como vista, controllers REST como entrada,
+services como lógica, repositories/JdbcTemplate como persistencia y PostgreSQL
+como modelo de datos.
+
+P: ¿Por qué Repository?
+R: Para abstraer CRUD y consultas comunes. Spring Data genera implementaciones.
+
+P: ¿Por qué DTO?
+R: Porque lo que guarda la BD no siempre es lo que necesita la UI. El DTO prepara
+datos para experiencias educativas como drag and drop o diagramas.
+
+P: ¿Cómo evitas que un alumno dañe datos de otro?
+R: Cada usuario tiene un esquema propio `sandbox_usuario_<uuid>` y el backend usa
+`SET search_path` para ejecutar ahí.
+
+P: ¿Cómo se crea el sandbox?
+R: Con un trigger AFTER INSERT sobre usuarios que ejecuta `fn_crear_multiverso()`.
+
+P: ¿Qué patrón es ese trigger?
+R: Observer a nivel BD. Observa un evento y reacciona automáticamente.
+
+P: ¿Qué patrón es el template de sandbox?
+R: Prototype/Factory. `lms_sandbox_template` es el prototipo y la función crea
+una copia por usuario.
+
+P: ¿Cómo funciona el ranking?
+R: Con `v_ranking_alumnos`, que calcula XP desde intentos correctos.
+
+P: ¿Cómo funciona Clawbot?
+R: El backend envía contexto del error a un proveedor IA o usa fallback, siempre
+con reglas socráticas para no revelar la solución.
+
+P: ¿Dónde entra MPI?
+R: En analytics del ranking. Spring llama a Flask, Flask lanza `mpirun`, MPI divide
+usuarios entre ranks y consolida métricas.
+
+P: ¿Qué harías antes de producción?
+R: Cerrar CORS, proteger rutas sensibles, sanitizar dump, separar SQL y refactorizar
+validadores por tipo de ejercicio.
+
+================================================================================
+CIERRE SUGERIDO
+================================================================================
+
+Frase final:
+
+  "Dagon no es solo una interfaz para practicar SQL. Es una arquitectura educativa
+   completa: React guía al alumno, Spring Boot protege y coordina la lógica,
+   PostgreSQL crea sandboxes y calcula progreso, Clawbot da retroalimentación
+   y MPI agrega análisis paralelo. Los patrones de diseño permiten separar
+   responsabilidades, aislar usuarios, escalar la lógica educativa y explicar el
+   sistema por capas de forma mantenible."
+
+================================================================================
+ANEXO HISTÓRICO: DOCUMENTACIÓN ANTERIOR
+================================================================================

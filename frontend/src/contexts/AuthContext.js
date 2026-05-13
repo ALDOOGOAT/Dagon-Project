@@ -84,6 +84,8 @@ const login = async (email, password) => {
       
       localStorage.setItem('token', token);
       localStorage.setItem('dagon_first_login', 'true'); // Marcar primera vez
+      localStorage.setItem('dagon_tutorial_pending', 'true');
+      localStorage.removeItem('dagon_tutorial_completed');
       setToken(token);
       setUser(user);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;

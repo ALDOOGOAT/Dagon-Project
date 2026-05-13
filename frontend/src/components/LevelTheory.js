@@ -1428,7 +1428,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
 
   const [index, setIndex] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => !sounds.isEnabled());
 
   const slide = theory.slides[index];
   const total = theory.slides.length;
@@ -1443,8 +1443,23 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
     return () => window.speechSynthesis.cancel();
   }, []);
 
+  useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setIsMuted(!enabled);
+      if (!enabled) {
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
   const speak = () => {
-    if (isMuted) return;
+    if (isMuted || !sounds.speechAllowed()) return;
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
@@ -1501,7 +1516,16 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
               {isSpeaking ? '🛑 Detener' : '🔊 Escuchar'}
             </button>
             <button
-              onClick={() => setIsMuted(!isMuted)}
+              onClick={() => {
+                const enabled = sounds.toggleEnabled({ restart: false });
+                setIsMuted(!enabled);
+                if (!enabled) {
+                  window.speechSynthesis.cancel();
+                  setIsSpeaking(false);
+                } else {
+                  sounds.init();
+                }
+              }}
               className="p-2 rounded-xl bg-slate-800 text-white"
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

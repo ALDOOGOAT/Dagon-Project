@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
 import { X, Volume2, VolumeX, Sparkles, ChevronRight, Database, Code, Trophy, Target } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../contexts/ThemeContext';
+import { sounds } from '../lib/SoundEngine';
 
 const welcomeSteps = [
   {
@@ -41,7 +42,7 @@ const welcomeSteps = [
 export const WelcomeCard = ({ onDismiss }) => {
   const [show, setShow] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(() => sounds.isEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
   const utteranceRef = useRef(null);
@@ -52,14 +53,30 @@ export const WelcomeCard = ({ onDismiss }) => {
 
   useEffect(() => {
     const isFirstLogin = localStorage.getItem('dagon_first_login') === 'true';
-    if (isFirstLogin) {
+    const tutorialPending = localStorage.getItem('dagon_tutorial_pending') === 'true';
+    if (isFirstLogin && !tutorialPending) {
       const timer = setTimeout(() => setShow(true), 1000);
       return () => clearTimeout(timer);
     }
   }, []);
 
-  const speak = (text) => {
-    if (!voiceEnabled) return;
+  useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setVoiceEnabled(enabled);
+      if (!enabled) {
+        synthRef.current?.cancel();
+        setIsSpeaking(false);
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
+  const speak = useCallback((text) => {
+    if (!voiceEnabled || !sounds.speechAllowed()) return;
     synthRef.current.cancel();
     
     const utterance = new SpeechSynthesisUtterance(text);
@@ -77,7 +94,7 @@ export const WelcomeCard = ({ onDismiss }) => {
     
     utteranceRef.current = utterance;
     synthRef.current.speak(utterance);
-  };
+  }, [voiceEnabled]);
 
   const currentStepData = welcomeSteps[currentStep];
   const StepIcon = currentStepData.icon;
@@ -94,7 +111,7 @@ export const WelcomeCard = ({ onDismiss }) => {
       const timer = setTimeout(() => speak(texts[currentStep]), 500);
       return () => clearTimeout(timer);
     }
-  }, [currentStep, show, voiceEnabled]);
+  }, [currentStep, show, voiceEnabled, speak]);
 
   useEffect(() => {
     const loadVoices = () => synthRef.current.getVoices();
@@ -153,8 +170,10 @@ export const WelcomeCard = ({ onDismiss }) => {
           <div className="absolute top-4 right-4 flex gap-2 z-10">
             <button
               onClick={() => {
-                if (isSpeaking) { synthRef.current.cancel(); setIsSpeaking(false); }
-                setVoiceEnabled(!voiceEnabled);
+                const enabled = sounds.toggleEnabled({ restart: false });
+                setVoiceEnabled(enabled);
+                if (!enabled || isSpeaking) { synthRef.current.cancel(); setIsSpeaking(false); }
+                if (enabled) sounds.init();
               }}
               className="w-10 h-10 backdrop-blur-xl rounded-full flex items-center justify-center transition-all"
               style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.10)' }}

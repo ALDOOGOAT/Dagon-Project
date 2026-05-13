@@ -129,8 +129,8 @@ export const QuickPracticeMode = ({
           const data = await response.json();
           setCompletedLevels(data);
         }
-      } catch (error) {
-        console.log('Error fetching completed levels:', error);
+      } catch {
+        // La practica rapida puede funcionar con el progreso local si falla la red.
       }
     };
     fetchCompletedLevels();

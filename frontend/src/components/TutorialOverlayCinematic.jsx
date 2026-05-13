@@ -1,0 +1,567 @@
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { DagonMascot } from './DagonMascot';
+import { Button } from './ui/button';
+import {
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Volume2,
+  VolumeX,
+  Database,
+  Trophy,
+  Sparkles,
+  BookOpen,
+  Target,
+  PlayCircle,
+  User,
+  Flame,
+  Zap,
+  Compass,
+  HelpCircle,
+  Monitor,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { sounds } from '../lib/SoundEngine';
+
+const tutorialSteps = [
+  {
+    id: 'intro',
+    target: null,
+    eyebrow: 'Prólogo',
+    shot: 'Plano general',
+    title: 'Dagon abre tu mapa de aprendizaje',
+    content: 'Este recorrido funciona como un manual de usuario jugable. Dagon te va a señalar cada zona importante para que sepas dónde practicar, revisar tu avance y repetir el tutorial cuando lo necesites.',
+    voice: 'Bienvenido a Dagon. Este recorrido es tu manual de usuario interactivo. Te voy a señalar las zonas importantes para que sepas practicar, avanzar y revisar tu progreso desde el primer minuto.',
+    icon: Sparkles,
+    mood: 'excited',
+    cue: 'cinematic',
+  },
+  {
+    id: 'header',
+    target: 'header',
+    eyebrow: 'Centro de mando',
+    shot: 'Orientación',
+    title: 'Aquí sabes en qué parte del viaje estás',
+    content: 'La parte superior resume tu sesión actual. Desde aquí puedes reconocer tu cuenta, entrar al tour, controlar sonido, abrir tu perfil, cuidar tu racha y empezar una práctica rápida.',
+    voice: 'Esta es tu zona de mando. Aquí encuentras el tour, el sonido, tu perfil, tu racha y la práctica rápida. Si te pierdes, vuelve a esta parte.',
+    icon: Monitor,
+    mood: 'happy',
+    cue: 'focus',
+  },
+  {
+    id: 'progress',
+    target: 'progress',
+    eyebrow: 'Progreso',
+    shot: 'Perfil de aventura',
+    title: 'Tu avance no es decorativo',
+    content: 'Esta tarjeta muestra tu nivel, XP total, rango y estado de Dagon. Sirve para que veas si estás practicando con constancia y qué tan cerca estás del siguiente nivel.',
+    voice: 'Tu avance vive aquí. Revisa tu nivel, experiencia total, rango y progreso al siguiente nivel para saber si vas construyendo dominio real.',
+    icon: Trophy,
+    mood: 'happy',
+    cue: 'safe',
+  },
+  {
+    id: 'stats',
+    target: 'stats',
+    eyebrow: 'Indicadores',
+    shot: 'Lectura rápida',
+    title: 'Estos accesos te dicen qué cuidar',
+    content: 'Las tarjetas rápidas muestran racha, XP, ranking y rango. Úsalas como señales: si baja tu racha, entra a practicar; si sube tu XP, desbloqueas más contenido.',
+    voice: 'Estas tarjetas son señales rápidas. La racha mide constancia, la experiencia mide práctica, el ranking compara avance y el rango reconoce tu nivel.',
+    icon: Zap,
+    mood: 'determined',
+    cue: 'tick',
+  },
+  {
+    id: 'courses',
+    target: 'courses',
+    eyebrow: 'Sendas',
+    shot: 'Selección de ruta',
+    title: 'Elige cómo quieres aprender SQL',
+    content: 'Las sendas separan el aprendizaje por intención. Puedes iniciar desde misiones básicas o avanzar hacia rutas más arquitectónicas cuando ya entiendas la lógica.',
+    voice: 'Aquí eliges tu senda. Cada ruta organiza los módulos con una intención distinta, desde lo básico hasta una comprensión más arquitectónica.',
+    icon: Compass,
+    mood: 'thinking',
+    cue: 'switch',
+  },
+  {
+    id: 'modules',
+    target: 'modules',
+    eyebrow: 'Misiones',
+    shot: 'Mapa de niveles',
+    title: 'Cada módulo es una misión completa',
+    content: 'Entra desde las tarjetas de módulo. Las misiones bloqueadas te dicen cuánta XP necesitas. Las disponibles abren cinemática, teoría corta y ejercicios reales.',
+    voice: 'Cada módulo es una misión. Si está bloqueado, necesitas más experiencia. Si está disponible, entrarás a cinemática, teoría y ejercicios reales.',
+    icon: BookOpen,
+    mood: 'excited',
+    cue: 'challenge',
+  },
+  {
+    id: 'daily-challenge',
+    target: 'daily-challenge',
+    eyebrow: 'Reto diario',
+    shot: 'Presión sana',
+    title: 'La práctica corta mantiene el hábito',
+    content: 'El reto del día te da una entrada rápida cuando no tienes mucho tiempo. Resolver poco pero constante evita que SQL se vuelva memoria suelta.',
+    voice: 'El reto diario es para practicar sin fricción. Aunque tengas poco tiempo, entrar y resolver algo mantiene vivo el hábito.',
+    icon: Target,
+    mood: 'determined',
+    cue: 'build',
+  },
+  {
+    id: 'ranking',
+    target: 'ranking',
+    eyebrow: 'Competencia',
+    shot: 'Tabla de honor',
+    title: 'El ranking convierte el avance en referencia',
+    content: 'El top de aventureros te muestra cómo vas frente al grupo. No es para castigarte: es una referencia para mantener ritmo y curiosidad.',
+    voice: 'El ranking te da referencia de avance. Úsalo para mantener ritmo y curiosidad, no para frustrarte.',
+    icon: Trophy,
+    mood: 'happy',
+    cue: 'confirm',
+  },
+  {
+    id: 'profile',
+    target: 'profile',
+    eyebrow: 'Cuenta',
+    shot: 'Identidad',
+    title: 'Tu perfil concentra ajustes y progreso personal',
+    content: 'Desde Mi Perfil revisas datos de cuenta, avatar, preferencias visuales y estado general. Si algo del entorno no se siente tuyo, este es el primer lugar para ajustar.',
+    voice: 'En Mi Perfil puedes revisar tu cuenta, avatar, preferencias y progreso personal. Es tu zona de ajustes.',
+    icon: User,
+    mood: 'happy',
+    cue: 'select',
+  },
+  {
+    id: 'streaks',
+    target: 'streaks',
+    eyebrow: 'Rachas',
+    shot: 'Constancia',
+    title: 'La racha existe para que no abandones',
+    content: 'La racha te recuerda volver. Si estás aprendiendo desde cero, la constancia vale más que estudiar mucho un día y desaparecer una semana.',
+    voice: 'La racha te recuerda volver. Para aprender programación desde cero, la constancia pesa más que estudiar muchas horas una sola vez.',
+    icon: Flame,
+    mood: 'determined',
+    cue: 'risk',
+  },
+  {
+    id: 'quick-practice',
+    target: 'quick-practice',
+    eyebrow: 'Entrenamiento',
+    shot: 'Acción inmediata',
+    title: 'Práctica rápida es tu botón de calentamiento',
+    content: 'Si no sabes qué hacer, entra aquí. Te lanza ejercicios cortos para ganar XP, detectar dudas y llegar mejor preparado a los módulos largos.',
+    voice: 'Práctica rápida es tu calentamiento. Te ayuda a ganar experiencia, detectar dudas y prepararte antes de un módulo largo.',
+    icon: Target,
+    mood: 'excited',
+    cue: 'build',
+  },
+  {
+    id: 'sound-toggle',
+    target: 'sound-toggle',
+    eyebrow: 'Audio',
+    shot: 'Control global',
+    title: 'El botón de sonido controla música, efectos y narración',
+    content: 'Si activas silencio, Dagon deja de narrar y los efectos se apagan. Si lo vuelves a activar, regresan las pistas de audio del entorno.',
+    voice: 'Este botón controla el audio global. Silencia música, efectos y narración. Puedes activarlo de nuevo cuando quieras.',
+    icon: Volume2,
+    mood: 'thinking',
+    cue: 'switch',
+  },
+  {
+    id: 'tour-button',
+    target: 'tour-button',
+    eyebrow: 'Repetición',
+    shot: 'Reinicio guiado',
+    title: 'Puedes volver a ver este tutorial',
+    content: 'El botón Tutorial queda disponible para repetir este recorrido. Es útil si presentas el proyecto, si entra alguien nuevo o si quieres recordar dónde está cada herramienta.',
+    voice: 'El botón Tutorial sirve para repetir este recorrido. Úsalo para presentaciones, usuarios nuevos o para recordar cada herramienta.',
+    icon: HelpCircle,
+    mood: 'happy',
+    cue: 'safe',
+  },
+  {
+    id: 'finish',
+    target: null,
+    eyebrow: 'Inicio',
+    shot: 'Listo para jugar',
+    title: 'Ya puedes moverte por Dagon sin miedo',
+    content: 'Empieza por una senda, revisa el módulo recomendado o entra a práctica rápida. La meta no es adivinar: es entender qué hace cada consulta SQL.',
+    voice: 'Listo. Empieza por una senda, una misión recomendada o práctica rápida. La meta no es adivinar, es entender cada consulta SQL.',
+    icon: Sparkles,
+    mood: 'celebrating',
+    cue: 'confirm',
+  },
+];
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const createTourParticles = () => Array.from({ length: 18 }, (_, index) => {
+  const angle = index * 2.399963229728653;
+  const radius = 18 + (index % 6) * 9;
+  const left = clamp(50 + Math.cos(angle) * radius, 4, 96);
+  const top = clamp(50 + Math.sin(angle) * radius * 0.76, 7, 93);
+
+  return {
+    id: `tour-particle-${index}`,
+    left: `${left}%`,
+    top: `${top}%`,
+    drift: 70 + (index % 7) * 16,
+    duration: 4.4 + (index % 5) * 0.55,
+    delay: (index % 6) * 0.22,
+    scale: 0.9 + (index % 4) * 0.18,
+  };
+});
+
+export const TutorialOverlay = ({ isOpen, onClose }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [targetRect, setTargetRect] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => sounds.isEnabled());
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const particles = useMemo(() => createTourParticles(), []);
+  const step = tutorialSteps[currentStep];
+  const StepIcon = step.icon;
+  const progress = ((currentStep + 1) / tutorialSteps.length) * 100;
+
+  const updateTargetRect = useCallback(() => {
+    if (!isOpen || !step?.target || typeof document === 'undefined') {
+      setTargetRect(null);
+      return;
+    }
+
+    const element = document.querySelector(`[data-tour="${step.target}"]`);
+    if (!element) {
+      setTargetRect(null);
+      return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    setTargetRect({
+      top: clamp(rect.top - 10, 12, window.innerHeight - 80),
+      left: clamp(rect.left - 10, 12, window.innerWidth - 80),
+      width: Math.min(rect.width + 20, window.innerWidth - 24),
+      height: Math.min(rect.height + 20, window.innerHeight - 24),
+    });
+  }, [isOpen, step?.target]);
+
+  const cancelSpeech = useCallback(() => {
+    synthRef.current?.cancel();
+    setIsSpeaking(false);
+  }, []);
+
+  const speak = useCallback((text) => {
+    if (!soundEnabled || !sounds.speechAllowed() || !text || !isOpen) return;
+
+    const synth = synthRef.current;
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-MX';
+    utterance.rate = 0.94;
+    utterance.pitch = 1.05;
+    utterance.volume = 0.95;
+
+    const voices = synth.getVoices();
+    const spanishVoice = voices.find((voice) => voice.lang.includes('es-MX')) || voices.find((voice) => voice.lang.startsWith('es')) || voices[0];
+    if (spanishVoice) utterance.voice = spanishVoice;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    synth.speak(utterance);
+  }, [isOpen, soundEnabled]);
+
+  useEffect(() => {
+    const syncSound = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setSoundEnabled(enabled);
+      if (!enabled) cancelSpeech();
+    };
+
+    window.addEventListener('dagon:soundchange', syncSound);
+    syncSound();
+    return () => window.removeEventListener('dagon:soundchange', syncSound);
+  }, [cancelSpeech]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      cancelSpeech();
+      return;
+    }
+
+    setCurrentStep(0);
+    sounds.playCinematicCue?.('cinematic');
+  }, [isOpen, cancelSpeech]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    cancelSpeech();
+    sounds.playCinematicCue?.(step.cue || 'focus');
+
+    const target = step.target ? document.querySelector(`[data-tour="${step.target}"]`) : null;
+    target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+
+    updateTargetRect();
+    const rectTimer = setTimeout(updateTargetRect, 420);
+    const speechTimer = setTimeout(() => speak(step.voice), step.target ? 520 : 300);
+
+    return () => {
+      clearTimeout(rectTimer);
+      clearTimeout(speechTimer);
+      cancelSpeech();
+    };
+  }, [currentStep, isOpen, step, speak, updateTargetRect, cancelSpeech]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const handleViewportChange = () => updateTargetRect();
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [isOpen, updateTargetRect]);
+
+  useEffect(() => {
+    const synth = synthRef.current;
+    if (!synth) return undefined;
+
+    const loadVoices = () => synth.getVoices();
+    loadVoices();
+    if (synth.onvoiceschanged !== undefined) {
+      synth.onvoiceschanged = loadVoices;
+    }
+    return () => synth.cancel();
+  }, []);
+
+  const handleClose = () => {
+    cancelSpeech();
+    localStorage.setItem('dagon_tutorial_completed', 'true');
+    localStorage.removeItem('dagon_tutorial_pending');
+    localStorage.removeItem('dagon_first_login');
+    onClose?.();
+  };
+
+  const handleNext = () => {
+    sounds.playStep();
+    cancelSpeech();
+    if (currentStep < tutorialSteps.length - 1) {
+      setCurrentStep((value) => value + 1);
+      return;
+    }
+    handleClose();
+  };
+
+  const handlePrevious = () => {
+    sounds.playSelect();
+    cancelSpeech();
+    setCurrentStep((value) => Math.max(0, value - 1));
+  };
+
+  const toggleVoice = async () => {
+    const next = sounds.toggleEnabled({ restart: false });
+    setSoundEnabled(next);
+    if (next) {
+      await sounds.init();
+      sounds.playMagic();
+      speak(step.voice);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: 'easeOut' }}
+          className="tour-overlay-shell fixed inset-0 z-[100] overflow-hidden bg-slate-950/70 backdrop-blur-[14px]"
+        >
+          <div className="tour-cinematic-vignette absolute inset-0 pointer-events-none" />
+          <div className="tour-scanlines absolute inset-0 pointer-events-none" />
+
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {particles.map((particle) => (
+              <motion.div
+                key={particle.id}
+                className="tour-particle absolute w-1.5 h-1.5 bg-cyan-300/35 rounded-full blur-[1px]"
+                style={{ left: particle.left, top: particle.top }}
+                animate={{
+                  y: [0, -particle.drift, 0],
+                  opacity: [0, 1, 0],
+                  scale: [1, particle.scale, 1],
+                }}
+                transition={{
+                  duration: particle.duration,
+                  repeat: Infinity,
+                  delay: particle.delay,
+                  ease: 'easeInOut',
+                }}
+              />
+            ))}
+          </div>
+
+          {targetRect && (
+            <motion.div
+              key={`${step.id}-target`}
+              className="tour-spotlight fixed z-[101] pointer-events-none rounded-[24px]"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                top: targetRect.top,
+                left: targetRect.left,
+                width: targetRect.width,
+                height: targetRect.height,
+              }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            />
+          )}
+
+          <div className="relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
+            <motion.div
+              key={step.id}
+              initial={{ opacity: 0, y: 36, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/25 bg-slate-950/86 shadow-[0_30px_120px_rgba(0,0,0,0.58)]"
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/50 to-transparent" />
+
+              <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:grid lg:grid-cols-[250px_1fr] lg:p-8 xl:p-10">
+                <aside className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-center">
+                  <motion.div
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative"
+                  >
+                    <div className="absolute inset-0 scale-150 rounded-full bg-cyan-400/20 blur-3xl" />
+                    <DagonMascot size="xlarge" mood={step.mood} />
+                  </motion.div>
+
+                  <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4">
+                    <StepIcon className="mx-auto mb-2 h-8 w-8 text-cyan-200 drop-shadow-[0_0_14px_rgba(125,211,252,0.55)]" />
+                    <p className="font-display text-[10px] font-black uppercase tracking-[0.28em] text-cyan-200">
+                      {step.shot}
+                    </p>
+                  </div>
+                </aside>
+
+                <section className="min-w-0">
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-gameui text-[10px] font-black uppercase tracking-[0.32em] text-cyan-200">
+                        Capítulo {String(currentStep + 1).padStart(2, '0')} / {String(tutorialSteps.length).padStart(2, '0')} · {step.eyebrow}
+                      </p>
+                      <div className="mt-3 h-1.5 w-full max-w-xl overflow-hidden rounded-full border border-white/10 bg-black/45">
+                        <motion.div
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-200"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.45, ease: 'circOut' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={toggleVoice}
+                        className="tour-icon-button"
+                        title={soundEnabled ? 'Silenciar tutorial' : 'Activar sonido del tutorial'}
+                      >
+                        {isSpeaking ? <Volume2 className="h-4 w-4 text-cyan-200" /> : soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        className="tour-icon-button hover:border-rose-300/50 hover:text-rose-200"
+                        title="Cerrar tutorial"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: 18 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.12, duration: 0.35 }}
+                  >
+                    <h2 className="text-arcane-title max-w-4xl font-display text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
+                      {step.title}
+                    </h2>
+                    <p className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                      {step.content}
+                    </p>
+                  </motion.div>
+
+                  <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-300">
+                      <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(125,211,252,0.8)]" />
+                      {targetRect ? 'Elemento señalado en pantalla' : 'Escena introductoria'}
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Button
+                        onClick={handleClose}
+                        variant="ghost"
+                        className="h-12 rounded-xl border border-white/10 px-5 font-display font-black text-slate-300 hover:bg-white/5 hover:text-white"
+                      >
+                        Omitir
+                      </Button>
+                      <Button
+                        onClick={handlePrevious}
+                        disabled={currentStep === 0}
+                        variant="outline"
+                        className="h-12 rounded-xl border-white/15 bg-white/[0.03] px-5 font-display font-black text-white disabled:opacity-40"
+                      >
+                        <ChevronLeft className="mr-2 h-4 w-4" />
+                        Atrás
+                      </Button>
+                      <Button
+                        onClick={handleNext}
+                        className="h-12 rounded-xl bg-white px-6 font-display font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.24)] transition-all hover:bg-cyan-100"
+                      >
+                        {currentStep === tutorialSteps.length - 1 ? 'Comenzar' : 'Siguiente'}
+                        <ChevronRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export const TourTrigger = ({ onClick }) => {
+  return (
+    <Button
+      data-tour="tour-button"
+      onClick={onClick}
+      variant="outline"
+      size="sm"
+      className="group relative min-h-[44px] overflow-hidden rounded-xl border-2 border-cyan-300/70 bg-cyan-400/10 px-4 font-display font-black shadow-[0_12px_30px_rgba(34,211,238,0.22)] ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:border-cyan-200 hover:bg-cyan-400/20"
+    >
+      <div className="absolute inset-0 translate-x-[-100%] bg-gradient-to-r from-cyan-300/0 via-cyan-200/18 to-fuchsia-300/0 transition-transform duration-1000 group-hover:translate-x-[100%]" />
+      <span className="relative flex items-center gap-2 text-cyan-100">
+        <PlayCircle className="h-4 w-4" />
+        Tutorial
+      </span>
+    </Button>
+  );
+};

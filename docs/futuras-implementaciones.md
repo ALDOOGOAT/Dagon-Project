@@ -4,16 +4,18 @@ Checklist paso a paso para mejorar el proyecto completo: backend, frontend, base
 
 ## Fase 1: Orden y Diagnóstico Inicial
 
-- [ ] Revisar el estado actual del repositorio con `git status`.
-- [ ] Confirmar que el backend levanta correctamente con `cd backend && ./mvnw spring-boot:run`.
-- [ ] Confirmar que el frontend levanta correctamente con `cd frontend && yarn start`.
-- [ ] Confirmar que el servicio MPI levanta correctamente con `cd mpi_service && ./run_mpi.sh`.
-- [ ] Ejecutar el build del frontend con `cd frontend && yarn build`.
-- [ ] Ejecutar pruebas del backend con `cd backend && ./mvnw test`.
-- [ ] Revisar archivos duplicados, temporales o de respaldo que no deban estar en el flujo principal.
-- [ ] Eliminar `console.log`, `System.out.println` y logs innecesarios de producción.
-- [ ] Documentar qué script SQL es la fuente oficial de la base de datos.
+- [x] Revisar el estado actual del repositorio con `git status`.
+- [x] Confirmar que el backend levanta correctamente con `cd backend && ./mvnw spring-boot:run`.
+- [x] Confirmar que el frontend levanta correctamente con `cd frontend && yarn start`.
+- [x] Confirmar que el servicio MPI levanta correctamente con `cd mpi_service && ./run_mpi.sh`.
+- [x] Ejecutar el build del frontend con `cd frontend && yarn build`.
+- [x] Ejecutar pruebas del backend con `cd backend && ./mvnw test`.
+- [x] Revisar archivos duplicados, temporales o de respaldo que no deban estar en el flujo principal.
+- [x] Eliminar `console.log`, `System.out.println` y logs innecesarios de producción.
+- [x] Documentar qué script SQL es la fuente oficial de la base de datos.
 - [ ] Separar estructura limpia, datos semilla, datos de prueba y respaldos reales.
+
+Nota Fase 1: el respaldo oficial actual quedó documentado en `scripts/flujo_bd_dagon.md`. La separación física del SQL sigue pendiente porque requiere dividir un respaldo sensible en estructura, semillas y datos reales sin romper restauraciones.
 
 ## Fase 2: Seguridad del Backend
 
@@ -33,14 +35,14 @@ Checklist paso a paso para mejorar el proyecto completo: backend, frontend, base
 
 ## Fase 3: Correcciones y Refactor del Backend
 
-- [ ] Corregir la consulta de cursos completados en `ModuloService` agrupando correctamente la condición del usuario antes de `AND i.es_correcto = true`.
+- [x] Corregir la consulta de cursos completados en `ModuloService` agrupando correctamente la condición del usuario antes de `AND i.es_correcto = true`.
 - [ ] Unificar endpoints duplicados de ranking.
 - [ ] Evitar que controladores consulten datos sensibles directamente si la lógica pertenece a servicios.
 - [ ] Separar la lógica grande de `EjercicioService` en validadores por tipo de ejercicio.
 - [ ] Crear validadores específicos para `SELECT`, DML, DDL, diagramas, transacciones y ejercicios de práctica rápida.
 - [ ] Mantener el sandbox SQL con `search_path` controlado.
 - [ ] Mantener el rol `app_sandbox_user` sin permisos peligrosos.
-- [ ] Mejorar logs con logger formal.
+- [x] Mejorar logs con logger formal.
 - [ ] Agregar pruebas para login, registro, perfil, progreso, ranking y validación.
 - [ ] Agregar pruebas enfocadas en seguridad del sandbox SQL.
 

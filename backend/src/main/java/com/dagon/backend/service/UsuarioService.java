@@ -2,6 +2,8 @@ package com.dagon.backend.service;
 
 import com.dagon.backend.model.Usuario;
 import com.dagon.backend.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +11,8 @@ import java.util.Optional;
 
 @Service
 public class UsuarioService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UsuarioService.class);
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -72,9 +76,9 @@ public class UsuarioService {
                 jdbcTemplate.update(updateSql, hoy.toString(), usuarioId);
             }
 
-            System.out.println("✅ Práctica diaria registrada para el usuario con ID: " + usuarioId);
+            logger.debug("Practica diaria registrada para el usuario con ID: {}", usuarioId);
         } catch (Exception e) {
-            System.err.println("❌ Error al registrar práctica diaria: " + e.getMessage());
+            logger.warn("Error al registrar practica diaria: {}", e.getMessage());
         }
     }
 }

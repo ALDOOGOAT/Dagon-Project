@@ -1,5 +1,7 @@
 package com.dagon.backend.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -9,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 
 @Service
 public class ClawbotService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClawbotService.class);
 
     @Value("${ollama.url:http://localhost:11434}")
     private String ollamaUrl;
@@ -74,7 +78,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     return formatearRespuestaAnalisis(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Clawbot: Error con Gemini - " + e.getMessage());
+                logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
             }
         }
 
@@ -93,7 +97,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     return formatearRespuestaAnalisis(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Clawbot: Error con Groq - " + e.getMessage());
+                logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
             }
         }
 
@@ -126,7 +130,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     return formatearRespuestaChat(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Clawbot: Error con Gemini - " + e.getMessage());
+                logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
             }
         }
 
@@ -138,7 +142,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     return formatearRespuestaChat(respuesta);
                 }
             } catch (Exception e) {
-                System.err.println("Clawbot: Error con Groq - " + e.getMessage());
+                logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
             }
         }
 
@@ -147,7 +151,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
 
     private String callGeminiChat(String prompt) {
         if (geminiApiKey == null || geminiApiKey.isEmpty()) {
-            System.out.println("Clawbot: Gemini API key no configurada");
+            logger.debug("Clawbot: Gemini API key no configurada");
             return null;
         }
 
@@ -189,13 +193,13 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
                     if (!candidateParts.isEmpty()) {
                         String result = candidateParts.get(0).get("text").toString();
-                        System.out.println("Clawbot: Respuesta Gemini recibida, longitud: " + result.length());
+                        logger.debug("Clawbot: Respuesta Gemini recibida, longitud: {}", result.length());
                         return result;
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Clawbot: Gemini API error - " + e.getMessage());
+            logger.warn("Clawbot: Gemini API error: {}", e.getMessage());
         }
         return null;
     }
@@ -251,13 +255,13 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                     List<Map<String, Object>> candidateParts = (List<Map<String, Object>>) candidateContent.get("parts");
                     if (!candidateParts.isEmpty()) {
                         String result = candidateParts.get(0).get("text").toString();
-                        System.out.println("Clawbot: Análisis Gemini recibido para intento " + intentos);
+                        logger.debug("Clawbot: Analisis Gemini recibido para intento {}", intentos);
                         return result;
                     }
                 }
             }
         } catch (Exception e) {
-            System.err.println("Clawbot: Gemini Analysis error - " + e.getMessage());
+            logger.warn("Clawbot: Gemini Analysis error: {}", e.getMessage());
         }
         return null;
     }
@@ -293,7 +297,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                 return m.get("content").toString();
             }
         } catch (Exception e) {
-            System.err.println("Ollama API error: " + e.getMessage());
+            logger.warn("Ollama API error: {}", e.getMessage());
         }
         return null;
     }
@@ -335,7 +339,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                 return m.get("content").toString();
             }
         } catch (Exception e) {
-            System.err.println("Ollama analysis error: " + e.getMessage());
+            logger.warn("Ollama analysis error: {}", e.getMessage());
         }
         return null;
     }
@@ -371,7 +375,7 @@ private static final String SYSTEM_PROMPT_ANALYSIS =
                 }
             }
         } catch (Exception e) {
-            System.err.println("Groq API error: " + e.getMessage());
+            logger.warn("Groq API error: {}", e.getMessage());
         }
         return null;
     }

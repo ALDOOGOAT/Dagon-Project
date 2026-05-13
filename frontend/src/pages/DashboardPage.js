@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
-import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlay.jsx';
+import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlayCinematic.jsx';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
 import { QuickPracticeMode } from '../components/QuickPracticeMode';
@@ -54,23 +54,39 @@ export const DashboardPage = () => {
   const pillBg = isLight ? 'rgba(250, 204, 21, 0.14)' : 'rgba(6, 182, 212, 0.10)';
   const pillBorder = isLight ? 'rgba(245, 158, 11, 0.24)' : 'rgba(34, 211, 238, 0.30)';
   const pillText = isLight ? '#92400e' : '#cffafe';
-  const topActionClass = "border-2 font-display font-black text-sm w-full sm:w-auto justify-center rounded-xl shadow-[0_10px_28px_rgba(2,6,23,0.16)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.24)] transition-all";
+  const topActionClass = "min-h-[44px] border-2 ring-1 ring-white/10 font-display font-black text-sm w-full sm:w-auto justify-center rounded-xl px-4 backdrop-blur-xl shadow-[0_10px_28px_rgba(2,6,23,0.16)] hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(2,6,23,0.24)] transition-all";
   const topActionStyle = {
-    backgroundColor: isLight ? 'rgba(255,255,255,0.84)' : 'rgba(15,23,42,0.74)',
-    borderColor: isLight ? 'rgba(245,158,11,0.34)' : 'rgba(148,163,184,0.30)',
+    backgroundColor: isLight ? 'rgba(255,255,255,0.90)' : 'rgba(15,23,42,0.82)',
+    borderColor: isLight ? 'rgba(245,158,11,0.48)' : 'rgba(148,163,184,0.44)',
     color: headingColor,
-    boxShadow: isLight ? '0 12px 28px -20px rgba(180,83,9,0.55)' : '0 14px 36px -22px rgba(34,211,238,0.55)'
+    boxShadow: isLight ? '0 14px 32px -20px rgba(180,83,9,0.62)' : '0 16px 40px -22px rgba(34,211,238,0.62)'
   };
 
-  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('dagon_tutorial_completed'));
+  const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('dagon_tutorial_pending') === 'true' || !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
   const [showCertificado, setShowCertificado] = useState(false);
   const [certificadoData, setCertificadoData] = useState(null);
   const [certificadoCurso, setCertificadoCurso] = useState(null);
   const [userAvatar, setUserAvatar] = useState(null);
-  const [soundEnabled, setSoundEnabled] = useState(() => sounds.enabled);
+  const [soundEnabled, setSoundEnabled] = useState(() => sounds.isEnabled());
 
   useEffect(() => {
+    const syncSoundState = (event) => {
+      setSoundEnabled(event?.detail?.enabled ?? sounds.isEnabled());
+    };
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
+
+  useEffect(() => {
+    if (!soundEnabled) {
+      sounds.stopGameMusic();
+      sounds.stopBackgroundMusic();
+      return undefined;
+    }
+
+    sounds.init();
     if (showQuickPractice) {
       sounds.startGameMusic();
     } else {
@@ -81,7 +97,7 @@ export const DashboardPage = () => {
       sounds.stopGameMusic();
       sounds.stopBackgroundMusic();
     };
-  }, [showQuickPractice]);
+  }, [showQuickPractice, soundEnabled]);
 
   const { cursosCompletados, generarCertificado } = useCertificado(token);
 
@@ -189,15 +205,24 @@ export const DashboardPage = () => {
   };
 
   const handleToggleSound = async () => {
-    const next = !soundEnabled;
+    const next = sounds.toggleEnabled({ restart: false });
     setSoundEnabled(next);
     if (next) {
-      sounds.setEnabled(true);
       await sounds.init();
       sounds.playMagic();
-    } else {
-      sounds.setEnabled(false);
     }
+  };
+
+  const openTutorial = () => {
+    sounds.playSelect?.();
+    setShowTutorial(true);
+  };
+
+  const closeTutorial = () => {
+    localStorage.setItem('dagon_tutorial_completed', 'true');
+    localStorage.removeItem('dagon_tutorial_pending');
+    localStorage.removeItem('dagon_first_login');
+    setShowTutorial(false);
   };
 
   const handleLogout = () => {
@@ -256,7 +281,7 @@ export const DashboardPage = () => {
 
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
-      <TutorialOverlay isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+      <TutorialOverlay isOpen={showTutorial} onClose={closeTutorial} />
       <WelcomeCard />
       {showQuickPractice && (
         <QuickPracticeMode
@@ -268,10 +293,10 @@ export const DashboardPage = () => {
         />
       )}
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="dashboard-shell container mx-auto px-4 sm:px-6 lg:px-10 2xl:px-14 py-8 lg:py-12 max-w-[1560px]">
         {/* HEADER */}
-        <div className="flex justify-between items-start mb-8 gap-4 flex-wrap">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px]">
+        <div className="flex justify-between items-start mb-8 lg:mb-12 gap-6 lg:gap-10 flex-wrap" data-tour="header">
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px] max-w-3xl">
             <p className="arcane-kicker text-xs font-bold mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
@@ -283,9 +308,10 @@ export const DashboardPage = () => {
             </p>
           </motion.div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-            <TourTrigger onClick={() => setShowTutorial(true)} />
+          <div className="dashboard-top-actions flex flex-wrap items-center gap-2.5 lg:gap-3 w-full lg:w-auto lg:max-w-[720px] lg:justify-end">
+            <TourTrigger onClick={openTutorial} />
             <Button
+              data-tour="sound-toggle"
               onClick={handleToggleSound}
               variant="ghost"
               className={topActionClass}
@@ -296,6 +322,7 @@ export const DashboardPage = () => {
               <span className="hidden sm:inline">{soundEnabled ? 'Sonido' : 'Silencio'}</span>
             </Button>
             <Button
+              data-tour="profile"
               onClick={() => navigate('/profile')}
               className={topActionClass}
               style={topActionStyle}
@@ -305,6 +332,7 @@ export const DashboardPage = () => {
             </Button>
             {userStreak > 0 ? (
               <Button
+                data-tour="streaks"
                 onClick={() => navigate('/streak')}
                 className={topActionClass}
                 style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, rgba(245,158,11,0.95), rgba(251,146,60,0.95))' : 'rgba(124,45,18,0.34)', borderColor: 'rgba(251,146,60,0.70)', color: isLight ? '#1f2937' : '#ffffff' }}
@@ -314,6 +342,7 @@ export const DashboardPage = () => {
               </Button>
             ) : (
               <Button
+                data-tour="streaks"
                 onClick={() => navigate('/streak')}
                 variant="ghost"
                 className={topActionClass}
@@ -324,6 +353,7 @@ export const DashboardPage = () => {
               </Button>
             )}
             <Button
+              data-tour="quick-practice"
               onClick={() => setShowQuickPractice(true)}
               className={`${topActionClass} tracking-wide hover:scale-[1.03]`}
               style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, borderColor: isLight ? 'rgba(251,146,60,0.72)' : 'rgba(34,211,238,0.72)', color: isLight ? '#1f2937' : '#ffffff' }}
@@ -342,7 +372,8 @@ export const DashboardPage = () => {
         {/* PLAYER HERO CARD */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="glass-card-apple rounded-3xl p-6 lg:p-8 border mb-8 holo-border relative overflow-hidden"
+          className="glass-card-apple rounded-3xl p-6 lg:p-9 xl:p-10 border mb-8 lg:mb-10 holo-border relative overflow-hidden"
+          data-tour="progress"
           style={{ borderColor: colors.border }}
         >
           <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }} />
@@ -416,6 +447,7 @@ export const DashboardPage = () => {
 
         {/* ACADEMIA POSTGRESQL */}
         <motion.button
+          data-tour="postgres-academy"
           type="button"
           onClick={() => {
             sounds.playClick();
@@ -424,7 +456,7 @@ export const DashboardPage = () => {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
-          className="w-full glass-card-apple rounded-3xl p-5 sm:p-6 border mb-8 text-left group relative overflow-hidden"
+          className="w-full glass-card-apple rounded-3xl p-5 sm:p-6 lg:p-7 border mb-8 lg:mb-10 text-left group relative overflow-hidden"
           style={{ borderColor: `${colors.primary}3d` }}
         >
           <div className="absolute inset-y-0 right-0 w-1/2 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}14, ${colors.secondary}12)` }} />
@@ -468,7 +500,8 @@ export const DashboardPage = () => {
         {/* STATS QUICK BAR */}
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+          className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-5 mb-6 lg:mb-8"
+          data-tour="stats"
         >
           <button
             onClick={() => navigate('/streak')}
@@ -556,7 +589,7 @@ export const DashboardPage = () => {
           <DidacticCard />
 
           {/* SELECTOR DE CURSOS / SENDAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
             {cursos.map(curso => (
                 <button 
                   key={curso.id_curso}
@@ -605,7 +638,8 @@ export const DashboardPage = () => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="glass-card-apple rounded-3xl p-5 sm:p-6 border mb-8 relative overflow-hidden"
+            className="glass-card-apple rounded-3xl p-5 sm:p-6 lg:p-7 border mb-8 lg:mb-10 relative overflow-hidden"
+            data-tour="recommended"
             style={{ borderColor: `${colors.primary}40` }}
           >
             <div className="absolute inset-y-0 right-0 w-2/5 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary}16)` }} />
@@ -678,9 +712,9 @@ export const DashboardPage = () => {
         )}
 
         {/* MAIN GRID */}
-        <div className="grid lg:grid-cols-[1fr_320px] gap-8">
+        <div className="grid xl:grid-cols-[minmax(0,1fr)_360px] gap-8 xl:gap-10 2xl:gap-12">
           {/* SENDERO DE NIVELES DEL CURSO ACTIVO */}
-          <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
+          <div className="glass-card-apple rounded-3xl p-6 lg:p-8 xl:p-10 border relative overflow-hidden" data-tour="modules" style={{ borderColor: colors.border }}>
             <div className="absolute -top-32 -right-32 w-72 h-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.10)' : 'rgba(59,130,246,0.10)' }} />
 
             <div className="flex items-center justify-between mb-8 flex-wrap gap-3">
@@ -799,8 +833,8 @@ export const DashboardPage = () => {
           </div>
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
-          <aside className="space-y-6">
-            <motion.div className="glass-card-apple rounded-3xl p-6 border border-white/10 relative overflow-hidden holo-border">
+          <aside className="space-y-6 xl:space-y-7">
+            <motion.div className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
                 <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
@@ -822,7 +856,8 @@ export const DashboardPage = () => {
             {/* Mini leaderboard (RESTAURADO) */}
             <motion.div
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl p-6 border"
+              className="glass-card-apple rounded-3xl p-6 xl:p-7 border"
+              data-tour="ranking"
               style={{ borderColor: colors.border }}
             >
               <div className="flex items-center justify-between mb-4">
@@ -878,7 +913,7 @@ export const DashboardPage = () => {
             {/* Botón Créditos / Equipo Dagon */}
             <motion.div
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="glass-card-apple rounded-3xl p-6 border cursor-pointer group"
+              className="glass-card-apple rounded-3xl p-6 xl:p-7 border cursor-pointer group"
               style={{ borderColor: colors.border }}
               onClick={() => navigate('/credits')}
             >

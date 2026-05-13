@@ -1,12 +1,15 @@
 class SoundEngine {
   constructor() {
     this.audioContext = null;
-    this.enabled = true;
+    this.enabled = this.readStoredEnabled();
     this.initialized = false;
     this.bgMusicNodes = null;
     this.gameMusicNodes = null;
     this.twinkleTimeout = null;
+    this.activeAssets = new Set();
     this.assetCooldown = new Map();
+    this.storageKey = 'dagon_sound_enabled';
+    this.changeEvent = 'dagon:soundchange';
     this.assetBase = `${process.env.PUBLIC_URL || ''}/assets/sounds/kenney-interface`;
     this.assetMap = {
       cinematic: 'open_001.ogg',
@@ -19,6 +22,45 @@ class SoundEngine {
     };
   }
 
+  readStoredEnabled() {
+    if (typeof window === 'undefined') return true;
+    return window.localStorage.getItem('dagon_sound_enabled') !== 'false';
+  }
+
+  persistEnabled() {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('dagon_sound_enabled', this.enabled ? 'true' : 'false');
+  }
+
+  emitSoundChange() {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent(this.changeEvent, { detail: { enabled: this.enabled } }));
+  }
+
+  isEnabled() {
+    return this.enabled;
+  }
+
+  speechAllowed() {
+    return this.enabled && typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+  }
+
+  stopSpeech() {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  stopActiveAssets() {
+    this.activeAssets.forEach((audio) => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (e) {}
+    });
+    this.activeAssets.clear();
+  }
+
   async init() {
     if (this.initialized) {
       await this.resume();
@@ -28,14 +70,16 @@ class SoundEngine {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.audioContext = new AudioContext();
       this.initialized = true;
-      console.log('🔊 SoundEngine initialized');
-      this.startBackgroundMusic();
+      if (this.enabled) {
+        this.startBackgroundMusic();
+      }
     } catch (e) {
       console.warn('Audio not supported:', e);
     }
   }
 
   resume() {
+    if (!this.enabled) return Promise.resolve();
     if (this.audioContext && this.audioContext.state === 'suspended') {
       return this.audioContext.resume();
     }
@@ -72,7 +116,11 @@ class SoundEngine {
     try {
       const audio = new Audio(`${this.assetBase}/${file}`);
       audio.volume = volume;
-      audio.play().catch(() => {});
+      const cleanup = () => this.activeAssets.delete(audio);
+      audio.addEventListener('ended', cleanup, { once: true });
+      audio.addEventListener('pause', cleanup, { once: true });
+      this.activeAssets.add(audio);
+      audio.play().catch(() => cleanup());
       return true;
     } catch (e) {
       return false;
@@ -84,21 +132,33 @@ class SoundEngine {
   playStep() { if (!this.playAsset('switch', 0.24)) this.playTone(220, 0.1, 'triangle', 0.3); }
   playHover() { this.playTone(900, 0.03, 'sine', 0.12); }
 
-  setEnabled(enabled) {
-    this.enabled = enabled;
-    if (!enabled) {
+  setEnabled(enabled, options = {}) {
+    const { restart = true } = options;
+    const next = Boolean(enabled);
+    const changed = this.enabled !== next;
+    this.enabled = next;
+    this.persistEnabled();
+    if (!next) {
       this.stopBackgroundMusic();
       this.stopGameMusic();
+      this.stopActiveAssets();
+      this.stopSpeech();
+      if (this.twinkleTimeout) {
+        clearTimeout(this.twinkleTimeout);
+        this.twinkleTimeout = null;
+      }
+      if (changed) this.emitSoundChange();
       return;
     }
-    if (this.initialized) {
+    if (changed) this.emitSoundChange();
+    if (restart && this.initialized) {
       this.startBackgroundMusic();
     }
   }
 
-  toggleEnabled() {
+  toggleEnabled(options = {}) {
     const next = !this.enabled;
-    this.setEnabled(next);
+    this.setEnabled(next, options);
     return next;
   }
 
@@ -217,6 +277,7 @@ class SoundEngine {
   startBackgroundMusic() {
     if (!this.enabled || !this.audioContext || this.bgMusicNodes) return;
     this.resume().then(() => {
+      if (!this.enabled || this.bgMusicNodes) return;
       const masterGain = this.audioContext.createGain();
       masterGain.gain.setValueAtTime(0, this.audioContext.currentTime);
       masterGain.gain.linearRampToValueAtTime(0.06, this.audioContext.currentTime + 3);
@@ -261,9 +322,16 @@ class SoundEngine {
   }
 
   stopBackgroundMusic() {
-    if (this.twinkleTimeout) clearTimeout(this.twinkleTimeout);
+    if (this.twinkleTimeout) {
+      clearTimeout(this.twinkleTimeout);
+      this.twinkleTimeout = null;
+    }
     if (!this.bgMusicNodes) return;
     const { nodes, masterGain } = this.bgMusicNodes;
+    if (!this.audioContext) {
+      this.bgMusicNodes = null;
+      return;
+    }
     masterGain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 1.5);
     setTimeout(() => {
       try { nodes.forEach(n => { n.osc1.stop(); n.osc2.stop(); }); } catch (e) {}

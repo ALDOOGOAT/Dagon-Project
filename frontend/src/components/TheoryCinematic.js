@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
 import { Volume2, VolumeX, SkipForward, ChevronRight } from 'lucide-react';
+import { sounds } from '../lib/SoundEngine';
 
 const THEORY_SCRIPTS = {
   "nivel-0": {
@@ -116,7 +117,7 @@ export const TheoryCinematic = ({
 }) => {
   const [currentScene, setCurrentScene] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => !sounds.isEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showConcepts, setShowConcepts] = useState(false);
   const [highlightedConcept, setHighlightedConcept] = useState(null);
@@ -126,6 +127,21 @@ export const TheoryCinematic = ({
 
   const theoryData = THEORY_SCRIPTS[levelId] || THEORY_SCRIPTS['nivel-0'];
   const scene = theoryData.scenes[currentScene];
+
+  useEffect(() => {
+    const syncSoundState = (event) => {
+      const enabled = event?.detail?.enabled ?? sounds.isEnabled();
+      setIsMuted(!enabled);
+      if (!enabled) {
+        window.speechSynthesis?.cancel();
+        setIsSpeaking(false);
+      }
+    };
+
+    window.addEventListener('dagon:soundchange', syncSoundState);
+    syncSoundState();
+    return () => window.removeEventListener('dagon:soundchange', syncSoundState);
+  }, []);
 
   useEffect(() => {
     if (isPlaying && scene && currentScene === 0) {
@@ -138,7 +154,7 @@ export const TheoryCinematic = ({
       setHighlightedConcept(scene.highlight);
       
       // Speech synthesis with better voice loading
-      if (!isMuted && window.speechSynthesis) {
+      if (!isMuted && sounds.speechAllowed()) {
         window.speechSynthesis.cancel();
         
         const speakWithVoice = () => {
@@ -196,10 +212,12 @@ export const TheoryCinematic = ({
   }, [currentScene, isPlaying, isMuted, scene, theoryData.scenes.length]);
 
   const toggleMute = () => {
-    if (!isMuted && speechRef.current) {
+    const enabled = sounds.toggleEnabled({ restart: false });
+    setIsMuted(!enabled);
+    if (!enabled && speechRef.current) {
       window.speechSynthesis.cancel();
     }
-    setIsMuted(!isMuted);
+    if (enabled) sounds.init();
   };
 
   const skipToEnd = () => {
