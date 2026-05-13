@@ -3,6 +3,7 @@ import { DagonMascot } from './DagonMascot';
 import { Button } from '../components/ui/button';
 import { Volume2, VolumeX, MessageCircle, Sparkles, X, RefreshCw, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { sounds } from '../lib/SoundEngine';
 
 const MENSAJES = {
   intro: [
