@@ -18,6 +18,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -43,13 +45,14 @@ class UsuarioControllerTest {
 
     @Test
     void registroDevuelveDtoSeguroSinPasswordHash() {
-        Usuario entrada = new Usuario();
-        entrada.setNombre("Aldo");
-        entrada.setEmail("aldo@example.com");
-        entrada.setPasswordHash("secreto");
+        Map<String, Object> entrada = Map.of(
+                "nombre", "Aldo",
+                "email", "aldo@example.com",
+                "passwordHash", "secreto"
+        );
 
         Usuario guardado = usuario("Aldo", "aldo@example.com", "hash-real");
-        when(usuarioService.registrarUsuario(entrada)).thenReturn(guardado);
+        when(usuarioService.registrarUsuario(any(Usuario.class), eq("alumno"))).thenReturn(guardado);
         when(jwtUtil.generarToken(guardado.getIdUsuario().toString())).thenReturn("jwt");
 
         ResponseEntity<?> response = controller.registrarUsuario(entrada);
