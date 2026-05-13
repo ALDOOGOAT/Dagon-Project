@@ -37,7 +37,7 @@ public class UsuarioService {
     private JdbcTemplate jdbcTemplate;
 
     // --- FUNCION 1: REGISTRO ---
-    public Usuario registrarUsuario(Usuario nuevoUsuario) {
+    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
         Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(nuevoUsuario.getEmail());
         if (usuarioExistente.isPresent()) {
             throw new RuntimeException("Error: Este correo ya está registrado en Dagon.");
@@ -45,7 +45,27 @@ public class UsuarioService {
         if (nuevoUsuario.getActivo() == null) {
             nuevoUsuario.setActivo(true);
         }
+
+        Integer idRol = resolverIdRol(rol);
+        nuevoUsuario.setIdRol(idRol);
+
         return usuarioRepository.save(nuevoUsuario);
+    }
+
+    public Usuario registrarUsuario(Usuario nuevoUsuario) {
+        return registrarUsuario(nuevoUsuario, "alumno");
+    }
+
+    private Integer resolverIdRol(String rol) {
+        if (rol == null || rol.isBlank()) rol = "alumno";
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT id_rol FROM lms_core.roles WHERE nombre = ?",
+                    Integer.class, rol.toLowerCase().trim());
+        } catch (Exception e) {
+            logger.warn("Rol '{}' no encontrado, asignando alumno por defecto", rol);
+            return 1;
+        }
     }
 
     // --- FUNCION 2: LOGIN ---
