@@ -196,9 +196,9 @@ const tutorialSteps = [
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-const createTourParticles = () => Array.from({ length: 18 }, (_, index) => {
+const createTourParticles = () => Array.from({ length: 8 }, (_, index) => {
   const angle = index * 2.399963229728653;
-  const radius = 18 + (index % 6) * 9;
+  const radius = 20 + (index % 4) * 12;
   const left = clamp(50 + Math.cos(angle) * radius, 4, 96);
   const top = clamp(50 + Math.sin(angle) * radius * 0.76, 7, 93);
 
@@ -206,10 +206,10 @@ const createTourParticles = () => Array.from({ length: 18 }, (_, index) => {
     id: `tour-particle-${index}`,
     left: `${left}%`,
     top: `${top}%`,
-    drift: 70 + (index % 7) * 16,
-    duration: 4.4 + (index % 5) * 0.55,
-    delay: (index % 6) * 0.22,
-    scale: 0.9 + (index % 4) * 0.18,
+    drift: 70 + (index % 5) * 18,
+    duration: 5 + (index % 3) * 0.8,
+    delay: (index % 4) * 0.3,
+    scale: 0.9 + (index % 3) * 0.2,
   };
 });
 
@@ -299,17 +299,16 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     if (!isOpen) return undefined;
 
     cancelSpeech();
-    sounds.playCinematicCue?.(step.cue || 'focus');
 
     const target = step.target ? document.querySelector(`[data-tour="${step.target}"]`) : null;
-    target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+    target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
 
     updateTargetRect();
-    const rectTimer = setTimeout(updateTargetRect, 420);
-    const speechTimer = setTimeout(() => speak(step.voice), step.target ? 520 : 300);
+    const rectTimer = requestAnimationFrame(() => updateTargetRect());
+    const speechTimer = setTimeout(() => speak(step.voice), 150);
 
     return () => {
-      clearTimeout(rectTimer);
+      cancelAnimationFrame(rectTimer);
       clearTimeout(speechTimer);
       cancelSpeech();
     };
@@ -318,14 +317,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const handleViewportChange = () => updateTargetRect();
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange, true);
+    const handleResize = () => updateTargetRect();
+    window.addEventListener('resize', handleResize);
 
-    return () => {
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, [isOpen, updateTargetRect]);
 
   useEffect(() => {
@@ -349,19 +344,20 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
   };
 
   const handleNext = () => {
-    sounds.playStep();
     cancelSpeech();
     if (currentStep < tutorialSteps.length - 1) {
       setCurrentStep((value) => value + 1);
+      // Sonido después del cambio de estado para no bloquear
+      requestAnimationFrame(() => sounds.playStep());
       return;
     }
     handleClose();
   };
 
   const handlePrevious = () => {
-    sounds.playSelect();
     cancelSpeech();
     setCurrentStep((value) => Math.max(0, value - 1));
+    requestAnimationFrame(() => sounds.playSelect());
   };
 
   const toggleVoice = async () => {
@@ -382,72 +378,79 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="tour-overlay-shell fixed inset-0 z-[100] overflow-hidden bg-slate-950/70 backdrop-blur-[14px]"
+          className="tour-overlay-shell fixed inset-0 z-[100] overflow-hidden"
         >
-          <div className="tour-cinematic-vignette absolute inset-0 pointer-events-none" />
-          <div className="tour-scanlines absolute inset-0 pointer-events-none" />
+          {/* Overlay oscuro con hueco recortado donde está el target */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+            <defs>
+              <mask id="tour-cutout-mask">
+                <rect width="100%" height="100%" fill="white" />
+                {targetRect && (
+                  <rect
+                    x={targetRect.left}
+                    y={targetRect.top}
+                    width={targetRect.width}
+                    height={targetRect.height}
+                    rx="24"
+                    fill="black"
+                    className="tour-mask-hole"
+                  />
+                )}
+              </mask>
+            </defs>
+            <rect
+              width="100%"
+              height="100%"
+              fill="rgba(2, 6, 23, 0.74)"
+              mask="url(#tour-cutout-mask)"
+            />
+          </svg>
 
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
             {particles.map((particle) => (
-              <motion.div
+              <div
                 key={particle.id}
                 className="tour-particle absolute w-1.5 h-1.5 bg-cyan-300/35 rounded-full blur-[1px]"
-                style={{ left: particle.left, top: particle.top }}
-                animate={{
-                  y: [0, -particle.drift, 0],
-                  opacity: [0, 1, 0],
-                  scale: [1, particle.scale, 1],
-                }}
-                transition={{
-                  duration: particle.duration,
-                  repeat: Infinity,
-                  delay: particle.delay,
-                  ease: 'easeInOut',
+                style={{
+                  left: particle.left,
+                  top: particle.top,
+                  animation: `tour-float ${particle.duration}s ease-in-out ${particle.delay}s infinite`,
+                  '--tour-drift': `${particle.drift}px`,
                 }}
               />
             ))}
           </div>
 
           {targetRect && (
-            <motion.div
-              key={`${step.id}-target`}
-              className="tour-spotlight fixed z-[101] pointer-events-none rounded-[24px]"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{
-                opacity: 1,
-                scale: 1,
+            <div
+              className="tour-spotlight fixed pointer-events-none rounded-[24px]"
+              style={{
+                zIndex: 3,
                 top: targetRect.top,
                 left: targetRect.left,
                 width: targetRect.width,
                 height: targetRect.height,
               }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
             />
           )}
 
           <div className="relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
             <motion.div
-              key={step.id}
-              initial={{ opacity: 0, y: 36, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.98 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/25 bg-slate-950/86 shadow-[0_30px_120px_rgba(0,0,0,0.58)]"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
+              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]"
             >
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/70 to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/50 to-transparent" />
+              <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/60 to-transparent" />
 
               <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:grid lg:grid-cols-[250px_1fr] lg:p-8 xl:p-10">
-                <aside className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-center">
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    className="relative"
-                  >
-                    <div className="absolute inset-0 scale-150 rounded-full bg-cyan-400/20 blur-3xl" />
-                    <DagonMascot size="xlarge" mood={step.mood} />
-                  </motion.div>
+                <aside className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center">
+                  <div className="relative tour-mascot-float">
+                    <div className="absolute inset-0 scale-150 rounded-full bg-cyan-400/20 blur-2xl" />
+                    <DagonMascot size="xlarge" mood={step.mood} animated={false} />
+                  </div>
 
                   <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4">
                     <StepIcon className="mx-auto mb-2 h-8 w-8 text-cyan-200 drop-shadow-[0_0_14px_rgba(125,211,252,0.55)]" />
@@ -464,11 +467,9 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                         Capítulo {String(currentStep + 1).padStart(2, '0')} / {String(tutorialSteps.length).padStart(2, '0')} · {step.eyebrow}
                       </p>
                       <div className="mt-3 h-1.5 w-full max-w-xl overflow-hidden rounded-full border border-white/10 bg-black/45">
-                        <motion.div
-                          className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-200"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${progress}%` }}
-                          transition={{ duration: 0.45, ease: 'circOut' }}
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-200 transition-[width] duration-200 ease-out"
+                          style={{ width: `${progress}%` }}
                         />
                       </div>
                     </div>
@@ -493,21 +494,17 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  <motion.div
-                    initial={{ opacity: 0, x: 18 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.12, duration: 0.35 }}
-                  >
+                  <div className="tour-step-content">
                     <h2 className="text-arcane-title max-w-4xl font-display text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
                       {step.title}
                     </h2>
-                    <p className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-300 sm:text-lg">
+                    <p className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-100 sm:text-lg">
                       {step.content}
                     </p>
-                  </motion.div>
+                  </div>
 
                   <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-300">
+                    <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-200">
                       <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(125,211,252,0.8)]" />
                       {targetRect ? 'Elemento señalado en pantalla' : 'Escena introductoria'}
                     </div>

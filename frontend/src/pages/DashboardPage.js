@@ -296,7 +296,7 @@ export const DashboardPage = () => {
       <div className="dashboard-shell container mx-auto px-4 sm:px-6 lg:px-10 2xl:px-14 py-8 lg:py-12 max-w-[1560px]">
         {/* HEADER */}
         <div className="flex justify-between items-start mb-8 lg:mb-12 gap-6 lg:gap-10 flex-wrap" data-tour="header">
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 min-w-[260px] max-w-3xl">
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="flex-1 min-w-[260px] max-w-3xl">
             <p className="arcane-kicker text-xs font-bold mb-2" style={{ color: colors.accent }}>
               {todayDay} · Bienvenido de vuelta
             </p>
@@ -371,13 +371,23 @@ export const DashboardPage = () => {
 
         {/* PLAYER HERO CARD */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+          initial={{ opacity: 0, y: 30, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="glass-card-apple rounded-3xl p-6 lg:p-9 xl:p-10 border mb-8 lg:mb-10 holo-border relative overflow-hidden"
           data-tour="progress"
           style={{ borderColor: colors.border }}
         >
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }} />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(37,99,235,0.15)' }} />
+          <motion.div
+            className="absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none"
+            style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.14)' : 'rgba(192,38,211,0.15)' }}
+            animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.div
+            className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none"
+            style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(37,99,235,0.15)' }}
+            animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.9, 0.5] }}
+            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          />
 
           <div className="relative z-10 grid gap-6 md:gap-8 lg:grid-cols-[auto_1fr_auto] items-center">
             <div className="flex items-center justify-center lg:justify-start gap-5">
@@ -431,9 +441,14 @@ export const DashboardPage = () => {
             </div>
 
             <div className="text-center lg:text-right">
-              <p className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
+              <motion.p
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.4, type: 'spring', stiffness: 300, damping: 15 }}
+                className="font-display text-5xl sm:text-6xl lg:text-7xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}
+              >
                 {userXP}
-              </p>
+              </motion.p>
               <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP Totales</p>
               {userStreak > 0 && (
                 <div className="flex items-center gap-1 mt-3 justify-end">
@@ -498,108 +513,65 @@ export const DashboardPage = () => {
         </motion.button>
 
         {/* STATS QUICK BAR */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        <div
           className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-5 mb-6 lg:mb-8"
           data-tour="stats"
         >
-          <button
-            onClick={() => navigate('/streak')}
-            className="glass-card-apple rounded-2xl p-4 border border-orange-500/30 hover:border-orange-400/60 transition-all group text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/30 to-rose-500/20 flex items-center justify-center border border-orange-400/30 group-hover:scale-110 transition-transform">
-                <Flame className="w-5 h-5 text-orange-400" />
+          {[
+            { onClick: () => navigate('/streak'), borderColor: 'border-orange-500/30 hover:border-orange-400/60', iconBg: 'bg-gradient-to-br from-orange-500/30 to-rose-500/20', iconBorder: 'border-orange-400/30', icon: <Flame className="w-5 h-5 text-orange-400" />, value: userStreak || 0, label: 'Días', delay: 0.1 },
+            { onClick: () => navigate('/profile'), borderStyle: { borderColor: `${colors.primary}40` }, iconStyle: { backgroundColor: `${colors.primary}20`, borderColor: `${colors.primary}40` }, icon: <Zap className="w-5 h-5" style={{ color: colors.primary }} />, value: userXP, label: 'XP Total', delay: 0.17 },
+            { onClick: () => navigate('/leaderboard'), borderStyle: { borderColor: `${colors.accent}40` }, iconStyle: { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` }, icon: <Trophy className="w-5 h-5" style={{ color: colors.accent }} />, value: userRank !== '-' ? `#${userRank}` : '-', label: 'Ranking', delay: 0.24 },
+            { onClick: () => navigate('/profile'), borderStyle: { borderColor: `${colors.secondary}40` }, iconStyle: { backgroundColor: `${colors.secondary}20`, borderColor: `${colors.secondary}40` }, icon: <Crown className="w-5 h-5" style={{ color: colors.secondary }} />, value: title.name, label: 'Rango', delay: 0.31, isText: true },
+          ].map((stat, i) => (
+            <motion.button
+              key={i}
+              onClick={stat.onClick}
+              initial={{ opacity: 0, y: 24, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: stat.delay, type: 'spring', stiffness: 300, damping: 22 }}
+              whileHover={{ y: -4, scale: 1.03, transition: { duration: 0.2 } }}
+              whileTap={{ scale: 0.97 }}
+              className={`glass-card-apple rounded-2xl p-4 border transition-colors group text-left ${stat.borderColor || ''}`}
+              style={stat.borderStyle || {}}
+            >
+              <div className="flex items-center gap-3">
+                <motion.div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.iconBg || ''} ${stat.iconBorder || ''}`}
+                  style={stat.iconStyle || {}}
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  transition={{ type: 'spring', stiffness: 400 }}
+                >
+                  {stat.icon}
+                </motion.div>
+                <div>
+                  <p className={`font-display font-black ${stat.isText ? 'text-lg truncate max-w-[100px]' : 'text-2xl'}`} style={{ color: headingColor }}>{stat.value}</p>
+                  <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>{stat.label}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userStreak || 0}</p>
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Días</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/profile')}
-            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
-            style={{ borderColor: `${colors.primary}40` }}
-          >
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
-                style={{ 
-                  backgroundColor: `${colors.primary}20`,
-                  borderColor: `${colors.primary}40`
-                }}
-              >
-                <Zap className="w-5 h-5" style={{ color: colors.primary }} />
-              </div>
-              <div>
-                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userXP}</p>
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>XP Total</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/leaderboard')}
-            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
-            style={{ borderColor: `${colors.accent}40` }}
-          >
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
-                style={{ 
-                  backgroundColor: `${colors.accent}20`,
-                  borderColor: `${colors.accent}40`
-                }}
-              >
-                <Trophy className="w-5 h-5" style={{ color: colors.accent }} />
-              </div>
-              <div>
-                <p className="font-display text-2xl font-black" style={{ color: headingColor }}>{userRank !== '-' ? `#${userRank}` : '-'}</p>
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Ranking</p>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => navigate('/profile')}
-            className="glass-card-apple rounded-2xl p-4 border transition-all group text-left"
-            style={{ borderColor: `${colors.secondary}40` }}
-          >
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-10 h-10 rounded-xl flex items-center justify-center border group-hover:scale-110 transition-transform"
-                style={{ 
-                  backgroundColor: `${colors.secondary}20`,
-                  borderColor: `${colors.secondary}40`
-                }}
-              >
-                <Crown className="w-5 h-5" style={{ color: colors.secondary }} />
-              </div>
-              <div>
-                <p className="font-display text-lg font-black truncate max-w-[100px]" style={{ color: headingColor }}>{title.name}</p>
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>Rango</p>
-              </div>
-            </div>
-          </button>
-          </motion.div>
+            </motion.button>
+          ))}
+        </div>
 
           {/* DIDACTIC CARDS */}
           <DidacticCard />
 
           {/* SELECTOR DE CURSOS / SENDAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
-            {cursos.map(curso => (
-                <button 
+            {cursos.map((curso, i) => (
+                <motion.button
                   key={curso.id_curso}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 250, damping: 22 }}
+                  whileHover={{ y: -3, scale: 1.015, transition: { duration: 0.2 } }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     sounds.playClick();
                     setCursoActivoId(curso.id_curso);
                   }}
-                  className={`p-6 rounded-2xl border-2 transition-all flex items-center justify-between group ${
-                      cursoActivoId === curso.id_curso 
-                        ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]' 
+                  className={`p-6 rounded-2xl border-2 transition-colors flex items-center justify-between group ${
+                      cursoActivoId === curso.id_curso
+                        ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]'
                         : 'border-white/10 hover:border-slate-500'
                   }`}
                   style={{
@@ -608,36 +580,51 @@ export const DashboardPage = () => {
                   }}
                 >
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors`}
+                        <motion.div
+                          className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors"
+                          animate={cursoActivoId === curso.id_curso ? { rotate: [0, -5, 5, 0], scale: [1, 1.05, 1] } : {}}
+                          transition={{ duration: 0.5 }}
                           style={{
                             backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}33` : colors.surface,
                             color: cursoActivoId === curso.id_curso ? colors.primary : colors.textMuted
                           }}
                         >
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
-                        </div>
+                        </motion.div>
                         <div className="text-left">
                             <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoActivoId === curso.id_curso ? headingColor : mutedColor }}>
                                 {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
                             </h3>
-                            <p className={`text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors`}
+                            <p className="text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors"
                                style={{ color: cursoActivoId === curso.id_curso ? colors.accent : colors.textMuted }}>
                                 {curso.titulo}
                             </p>
                         </div>
                     </div>
                     {cursoActivoId === curso.id_curso && (
-                        <div className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ backgroundColor: colors.primary }} />
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 500, damping: 15 }}
+                          className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+                          style={{ backgroundColor: colors.primary }}
+                        >
+                          <motion.div
+                            className="w-full h-full rounded-full"
+                            animate={{ boxShadow: ['0 0 6px rgba(255,255,255,0.3)', '0 0 14px rgba(255,255,255,0.7)', '0 0 6px rgba(255,255,255,0.3)'] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                        </motion.div>
                     )}
-                </button>
+                </motion.button>
             ))}
         </div>
 
         {recommendedMission && (
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12 }}
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.12, type: 'spring', stiffness: 200, damping: 24 }}
             className="glass-card-apple rounded-3xl p-5 sm:p-6 lg:p-7 border mb-8 lg:mb-10 relative overflow-hidden"
             data-tour="recommended"
             style={{ borderColor: `${colors.primary}40` }}
@@ -773,13 +760,21 @@ export const DashboardPage = () => {
                     {modulos.map((mod, index) => {
                         const isLeft = index % 2 === 0;
                         return (
-                        <div key={mod.id_modulo} className={`flex items-stretch gap-4 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}>
-                            <button
+                        <motion.div
+                          key={mod.id_modulo}
+                          initial={{ opacity: 0, x: isLeft ? -30 : 30, y: 10 }}
+                          animate={{ opacity: 1, x: 0, y: 0 }}
+                          transition={{ delay: 0.08 * index, type: 'spring', stiffness: 200, damping: 22 }}
+                          className={`flex items-stretch gap-4 ${isLeft ? 'md:flex-row' : 'md:flex-row-reverse'}`}
+                        >
+                            <motion.button
                             onClick={() => handleModuloClick(mod)}
-                            className={`flex-1 p-4 sm:p-5 rounded-2xl border transition-all duration-300 text-left flex flex-col sm:flex-row sm:items-center gap-4 group relative overflow-hidden ${
+                            whileHover={!mod.bloqueado ? { y: -4, scale: 1.01, transition: { duration: 0.2 } } : {}}
+                            whileTap={!mod.bloqueado ? { scale: 0.98 } : {}}
+                            className={`flex-1 p-4 sm:p-5 rounded-2xl border transition-colors duration-300 text-left flex flex-col sm:flex-row sm:items-center gap-4 group relative overflow-hidden ${
                                 mod.bloqueado
                                 ? 'bg-slate-900/30 border-slate-800/60 opacity-70 cursor-not-allowed grayscale'
-                                : 'glass-card-apple border-white/10 hover:border-blue-400/60 hover:shadow-[0_15px_40px_-15px_rgba(59,130,246,0.5)] hover:-translate-y-1'
+                                : 'glass-card-apple border-white/10 hover:border-blue-400/60 hover:shadow-[0_15px_40px_-15px_rgba(59,130,246,0.5)]'
                             }`}
                             >
                             {!mod.bloqueado && (
@@ -810,19 +805,23 @@ export const DashboardPage = () => {
                                 </span>
                                 )}
                             </div>
-                            </button>
+                            </motion.button>
 
                             <div className="hidden md:flex flex-col items-center justify-center w-20 shrink-0">
-                            <div className={`relative w-16 h-16 rounded-full flex items-center justify-center font-display font-black text-xl border-2 ${
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ delay: 0.1 * index + 0.15, type: 'spring', stiffness: 400, damping: 15 }}
+                              className={`relative w-16 h-16 rounded-full flex items-center justify-center font-display font-black text-xl border-2 ${
                                 mod.bloqueado
                                 ? 'bg-slate-900 border-slate-700 text-slate-600'
                                 : 'bg-gradient-to-br from-cyan-400 to-blue-700 border-cyan-300 text-white shadow-[0_0_25px_rgba(34,211,238,0.55)]'
                             }`}>
                                 {mod.bloqueado ? <Lock className="w-6 h-6" /> : index + 1}
-                            </div>
+                            </motion.div>
                             </div>
                             <div className="hidden md:block flex-1" />
-                        </div>
+                        </motion.div>
                         );
                     })}
                     </div>
@@ -834,7 +833,12 @@ export const DashboardPage = () => {
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
           <aside className="space-y-6 xl:space-y-7">
-            <motion.div className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
+            <motion.div
+              initial={{ opacity: 0, x: 30, y: 10 }}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 22 }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
                 <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
@@ -855,7 +859,10 @@ export const DashboardPage = () => {
             
             {/* Mini leaderboard (RESTAURADO) */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, x: 30, y: 10 }}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 22 }}
+              whileHover={{ y: -3, transition: { duration: 0.2 } }}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border"
               data-tour="ranking"
               style={{ borderColor: colors.border }}
@@ -912,7 +919,10 @@ export const DashboardPage = () => {
 
             {/* Botón Créditos / Equipo Dagon */}
             <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+              initial={{ opacity: 0, x: 30, y: 10 }}
+              animate={{ opacity: 1, x: 0, y: 0 }}
+              transition={{ delay: 0.4, type: 'spring', stiffness: 200, damping: 22 }}
+              whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.2 } }}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border cursor-pointer group"
               style={{ borderColor: colors.border }}
               onClick={() => navigate('/credits')}
