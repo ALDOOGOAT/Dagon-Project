@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,9 +37,20 @@ public class UsuarioService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // --- FUNCION 1: REGISTRO ---
     public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
-        Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(nuevoUsuario.getEmail());
+        if (nuevoUsuario.getEmail() == null || nuevoUsuario.getEmail().isBlank()) {
+            throw new RuntimeException("Error: El correo es obligatorio.");
+        }
+        if (nuevoUsuario.getPasswordHash() == null || nuevoUsuario.getPasswordHash().length() < 8) {
+            throw new RuntimeException("Error: La contraseña debe tener al menos 8 caracteres.");
+        }
+
+        nuevoUsuario.setEmail(nuevoUsuario.getEmail().trim().toLowerCase());
+        Optional<Usuario> usuarioExistente = usuarioRepository.findByEmailIgnoreCase(nuevoUsuario.getEmail());
         if (usuarioExistente.isPresent()) {
             throw new RuntimeException("Error: Este correo ya está registrado en Dagon.");
         }
@@ -48,6 +60,7 @@ public class UsuarioService {
 
         Integer idRol = resolverIdRol(rol);
         nuevoUsuario.setIdRol(idRol);
+        nuevoUsuario.setPasswordHash(passwordEncoder.encode(nuevoUsuario.getPasswordHash()));
 
         return usuarioRepository.save(nuevoUsuario);
     }
@@ -70,14 +83,29 @@ public class UsuarioService {
 
     // --- FUNCION 2: LOGIN ---
     public Usuario iniciarSesion(String email, String password) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
+        if (email == null || password == null) {
+            throw new RuntimeException("Correo o contraseña incorrectos.");
+        }
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmailIgnoreCase(email.trim().toLowerCase());
         if (usuarioOpt.isPresent()) {
             Usuario usuarioBaseDatos = usuarioOpt.get();
-            if (usuarioBaseDatos.getPasswordHash().equals(password)) {
+            String hashGuardado = usuarioBaseDatos.getPasswordHash();
+            if (passwordEncoder.matches(password, hashGuardado)) {
+                return usuarioBaseDatos;
+            }
+
+            // Compatibilidad temporal: migra cuentas antiguas que estaban en texto plano.
+            if (hashGuardado != null && !pareceHashBCrypt(hashGuardado) && hashGuardado.equals(password)) {
+                usuarioBaseDatos.setPasswordHash(passwordEncoder.encode(password));
+                usuarioRepository.save(usuarioBaseDatos);
                 return usuarioBaseDatos;
             }
         }
         throw new RuntimeException("Correo o contraseña incorrectos.");
+    }
+
+    private boolean pareceHashBCrypt(String valor) {
+        return valor != null && valor.matches("^\\$2[aby]\\$.{56}$");
     }
 
     // --- FUNCION 3: REGISTRAR PRACTICA (RACHAS) ---

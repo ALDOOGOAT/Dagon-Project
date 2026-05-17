@@ -2,52 +2,70 @@ package com.dagon.backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    // La "Firma del Director". Con esta llave secreta se sellan los pasaportes.
-    // Si un hacker intenta crear un pasaporte falso, no podrá porque no tiene esta llave.
-    private static final Key SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    @Value("${dagon.jwt.secret:}")
+    private String jwtSecret;
 
-    // Tiempo de vida del pasaporte: 24 horas (en milisegundos)
-    private static final long EXPIRATION_TIME = 86400000;
+    @Value("${dagon.jwt.expiration-ms:86400000}")
+    private long expirationTimeMs;
 
-    // 1. FABRICAR EL PASAPORTE (Cuando el usuario hace Login correctamente)
+    @Value("${dagon.jwt.issuer:dagon-backend}")
+    private String issuer;
+
+    @Value("${dagon.jwt.audience:dagon-frontend}")
+    private String audience;
+
+    private Key signingKey;
+
+    @PostConstruct
+    void init() {
+        if (jwtSecret == null || jwtSecret.length() < 32) {
+            throw new IllegalStateException("Configura dagon.jwt.secret con al menos 32 caracteres.");
+        }
+        signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
     public String generarToken(String idUsuario) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
-                .setSubject(idUsuario) // El dueño del pasaporte (UUID)
-                .setIssuedAt(new Date()) // Fecha de emisión
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) // Fecha de caducidad
-                .signWith(SECRET_KEY) // Sello de seguridad
+                .setSubject(idUsuario)
+                .setIssuer(issuer)
+                .setAudience(audience)
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + expirationTimeMs))
+                .signWith(signingKey)
                 .compact();
     }
 
-    // 2. LEER EL PASAPORTE (Saber de quién es el ID que viene adentro)
     public String extraerUsuarioId(String token) {
         return getClaims(token).getSubject();
     }
 
-    // 3. VALIDAR PASAPORTE (Revisar si es falso o si ya caducó)
     public boolean validarToken(String token) {
         try {
             getClaims(token);
             return true;
         } catch (Exception e) {
-            return false; // Si falla, es un pasaporte falso o expirado
+            return false;
         }
     }
 
-    // Herramienta interna para abrir el pasaporte
     private Claims getClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(signingKey)
+                .requireIssuer(issuer)
+                .requireAudience(audience)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

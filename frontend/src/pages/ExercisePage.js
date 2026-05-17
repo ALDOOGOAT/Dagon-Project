@@ -344,6 +344,7 @@ export const ExercisePage = () => {
             errorDb: result.errorDb || result.message,
             intentos: nuevos,
             nivelId: parseInt(levelId),
+            ejercicioId: exercise.id,
             tituloEjercicio: exercise.title,
           });
         } else {

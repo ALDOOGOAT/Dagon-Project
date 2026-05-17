@@ -14,4 +14,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     // crea automáticamente el SQL: "SELECT * FROM usuarios WHERE email = ?"
     Optional<Usuario> findByEmail(String email);
 
+    Optional<Usuario> findByEmailIgnoreCase(String email);
+
 }

@@ -10,6 +10,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -36,7 +37,7 @@ public class ClawbotService {
     @Value("${GROQ_API_KEY:}")
     private String groqApiKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate(requestFactory());
     private final ClawbotPromptCatalog promptCatalog;
     private final ClawbotRateLimiter rateLimiter;
     private final ClawbotTelemetryService telemetryService;
@@ -283,6 +284,13 @@ public class ClawbotService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
+    }
+
+    private static SimpleClientHttpRequestFactory requestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(3_000);
+        factory.setReadTimeout(20_000);
+        return factory;
     }
 
     private String buildChatPrompt(String mensajeUsuario, List<Map<String, String>> historial) {

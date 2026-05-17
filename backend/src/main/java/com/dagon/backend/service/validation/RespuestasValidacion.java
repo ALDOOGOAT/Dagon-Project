@@ -17,7 +17,6 @@ final class RespuestasValidacion {
         respuesta.put("xp_gained", 0);
         if (ejercicio != null) {
             respuesta.put("descripcion", ejercicio.getEnunciado());
-            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
         }
         respuesta.put("queryAlumno", queryUsuario);
         respuesta.put("errorDb", errorDb);

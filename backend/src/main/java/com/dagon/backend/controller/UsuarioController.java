@@ -3,6 +3,7 @@ package com.dagon.backend.controller;
 import com.dagon.backend.dto.AuthResponseDTO;
 import com.dagon.backend.dto.UsuarioResponseDTO;
 import com.dagon.backend.model.Usuario;
+import com.dagon.backend.security.AuthRateLimiter;
 import com.dagon.backend.security.JwtUtil;
 import com.dagon.backend.service.LeaderboardService;
 import com.dagon.backend.service.UsuarioService;
@@ -12,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.Map;
@@ -26,6 +28,8 @@ public class UsuarioController {
     private JwtUtil jwtUtil;
     @Autowired
     private LeaderboardService leaderboardService;
+    @Autowired
+    private AuthRateLimiter authRateLimiter;
 
     // Cuando React pregunte por las estadísticas COMPLETAS del Perfil
     @GetMapping("/{id}/stats")
@@ -38,18 +42,21 @@ public class UsuarioController {
     @PostMapping("/registro")
     public ResponseEntity<?> registrarUsuario(@RequestBody Map<String, Object> body) {
         try {
+            authRateLimiter.consumeRegistro((String) body.get("email"));
+
             Usuario nuevoUsuario = new Usuario();
             nuevoUsuario.setNombre((String) body.get("nombre"));
             nuevoUsuario.setEmail((String) body.get("email"));
             nuevoUsuario.setPasswordHash((String) body.get("passwordHash"));
 
-            String rol = (String) body.getOrDefault("rol", "alumno");
-
-            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, rol);
+            // El registro publico siempre crea alumnos. Los roles elevados deben asignarse por un flujo docente/admin.
+            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, "alumno");
 
             String token = jwtUtil.generarToken(usuarioGuardado.getIdUsuario().toString());
 
             return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuarioGuardado)));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -59,6 +66,8 @@ public class UsuarioController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUsuario(@RequestBody Usuario credenciales) {
         try {
+            authRateLimiter.consumeLogin(credenciales.getEmail());
+
             Usuario usuarioAutenticado = usuarioService.iniciarSesion(
                     credenciales.getEmail(),
                     credenciales.getPasswordHash()
@@ -68,6 +77,8 @@ public class UsuarioController {
             String token = jwtUtil.generarToken(usuarioAutenticado.getIdUsuario().toString());
 
             return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuarioAutenticado)));
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

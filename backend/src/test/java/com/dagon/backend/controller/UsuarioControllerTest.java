@@ -3,6 +3,7 @@ package com.dagon.backend.controller;
 import com.dagon.backend.dto.AuthResponseDTO;
 import com.dagon.backend.dto.UsuarioResponseDTO;
 import com.dagon.backend.model.Usuario;
+import com.dagon.backend.security.AuthRateLimiter;
 import com.dagon.backend.security.JwtUtil;
 import com.dagon.backend.service.LeaderboardService;
 import com.dagon.backend.service.UsuarioService;
@@ -41,6 +42,7 @@ class UsuarioControllerTest {
         ReflectionTestUtils.setField(controller, "usuarioService", usuarioService);
         ReflectionTestUtils.setField(controller, "leaderboardService", leaderboardService);
         ReflectionTestUtils.setField(controller, "jwtUtil", jwtUtil);
+        ReflectionTestUtils.setField(controller, "authRateLimiter", new AuthRateLimiter());
     }
 
     @Test

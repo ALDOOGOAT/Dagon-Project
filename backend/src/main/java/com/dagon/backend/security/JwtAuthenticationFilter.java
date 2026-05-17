@@ -59,6 +59,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (usuarioId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             List<GrantedAuthority> authorities = cargarAuthorities(usuarioId);
+            if (authorities.isEmpty()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                     usuarioId, null, authorities);
@@ -72,14 +76,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private List<GrantedAuthority> cargarAuthorities(String usuarioId) {
         try {
-            Integer idRol = jdbcTemplate.queryForObject(
-                    "SELECT id_rol FROM lms_core.usuarios WHERE id_usuario = ?::uuid",
-                    Integer.class, usuarioId);
+            Map<String, Object> usuario = jdbcTemplate.queryForMap(
+                    "SELECT id_rol, activo FROM lms_core.usuarios WHERE id_usuario = ?::uuid",
+                    usuarioId);
+            Boolean activo = (Boolean) usuario.get("activo");
+            if (!Boolean.TRUE.equals(activo)) {
+                return List.of();
+            }
+            Integer idRol = ((Number) usuario.get("id_rol")).intValue();
             String roleName = ROLES.getOrDefault(idRol, "ROLE_ALUMNO");
             return List.of(new SimpleGrantedAuthority(roleName));
         } catch (Exception e) {
             logger.debug("No se pudo cargar rol para usuario {}: {}", usuarioId, e.getMessage());
-            return List.of(new SimpleGrantedAuthority("ROLE_ALUMNO"));
+            return List.of();
         }
     }
 }
