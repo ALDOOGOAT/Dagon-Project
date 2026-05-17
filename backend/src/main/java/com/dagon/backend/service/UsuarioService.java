@@ -91,17 +91,24 @@ public class UsuarioService {
             Usuario usuarioBaseDatos = usuarioOpt.get();
             String hashGuardado = usuarioBaseDatos.getPasswordHash();
             if (passwordEncoder.matches(password, hashGuardado)) {
-                return usuarioBaseDatos;
+                return asegurarRolAlumnoSiFalta(usuarioBaseDatos);
             }
 
             // Compatibilidad temporal: migra cuentas antiguas que estaban en texto plano.
             if (hashGuardado != null && !pareceHashBCrypt(hashGuardado) && hashGuardado.equals(password)) {
                 usuarioBaseDatos.setPasswordHash(passwordEncoder.encode(password));
-                usuarioRepository.save(usuarioBaseDatos);
-                return usuarioBaseDatos;
+                return asegurarRolAlumnoSiFalta(usuarioBaseDatos);
             }
         }
         throw new RuntimeException("Correo o contraseña incorrectos.");
+    }
+
+    private Usuario asegurarRolAlumnoSiFalta(Usuario usuario) {
+        if (usuario.getIdRol() == null) {
+            usuario.setIdRol(resolverIdRol("alumno"));
+            return usuarioRepository.save(usuario);
+        }
+        return usuario;
     }
 
     private boolean pareceHashBCrypt(String valor) {

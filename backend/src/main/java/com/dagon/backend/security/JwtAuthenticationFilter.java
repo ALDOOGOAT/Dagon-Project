@@ -83,7 +83,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (!Boolean.TRUE.equals(activo)) {
                 return List.of();
             }
-            Integer idRol = ((Number) usuario.get("id_rol")).intValue();
+            Object idRolRaw = usuario.get("id_rol");
+            Integer idRol = idRolRaw instanceof Number ? ((Number) idRolRaw).intValue() : 1;
             String roleName = ROLES.getOrDefault(idRol, "ROLE_ALUMNO");
             return List.of(new SimpleGrantedAuthority(roleName));
         } catch (Exception e) {
