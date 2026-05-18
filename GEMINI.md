@@ -1,4 +1,4 @@
-# GEMINI.md - Dagon Project Context
+# GEMINI.md - Dagon Project Contexto sjsjsj
 
 ## Project Overview
 Dagon is a modern, interactive educational platform designed for learning SQL and PostgreSQL database administration. It features a gamified experience with XP, streaks, and certificates, supported by an AI tutor named **Clawbot** (or Dagonbot).
