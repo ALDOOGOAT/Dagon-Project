@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../services/apiClient';
-import { StreakAnimation } from './StreakAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { sounds } from '../lib/SoundEngine';
 
@@ -78,8 +77,6 @@ export const QuickPracticeMode = ({
   onClose = () => {}
 }) => {
   const { updateUserStreak } = useAuth();
-  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
-  const [streakData, setStreakData] = useState(null);
   const [currentChallenge, setCurrentChallenge] = useState(null);
   const [practicePool, setPracticePool] = useState([]);
   const [poolIndex, setPoolIndex] = useState(0);
@@ -317,8 +314,7 @@ export const QuickPracticeMode = ({
 
         if (result.streak_activated_today) {
           updateUserStreak(result.new_streak);
-          setStreakData({ count: result.new_streak });
-          setShowStreakAnimation(true);
+          window.dispatchEvent(new CustomEvent('dagon_streak_activated', { detail: result.new_streak }));
         }
 
         setLastResult({
@@ -893,13 +889,6 @@ export const QuickPracticeMode = ({
           )}
         </AnimatePresence>
       </div>
-
-      {showStreakAnimation && streakData && (
-        <StreakAnimation 
-          streakCount={streakData.count} 
-          onComplete={() => { setShowStreakAnimation(false); setStreakData(null); }} 
-        />
-      )}
     </motion.div>
   );
 };

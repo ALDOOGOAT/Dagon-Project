@@ -4,7 +4,6 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
-import { StreakAnimation } from '../components/StreakAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
@@ -145,9 +144,7 @@ export const ExercisePage = () => {
   const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
   const [showReward, setShowReward] = useState(false);
-  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
   const [isReadingStatement, setIsReadingStatement] = useState(false);
-  const [streakData, setStreakData] = useState(null);
   const [lastXPGained, setLastXPGained] = useState(0);
   const [levelUpData, setLevelUpData] = useState(null);
   const [lastAlertedExerciseKey, setLastAlertedExerciseKey] = useState(null);
@@ -223,8 +220,6 @@ export const ExercisePage = () => {
       setIntentosFallidos(0);
       setCombo(0);
       setShowReward(false);
-      setShowStreakAnimation(false);
-      setStreakData(null);
       setLevelUpData(null);
       setLastXPGained(0);
       setLastAlertedExerciseKey(null);
@@ -497,8 +492,7 @@ export const ExercisePage = () => {
 
         if (result.streak_activated_today) {
           updateUserStreak(result.new_streak);
-          setStreakData({ count: result.new_streak });
-          setShowStreakAnimation(true);
+          window.dispatchEvent(new CustomEvent('dagon_streak_activated', { detail: result.new_streak }));
         }
 
         if (gained > 0 || result.streak_activated_today) {
@@ -883,7 +877,7 @@ export const ExercisePage = () => {
           : `Agregar bloque ${word.word}`}
         className={`touch-drag-none relative shrink-0 border-2 px-3 py-2 sm:px-4 rounded-xl font-mono text-sm sm:text-base cursor-grab active:cursor-grabbing min-h-[50px] flex items-center gap-2 transition-all ${
           isPlaced ? 'animate-dnd-placed font-bold' : 'font-semibold'
-        } ${isClone ? `scale-105 z-[9999] border-white ring-4 ${chipTone.ring}` : 'mr-3 hover:-translate-y-0.5'}`}
+        } ${isClone ? `scale-105 z-[9999] border-white ring-4 ${chipTone.ring}` : 'hover:-translate-y-0.5'}`}
         style={{
           ...provided.draggableProps.style,
           userSelect: 'none',
@@ -932,13 +926,7 @@ export const ExercisePage = () => {
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="exercise-page">
-      {showStreakAnimation && streakData && (
-        <StreakAnimation
-          streakCount={streakData.count}
-          onComplete={() => { setShowStreakAnimation(false); setStreakData(null); }}
-        />
-      )}
-      {showReward && !showStreakAnimation && (
+      {showReward && (
         <RewardAnimation
           type="success" xpGained={lastXPGained} isLevelUp={!!levelUpData}
           newLevel={levelUpData?.newLevel}
@@ -1853,7 +1841,7 @@ export const ExercisePage = () => {
                                 dropZoneScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[142px] overflow-x-auto overflow-y-hidden scroll-fancy rounded-2xl border-2 border-dashed p-4 flex flex-nowrap items-center transition-all relative ${
+                              className={`min-h-[142px] rounded-2xl border-2 border-dashed p-4 flex flex-wrap content-start gap-y-3 gap-x-2 transition-all relative ${
                                 snapshot.isDraggingOver ? 'border-emerald-400 animate-dnd-glow' : ''
                               }`}
                               style={{
@@ -1938,7 +1926,7 @@ export const ExercisePage = () => {
                                 wordBankScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[142px] overflow-x-auto overflow-y-hidden scroll-fancy rounded-2xl border-2 p-4 flex flex-nowrap items-center transition-all duration-300 ${
+                              className={`min-h-[142px] rounded-2xl border-2 p-4 flex flex-wrap content-start gap-y-3 gap-x-2 transition-all duration-300 ${
                                 snapshot.isDraggingOver ? 'shadow-[inset_0_0_24px_rgba(34,211,238,0.14)]' : ''
                               }`}
                               style={{

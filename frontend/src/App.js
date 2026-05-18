@@ -19,6 +19,7 @@ import { GraduationPage } from './pages/GraduationPage';
 import { CreditsPage } from './pages/CreditsPage';
 import { PostgresAcademyPage } from './pages/PostgresAcademyPage';
 import { DocentePage } from './pages/DocentePage';
+import { StreakAnimation } from './components/StreakAnimation';
 
 const MOTION_STORAGE_KEY = 'dagon_motion_mode';
 
@@ -123,7 +124,16 @@ const AppRoutes = () => {
   const { colors } = useTheme();
   const location = useLocation();
   const motionSafety = useMotionSafety();
+  const [globalStreak, setGlobalStreak] = useState(null);
   const isLightTheme = colors?.mode === 'light';
+  
+  useEffect(() => {
+    const handleStreak = (e) => {
+      setGlobalStreak(e.detail);
+    };
+    window.addEventListener('dagon_streak_activated', handleStreak);
+    return () => window.removeEventListener('dagon_streak_activated', handleStreak);
+  }, []);
   
   const bgTint = colors ? `rgba(${parseInt(colors.primary.slice(1,3), 16)}, ${parseInt(colors.primary.slice(3,5), 16)}, ${parseInt(colors.primary.slice(5,7), 16)}, 0.85)` : 'rgba(99,102,241,0.85)';
   
@@ -217,6 +227,12 @@ const AppRoutes = () => {
          </Routes>
       </AnimatePresence>
       <Clawbot />
+      {globalStreak !== null && (
+        <StreakAnimation 
+          streakCount={globalStreak} 
+          onComplete={() => setGlobalStreak(null)} 
+        />
+      )}
       <Toaster position="top-right" theme={isLightTheme ? 'light' : 'dark'} richColors />
     </MotionConfig>
   );
