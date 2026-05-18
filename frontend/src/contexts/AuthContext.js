@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import apiClient from '../services/apiClient';
 
 const AuthContext = createContext(null);
@@ -106,9 +106,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const updateUserXP = (newXP) => {
-    setUser(prev => ({ ...prev, xp: newXP }));
-  };
+  const updateUserXP = useCallback((newXP) => {
+    setUser(prev => {
+      if (!prev || prev.xp === newXP) return prev;
+      return { ...prev, xp: newXP };
+    });
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP }}>

@@ -923,7 +923,886 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dashboard-shell {
-    width: min(100%, 1560px);
+    width: min(100%, 1840px);
+}
+
+.dashboard-command-center {
+    align-items: stretch;
+}
+
+.dashboard-command-panel {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.dashboard-command-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        linear-gradient(115deg, color-mix(in srgb, var(--color-primary) 14%, transparent 86%), transparent 42%),
+        linear-gradient(0deg, rgba(255, 255, 255, 0.04), transparent 55%);
+    opacity: 0.92;
+}
+
+.dashboard-command-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 18%, transparent 82%) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--color-secondary) 12%, transparent 88%) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(120deg, rgba(0, 0, 0, 0.70), transparent 72%);
+    opacity: 0.45;
+}
+
+.dashboard-hud {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.dashboard-hud::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        linear-gradient(110deg, color-mix(in srgb, var(--hud-accent, var(--color-primary)) 18%, transparent 82%), transparent 36%),
+        linear-gradient(270deg, color-mix(in srgb, var(--hud-secondary, var(--color-secondary)) 14%, transparent 86%), transparent 44%);
+}
+
+.dashboard-hud::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(90deg, color-mix(in srgb, var(--hud-accent, var(--color-primary)) 16%, transparent 84%) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--hud-secondary, var(--color-secondary)) 12%, transparent 88%) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.32;
+    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.74), transparent 88%);
+}
+
+.dashboard-hud-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: stretch;
+}
+
+.dashboard-hud-zone {
+    min-width: 0;
+    border-radius: 1.35rem;
+}
+
+.dashboard-hud-zone--identity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dashboard-hud-zone--progress {
+    border: 1px solid color-mix(in srgb, var(--hud-accent, var(--color-primary)) 26%, transparent 74%);
+    background: color-mix(in srgb, var(--hud-surface, var(--color-surface)) 48%, transparent 52%);
+    padding: 1rem;
+}
+
+.dashboard-hud-zone--actions {
+    min-width: 0;
+}
+
+.dashboard-control-dock {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.dashboard-control-dock__wide {
+    grid-column: 1 / -1;
+}
+
+.dashboard-streak-action {
+    position: relative;
+    overflow: hidden;
+}
+
+.dashboard-streak-action::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(circle at 18% 22%, rgba(251, 191, 36, 0.34), transparent 28%),
+        linear-gradient(115deg, rgba(249, 115, 22, 0.18), transparent 54%);
+    opacity: 0.76;
+    pointer-events: none;
+}
+
+.dashboard-streak-action > * {
+    position: relative;
+    z-index: 1;
+}
+
+.dashboard-streak-action__flame {
+    color: #fb923c;
+    filter: drop-shadow(0 0 9px rgba(251, 146, 60, 0.62));
+    animation: dashboard-streak-flame 1.25s ease-in-out infinite;
+}
+
+.dashboard-streak-action__count {
+    margin-left: 0.3rem;
+    min-width: 1.65rem;
+    height: 1.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgba(251, 191, 36, 0.42);
+    background: rgba(251, 146, 60, 0.16);
+    font-size: 0.72rem;
+    line-height: 1;
+}
+
+@keyframes dashboard-streak-flame {
+    0%, 100% {
+        transform: translateY(0) rotate(-3deg) scale(1);
+    }
+    50% {
+        transform: translateY(-2px) rotate(4deg) scale(1.12);
+    }
+}
+
+@media (min-width: 1280px) {
+    .dashboard-hud-grid {
+        grid-template-columns: minmax(280px, 0.95fr) minmax(420px, 1.1fr) minmax(300px, 0.82fr);
+    }
+
+    .dashboard-hud-zone {
+        padding-inline: 0.25rem;
+    }
+
+    .dashboard-hud-zone--progress {
+        padding: 1.1rem;
+    }
+}
+
+.dashboard-briefing-card {
+    isolation: isolate;
+}
+
+.dashboard-briefing-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        radial-gradient(circle at 9% 50%, color-mix(in srgb, var(--briefing-accent, var(--color-primary)) 22%, transparent 78%), transparent 28%),
+        linear-gradient(110deg, color-mix(in srgb, var(--briefing-accent, var(--color-primary)) 10%, transparent 90%), transparent 58%),
+        linear-gradient(270deg, color-mix(in srgb, var(--briefing-secondary, var(--color-secondary)) 12%, transparent 88%), transparent 52%);
+}
+
+.dashboard-briefing-trigger {
+    width: 100%;
+    border-radius: 1.35rem;
+    outline: none;
+}
+
+.dashboard-briefing-trigger:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--briefing-accent, var(--color-primary)) 72%, white 28%);
+    outline-offset: 4px;
+}
+
+.dashboard-briefing-orb {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    flex-shrink: 0;
+    border-radius: 1.35rem;
+    color: #06111f;
+    background: linear-gradient(135deg, var(--briefing-accent, var(--color-primary)), var(--briefing-secondary, var(--color-secondary)));
+    box-shadow:
+        0 0 0 7px color-mix(in srgb, var(--briefing-accent, var(--color-primary)) 14%, transparent 86%),
+        0 18px 40px -24px color-mix(in srgb, var(--briefing-accent, var(--color-primary)) 70%, transparent 30%);
+}
+
+.profile-identity-hero,
+.profile-theme-forge,
+.profile-achievement-vault {
+    isolation: isolate;
+}
+
+.profile-identity-hero::before,
+.profile-theme-forge::before,
+.profile-achievement-vault::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        linear-gradient(115deg, color-mix(in srgb, var(--profile-accent, var(--color-primary)) 16%, transparent 84%), transparent 44%),
+        linear-gradient(270deg, color-mix(in srgb, var(--profile-secondary, var(--color-secondary)) 12%, transparent 88%), transparent 52%);
+}
+
+.profile-identity-hero::after,
+.profile-theme-forge::after,
+.profile-achievement-vault::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+        linear-gradient(90deg, color-mix(in srgb, var(--profile-accent, var(--color-primary)) 18%, transparent 82%) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--profile-secondary, var(--color-secondary)) 12%, transparent 88%) 1px, transparent 1px);
+    background-size: 46px 46px;
+    opacity: 0.26;
+    mask-image: linear-gradient(115deg, rgba(0, 0, 0, 0.72), transparent 84%);
+}
+
+.profile-theme-forge,
+.profile-achievement-vault {
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-palette-chip {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.025)),
+        color-mix(in srgb, var(--color-surface) 68%, transparent 32%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.profile-palette-chip::after {
+    content: "";
+    position: absolute;
+    inset: 0.38rem;
+    border-radius: 0.9rem;
+    border: 1px solid color-mix(in srgb, var(--swatch-primary, var(--color-primary)) 32%, transparent 68%);
+    pointer-events: none;
+}
+
+.profile-palette-chip.is-active {
+    box-shadow:
+        0 14px 36px -22px color-mix(in srgb, var(--profile-accent, var(--color-primary)) 70%, transparent 30%),
+        0 0 0 1px color-mix(in srgb, var(--profile-accent, var(--color-primary)) 35%, transparent 65%),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.profile-vault-orb {
+    display: grid;
+    place-items: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    flex: 0 0 auto;
+    border-radius: 1.25rem;
+    color: #06111f;
+    background:
+        radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.80), transparent 28%),
+        linear-gradient(135deg, var(--profile-accent, var(--color-primary)), var(--profile-secondary, var(--color-secondary)));
+    box-shadow:
+        0 0 0 7px color-mix(in srgb, var(--profile-accent, var(--color-primary)) 14%, transparent 86%),
+        0 18px 42px -25px color-mix(in srgb, var(--profile-accent, var(--color-primary)) 70%, transparent 30%);
+}
+
+.profile-achievement-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent),
+        linear-gradient(135deg, color-mix(in srgb, var(--profile-accent, var(--color-primary)) 10%, transparent 90%), transparent 58%);
+    opacity: 0;
+    transform: translateX(-38%);
+    transition: opacity 220ms ease, transform 420ms ease;
+}
+
+.profile-achievement-card:hover::before {
+    opacity: 1;
+    transform: translateX(38%);
+}
+
+.dagon-streak-stage {
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+}
+
+.dagon-streak-stage::before {
+    content: "";
+    position: absolute;
+    inset: 10%;
+    z-index: -1;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle, rgba(251, 191, 36, 0.34), rgba(249, 115, 22, 0.12) 42%, transparent 68%);
+    filter: blur(18px);
+    opacity: 0.88;
+}
+
+.dagon-streak-stage--danger::before {
+    background:
+        radial-gradient(circle, rgba(239, 68, 68, 0.34), rgba(59, 130, 246, 0.16) 46%, transparent 70%);
+    animation: streak-danger-pulse 0.82s ease-in-out infinite;
+}
+
+.dagon-streak-stage--powered::before {
+    background:
+        radial-gradient(circle, rgba(250, 204, 21, 0.42), rgba(249, 115, 22, 0.24) 42%, transparent 72%);
+    animation: streak-power-aura 1.35s ease-in-out infinite;
+}
+
+.dagon-streak-muscle,
+.dagon-streak-warning-badge {
+    position: absolute;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: #fff7ed;
+    box-shadow: 0 18px 30px -18px rgba(249, 115, 22, 0.82);
+}
+
+.dagon-streak-muscle {
+    top: 38%;
+    width: 2.7rem;
+    height: 2.7rem;
+    border-radius: 1.15rem;
+    background:
+        radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.78), transparent 22%),
+        linear-gradient(135deg, #fbbf24, #f97316 52%, #be123c);
+}
+
+.dagon-streak-muscle--left {
+    left: -0.75rem;
+}
+
+.dagon-streak-muscle--right {
+    right: -0.75rem;
+}
+
+.dagon-streak-warning-badge {
+    top: -0.2rem;
+    right: 0.2rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 1rem;
+    background:
+        radial-gradient(circle at 28% 20%, rgba(255, 255, 255, 0.76), transparent 24%),
+        linear-gradient(135deg, #ef4444, #7f1d1d);
+    box-shadow: 0 16px 32px -16px rgba(239, 68, 68, 0.88);
+}
+
+.streak-status-ribbon {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    max-width: 48rem;
+    padding: 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--streak-accent, #fb923c) 34%, transparent 66%);
+    border-radius: 1.25rem;
+    color: var(--streak-text, #ffffff);
+    background:
+        linear-gradient(120deg, color-mix(in srgb, var(--streak-accent, #fb923c) 16%, transparent 84%), transparent 58%),
+        rgba(15, 23, 42, 0.30);
+    box-shadow: 0 22px 48px -32px color-mix(in srgb, var(--streak-accent, #fb923c) 58%, transparent 42%);
+    backdrop-filter: blur(16px);
+}
+
+.streak-status-ribbon p:last-child {
+    color: var(--streak-muted, #94a3b8);
+}
+
+html[data-theme-mode='light'] .streak-status-ribbon {
+    background:
+        linear-gradient(120deg, color-mix(in srgb, var(--streak-accent, #fb923c) 18%, transparent 82%), transparent 58%),
+        rgba(255, 255, 255, 0.52);
+}
+
+.streak-status-ribbon__icon,
+.streak-daily-card__seal {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 1rem;
+    color: #111827;
+    background:
+        radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.84), transparent 26%),
+        linear-gradient(135deg, var(--streak-accent, #fb923c), var(--streak-secondary, #fbbf24));
+}
+
+.streak-status-ribbon__icon {
+    width: 2.7rem;
+    height: 2.7rem;
+}
+
+.streak-daily-card {
+    isolation: isolate;
+}
+
+.streak-daily-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(90deg, rgba(251, 146, 60, 0.16) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(251, 191, 36, 0.10) 1px, transparent 1px);
+    background-size: 38px 38px;
+    mask-image: linear-gradient(115deg, rgba(0, 0, 0, 0.72), transparent 84%);
+    opacity: 0.42;
+}
+
+.streak-daily-card__seal {
+    width: 3rem;
+    height: 3rem;
+    box-shadow: 0 0 0 7px rgba(251, 146, 60, 0.10), 0 18px 38px -22px rgba(249, 115, 22, 0.84);
+}
+
+.streak-page-shell {
+    padding-top: clamp(1rem, 1.6vw, 1.45rem);
+    padding-bottom: clamp(1rem, 1.6vw, 1.45rem);
+}
+
+.streak-calendar-panel {
+    isolation: isolate;
+}
+
+.streak-calendar-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 16% 8%, rgba(251, 191, 36, 0.18), transparent 26%),
+        radial-gradient(circle at 88% 18%, rgba(244, 63, 94, 0.13), transparent 28%),
+        linear-gradient(115deg, rgba(251, 146, 60, 0.08), transparent 58%);
+}
+
+.streak-calendar-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0.85rem;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 1.4rem;
+    background-image:
+        linear-gradient(90deg, rgba(251, 146, 60, 0.14) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(251, 191, 36, 0.10) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: linear-gradient(130deg, rgba(0, 0, 0, 0.74), transparent 78%);
+    opacity: 0.58;
+}
+
+.streak-calendar-panel > * {
+    position: relative;
+    z-index: 1;
+}
+
+.streak-daily-card--danger .streak-daily-card__seal,
+.streak-status-ribbon--danger .streak-status-ribbon__icon {
+    color: #fff7ed;
+    background:
+        radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.68), transparent 26%),
+        linear-gradient(135deg, #ef4444, #7f1d1d);
+    animation: streak-danger-pulse 0.82s ease-in-out infinite;
+}
+
+.streak-calendar-day {
+    border: 1px solid transparent;
+    min-height: 2.65rem;
+    background-image:
+        radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.18), transparent 24%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 56%);
+    transition: transform 220ms ease, box-shadow 220ms ease, filter 220ms ease;
+}
+
+.streak-calendar-day::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent),
+        linear-gradient(135deg, rgba(251, 146, 60, 0.16), transparent 56%);
+    opacity: 0;
+    transform: translateX(-75%);
+    transition: opacity 220ms ease, transform 360ms ease;
+}
+
+.streak-calendar-day:hover::before,
+.streak-calendar-day.is-streak::before,
+.streak-calendar-day.is-complete::before {
+    opacity: 1;
+    transform: translateX(45%);
+}
+
+.streak-calendar-day:not(.invisible):hover {
+    transform: translateY(-2px) scale(1.04);
+}
+
+.streak-calendar-day.is-today {
+    outline: 2px solid rgba(251, 191, 36, 0.42);
+    outline-offset: 3px;
+}
+
+.streak-calendar-day.is-danger {
+    animation: streak-day-danger 0.95s ease-in-out infinite;
+}
+
+.streak-calendar-day.is-complete {
+    animation: streak-day-complete 1.8s ease-in-out infinite;
+}
+
+@keyframes streak-danger-pulse {
+    0%, 100% {
+        transform: scale(1);
+        filter: saturate(1);
+    }
+    50% {
+        transform: scale(1.06);
+        filter: saturate(1.25);
+    }
+}
+
+@keyframes streak-power-aura {
+    0%, 100% {
+        opacity: 0.64;
+        transform: scale(0.96);
+    }
+    50% {
+        opacity: 0.96;
+        transform: scale(1.08);
+    }
+}
+
+@keyframes streak-day-danger {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.34);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.11), 0 0 22px rgba(239, 68, 68, 0.38);
+    }
+}
+
+@keyframes streak-day-complete {
+    0%, 100% {
+        box-shadow: 0 0 16px rgba(16, 185, 129, 0.22);
+    }
+    50% {
+        box-shadow: 0 0 26px rgba(16, 185, 129, 0.46);
+    }
+}
+
+@media (max-width: 640px) {
+    .streak-status-ribbon {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+.dagon-circuit-field {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 16%, transparent 84%) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--color-secondary) 12%, transparent 88%) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-primary) 16%, transparent 84%), transparent 38%);
+    background-size: 56px 56px, 56px 56px, 100% 100%;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.80), transparent 92%);
+}
+
+.dagon-quest-map {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(0.95rem, 1.8vw, 1.55rem);
+    padding: clamp(0.15rem, 0.8vw, 0.75rem) 0;
+    isolation: isolate;
+}
+
+.dagon-quest-map::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: 2rem;
+    background:
+        linear-gradient(180deg, transparent, color-mix(in srgb, var(--color-primary) 9%, transparent 91%), transparent),
+        repeating-linear-gradient(90deg, transparent 0 32px, color-mix(in srgb, var(--color-primary) 9%, transparent 91%) 32px 33px),
+        repeating-linear-gradient(0deg, transparent 0 32px, color-mix(in srgb, var(--color-secondary) 7%, transparent 93%) 32px 33px);
+    opacity: 0.66;
+}
+
+.dagon-quest-map::after {
+    content: "";
+    position: absolute;
+    inset: 1.2rem 0;
+    z-index: -1;
+    border-radius: 2rem;
+    background:
+        linear-gradient(90deg, transparent 0 32%, color-mix(in srgb, var(--color-primary) 18%, transparent 82%) 32% 33%, transparent 33%),
+        linear-gradient(90deg, transparent 66%, color-mix(in srgb, var(--color-secondary) 16%, transparent 84%) 66% 67%, transparent 67%);
+    opacity: 0.72;
+}
+
+.dagon-quest-node {
+    position: relative;
+    min-width: 0;
+}
+
+.dagon-quest-node:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 1.5rem;
+    top: calc(100% - 0.15rem);
+    z-index: -1;
+    width: 2px;
+    height: clamp(1.05rem, 2vw, 1.55rem);
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--quest-accent, var(--color-primary)), var(--quest-secondary, var(--color-secondary)));
+    box-shadow: 0 0 18px var(--quest-glow, color-mix(in srgb, var(--color-primary) 56%, transparent 44%));
+}
+
+.dagon-quest-node:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: calc(1.5rem - 4px);
+    top: calc(100% + clamp(1.05rem, 2vw, 1.55rem) - 0.45rem);
+    z-index: 0;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 8px solid var(--quest-secondary, var(--color-secondary));
+    filter: drop-shadow(0 0 8px var(--quest-glow, rgba(34, 211, 238, 0.45)));
+}
+
+.dagon-quest-node--final {
+    transform-origin: center;
+}
+
+.dagon-quest-button {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--quest-accent, var(--color-primary)) 16%, transparent 84%), rgba(255, 255, 255, 0.03)),
+        var(--quest-surface, color-mix(in srgb, var(--color-surface) 78%, transparent 22%));
+    border-color: color-mix(in srgb, var(--quest-accent, var(--color-primary)) 36%, var(--color-border) 64%);
+    box-shadow:
+        0 16px 42px -30px var(--quest-glow, color-mix(in srgb, var(--color-primary) 42%, transparent 58%)),
+        inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.dagon-quest-button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--quest-accent, var(--color-primary)) 34%, transparent 66%) 1px, transparent 1px),
+        linear-gradient(0deg, color-mix(in srgb, var(--quest-secondary, var(--color-secondary)) 20%, transparent 80%) 1px, transparent 1px);
+    background-size: 34px 34px;
+    opacity: 0.24;
+    mask-image: linear-gradient(130deg, rgba(0, 0, 0, 0.75), transparent 72%);
+}
+
+.dagon-quest-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.10), transparent);
+    transform: translateX(-120%);
+    transition: transform 420ms ease;
+}
+
+.dagon-quest-button:hover::after {
+    transform: translateX(120%);
+}
+
+.dagon-quest-button--current {
+    border-color: color-mix(in srgb, var(--quest-accent, var(--color-primary)) 72%, white 28%);
+    box-shadow:
+        0 22px 70px -32px var(--quest-glow, color-mix(in srgb, var(--color-primary) 70%, transparent 30%)),
+        0 0 0 1px color-mix(in srgb, var(--quest-accent, var(--color-primary)) 26%, transparent 74%),
+        inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.dagon-quest-button--final {
+    border-width: 2px;
+    border-color: color-mix(in srgb, var(--quest-accent, var(--color-accent)) 78%, white 22%);
+    box-shadow:
+        0 24px 82px -34px var(--quest-glow, rgba(34, 211, 238, 0.55)),
+        0 0 0 1px color-mix(in srgb, var(--quest-secondary, var(--color-primary)) 32%, transparent 68%),
+        inset 0 1px 0 rgba(255, 255, 255, 0.20);
+}
+
+.dagon-quest-button--mastered {
+    border-color: color-mix(in srgb, var(--quest-accent, #22c55e) 48%, var(--color-border) 52%);
+}
+
+.dagon-quest-button--locked {
+    background: color-mix(in srgb, var(--color-surface) 72%, black 28%);
+    border-color: rgba(100, 116, 139, 0.30);
+}
+
+.dagon-quest-core {
+    position: relative;
+    z-index: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.dagon-quest-core::before {
+    content: "";
+    position: absolute;
+    inset: -0.42rem;
+    z-index: -2;
+    border-radius: 1.45rem;
+    background:
+        conic-gradient(
+            from 28deg,
+            var(--quest-accent, var(--color-primary)),
+            var(--quest-secondary, var(--color-secondary)),
+            transparent 38%,
+            transparent 58%,
+            var(--quest-accent, var(--color-primary))
+        );
+    opacity: 0.88;
+    filter: drop-shadow(0 0 14px var(--quest-glow, rgba(34, 211, 238, 0.45)));
+}
+
+.dagon-quest-core::after {
+    content: "";
+    position: absolute;
+    inset: -0.18rem;
+    z-index: -1;
+    border-radius: 1.25rem;
+    background: color-mix(in srgb, var(--quest-surface, var(--color-surface)) 86%, transparent 14%);
+}
+
+.dagon-quest-core--current {
+    color: #06111f;
+    border-color: rgba(255, 255, 255, 0.72);
+    background: linear-gradient(135deg, var(--quest-accent, var(--color-primary)), var(--quest-secondary, var(--color-secondary)) 62%, color-mix(in srgb, var(--quest-accent, var(--color-primary)) 58%, white 42%));
+    box-shadow:
+        0 0 0 6px color-mix(in srgb, var(--quest-accent, var(--color-primary)) 18%, transparent 82%),
+        0 0 34px var(--quest-glow, color-mix(in srgb, var(--color-primary) 64%, transparent 36%));
+}
+
+.dagon-quest-core--mastered {
+    color: #ecfdf5;
+    border-color: color-mix(in srgb, var(--quest-accent, #22c55e) 58%, white 18%);
+    background: linear-gradient(135deg, var(--quest-accent, #22c55e), var(--quest-secondary, #14b8a6));
+    box-shadow: 0 0 24px var(--quest-glow, rgba(16, 185, 129, 0.34));
+}
+
+.dagon-quest-core--open {
+    color: #ecfeff;
+    border-color: color-mix(in srgb, var(--quest-accent, var(--color-secondary)) 58%, white 16%);
+    background: linear-gradient(135deg, var(--quest-accent, var(--color-secondary)), var(--quest-secondary, var(--color-primary)));
+    box-shadow: 0 0 24px var(--quest-glow, rgba(34, 211, 238, 0.32));
+}
+
+.dagon-quest-core--locked {
+    color: #94a3b8;
+    border-color: rgba(100, 116, 139, 0.42);
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+}
+
+.dagon-quest-core--final {
+    color: #06111f;
+    border-color: rgba(255, 255, 255, 0.82);
+    background:
+        radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.76), transparent 26%),
+        linear-gradient(135deg, var(--quest-accent, var(--color-accent)), var(--quest-secondary, var(--color-primary)) 58%, #facc15);
+    box-shadow:
+        0 0 0 8px color-mix(in srgb, var(--quest-accent, var(--color-accent)) 18%, transparent 82%),
+        0 0 42px var(--quest-glow, rgba(34, 211, 238, 0.58));
+}
+
+.dagon-flow-cap,
+.dagon-flow-exit {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    min-height: 1.55rem;
+    padding: 0.42rem 0.82rem 0;
+    color: color-mix(in srgb, var(--quest-muted, var(--color-text-muted)) 74%, var(--quest-accent, var(--color-primary)) 26%);
+    font-size: 0.52rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.dagon-flow-cap::before,
+.dagon-flow-exit::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    border: 2px solid var(--quest-accent, var(--color-primary));
+    background: var(--quest-surface, var(--color-surface));
+    box-shadow: 0 0 12px var(--quest-glow, rgba(34, 211, 238, 0.45));
+}
+
+.dagon-flow-exit {
+    justify-content: flex-end;
+    padding: 0 0.82rem 0.55rem;
+}
+
+.dagon-quest-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dagon-flow-exit::before {
+    order: 2;
+    border-color: var(--quest-secondary, var(--color-secondary));
+}
+
+.dagon-quest-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.35rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--quest-accent, #67e8f9) 30%, transparent 70%);
+    padding: 0.16rem 0.5rem;
+    background: color-mix(in srgb, var(--quest-accent, #22d3ee) 12%, transparent 88%);
+    color: color-mix(in srgb, var(--quest-accent, #a5f3fc) 34%, white 66%);
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.dagon-quest-status--current {
+    border-color: color-mix(in srgb, var(--quest-secondary, #facc15) 42%, transparent 58%);
+    background: color-mix(in srgb, var(--quest-secondary, #facc15) 16%, transparent 84%);
+    color: color-mix(in srgb, var(--quest-secondary, #facc15) 28%, white 72%);
+}
+
+.dagon-quest-status--mastered {
+    border-color: color-mix(in srgb, var(--quest-accent, #22c55e) 34%, transparent 66%);
+    background: color-mix(in srgb, var(--quest-accent, #22c55e) 14%, transparent 86%);
+    color: color-mix(in srgb, var(--quest-accent, #22c55e) 28%, white 72%);
+}
+
+.dagon-quest-status--locked {
+    border-color: rgba(100, 116, 139, 0.28);
+    background: rgba(15, 23, 42, 0.64);
+    color: #94a3b8;
 }
 
 .a11y-top-action {
@@ -1005,6 +1884,26 @@ h1, h2, h3, h4, h5, h6 {
 
     .dashboard-top-actions {
         row-gap: 0.85rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .dagon-quest-map {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        column-gap: clamp(0.8rem, 2.2vw, 2.2rem);
+        row-gap: clamp(1.1rem, 2vw, 1.75rem);
+        padding-inline: clamp(0.15rem, 0.8vw, 0.75rem);
+    }
+
+    .dagon-quest-node:not(:last-child)::after {
+        left: 50%;
+        top: calc(100% - 0.2rem);
+        height: clamp(1.2rem, 2vw, 1.85rem);
+    }
+
+    .dagon-quest-node:not(:last-child)::before {
+        left: calc(50% - 5px);
+        top: calc(100% + clamp(1.2rem, 2vw, 1.85rem) - 0.45rem);
     }
 }
 
@@ -1141,6 +2040,48 @@ h1, h2, h3, h4, h5, h6 {
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
     }
+}
+
+html[data-motion-safety='low'] .ambient-orb,
+html[data-motion-safety='low'] .login-orbit,
+html[data-motion-safety='low'] .login-dagon-aura,
+html[data-motion-safety='low'] .login-dagon-ring,
+html[data-motion-safety='low'] .dashboard-streak-action__flame,
+html[data-motion-safety='low'] .streak-calendar-day.is-danger,
+html[data-motion-safety='low'] .streak-calendar-day.is-complete,
+html[data-motion-safety='low'] .streak-daily-card--danger .streak-daily-card__seal,
+html[data-motion-safety='low'] .streak-status-ribbon--danger .streak-status-ribbon__icon,
+html[data-motion-safety='low'] .dagon-streak-stage--danger::before,
+html[data-motion-safety='low'] .dagon-streak-stage--powered::before,
+html[data-motion-safety='low'] [class*="animate-dagon-"],
+html[data-motion-safety='low'] .animate-breathe-slow,
+html[data-motion-safety='low'] .animate-pulse-slow,
+html[data-motion-safety='low'] .animate-pulse-slower,
+html[data-motion-safety='low'] .animate-gradient,
+html[data-motion-safety='low'] .animate-float,
+html[data-motion-safety='low'] .animate-breathe,
+html[data-motion-safety='low'] .animate-pulse-glow {
+    animation: none !important;
+}
+
+html[data-motion-safety='low'] .ambient-orb,
+html[data-motion-safety='low'] .login-orbit {
+    opacity: 0.24;
+    filter: blur(72px);
+}
+
+html[data-motion-safety='low'] .dagon-mascot-shell,
+html[data-motion-safety='low'] .dagon-mascot-svg,
+html[data-motion-safety='low'] .page-transition-surface {
+    will-change: auto;
+}
+
+html[data-motion-safety='low'] .glass-card,
+html[data-motion-safety='low'] .glass-card-apple,
+html[data-motion-safety='low'] .streak-status-ribbon,
+html[data-motion-safety='low'] .tour-overlay-shell {
+    backdrop-filter: blur(8px) saturate(130%);
+    -webkit-backdrop-filter: blur(8px) saturate(130%);
 }
 
 .page-transition-surface {
@@ -1353,6 +2294,93 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @layer utilities {
+    .dagon-page-shell {
+        width: min(100%, 1760px);
+        margin-inline: auto;
+        padding: clamp(1.25rem, 2.2vw, 2.75rem) clamp(1rem, 3vw, 4rem);
+    }
+
+    .dagon-page-shell--workbench {
+        width: min(100%, 1920px);
+        padding-inline: clamp(0.85rem, 1.8vw, 2.5rem);
+    }
+
+    .dagon-page-shell--wide {
+        width: min(100%, 1880px);
+        padding-inline: clamp(0.85rem, 2vw, 2.75rem);
+    }
+
+    .dagon-page-shell--reading {
+        width: min(100%, 1440px);
+    }
+
+    .dagon-relaxed-flow {
+        display: grid;
+        gap: clamp(1rem, 1.7vw, 2rem);
+    }
+
+    .dagon-workbench-grid {
+        display: grid;
+        gap: clamp(1rem, 1.8vw, 2.25rem);
+        align-items: start;
+    }
+
+    .dagon-workbench-rail {
+        min-width: 0;
+    }
+
+    .dagon-workbench-main {
+        min-width: 0;
+        display: grid;
+        gap: clamp(1rem, 1.6vw, 2rem);
+    }
+
+    .dagon-compact-card {
+        box-shadow:
+            0 18px 50px -34px color-mix(in srgb, var(--color-primary) 28%, transparent 72%),
+            inset 0 1px 0 0 color-mix(in srgb, var(--glass-highlight) 70%, transparent 30%);
+    }
+
+    .dagon-workbench-grid--focus {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    @media (min-width: 1024px) {
+        .dagon-workbench-grid {
+            grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+        }
+
+        .dagon-workbench-rail {
+            position: sticky;
+            top: 6rem;
+            max-height: calc(100dvh - 7rem);
+            overflow: auto;
+            scrollbar-width: thin;
+        }
+
+        .dagon-workbench-grid--focus {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+
+    @media (min-width: 1536px) {
+        .dagon-workbench-grid {
+            grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+        }
+
+        .dagon-workbench-grid--focus {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .glass-card-apple,
+        .glass-card,
+        .glass-card-deep {
+            box-shadow:
+                0 22px 70px -48px color-mix(in srgb, var(--color-primary) 24%, transparent 76%),
+                inset 0 1px 0 0 var(--glass-highlight);
+        }
+    }
+
     .quick-practice-container {
         @apply w-full max-w-2xl lg:max-w-4xl mx-auto;
     }

@@ -22,6 +22,10 @@ import java.util.*;
 
 @Service
 public class EjercicioService {
+    private static final int PRACTICA_RAPIDA_XP = 5;
+    private static final int PRACTICA_RAPIDA_XP_DIARIA_MAX = 25;
+    private static final int PRACTICA_RAPIDA_ACIERTOS_DIARIOS_CON_XP = PRACTICA_RAPIDA_XP_DIARIA_MAX / PRACTICA_RAPIDA_XP;
+
     @Autowired
     private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
@@ -68,6 +72,11 @@ public class EjercicioService {
             dto.setTitle(ej.getTitulo() != null ? ej.getTitulo() : "Misión " + contador);
             dto.setDescription(ej.getEnunciado());
             dto.setOrden(ej.getOrden() != null ? ej.getOrden() : contador);
+            dto.setIdModulo(ej.getIdModulo());
+            dto.setDifficulty(ej.getDificultad() != null ? ej.getDificultad() : 1);
+            dto.setXpReward("RAPIDA".equals(ej.getTipoMision()) ? PRACTICA_RAPIDA_XP : dto.getDifficulty() * 10);
+            dto.setTimeLimitSeconds(calcularTiempoPractica(ej.getQueryMaestra(), dto.getDifficulty()));
+            dto.setConcept(construirConceptoPractica(ej.getQueryMaestra(), ej.getIdModulo()));
 
             String formato = ej.getFormato();
 
@@ -175,42 +184,207 @@ public class EjercicioService {
     }
 
     public List<EjercicioDTO> obtenerEjerciciosPracticaRapida() {
-        String sql = "SELECT * FROM lms_core.ejercicios_practicos WHERE tipo_mision = 'RAPIDA' ORDER BY RANDOM() LIMIT 3";
-        List<Map<String, Object>> crudos = jdbcTemplate.queryForList(sql);
+        return obtenerEjerciciosPracticaRapida("mixto", 3, null);
+    }
+
+    public List<EjercicioDTO> obtenerEjerciciosPracticaRapida(String nivel, int limite, String usuarioId) {
+        int limiteSeguro = Math.max(3, Math.min(limite, 12));
+        String nivelNormalizado = nivel != null ? nivel.trim().toLowerCase(Locale.ROOT) : "mixto";
+        int[] rango = resolverRangoComplejidadPractica(nivelNormalizado);
+        boolean permitirMutaciones = permiteMutacionesEnPractica(nivelNormalizado);
+        String seleccionBase = construirSelectBasePracticaRapida();
+
+        String sqlConUsuario = seleccionBase +
+                "WHERE q.complejidad_rapida BETWEEN ? AND ? " +
+                "AND (? OR q.select_seguro = true) " +
+                "ORDER BY CASE WHEN EXISTS ( " +
+                "    SELECT 1 FROM lms_core.intentos i " +
+                "    WHERE i.id_usuario = ?::uuid " +
+                "      AND i.id_ejercicio = q.id_ejercicio " +
+                "      AND i.es_correcto = true " +
+                "      AND DATE(i.fecha_intento) = CURRENT_DATE " +
+                ") THEN 1 ELSE 0 END, q.complejidad_rapida, RANDOM() " +
+                "LIMIT ?";
+
+        String sqlSinUsuario = seleccionBase +
+                "WHERE q.complejidad_rapida BETWEEN ? AND ? " +
+                "AND (? OR q.select_seguro = true) " +
+                "ORDER BY q.complejidad_rapida, RANDOM() " +
+                "LIMIT ?";
+
+        List<Map<String, Object>> crudos;
+        if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+            crudos = jdbcTemplate.queryForList(sqlConUsuario, rango[0], rango[1], permitirMutaciones, usuarioId, limiteSeguro);
+        } else {
+            crudos = jdbcTemplate.queryForList(sqlSinUsuario, rango[0], rango[1], permitirMutaciones, limiteSeguro);
+        }
+
+        if (crudos.isEmpty()) {
+            String fallbackSql = seleccionBase +
+                    "WHERE (? OR q.select_seguro = true) " +
+                    "ORDER BY ABS(q.complejidad_rapida - ?), q.complejidad_rapida, RANDOM() LIMIT ?";
+            crudos = jdbcTemplate.queryForList(fallbackSql, permitirMutaciones, rango[0], limiteSeguro);
+        }
 
         List<EjercicioDTO> dtos = new ArrayList<>();
         int contador = 1;
-
-        for(Map<String, Object> ejMap : crudos) {
-            EjercicioDTO dto = new EjercicioDTO();
-            dto.setId((Integer) ejMap.get("id_ejercicio"));
-            dto.setTitle("Misión Relámpago " + contador);
-            dto.setDescription((String) ejMap.get("enunciado"));
-
-            dto.setType("drag_drop");
-            dto.setHint("¡El tiempo es oro! Arrastra los bloques correctos.");
-
-            String queryReal = (String) ejMap.get("query_maestra");
-            if (queryReal != null) {
-                List<String> bancoPalabras = new ArrayList<>();
-
-                for (String palabra : queryReal.replaceAll(";", " ;").split("\\s+")) {
-                    if (palabra != null && !palabra.trim().isEmpty()) {
-                        bancoPalabras.add(palabra.trim());
-                    }
-                }
-
-                bancoPalabras.addAll(Arrays.asList(
-                    "WHERE", "JOIN", "COUNT", "MAX", "MIN", "equipamiento", "INNER"
-                ));
-
-                Collections.shuffle(bancoPalabras);
-                dto.setWordBank(bancoPalabras);
-            }
-            dtos.add(dto);
-            contador++;
+        for (Map<String, Object> ejMap : crudos) {
+            dtos.add(construirDtoPracticaRapida(ejMap, contador++));
         }
         return dtos;
+    }
+
+    private EjercicioDTO construirDtoPracticaRapida(Map<String, Object> ejMap, int contador) {
+        EjercicioDTO dto = new EjercicioDTO();
+        Integer dificultad = obtenerEntero(ejMap.get("complejidad_rapida"), obtenerEntero(ejMap.get("dificultad"), 1));
+        String queryReal = (String) ejMap.get("query_maestra");
+        String titulo = (String) ejMap.get("titulo");
+
+        dto.setId(obtenerEntero(ejMap.get("id_ejercicio"), null));
+        dto.setIdModulo(obtenerEntero(ejMap.get("id_modulo"), null));
+        dto.setTitle(titulo != null && !titulo.isBlank() ? titulo : "Misión Relámpago " + contador);
+        dto.setDescription((String) ejMap.get("enunciado"));
+        dto.setType("drag_drop");
+        dto.setHint("Arma la consulta por bloques. Si el tiempo presiona, identifica primero SELECT, FROM y la condicion central.");
+        dto.setOrden(obtenerEntero(ejMap.get("orden"), contador));
+        dto.setDifficulty(dificultad);
+        dto.setXpReward(PRACTICA_RAPIDA_XP);
+        dto.setTimeLimitSeconds(calcularTiempoPractica(queryReal, dificultad));
+        dto.setConcept(construirConceptoPractica(queryReal, dto.getIdModulo()));
+        dto.setWordBank(construirBancoPalabrasPractica(queryReal));
+        return dto;
+    }
+
+    private String construirSelectBasePracticaRapida() {
+        return "SELECT q.* FROM (" +
+                "SELECT e.*, " +
+                sqlComplejidadPracticaRapida() + " AS complejidad_rapida, " +
+                sqlSelectSeguroPracticaRapida() + " AS select_seguro " +
+                "FROM lms_core.ejercicios_practicos e " +
+                "WHERE e.tipo_mision = 'RAPIDA'" +
+                ") q ";
+    }
+
+    private String sqlComplejidadPracticaRapida() {
+        String q = "UPPER(TRIM(COALESCE(e.query_maestra, '')))";
+        return "CASE " +
+                "WHEN " + q + " LIKE 'BEGIN%' OR " + q + " LIKE 'COMMIT%' OR " + q + " LIKE 'ROLLBACK%' " +
+                "OR " + q + " LIKE 'CREATE%' OR " + q + " LIKE 'ALTER%' OR " + q + " LIKE 'DROP%' " +
+                "OR " + q + " LIKE 'INSERT%' OR " + q + " LIKE 'UPDATE%' OR " + q + " LIKE 'DELETE%' THEN 5 " +
+                "WHEN " + q + " LIKE '% JOIN %' AND (" + q + " LIKE '% GROUP BY%' OR " + q + " LIKE '% HAVING%') THEN 4 " +
+                "WHEN " + q + " LIKE 'WITH %' OR " + q + " LIKE '% IN ( SELECT%' OR " + q + " LIKE '% NOT IN ( SELECT%' THEN 4 " +
+                "WHEN " + q + " LIKE '% JOIN %' OR " + q + " LIKE '% GROUP BY%' OR " + q + " LIKE '% HAVING%' OR " + q + " LIKE '%NEXTVAL%' OR " + q + " LIKE '%CURRVAL%' " +
+                "OR " + q + " LIKE '%COUNT(%' OR " + q + " LIKE '%COUNT(*)%' OR " + q + " LIKE '%AVG(%' OR " + q + " LIKE '%SUM(%' OR " + q + " LIKE '%MIN(%' OR " + q + " LIKE '%MAX(%' THEN 3 " +
+                "WHEN " + q + " LIKE '% WHERE %' OR " + q + " LIKE '% BETWEEN %' OR " + q + " LIKE '% IS NULL%' OR " + q + " LIKE '% ORDER BY%' " +
+                "THEN 2 " +
+                "ELSE 1 END";
+    }
+
+    private String sqlSelectSeguroPracticaRapida() {
+        String q = "UPPER(TRIM(COALESCE(e.query_maestra, '')))";
+        return "(" + q + " LIKE 'SELECT%' " +
+                "AND " + q + " NOT LIKE '%NEXTVAL%' " +
+                "AND " + q + " NOT LIKE '%CURRVAL%' " +
+                "AND " + q + " NOT LIKE '%SETVAL%' " +
+                "AND " + q + " NOT LIKE '%; INSERT%' " +
+                "AND " + q + " NOT LIKE '%; UPDATE%' " +
+                "AND " + q + " NOT LIKE '%; DELETE%' " +
+                "AND " + q + " NOT LIKE '%; CREATE%' " +
+                "AND " + q + " NOT LIKE '%; ALTER%' " +
+                "AND " + q + " NOT LIKE '%; DROP%')";
+    }
+
+    private int[] resolverRangoComplejidadPractica(String nivel) {
+        return switch (nivel) {
+            case "nivel-0", "basico-inicial" -> new int[]{1, 1};
+            case "basico" -> new int[]{2, 2};
+            case "medio", "intermedio" -> new int[]{3, 3};
+            case "avanzado" -> new int[]{4, 4};
+            case "experto" -> new int[]{5, 5};
+            default -> new int[]{1, 5};
+        };
+    }
+
+    private boolean permiteMutacionesEnPractica(String nivel) {
+        return "avanzado".equals(nivel) || "experto".equals(nivel) || "mixto".equals(nivel) || "libre".equals(nivel);
+    }
+
+    private Integer obtenerEntero(Object valor, Integer fallback) {
+        if (valor instanceof Number numero) {
+            return numero.intValue();
+        }
+        if (valor != null) {
+            try {
+                return Integer.parseInt(valor.toString());
+            } catch (NumberFormatException ignored) {}
+        }
+        return fallback;
+    }
+
+    private List<String> construirBancoPalabrasPractica(String queryReal) {
+        LinkedHashSet<String> bancoPalabras = new LinkedHashSet<>();
+
+        if (queryReal != null) {
+            for (String palabra : queryReal.replaceAll(";", " ;").split("\\s+")) {
+                if (palabra != null && !palabra.trim().isEmpty()) {
+                    bancoPalabras.add(palabra.trim());
+                }
+            }
+        }
+
+        bancoPalabras.addAll(Arrays.asList(
+                "SELECT", "FROM", "WHERE", "GROUP", "BY", "HAVING", "ORDER", "ASC", "DESC",
+                "COUNT(*)", "MAX(nivel)", "MIN(precio)", "AVG(nivel)",
+                "aventureros", "equipamiento", "nombre", "clase", "nivel", "item", "precio"
+        ));
+
+        List<String> mezclado = new ArrayList<>(bancoPalabras);
+        Collections.shuffle(mezclado);
+        return mezclado;
+    }
+
+    private int calcularTiempoPractica(String queryReal, int dificultad) {
+        int palabras = queryReal != null ? Math.max(4, queryReal.replaceAll(";", " ;").trim().split("\\s+").length) : 8;
+        int segundos = 24 + palabras + (Math.max(1, dificultad) * 6);
+
+        if (queryReal != null) {
+            String upper = queryReal.toUpperCase(Locale.ROOT);
+            if (upper.contains("JOIN") || upper.contains("GROUP BY") || upper.contains("HAVING")) {
+                segundos += 8;
+            }
+            if (upper.matches("^[\\s\\S]*(CREATE|ALTER|INSERT|UPDATE|DELETE|BEGIN|COMMIT|ROLLBACK)[\\s\\S]*$")) {
+                segundos += 10;
+            }
+        }
+
+        return Math.max(28, Math.min(segundos, 85));
+    }
+
+    private String construirConceptoPractica(String queryReal, Integer idModulo) {
+        String upper = queryReal != null ? queryReal.trim().toUpperCase(Locale.ROOT) : "";
+
+        if ((idModulo != null && (idModulo == 15 || idModulo == 16)) || upper.contains("BEGIN") || upper.contains("COMMIT") || upper.contains("ROLLBACK")) {
+            return "Transacciones";
+        }
+        if (upper.contains("NEXTVAL") || upper.contains("CURRVAL") || upper.contains("SETVAL")) {
+            return "Secuencias";
+        }
+        if (upper.startsWith("CREATE") || upper.startsWith("ALTER") || upper.startsWith("DROP") || upper.contains("CONSTRAINT")) {
+            return "DDL y reglas";
+        }
+        if (upper.startsWith("INSERT") || upper.startsWith("UPDATE") || upper.startsWith("DELETE")) {
+            return "Cambios controlados";
+        }
+        if (upper.contains("JOIN")) {
+            return "Relaciones entre tablas";
+        }
+        if (upper.contains("GROUP BY") || upper.contains("COUNT") || upper.contains("AVG") || upper.contains("SUM") || upper.contains("MAX") || upper.contains("MIN") || upper.contains("HAVING")) {
+            return "Agregaciones";
+        }
+        if (upper.contains("WHERE") || upper.contains("BETWEEN") || upper.contains("LIKE") || upper.contains(" IS NULL") || upper.contains(" IN ")) {
+            return "Filtros";
+        }
+        return "Lectura con SELECT";
     }
 
     private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId) throws java.sql.SQLException {
@@ -816,8 +990,20 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
 
                 String tipo = ejercicio.getTipoMision() != null ? ejercicio.getTipoMision() : "HISTORIA";
                 if ("RAPIDA".equals(tipo)) {
-                    respuesta.put("message", "¡Relámpago! +5 XP y Racha Salvada 🔥");
-                    respuesta.put("xp_gained", 5);
+                    int aciertosRapidosHoy = contarAciertosRapidosHoy(usuarioId);
+                    int xpRapida = aciertosRapidosHoy <= PRACTICA_RAPIDA_ACIERTOS_DIARIOS_CON_XP ? PRACTICA_RAPIDA_XP : 0;
+                    int xpConsumidaHoy = Math.min(aciertosRapidosHoy, PRACTICA_RAPIDA_ACIERTOS_DIARIOS_CON_XP) * PRACTICA_RAPIDA_XP;
+                    int xpRestanteHoy = Math.max(0, PRACTICA_RAPIDA_XP_DIARIA_MAX - xpConsumidaHoy);
+
+                    respuesta.put("message", xpRapida > 0
+                            ? "¡Relámpago completado! Racha protegida y +" + xpRapida + " XP."
+                            : "Racha protegida. Ya alcanzaste el cupo de XP relámpago de hoy.");
+                    respuesta.put("xp_gained", xpRapida);
+                    respuesta.put("quick_practice", true);
+                    respuesta.put("streak_saved", true);
+                    respuesta.put("daily_quick_xp_cap", PRACTICA_RAPIDA_XP_DIARIA_MAX);
+                    respuesta.put("daily_quick_xp_remaining", xpRestanteHoy);
+                    respuesta.put("daily_quick_successes", aciertosRapidosHoy);
                 } else if (yaResuelto) {
                     respuesta.put("message", "¡Perfecto! (Pero ya habías resuelto esta misión. 0 extra)");
                     respuesta.put("xp_gained", 0);
@@ -1037,6 +1223,26 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             return null;
         }
         return null;
+    }
+
+    private int contarAciertosRapidosHoy(String usuarioId) {
+        if (usuarioId == null || usuarioId.trim().isEmpty()) {
+            return 0;
+        }
+
+        try {
+            String sql = "SELECT COUNT(*) " +
+                    "FROM lms_core.intentos i " +
+                    "JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
+                    "WHERE i.id_usuario = ?::uuid " +
+                    "AND i.es_correcto = true " +
+                    "AND e.tipo_mision = 'RAPIDA' " +
+                    "AND DATE(i.fecha_intento) = CURRENT_DATE";
+            Integer total = jdbcTemplate.queryForObject(sql, Integer.class, usuarioId);
+            return total != null ? total : 0;
+        } catch (Exception ignored) {
+            return 0;
+        }
     }
 
     private boolean compararResultadosDML(List<Map<String, Object>> r1, List<Map<String, Object>> r2) {

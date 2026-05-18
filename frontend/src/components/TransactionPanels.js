@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, ChevronDown, Database } from 'lucide-react';
 import { buildRowSignature, buildTransactionDiff } from '../lib/exerciseHelpers';
 
-export const DataComparisonTable = ({ data, colors, highlight = false, rowMarkers = [], animateRows = false }) => {
+export const DataComparisonTable = ({ data, colors, highlight = false, rowMarkers = [], animateRows = false, markerLabels = {} }) => {
   if (!data || data.length === 0) {
     return <div className="p-4 text-xs italic" style={{ color: colors.textMuted }}>Tabla vacía</div>;
   }
@@ -52,10 +52,10 @@ export const DataComparisonTable = ({ data, colors, highlight = false, rowMarker
                 <td key={j} className="px-3 py-1.5 font-mono" style={{ color: isLight ? '#374151' : '#cbd5e1' }}>
                   <div className="flex items-center gap-2">
                     {j === 0 && rowMarkers[i] === 'added' && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">Nuevo</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500">{markerLabels.added || 'Nuevo'}</span>
                     )}
                     {j === 0 && rowMarkers[i] === 'removed' && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">Revertido</span>
+                      <span className="text-[9px] font-black uppercase tracking-wider text-rose-500">{markerLabels.removed || 'Revertido'}</span>
                     )}
                     <span>{String(val)}</span>
                   </div>
@@ -589,4 +589,3 @@ export const TransactionOutcomePanel = ({ result, colors }) => {
     </div>
   );
 };
-

@@ -11,7 +11,11 @@ public class EjercicioDTO {
     private String starterCode;
     private String hint;
     private Integer orden;
-    // ¡NUEVO! El banco de palabras para el Drag & Drop
+    private Integer idModulo;
+    private Integer difficulty;
+    private Integer xpReward;
+    private Integer timeLimitSeconds;
+    private String concept;
     private List<String> wordBank;
     private Map<String, Object> pedagogia;
     // --- GETTERS Y SETTERS ---
@@ -35,6 +39,21 @@ public class EjercicioDTO {
 
     public Integer getOrden() { return orden; }
     public void setOrden(Integer orden) { this.orden = orden; }
+
+    public Integer getIdModulo() { return idModulo; }
+    public void setIdModulo(Integer idModulo) { this.idModulo = idModulo; }
+
+    public Integer getDifficulty() { return difficulty; }
+    public void setDifficulty(Integer difficulty) { this.difficulty = difficulty; }
+
+    public Integer getXpReward() { return xpReward; }
+    public void setXpReward(Integer xpReward) { this.xpReward = xpReward; }
+
+    public Integer getTimeLimitSeconds() { return timeLimitSeconds; }
+    public void setTimeLimitSeconds(Integer timeLimitSeconds) { this.timeLimitSeconds = timeLimitSeconds; }
+
+    public String getConcept() { return concept; }
+    public void setConcept(String concept) { this.concept = concept; }
 
     public List<String> getWordBank() { return wordBank; }
     public void setWordBank(List<String> wordBank) { this.wordBank = wordBank; }

@@ -74,7 +74,7 @@ export const CreditsPage = () => {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="max-w-5xl w-full text-center relative z-10"
+        className="dagon-page-shell dagon-page-shell--reading text-center relative z-10"
       >
         {/* MASCOTA */}
         <motion.div variants={itemVariants} className="mb-6">

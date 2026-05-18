@@ -6,6 +6,7 @@ import com.dagon.backend.repository.UsuarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +19,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +43,9 @@ public class UsuarioService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Value("${dagon.streak.zone:America/Mexico_City}")
+    private String streakZone;
 
     // --- FUNCION 1: REGISTRO ---
     public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
@@ -118,34 +125,22 @@ public class UsuarioService {
     // --- FUNCION 3: REGISTRAR PRACTICA (RACHAS) ---
     public void registrarPracticaDiaria(String usuarioId) {
         try {
-            java.time.LocalDate hoy = java.time.LocalDate.now();
+            LocalDate hoy = hoyRacha();
+            RachaSnapshot racha = obtenerRachaSnapshot(usuarioId, hoy);
 
-            String sqlUltimaPractica = "SELECT ultima_practica FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
-            java.sql.Date ultimaPractica = jdbcTemplate.queryForObject(sqlUltimaPractica, java.sql.Date.class, usuarioId);
-
-            if (ultimaPractica == null) {
-                String updateSql = "UPDATE lms_core.usuarios SET racha_actual = 1, mejor_racha = 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
-                jdbcTemplate.update(updateSql, hoy.toString(), usuarioId);
+            if (racha.ultimaPractica() != null && racha.ultimaPractica().equals(hoy)) {
                 return;
             }
 
-            java.time.LocalDate ultFecha = ultimaPractica.toLocalDate();
+            int nuevaRacha = racha.ultimaPractica() != null && racha.ultimaPractica().equals(hoy.minusDays(1))
+                    ? Math.max(0, racha.rachaActual()) + 1
+                    : 1;
+            int nuevaMejorRacha = Math.max(racha.mejorRacha(), nuevaRacha);
 
-            if (ultFecha.equals(hoy)) {
-                return;
-            } else if (ultFecha.equals(hoy.minusDays(1))) {
-                String sqlUpdate = "UPDATE lms_core.usuarios SET racha_actual = racha_actual + 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
-                jdbcTemplate.update(sqlUpdate, hoy.toString(), usuarioId);
-
-                String sqlCheck = "SELECT racha_actual FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
-                int rachaActual = jdbcTemplate.queryForObject(sqlCheck, Integer.class, usuarioId);
-
-                String sqlMejor = "UPDATE lms_core.usuarios SET mejor_racha = ? WHERE id_usuario = ?::uuid AND mejor_racha < ?";
-                jdbcTemplate.update(sqlMejor, rachaActual, usuarioId, rachaActual);
-            } else {
-                String updateSql = "UPDATE lms_core.usuarios SET racha_actual = 1, ultima_practica = ?::date WHERE id_usuario = ?::uuid";
-                jdbcTemplate.update(updateSql, hoy.toString(), usuarioId);
-            }
+            String updateSql = "UPDATE lms_core.usuarios " +
+                    "SET racha_actual = ?, mejor_racha = ?, ultima_practica = ?::date " +
+                    "WHERE id_usuario = ?::uuid";
+            jdbcTemplate.update(updateSql, nuevaRacha, nuevaMejorRacha, hoy.toString(), usuarioId);
 
             logger.debug("Practica diaria registrada para el usuario con ID: {}", usuarioId);
         } catch (Exception e) {
@@ -161,10 +156,26 @@ public class UsuarioService {
         Map<String, Object> stats = new HashMap<>();
 
         try {
-            String sqlXP = "SELECT COALESCE(SUM(e.dificultad * 10), 0) " +
-                    "FROM (SELECT DISTINCT id_ejercicio FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true) as unicos " +
-                    "JOIN lms_core.ejercicios_practicos e ON unicos.id_ejercicio = e.id_ejercicio";
-            stats.put("xp", jdbcTemplate.queryForObject(sqlXP, Integer.class, id));
+            String sqlXP = "WITH historia AS ( " +
+                    "  SELECT COALESCE(SUM(e.dificultad * 10), 0) AS xp " +
+                    "  FROM ( " +
+                    "    SELECT DISTINCT i.id_ejercicio " +
+                    "    FROM lms_core.intentos i " +
+                    "    JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
+                    "    WHERE i.id_usuario = ?::uuid " +
+                    "      AND i.es_correcto = true " +
+                    "      AND COALESCE(e.tipo_mision, 'HISTORIA') <> 'RAPIDA' " +
+                    "  ) unicos " +
+                    "  JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = unicos.id_ejercicio " +
+                    "), rapida_ordenada AS ( " +
+                    "  SELECT ROW_NUMBER() OVER (PARTITION BY DATE(i.fecha_intento) ORDER BY i.fecha_intento, i.id_intento) AS rn " +
+                    "  FROM lms_core.intentos i " +
+                    "  JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
+                    "  WHERE i.id_usuario = ?::uuid " +
+                    "    AND i.es_correcto = true " +
+                    "    AND e.tipo_mision = 'RAPIDA' " +
+                    ") SELECT (SELECT xp FROM historia) + COALESCE((SELECT COUNT(*) * 5 FROM rapida_ordenada WHERE rn <= 5), 0)";
+            stats.put("xp", jdbcTemplate.queryForObject(sqlXP, Integer.class, id, id));
 
             String sqlRank = "SELECT posicion FROM (" +
                     "  SELECT id_usuario, RANK() OVER (ORDER BY xp_total DESC) as posicion " +
@@ -182,13 +193,17 @@ public class UsuarioService {
             String sqlCompletados = "SELECT COUNT(DISTINCT id_ejercicio) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true";
             stats.put("ejercicios_completados", jdbcTemplate.queryForObject(sqlCompletados, Integer.class, id));
 
-            String sqlRacha = "SELECT racha_actual, mejor_racha FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
-            Map<String, Object> rachaData = jdbcTemplate.queryForMap(sqlRacha, id);
-            int rachaActual = ((Number) rachaData.get("racha_actual")).intValue();
-            int mejorRacha = ((Number) rachaData.get("mejor_racha")).intValue();
-
-            stats.put("racha", rachaActual);
-            stats.put("mejor_racha", mejorRacha);
+            RachaSnapshot racha = normalizarRachaParaStats(id);
+            stats.put("racha", racha.rachaActual());
+            stats.put("mejor_racha", racha.mejorRacha());
+            stats.put("ultima_practica", racha.ultimaPractica() != null ? racha.ultimaPractica().toString() : null);
+            stats.put("racha_estado", racha.estado());
+            stats.put("actividad_hoy", racha.actividadHoy());
+            stats.put("racha_en_riesgo", racha.enRiesgo());
+            stats.put("racha_expirada", racha.expirada());
+            stats.put("racha_protegida_hoy", racha.protegidaHoy());
+            stats.put("racha_expira_en_horas", racha.expiraEnHoras());
+            stats.put("dias_desde_ultima_practica", racha.diasDesdeUltimaPractica());
 
             String sqlFechas = "SELECT DISTINCT DATE(fecha_intento) as fecha_actividad " +
                     "FROM lms_core.intentos WHERE id_usuario = ?::uuid ORDER BY fecha_actividad DESC";
@@ -199,13 +214,33 @@ public class UsuarioService {
             }
             stats.put("fechas_actividad", fechasStr);
 
-            String sqlDistribucion = "SELECT e.dificultad, SUM(e.dificultad * 10) as xp_ganada " +
-                    "FROM (SELECT DISTINCT id_ejercicio FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true) as unicos " +
-                    "JOIN lms_core.ejercicios_practicos e ON unicos.id_ejercicio = e.id_ejercicio " +
-                    "GROUP BY e.dificultad " +
-                    "ORDER BY e.dificultad";
+            String sqlDistribucion = "WITH historia AS ( " +
+                    "  SELECT e.dificultad, SUM(e.dificultad * 10) AS xp_ganada " +
+                    "  FROM ( " +
+                    "    SELECT DISTINCT i.id_ejercicio " +
+                    "    FROM lms_core.intentos i " +
+                    "    JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
+                    "    WHERE i.id_usuario = ?::uuid " +
+                    "      AND i.es_correcto = true " +
+                    "      AND COALESCE(e.tipo_mision, 'HISTORIA') <> 'RAPIDA' " +
+                    "  ) unicos " +
+                    "  JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = unicos.id_ejercicio " +
+                    "  GROUP BY e.dificultad " +
+                    "), rapida_ordenada AS ( " +
+                    "  SELECT e.dificultad, ROW_NUMBER() OVER (PARTITION BY DATE(i.fecha_intento) ORDER BY i.fecha_intento, i.id_intento) AS rn " +
+                    "  FROM lms_core.intentos i " +
+                    "  JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
+                    "  WHERE i.id_usuario = ?::uuid " +
+                    "    AND i.es_correcto = true " +
+                    "    AND e.tipo_mision = 'RAPIDA' " +
+                    "), rapida AS ( " +
+                    "  SELECT dificultad, COUNT(*) * 5 AS xp_ganada " +
+                    "  FROM rapida_ordenada WHERE rn <= 5 GROUP BY dificultad " +
+                    ") SELECT dificultad, SUM(xp_ganada) AS xp_ganada " +
+                    "FROM (SELECT * FROM historia UNION ALL SELECT * FROM rapida) base " +
+                    "GROUP BY dificultad ORDER BY dificultad";
             try {
-                java.util.List<Map<String, Object>> distribucion = jdbcTemplate.queryForList(sqlDistribucion, id);
+                java.util.List<Map<String, Object>> distribucion = jdbcTemplate.queryForList(sqlDistribucion, id, id);
                 stats.put("distribucion_xp", distribucion);
             } catch (Exception e) {
                 stats.put("distribucion_xp", new java.util.ArrayList<>());
@@ -222,6 +257,109 @@ public class UsuarioService {
         }
 
         return stats;
+    }
+
+    private RachaSnapshot normalizarRachaParaStats(String usuarioId) {
+        LocalDate hoy = hoyRacha();
+        RachaSnapshot racha = obtenerRachaSnapshot(usuarioId, hoy);
+
+        if (racha.expirada() && racha.rachaActual() > 0) {
+            jdbcTemplate.update(
+                    "UPDATE lms_core.usuarios SET racha_actual = 0 WHERE id_usuario = ?::uuid AND racha_actual <> 0",
+                    usuarioId
+            );
+            return racha.conRachaActual(0);
+        }
+
+        return racha;
+    }
+
+    private RachaSnapshot obtenerRachaSnapshot(String usuarioId, LocalDate hoy) {
+        String sql = "SELECT COALESCE(racha_actual, 0) AS racha_actual, " +
+                "COALESCE(mejor_racha, 0) AS mejor_racha, ultima_practica " +
+                "FROM lms_core.usuarios WHERE id_usuario = ?::uuid";
+        Map<String, Object> row = jdbcTemplate.queryForMap(sql, usuarioId);
+        int rachaActual = ((Number) row.get("racha_actual")).intValue();
+        int mejorRacha = ((Number) row.get("mejor_racha")).intValue();
+        Object ultimaRaw = row.get("ultima_practica");
+        LocalDate ultimaPractica = null;
+        if (ultimaRaw instanceof java.sql.Date fechaSql) {
+            ultimaPractica = fechaSql.toLocalDate();
+        } else if (ultimaRaw instanceof LocalDate fechaLocal) {
+            ultimaPractica = fechaLocal;
+        }
+
+        if (ultimaPractica == null || rachaActual <= 0) {
+            return new RachaSnapshot(0, mejorRacha, ultimaPractica, "sin_racha", false, false, false, false, null, null);
+        }
+
+        long diasDesdeUltimaPractica = ChronoUnit.DAYS.between(ultimaPractica, hoy);
+        boolean actividadHoy = diasDesdeUltimaPractica <= 0;
+        boolean enRiesgo = diasDesdeUltimaPractica == 1;
+        boolean expirada = diasDesdeUltimaPractica > 1;
+        String estado = expirada ? "expirada" : enRiesgo ? "en_riesgo" : "protegida";
+        Integer expiraEnHoras = enRiesgo ? horasRestantesDelDia() : null;
+
+        return new RachaSnapshot(
+                rachaActual,
+                mejorRacha,
+                ultimaPractica,
+                estado,
+                actividadHoy,
+                enRiesgo,
+                expirada,
+                actividadHoy,
+                expiraEnHoras,
+                Math.max(0, diasDesdeUltimaPractica)
+        );
+    }
+
+    private LocalDate hoyRacha() {
+        try {
+            return LocalDate.now(ZoneId.of(streakZone));
+        } catch (Exception e) {
+            logger.warn("Zona horaria de racha invalida '{}', usando zona del servidor", streakZone);
+            return LocalDate.now();
+        }
+    }
+
+    private int horasRestantesDelDia() {
+        try {
+            ZoneId zone = ZoneId.of(streakZone);
+            java.time.ZonedDateTime ahora = java.time.ZonedDateTime.now(zone);
+            java.time.ZonedDateTime medianoche = ahora.toLocalDate().plusDays(1).atStartOfDay(zone);
+            return Math.max(0, (int) ChronoUnit.HOURS.between(ahora, medianoche));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private record RachaSnapshot(
+            int rachaActual,
+            int mejorRacha,
+            LocalDate ultimaPractica,
+            String estado,
+            boolean actividadHoy,
+            boolean enRiesgo,
+            boolean expirada,
+            boolean protegidaHoy,
+            Integer expiraEnHoras,
+            Long diasDesdeUltimaPractica
+    ) {
+        RachaSnapshot conRachaActual(int nuevaRacha) {
+            return new RachaSnapshot(
+                    nuevaRacha,
+                    mejorRacha,
+                    ultimaPractica,
+                    estado,
+                    actividadHoy,
+                    enRiesgo,
+                    expirada,
+                    protegidaHoy,
+                    expiraEnHoras,
+                    diasDesdeUltimaPractica
+            );
+        }
     }
 
     private java.util.List<Map<String, Object>> obtenerDominioConceptos(String id) {

@@ -261,7 +261,7 @@ export const GraduationPage = () => {
         {showCertificate && (
           <motion.div
             key="certificate"
-            className="z-10 max-w-2xl w-full"
+            className="z-10 w-full max-w-5xl px-4"
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}

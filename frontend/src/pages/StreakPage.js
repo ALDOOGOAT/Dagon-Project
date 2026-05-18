@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { DagonMascot } from '../components/DagonMascot';
-import { ArrowLeft, Flame, Trophy, Sparkles, Target, ChevronLeft, ChevronRight, Zap, PartyPopper, Star } from 'lucide-react';
+import {
+  ArrowLeft, Flame, Trophy, Sparkles, Target, ChevronLeft, ChevronRight,
+  Zap, PartyPopper, Star, ShieldAlert, Dumbbell, CalendarCheck, Clock3
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import apiClient from '../services/apiClient';
 
 const MILESTONES = [
@@ -20,13 +23,20 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const FireEffect = ({ intensity = 1 }) => {
-  const particles = useMemo(() => Array.from({ length: 20 }, (_, i) => ({
+  const shouldReduceMotion = useReducedMotion();
+  const particleCount = shouldReduceMotion ? 0 : 12;
+  const particles = useMemo(() => Array.from({ length: particleCount }, (_, i) => ({
     id: i,
     x: 15 + Math.random() * 70,
     delay: Math.random() * 2,
     duration: 1.5 + Math.random() * 1,
     size: 3 + Math.random() * 4,
-  })), []);
+    hue: 30 + Math.random() * 20,
+    lightness: 60 + Math.random() * 20,
+    driftX: (Math.random() - 0.5) * 30,
+  })), [particleCount]);
+
+  if (shouldReduceMotion) return null;
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-full">
@@ -37,7 +47,7 @@ const FireEffect = ({ intensity = 1 }) => {
           style={{
             width: p.size,
             height: p.size,
-            background: `hsl(${30 + Math.random() * 20}, 100%, ${60 + Math.random() * 20}%)`,
+            background: `hsl(${p.hue}, 100%, ${p.lightness}%)`,
             left: `${p.x}%`,
             bottom: '20%',
           }}
@@ -46,7 +56,7 @@ const FireEffect = ({ intensity = 1 }) => {
             y: [-150 * intensity, -200 * intensity],
             opacity: [0, 0.9, 0.5, 0],
             scale: [0.5, 1.2, 0.3],
-            x: [0, (Math.random() - 0.5) * 30],
+            x: [0, p.driftX],
           }}
           transition={{
             duration: p.duration,
@@ -61,6 +71,7 @@ const FireEffect = ({ intensity = 1 }) => {
 };
 
 const StreakFlame = ({ size = 'md', className = '' }) => {
+  const shouldReduceMotion = useReducedMotion();
   const sizes = { sm: 24, md: 40, lg: 64, xl: 80 };
   const s = sizes[size] || sizes.md;
   
@@ -75,10 +86,10 @@ const StreakFlame = ({ size = 'md', className = '' }) => {
       <motion.path
         d="M32 78C32 78 8 52 8 34C8 20 18 8 32 8C46 8 56 20 56 34C56 52 32 78 32 78Z"
         fill="url(#flameGrad)"
-        animate={{
+        animate={shouldReduceMotion ? undefined : {
           scale: [1, 1.05, 0.98, 1.03, 1],
         }}
-        transition={{
+        transition={shouldReduceMotion ? undefined : {
           duration: 0.8,
           repeat: Infinity,
           ease: 'easeInOut',
@@ -88,10 +99,10 @@ const StreakFlame = ({ size = 'md', className = '' }) => {
       <motion.path
         d="M32 62C32 62 20 46 20 36C20 28 25 18 32 18C39 18 44 28 44 36C44 46 32 62 32 62Z"
         fill="url(#flameInnerGrad)"
-        animate={{
+        animate={shouldReduceMotion ? undefined : {
           scale: [1, 1.08, 0.95, 1.05, 1],
         }}
-        transition={{
+        transition={shouldReduceMotion ? undefined : {
           duration: 0.6,
           repeat: Infinity,
           ease: 'easeInOut',
@@ -116,7 +127,9 @@ const StreakFlame = ({ size = 'md', className = '' }) => {
 };
 
 const EmberField = ({ amount = 18, color = '#fb923c', areaClassName = '' }) => {
-  const embers = useMemo(() => Array.from({ length: amount }, (_, index) => ({
+  const shouldReduceMotion = useReducedMotion();
+  const emberCount = shouldReduceMotion ? Math.min(4, amount) : amount;
+  const embers = useMemo(() => Array.from({ length: emberCount }, (_, index) => ({
     id: index,
     left: `${6 + Math.random() * 88}%`,
     top: `${4 + Math.random() * 88}%`,
@@ -126,7 +139,7 @@ const EmberField = ({ amount = 18, color = '#fb923c', areaClassName = '' }) => {
     delay: Math.random() * 2.5,
     duration: 3.5 + Math.random() * 3,
     opacity: 0.18 + Math.random() * 0.28,
-  })), [amount]);
+  })), [emberCount]);
 
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${areaClassName}`}>
@@ -142,13 +155,13 @@ const EmberField = ({ amount = 18, color = '#fb923c', areaClassName = '' }) => {
             background: `radial-gradient(circle, ${color} 0%, rgba(255,255,255,0.65) 25%, transparent 78%)`,
             opacity: ember.opacity,
           }}
-          animate={{
+          animate={shouldReduceMotion ? undefined : {
             x: [0, ember.driftX, 0],
             y: [0, -ember.driftY, 0],
             scale: [0.8, 1.2, 0.75],
             opacity: [0, ember.opacity, ember.opacity * 0.75, 0],
           }}
-          transition={{
+          transition={shouldReduceMotion ? undefined : {
             duration: ember.duration,
             delay: ember.delay,
             repeat: Infinity,
@@ -160,37 +173,97 @@ const EmberField = ({ amount = 18, color = '#fb923c', areaClassName = '' }) => {
   );
 };
 
+const StreakDagonStage = ({ state, mood, showFire, size = 'large' }) => {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className={`dagon-streak-stage dagon-streak-stage--${state}`}
+      animate={shouldReduceMotion ? undefined : state === 'danger'
+        ? { x: [-3, 3, -2, 2, 0], rotate: [-1.5, 1.5, -1, 1, 0] }
+        : { y: [-6, 6, -6] }}
+      transition={shouldReduceMotion ? undefined : {
+        duration: state === 'danger' ? 0.7 : 3,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      }}
+    >
+      {state === 'powered' && (
+        <>
+          <motion.div
+            className="dagon-streak-muscle dagon-streak-muscle--left"
+            animate={shouldReduceMotion ? undefined : { rotate: [-16, -24, -16], scale: [1, 1.08, 1] }}
+            transition={shouldReduceMotion ? undefined : { duration: 1.05, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Dumbbell className="h-5 w-5" />
+          </motion.div>
+          <motion.div
+            className="dagon-streak-muscle dagon-streak-muscle--right"
+            animate={shouldReduceMotion ? undefined : { rotate: [16, 24, 16], scale: [1, 1.08, 1] }}
+            transition={shouldReduceMotion ? undefined : { duration: 1.05, repeat: Infinity, ease: 'easeInOut', delay: 0.12 }}
+          >
+            <Dumbbell className="h-5 w-5" />
+          </motion.div>
+        </>
+      )}
+
+      {state === 'danger' && (
+        <motion.div
+          className="dagon-streak-warning-badge"
+          animate={shouldReduceMotion ? undefined : { y: [-3, 3, -3], scale: [1, 1.08, 1] }}
+          transition={shouldReduceMotion ? undefined : { duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <ShieldAlert className="h-4 w-4" />
+        </motion.div>
+      )}
+
+      <DagonMascot size={size} mood={mood} showFire={showFire} animated={!shouldReduceMotion} />
+    </motion.div>
+  );
+};
+
 export const StreakPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const { colors } = useTheme();
   const isLight = colors.mode === 'light';
+  const shouldReduceMotion = useReducedMotion();
   const [stats, setStats] = useState({ racha: 0, mejor_racha: 0, fechas_actividad: [] });
   const [loading, setLoading] = useState(true);
   const [mesActual, setMesActual] = useState(new Date());
 
   useEffect(() => {
     const fetchStreakStats = async () => {
-      if (!user?.idUsuario) return;
+      if (!user?.idUsuario) {
+        setLoading(false);
+        return;
+      }
       try {
         const response = await apiClient.get(`/api/usuarios/${user.idUsuario}/stats`);
         const data = response.data;
         
         const fechas = data.fechas_actividad || [];
         const diasActivos = new Set(fechas.map(f => {
+          if (typeof f === 'string') return f.slice(0, 10);
           const date = new Date(f);
           return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
         }));
         
-        if (data.success) setStats({ ...data, diasActivos });
+        if (data.success) {
+          setStats({ ...data, diasActivos });
+        } else {
+          throw new Error('El backend no pudo calcular las estadisticas.');
+        }
       } catch (error) {
-        toast.error('Error al cargar tu racha');
+        if (![401, 403].includes(error?.response?.status)) {
+          toast.error('Error al cargar tu racha');
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchStreakStats();
-  }, [user, token]);
+  }, [user?.idUsuario, token]);
 
   const diasEnMes = useMemo(() => {
     const año = mesActual.getFullYear();
@@ -254,8 +327,8 @@ export const StreakPage = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: colors.background }}>
         <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          animate={shouldReduceMotion ? undefined : { rotate: 360 }}
+          transition={shouldReduceMotion ? undefined : { duration: 2, repeat: Infinity, ease: 'linear' }}
         >
           <StreakFlame size="lg" className="text-orange-500" />
         </motion.div>
@@ -274,18 +347,66 @@ export const StreakPage = () => {
   const msProgress = nextMilestone ? Math.min(100, (stats.racha / nextMilestone.days) * 100) : 100;
   const diasActivosEsteMes = diasEnMes.filter(d => d.tieneActividad).length;
   const esHoy = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+  const tieneActividadHoy = Boolean(stats.actividad_hoy ?? stats.diasActivos?.has(esHoy));
+  const rachaExpirada = Boolean(stats.racha_expirada);
+  const rachaEnRiesgo = Boolean(stats.racha_en_riesgo ?? (stats.racha > 0 && !tieneActividadHoy));
+  const rachaCelebradaHoy = Boolean(stats.racha_protegida_hoy ?? (stats.racha > 0 && tieneActividadHoy));
+  const horasParaExpirar = stats.racha_expira_en_horas;
+  const streakState = rachaExpirada ? 'expired' : rachaEnRiesgo ? 'danger' : rachaCelebradaHoy ? 'powered' : stats.racha > 0 ? 'active' : 'empty';
+  const streakMood = rachaExpirada ? 'sad' : rachaEnRiesgo ? 'afraid' : rachaCelebradaHoy ? 'celebrating' : stats.racha > 0 ? 'excited' : 'sad';
+  const streakStatus = rachaExpirada
+    ? {
+        icon: ShieldAlert,
+        title: 'Tu racha anterior expiró',
+        body: 'La racha vuelve a cero cuando pasa más de un día sin práctica. Puedes iniciar una nueva hoy.',
+        action: 'Reencender',
+      }
+    : rachaEnRiesgo
+    ? {
+        icon: ShieldAlert,
+        title: 'Tu racha está en peligro',
+        body: `Resuelve una misión hoy para conservarla${Number.isFinite(horasParaExpirar) ? `: quedan ${horasParaExpirar} h antes del reinicio.` : '.'}`,
+        action: 'Salvar racha',
+      }
+    : rachaCelebradaHoy
+      ? {
+          icon: CalendarCheck,
+          title: 'Racha protegida por hoy',
+          body: 'Dagon se puso en modo campeón: ya sumaste actividad y tu fuego sigue vivo.',
+          action: 'Sumar otra misión',
+        }
+      : stats.racha > 0
+        ? {
+            icon: Flame,
+            title: 'Tu llama sigue activa',
+            body: 'Mantén el ritmo con una práctica corta antes de cerrar el día.',
+            action: 'Practicar',
+          }
+        : {
+            icon: Clock3,
+            title: 'Enciende la primera chispa',
+            body: 'Haz una misión hoy y convierte el aprendizaje en una rutina visible.',
+            action: 'Empezar racha',
+          };
+  const StatusIcon = streakStatus.icon;
   const streakTier = stats.racha >= 30 ? 'legendaria' : stats.racha >= 14 ? 'heroica' : stats.racha >= 7 ? 'ardiente' : stats.racha >= 3 ? 'encendida' : 'naciente';
-  const streakMessage = stats.racha >= 30
-    ? 'Tu fuego ya no es racha: es leyenda viva dentro del Abismo.'
-    : stats.racha >= 14
-      ? 'Tu disciplina ya se siente como ritual. Cada día consolida tu dominio.'
-      : stats.racha >= 7
-        ? 'La llama ya tiene forma. Estás construyendo una costumbre real.'
-        : stats.racha >= 3
-          ? 'Ya no es casualidad: estás entrando en ritmo.'
-          : stats.racha > 0
-            ? 'El fuego ya prendió. Solo hace falta alimentarlo mañana.'
-            : 'Hoy es buen día para encender la primera chispa.';
+  const streakMessage = rachaEnRiesgo
+    ? 'A Dagon se le está apagando la llama. Una sola misión hoy salva tu avance antes de que el contador vuelva a cero.'
+    : rachaCelebradaHoy
+      ? 'Dagon celebra contigo: hoy ya cumpliste, tu racha quedó protegida y el hábito ganó fuerza.'
+      : rachaExpirada
+        ? 'La llama anterior se apagó por inactividad. Hoy puedes empezar otra cadena sin perder lo aprendido.'
+        : stats.racha >= 30
+          ? 'Tu fuego ya no es racha: es leyenda viva dentro del Abismo.'
+          : stats.racha >= 14
+            ? 'Tu disciplina ya se siente como ritual. Cada día consolida tu dominio.'
+            : stats.racha >= 7
+              ? 'La llama ya tiene forma. Estás construyendo una costumbre real.'
+              : stats.racha >= 3
+                ? 'Ya no es casualidad: estás entrando en ritmo.'
+                : stats.racha > 0
+                  ? 'El fuego ya prendió. Solo hace falta alimentarlo mañana.'
+                  : 'Hoy es buen día para encender la primera chispa.';
   const heroPanelStyle = {
     background: isLight
       ? 'linear-gradient(155deg, rgba(255,248,238,0.94) 0%, rgba(255,240,222,0.92) 48%, rgba(250,228,192,0.86) 100%)'
@@ -308,12 +429,12 @@ export const StreakPage = () => {
   const accentFire = isLight ? '#ea580c' : '#fb923c';
 
   return (
-    <div className="min-h-screen" data-testid="streak-page">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+    <div className="min-h-screen overflow-x-hidden" data-testid="streak-page">
+      <div className="dagon-page-shell dagon-page-shell--wide streak-page-shell">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center mb-6"
+          className="flex items-center mb-4"
         >
           <Button onClick={() => navigate('/dashboard')} variant="ghost" style={{ color: helperText }}>
             <ArrowLeft className="w-5 h-5 mr-2" /> Volver
@@ -327,7 +448,7 @@ export const StreakPage = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: -20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative overflow-hidden rounded-3xl mb-8"
+            className="relative overflow-hidden rounded-3xl mb-5 dagon-compact-card"
             style={heroPanelStyle}
           >
             <div className="absolute inset-0" style={{ background: heroPanelStyle.background }} />
@@ -340,11 +461,11 @@ export const StreakPage = () => {
               <div className="absolute top-0 right-0 w-full h-full" style={{ background: `radial-gradient(ellipse at top right, ${isLight ? 'rgba(234,88,12,0.18)' : 'rgba(249,115,22,0.16)'}, transparent 70%)` }} />
               <div className="absolute bottom-0 left-0 w-full h-full" style={{ background: `radial-gradient(ellipse at bottom left, ${isLight ? 'rgba(217,119,6,0.12)' : 'rgba(239,68,68,0.1)'}, transparent 50%)` }} />
             </motion.div>
-            <EmberField amount={22} color={isLight ? '#ea580c' : '#fb923c'} />
+            <EmberField amount={shouldReduceMotion ? 3 : 10} color={isLight ? '#ea580c' : '#fb923c'} />
             <FireEffect intensity={stats.racha > 0 ? Math.min(1.35, 0.7 + stats.racha * 0.06) : 0.35} />
 
-            <div className="relative z-10 p-5 sm:p-8 lg:p-12">
-              <div className="flex flex-col lg:flex-row items-center gap-8 sm:gap-10 lg:gap-20">
+            <div className="relative z-10 p-4 sm:p-5 lg:p-6">
+              <div className="flex flex-col lg:flex-row items-center gap-5 lg:gap-8">
                 <div className="relative">
                   <motion.div
                     className="absolute -inset-10 rounded-full blur-3xl"
@@ -354,10 +475,11 @@ export const StreakPage = () => {
                   />
                   <motion.div
                     className="relative"
-                    animate={stats.racha > 0 ? { y: [-6, 6, -6] } : {}}
-                    transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                    initial={{ scale: 0.92, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 20 }}
                   >
-                    <DagonMascot size="xlarge" mood={stats.racha > 0 ? "excited" : "sad"} showFire={stats.racha > 3} />
+                    <StreakDagonStage state={streakState} mood={streakMood} showFire={stats.racha > 3 || rachaCelebradaHoy} />
                   </motion.div>
                   
                   {stats.racha > 0 && (
@@ -365,13 +487,13 @@ export const StreakPage = () => {
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ type: 'spring', delay: 0.2 }}
-                      className="absolute -top-2 -right-4"
+	                      className="absolute -top-1 -right-2"
                     >
                       <motion.div
                       animate={{ scale: [1, 1.15, 1] }}
                       transition={{ duration: 1, repeat: Infinity }}
                     >
-                        <StreakFlame size="lg" className="drop-shadow-2xl" />
+                        <StreakFlame size="md" className="drop-shadow-2xl" />
                       </motion.div>
                     </motion.div>
                   )}
@@ -392,7 +514,7 @@ export const StreakPage = () => {
                     transition={{ delay: 0.1 }}
                   >
                     <div
-                      className="inline-flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 rounded-2xl border backdrop-blur-xl"
+                      className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-xl"
                       style={{
                         background: isLight
                           ? 'linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,237,213,0.48))'
@@ -411,7 +533,7 @@ export const StreakPage = () => {
                         initial={{ scale: 0, rotateZ: -12 }}
                         animate={{ scale: 1, rotateZ: 0 }}
                         transition={{ type: 'spring', delay: 0.3, stiffness: 400, damping: 12 }}
-                        className="font-display text-6xl sm:text-8xl lg:text-9xl font-black text-gradient-fire relative"
+                        className="font-display text-5xl sm:text-6xl lg:text-7xl font-black text-gradient-fire relative"
                       >
                         <motion.span
                           animate={stats.racha > 0 ? {
@@ -428,7 +550,7 @@ export const StreakPage = () => {
                       </motion.span>
                     </div>
                     
-                    <p className="font-display text-2xl lg:text-3xl font-black uppercase tracking-[0.15em] mt-4" style={{ color: accentWarm }}>
+                    <p className="font-display text-xl lg:text-2xl font-black uppercase tracking-[0.15em] mt-3" style={{ color: accentWarm }}>
                       {stats.racha === 1 ? 'día' : 'días'} de racha
                     </p>
                     <div className="flex items-center justify-center lg:justify-start gap-2 mt-3">
@@ -446,7 +568,7 @@ export const StreakPage = () => {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
-                    className="mt-4 text-lg font-gameui leading-relaxed max-w-2xl"
+                    className="mt-3 text-sm sm:text-base font-gameui leading-relaxed max-w-2xl"
                     style={{ color: helperText }}
                   >
                     {streakMessage}
@@ -456,9 +578,9 @@ export const StreakPage = () => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-6"
+                    className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-4"
                   >
-                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl border" style={{
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border" style={{
                       backgroundColor: isLight ? 'rgba(255,245,227,0.66)' : 'rgba(245,158,11,0.1)',
                       borderColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(245,158,11,0.3)'
                     }}>
@@ -470,7 +592,7 @@ export const StreakPage = () => {
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl border"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border"
                         style={{
                           backgroundColor: isLight ? 'rgba(255,240,220,0.66)' : 'rgba(16,185,129,0.1)',
                           borderColor: isLight ? 'rgba(194,95,26,0.16)' : 'rgba(16,185,129,0.3)'
@@ -481,7 +603,7 @@ export const StreakPage = () => {
                       </motion.div>
                     )}
                     {stats.racha >= 3 && (
-                      <div className="flex items-center gap-2 px-4 py-2 rounded-xl border" style={{
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl border" style={{
                         backgroundColor: isLight ? 'rgba(255,244,229,0.7)' : 'rgba(244,63,94,0.08)',
                         borderColor: isLight ? 'rgba(217,119,6,0.14)' : 'rgba(244,63,94,0.2)'
                       }}>
@@ -490,25 +612,54 @@ export const StreakPage = () => {
                       </div>
                     )}
                   </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.38 }}
+                    className={`streak-status-ribbon streak-status-ribbon--${streakState} mt-4`}
+                    style={{
+                      '--streak-accent': accentFire,
+                      '--streak-secondary': isLight ? '#f59e0b' : '#fbbf24',
+                      '--streak-text': headingText,
+                      '--streak-muted': helperText,
+                    }}
+                  >
+                    <div className="streak-status-ribbon__icon">
+                      <StatusIcon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-sm font-black uppercase tracking-[0.18em]">{streakStatus.title}</p>
+                      <p className="mt-1 text-sm font-gameui leading-relaxed">{streakStatus.body}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={() => navigate('/dashboard')}
+                      className="shrink-0 rounded-xl px-4 py-2 font-display text-xs font-black uppercase tracking-widest"
+                      style={{ background: `linear-gradient(135deg, ${accentFire}, ${isLight ? '#f59e0b' : '#fbbf24'})`, color: isLight ? '#1f2937' : '#111827' }}
+                    >
+                      {streakStatus.action}
+                    </Button>
+                  </motion.div>
                 </div>
               </div>
             </div>
           </motion.div>
         </AnimatePresence>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] gap-4 xl:gap-5">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15, type: 'spring', stiffness: 200, damping: 24 }}
-            className="lg:col-span-2"
+            className="min-w-0"
           >
-            <div className="rounded-3xl border p-6 overflow-hidden relative" style={panelStyle}>
+            <div className="streak-calendar-panel rounded-3xl border p-4 overflow-hidden relative" style={panelStyle}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent 35%)' : 'linear-gradient(180deg, rgba(251,146,60,0.05), transparent 35%)' }} />
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5" style={{ color: accentFire }} />
-                  <h3 className="font-display text-xl font-black uppercase tracking-wide" style={{ color: headingText }}>Calendario de fuego</h3>
+                  <h3 className="font-display text-lg font-black uppercase tracking-wide" style={{ color: headingText }}>Calendario de fuego</h3>
                 </div>
                 
                 <div className="flex items-center gap-1 rounded-xl p-1 self-start sm:self-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.54)' : 'rgba(30,41,59,0.5)' }}>
@@ -533,15 +684,15 @@ export const StreakPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 mb-2">
+              <div className="grid grid-cols-7 gap-1.5 mb-1.5">
                 {DIAS_SEMANA.map((dia) => (
-                  <div key={dia} className="text-center text-xs font-black uppercase tracking-widest py-2" style={{ color: helperText }}>
+                  <div key={dia} className="text-center text-[10px] font-black uppercase tracking-widest py-1.5" style={{ color: helperText }}>
                     {dia}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1.5">
                 {diasEnMes.map((dia, idx) => {
                   const esDiaDeRacha = dia.fecha && diasConsecutivos.includes(dia.fecha);
                   const esRachaActivo = esDiaDeRacha && dia.tieneActividad;
@@ -553,14 +704,14 @@ export const StreakPage = () => {
                       initial={{ opacity: 0, scale: 0.3, y: 12 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ delay: idx * 0.018, type: 'spring', stiffness: 400, damping: 20 }}
-                      className={`aspect-square rounded-xl flex items-center justify-center text-sm font-display font-black relative overflow-hidden ${
+                      className={`streak-calendar-day aspect-square rounded-xl flex items-center justify-center text-xs sm:text-sm font-display font-black relative overflow-hidden ${
                         !dia.num ? 'invisible' :
                         esRachaActivo ? '' :
                         esDiaDeRacha ? '' :
                         dia.tieneActividad ? '' :
                         esHoyActual ? '' :
                         ''
-                      }`}
+                      } ${esRachaActivo ? 'is-streak' : ''} ${esHoyActual ? 'is-today' : ''} ${rachaEnRiesgo && esHoyActual ? 'is-danger' : ''} ${tieneActividadHoy && esHoyActual ? 'is-complete' : ''}`}
                       style={{
                         background: !dia.num
                           ? undefined
@@ -617,13 +768,34 @@ export const StreakPage = () => {
                       {dia.tieneActividad && !esRachaActivo && (
                         <Flame className="w-3 h-3 text-white/50 absolute bottom-1" />
                       )}
+
+                      {esHoyActual && rachaEnRiesgo && (
+                        <motion.div
+                          className="absolute bottom-1 right-1"
+                          animate={{ scale: [1, 1.18, 1], rotate: [-6, 6, -6] }}
+                          transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                          <ShieldAlert className="h-3.5 w-3.5 text-red-100 drop-shadow" />
+                        </motion.div>
+                      )}
+
+                      {esHoyActual && tieneActividadHoy && (
+                        <motion.div
+                          className="absolute bottom-1 right-1"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: 'spring', stiffness: 420, damping: 14 }}
+                        >
+                          <CalendarCheck className="h-3.5 w-3.5 text-emerald-100 drop-shadow" />
+                        </motion.div>
+                      )}
                     </motion.div>
                   );
                 })}
               </div>
 
-              <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: isLight ? 'rgba(198,122,29,0.12)' : 'rgba(255,255,255,0.05)' }}>
-                <div className="flex items-center gap-4 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t" style={{ borderColor: isLight ? 'rgba(198,122,29,0.12)' : 'rgba(255,255,255,0.05)' }}>
+                <div className="flex flex-wrap items-center gap-3 text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded bg-gradient-to-br from-yellow-400 via-orange-500 to-rose-600" />
                     <span style={{ color: helperText }}>Racha</span>
@@ -648,19 +820,46 @@ export const StreakPage = () => {
             initial={{ opacity: 0, x: 30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.25, type: 'spring', stiffness: 200, damping: 24 }}
-            className="space-y-4"
+            className="space-y-3"
           >
-            <div className="rounded-3xl border p-5 relative overflow-hidden" style={panelStyle}>
+            <div
+              className={`streak-daily-card streak-daily-card--${streakState} rounded-3xl border p-4 relative overflow-hidden`}
+              style={{
+                ...panelStyle,
+                '--streak-accent': accentFire,
+                '--streak-secondary': isLight ? '#f59e0b' : '#fbbf24',
+              }}
+            >
+              <EmberField amount={shouldReduceMotion ? 2 : 6} color={rachaEnRiesgo ? '#ef4444' : '#fb923c'} areaClassName="opacity-70" />
+              <div className="relative z-10 flex items-start gap-3">
+                <div className="streak-daily-card__seal">
+                  <StatusIcon className="h-6 w-6" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.34em]" style={{ color: rachaEnRiesgo ? (isLight ? '#b91c1c' : '#fca5a5') : accentFire }}>
+                    Misión de hoy
+                  </p>
+                  <h3 className="mt-2 font-display text-lg font-black" style={{ color: headingText }}>
+                    {rachaEnRiesgo ? 'No dejes que se apague' : rachaCelebradaHoy ? 'Día conquistado' : 'Un paso mantiene el fuego'}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: helperText }}>
+                    {streakStatus.body}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'radial-gradient(circle at top right, rgba(217,119,6,0.12), transparent 48%)' : 'radial-gradient(circle at top right, rgba(217,70,239,0.1), transparent 48%)' }} />
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="w-4 h-4" style={{ color: isLight ? '#c65f1a' : '#e879f9' }} />
                 <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: isLight ? '#a16207' : '#f0abfc' }}>Próxima meta</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <p className="font-display font-black text-xl" style={{ color: headingText }}>{nextMilestone.label}</p>
+                <p className="font-display font-black text-lg" style={{ color: headingText }}>{nextMilestone.label}</p>
                 <nextMilestone.icon className="w-5 h-5" style={{ color: accentFire }} />
               </div>
-              <p className="text-sm mb-4" style={{ color: helperText }}>{nextMilestone.reward}</p>
+              <p className="text-sm mb-3" style={{ color: helperText }}>{nextMilestone.reward}</p>
               
               <div className="h-2 rounded-full overflow-hidden relative" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(30,41,59,0.9)' }}>
                 <motion.div
@@ -676,17 +875,17 @@ export const StreakPage = () => {
               </p>
             </div>
 
-            <div className="rounded-3xl border p-5 relative overflow-hidden" style={panelStyle}>
+            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'radial-gradient(circle at bottom left, rgba(234,88,12,0.1), transparent 45%)' : 'radial-gradient(circle at bottom left, rgba(250,204,21,0.08), transparent 45%)' }} />
               <div className="flex items-center gap-2 mb-3">
                 <Trophy className="w-4 h-4" style={{ color: isLight ? '#b45309' : '#facc15' }} />
                 <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: isLight ? '#a16207' : '#fde047' }}>Récord</span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="font-display text-5xl font-black text-gradient-gold">{stats.mejor_racha}</span>
+                <span className="font-display text-4xl font-black text-gradient-gold">{stats.mejor_racha}</span>
                 <span className="text-lg font-bold" style={{ color: helperText }}>días</span>
               </div>
-              <div className="mt-4 flex items-center gap-2">
+              <div className="mt-3 flex items-center gap-2">
                 <Star className="w-4 h-4" style={{ color: accentFire }} />
                 <p className="text-sm leading-relaxed" style={{ color: helperText }}>
                   Superar tu récord requiere {Math.max(0, stats.mejor_racha - stats.racha + 1)} día{Math.max(0, stats.mejor_racha - stats.racha + 1) === 1 ? '' : 's'} más.
@@ -694,8 +893,8 @@ export const StreakPage = () => {
               </div>
             </div>
 
-            <div className="rounded-3xl border p-5 relative overflow-hidden" style={panelStyle}>
-              <div className="flex items-center gap-2 mb-4">
+            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
+              <div className="flex items-center gap-2 mb-3">
                 <Flame className="w-4 h-4" style={{ color: accentFire }} />
                 <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: accentWarm }}>Cadena actual</span>
               </div>
@@ -708,7 +907,7 @@ export const StreakPage = () => {
                       initial={{ opacity: 0, y: 20, scale: 0.5, rotateZ: -10 }}
                       animate={{ opacity: 1, y: 0, scale: 1, rotateZ: 0 }}
                       transition={{ delay: 0.07 * i, type: 'spring', stiffness: 350, damping: 18 }}
-                      className="w-10 h-12 rounded-2xl border flex items-center justify-center relative overflow-hidden"
+                      className="w-8 h-10 rounded-2xl border flex items-center justify-center relative overflow-hidden"
                       style={{
                         background: active
                           ? 'linear-gradient(180deg, #fbbf24 0%, #f97316 58%, #ea580c 100%)'

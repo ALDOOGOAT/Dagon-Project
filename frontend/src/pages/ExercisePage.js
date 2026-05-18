@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
@@ -12,16 +12,17 @@ import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, ChevronDown, ChevronUp, RotateCcw, Shield, BookOpen, Target, Film, Award, TrendingUp
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, BookOpen, Target, Film, Award, TrendingUp, Eye, EyeOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 import apiClient from '../services/apiClient';
-import { formatAIMessage, buildRowSignature, buildTransactionDiff, isTransactionExercise, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
+import { formatAIMessage, isTransactionExercise, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
 import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
-import { DataComparisonTable, CompactSection, TransactionPedagogyCard, TransactionSimulationPanel, TransactionOutcomePanel } from '../components/TransactionPanels';
+import { TransactionPedagogyCard } from '../components/TransactionPanels';
+import { QueryResultShowcase } from '../components/QueryResultShowcase';
 
 const XPPop = ({ amount }) => (
   <div className="pointer-events-none fixed inset-0 z-[9990] flex items-center justify-center">
@@ -81,6 +82,8 @@ export const ExercisePage = () => {
   const [currentSubTopic, setCurrentSubTopic] = useState(null);
   const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
+  const [showGuidePanel, setShowGuidePanel] = useState(true);
+  const [showLearningStrip, setShowLearningStrip] = useState(false);
   const [showReward, setShowReward] = useState(false);
   const [lastXPGained, setLastXPGained] = useState(0);
   const [levelUpData, setLevelUpData] = useState(null);
@@ -108,12 +111,25 @@ export const ExercisePage = () => {
   const [dagonTypingQuery, setDagonTypingQuery] = useState('');
   const [dagonShowPostMessage, setDagonShowPostMessage] = useState(false);
   const [dagonOriginalQuery, setDagonOriginalQuery] = useState('');
+  const dagonTypingIntervalRef = useRef(null);
+  const dagonPostMessageTimeoutRef = useRef(null);
 
   useEffect(() => { 
     setIsMounted(true); 
     sounds.init();
     sounds.startBackgroundMusic();
     return () => sounds.stopBackgroundMusic();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (dagonTypingIntervalRef.current) {
+        clearInterval(dagonTypingIntervalRef.current);
+      }
+      if (dagonPostMessageTimeoutRef.current) {
+        clearTimeout(dagonPostMessageTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -148,6 +164,15 @@ export const ExercisePage = () => {
 
   useEffect(() => {
     if (exercises.length > 0) {
+      if (dagonTypingIntervalRef.current) {
+        clearInterval(dagonTypingIntervalRef.current);
+        dagonTypingIntervalRef.current = null;
+      }
+      if (dagonPostMessageTimeoutRef.current) {
+        clearTimeout(dagonPostMessageTimeoutRef.current);
+        dagonPostMessageTimeoutRef.current = null;
+      }
+
       const exercise = exercises[currentExerciseIndex];
 
       // Detectar si cambiamos de subtema y mostrar teoría intermedia
@@ -264,18 +289,26 @@ export const ExercisePage = () => {
           setDagonTypingQuery('');
           setDagonShowPostMessage(false);
           setDagonOriginalQuery(result.userOriginalQuery || '');
+          if (dagonTypingIntervalRef.current) {
+            clearInterval(dagonTypingIntervalRef.current);
+          }
+          if (dagonPostMessageTimeoutRef.current) {
+            clearTimeout(dagonPostMessageTimeoutRef.current);
+          }
           
           // Animación de máquina de escribir
           let i = 0;
           const queryToType = result.dagonActionQuery || '';
-          const typingInterval = setInterval(() => {
+          dagonTypingIntervalRef.current = setInterval(() => {
             setDagonTypingQuery(prev => prev + queryToType.charAt(i));
             i++;
             if (i >= queryToType.length) {
-              clearInterval(typingInterval);
+              clearInterval(dagonTypingIntervalRef.current);
+              dagonTypingIntervalRef.current = null;
               // Después de terminar de escribir, mostrar mensaje final
-              setTimeout(() => {
+              dagonPostMessageTimeoutRef.current = setTimeout(() => {
                 setDagonShowPostMessage(true);
+                dagonPostMessageTimeoutRef.current = null;
               }, 800);
             }
           }, 40);
@@ -619,57 +652,103 @@ export const ExercisePage = () => {
             }}
           />
         ) : (
-          <div className={`max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-5 sm:space-y-6 ${shake ? 'animate-shake-x' : ''}`}>
+          <div className={`dagon-page-shell dagon-page-shell--workbench dagon-relaxed-flow ${shake ? 'animate-shake-x' : ''}`}>
 
-            {/* ESTADO PEDAGÓGICO */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid gap-3 md:grid-cols-2 lg:grid-cols-4"
+            <div
+              className="glass-card-apple dagon-compact-card rounded-3xl border px-4 py-3 lg:px-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+              style={{ borderColor: colors.border }}
             >
-              <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.62)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4" style={{ color: colors.primary }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.primary }}>Meta</span>
-                </div>
-                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                  {learningFocus.objective}
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: colors.accent }}>
+                  Laboratorio amplio
+                </p>
+                <p className="mt-1 text-sm font-gameui truncate" style={{ color: mutedColor }}>
+                  {learningFocus.concept} · {activeConcept.label}: {conceptMasteryValue}%
                 </p>
               </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(251,146,60,0.30)', backgroundColor: isLight ? 'rgba(255,247,237,0.82)' : 'rgba(124,45,18,0.16)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Flame className="w-4 h-4" style={{ color: isLight ? '#c2410c' : '#fdba74' }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>Presión sana</span>
-                </div>
-                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                  {intentosFallidos > 0
-                    ? `Intento ${intentosFallidos}. Corrige una parte y vuelve a probar.`
-                    : 'Puedes fallar sin perder avance; lo importante es entender el error.'}
-                </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowLearningStrip((prev) => !prev)}
+                  className="rounded-xl border font-display font-black"
+                  style={{ borderColor: `${colors.primary}35`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.52)' }}
+                >
+                  {showLearningStrip ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                  {showLearningStrip ? 'Ocultar objetivos' : 'Ver objetivos'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowGuidePanel((prev) => !prev)}
+                  className="rounded-xl border font-display font-black"
+                  style={{ borderColor: showGuidePanel ? `${colors.secondary}55` : `${colors.primary}55`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.52)' }}
+                >
+                  {showGuidePanel ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                  {showGuidePanel ? 'Modo foco' : 'Mostrar guía'}
+                </Button>
               </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(34,211,238,0.30)', backgroundColor: isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.20)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="w-4 h-4" style={{ color: isLight ? '#0891b2' : '#67e8f9' }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#0891b2' : '#67e8f9' }}>Concepto</span>
-                </div>
-                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                  {learningFocus.concept}
-                </p>
-              </div>
-              <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(168,85,247,0.30)', backgroundColor: isLight ? 'rgba(250,245,255,0.78)' : 'rgba(88,28,135,0.18)' }}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="w-4 h-4" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }}>Dominio</span>
-                </div>
-                <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                  {activeConcept.label}: {conceptMasteryValue}% · {activeConcept.badge}
-                </p>
-              </div>
-            </motion.div>
+            </div>
 
+            <AnimatePresence initial={false}>
+              {showLearningStrip && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -8 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -8 }}
+                  transition={{ duration: 0.24 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.62)' }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Target className="w-4 h-4" style={{ color: colors.primary }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.primary }}>Meta</span>
+                      </div>
+                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                        {learningFocus.objective}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(251,146,60,0.30)', backgroundColor: isLight ? 'rgba(255,247,237,0.82)' : 'rgba(124,45,18,0.16)' }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="w-4 h-4" style={{ color: isLight ? '#c2410c' : '#fdba74' }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>Presión sana</span>
+                      </div>
+                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                        {intentosFallidos > 0
+                          ? `Intento ${intentosFallidos}. Corrige una parte y vuelve a probar.`
+                          : 'Puedes fallar sin perder avance; lo importante es entender el error.'}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(34,211,238,0.30)', backgroundColor: isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.20)' }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="w-4 h-4" style={{ color: isLight ? '#0891b2' : '#67e8f9' }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#0891b2' : '#67e8f9' }}>Concepto</span>
+                      </div>
+                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                        {learningFocus.concept}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(168,85,247,0.30)', backgroundColor: isLight ? 'rgba(250,245,255,0.78)' : 'rgba(88,28,135,0.18)' }}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="w-4 h-4" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }}>Dominio</span>
+                      </div>
+                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                        {activeConcept.label}: {conceptMasteryValue}% · {activeConcept.badge}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className={`dagon-workbench-grid ${showGuidePanel ? '' : 'dagon-workbench-grid--focus'}`}>
+              {showGuidePanel && (
+              <div className="dagon-workbench-rail space-y-5">
             {/* MASCOTA + INSTRUCCIONES */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-              className="glass-card-apple rounded-3xl p-6 border relative overflow-hidden"
+              className="glass-card-apple dagon-compact-card rounded-3xl p-5 lg:p-6 border relative overflow-hidden"
               style={{ borderColor: colors.border }}
             >
               <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${colors.primary}12` }} />
@@ -922,10 +1001,14 @@ export const ExercisePage = () => {
                 )}
               </AnimatePresence>
             </motion.div>
+              </div>
+              )}
+
+              <div className="dagon-workbench-main">
 
             {/* ARENA DE CÓDIGO O DIAGRAMA */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl border border-white/10 overflow-hidden relative"
+              className="glass-card-apple dagon-compact-card rounded-3xl border border-white/10 overflow-hidden relative"
             >
               {/* Barra superior */}
               <div className="bg-slate-900/80 px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5">
@@ -937,27 +1020,39 @@ export const ExercisePage = () => {
                     {isDiagram ? 'Diseña el Modelo Entidad-Relación' : isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
                   </span>
                 </div>
-                <Button
-                  onClick={() => {
-                    sounds.playStep();
-                    handleValidate();
-                  }}
-                  disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
-                  className="w-full sm:w-auto justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
-                  aria-label="Ejecutar y validar la respuesta del ejercicio"
-                >
-                  {validating || clawbotThinking
-                    ? <Loader className="w-4 h-4 animate-spin mr-2" />
-                    : <Play className="w-4 h-4 mr-2 fill-current" />
-                  }
-                  {validating ? 'Validando...' : clawbotThinking ? 'Analizando...' : 'Ejecutar'}
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setShowGuidePanel((prev) => !prev)}
+                    className="w-full sm:w-auto justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 font-display font-black"
+                    aria-label={showGuidePanel ? 'Ocultar guía lateral' : 'Mostrar guía lateral'}
+                  >
+                    {showGuidePanel ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                    {showGuidePanel ? 'Foco' : 'Guía'}
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      sounds.playStep();
+                      handleValidate();
+                    }}
+                    disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
+                    className="w-full sm:w-auto justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
+                    aria-label="Ejecutar y validar la respuesta del ejercicio"
+                  >
+                    {validating || clawbotThinking
+                      ? <Loader className="w-4 h-4 animate-spin mr-2" />
+                      : <Play className="w-4 h-4 mr-2 fill-current" />
+                    }
+                    {validating ? 'Validando...' : clawbotThinking ? 'Analizando...' : 'Ejecutar'}
+                  </Button>
+                </div>
               </div>
 
               {/* Contenedor Principal (Diagrama / Editor / Drag-drop) */}
               <div className="p-4 sm:p-5">
                 {isDiagram ? (
-                  <div className="h-[360px] sm:h-[420px] lg:h-[500px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                  <div className="h-[360px] sm:h-[420px] lg:h-[540px] xl:h-[620px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
                     <MerDiagramBuilder 
                       onChangeData={(graphData) => {
                         setEditorCode(JSON.stringify(graphData)); 
@@ -1075,7 +1170,7 @@ export const ExercisePage = () => {
                     </div>
                   </DragDropContext>
                 ) : (
-                  <div className="h-[320px] sm:h-[360px] rounded-2xl overflow-hidden border border-white/10">
+                  <div className="h-[340px] sm:h-[420px] xl:h-[620px] 2xl:h-[680px] rounded-2xl overflow-hidden border border-white/10">
                     <Editor
                       height="100%"
                       defaultLanguage="sql"
@@ -1179,101 +1274,7 @@ export const ExercisePage = () => {
                     </div>
                   )}
 
-                  {executionResult.transactionSimulation && (
-                    <TransactionSimulationPanel simulation={executionResult.transactionSimulation} colors={colors} />
-                  )}
-
-                  {(executionResult.isTransactionVisual || executionResult.transactionOutcome) && (
-                    <TransactionOutcomePanel result={executionResult} colors={colors} />
-                  )}
-
-                  {/* Tabla de datos o estructura */}
-                  {executionResult.isDML ? (
-                    <div className="p-5 space-y-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* ANTES */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            <div className="w-2 h-2 rounded-full bg-slate-600" />
-                            Estado Inicial de {executionResult.targetTable}
-                          </div>
-                          <div className="rounded-xl border border-white/5 bg-slate-900/40 overflow-hidden">
-                             <DataComparisonTable data={executionResult.beforeData} colors={colors} />
-                          </div>
-                        </div>
-                        {/* DESPUÉS */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-400">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Estado Posterior al Cambio
-                          </div>
-                          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 overflow-hidden shadow-[0_0_20px_rgba(16,185,129,0.05)]">
-                             <DataComparisonTable data={executionResult.afterData} colors={colors} highlight />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-center text-slate-500 italic">
-                        Mostrando las primeras 20 filas para comparación visual.
-                      </p>
-                    </div>
-                  ) : executionResult.mockData && executionResult.mockData.length > 0 && (
-                    <div className="overflow-x-auto">
-                      <div className="text-xs text-amber-400 mb-2 px-5 pt-3">
-                        {executionResult.isStructure ? '📋 Estructura de la tabla' : '📊 Datos resultados'}
-                      </div>
-                      <table className="w-full text-sm text-left text-slate-300">
-                        <thead className="text-[10px] text-slate-400 uppercase tracking-widest bg-slate-900/60">
-                          <tr>
-                            {Object.keys(executionResult.mockData[0]).map((col) => (
-                              <th key={col} className="px-5 py-3 font-bold text-cyan-300">{col}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {executionResult.mockData.map((fila, ri) => (
-                            <motion.tr
-                              key={ri}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: ri * 0.05 }}
-                              className="border-t border-white/5 hover:bg-slate-800/30"
-                            >
-                              {Object.values(fila).map((val, ci) => (
-                                <td key={ci} className="px-5 py-3 font-mono">{String(val)}</td>
-                              ))}
-                            </motion.tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* 🌟 MAGIA DIDÁCTICA: Mostrar Constraints de la tabla */}
-                  {executionResult.constraintsData && executionResult.constraintsData.length > 0 && (
-                    <div className="p-5 pt-0">
-                      <div className="p-4 rounded-xl border bg-emerald-900/10 border-emerald-500/40">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Shield className="w-4 h-4 text-emerald-400" />
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                            🛡️ Reglas Activas (Constraints)
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {executionResult.constraintsData.map((regla, idx) => (
-                            <div key={idx} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/50 border border-white/5">
-                              <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-emerald-500/30 text-emerald-400">
-                                {regla.tipo === 'PRIMARY KEY' ? '🔑 PK' : 
-                                 regla.tipo === 'UNIQUE' ? '✓ UNIQUE' : 
-                                 regla.tipo === 'FOREIGN KEY' ? '🔗 FK' : 
-                                 regla.tipo === 'CHECK' ? '⚡ CHECK' : '📋'}
-                              </span>
-                              <span className="text-xs font-mono text-slate-300">{regla.nombre_regla}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <QueryResultShowcase result={executionResult} exercise={exercise} colors={colors} />
 
                   {/* Siguiente misión */}
                   {(executionResult.success || executionResult.isWarning) && (
@@ -1311,6 +1312,8 @@ export const ExercisePage = () => {
                 </motion.div>
               )}
             </AnimatePresence>
+              </div>
+            </div>
           </div>
         )}
       </main>

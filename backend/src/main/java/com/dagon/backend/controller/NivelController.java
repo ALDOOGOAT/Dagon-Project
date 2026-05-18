@@ -43,10 +43,16 @@ public class NivelController {
     // 3. ¡NUEVO! Obtener misiones para la Práctica Relámpago
     // URL: http://localhost:8080/api/practica-rapida
     @GetMapping("/practica-rapida")
-    public ResponseEntity<?> getPracticaRapida() {
-        List<EjercicioDTO> ejercicios = ejercicioService.obtenerEjerciciosPracticaRapida();
+    public ResponseEntity<?> getPracticaRapida(
+            @RequestParam(defaultValue = "mixto") String nivel,
+            @RequestParam(defaultValue = "6") Integer limite,
+            Authentication authentication
+    ) {
+        String usuarioId = authentication != null ? authentication.getName() : null;
+        List<EjercicioDTO> ejercicios = ejercicioService.obtenerEjerciciosPracticaRapida(nivel, limite != null ? limite : 6, usuarioId);
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("exercises", ejercicios);
+        respuesta.put("nivel", nivel);
         return ResponseEntity.ok(respuesta);
     }
 

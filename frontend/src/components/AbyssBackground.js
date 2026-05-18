@@ -24,7 +24,7 @@ const rgba = (hex, alpha) => {
  *
  * Uso: <AbyssBackground intensity={1.2} tint="rgba(99,102,241,0.85)" />
  */
-export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)', mode = 'dark', colors = null }) => {
+export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)', mode = 'dark', colors = null, reduceMotion = false }) => {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
@@ -32,15 +32,25 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
+    if (!ctx) return;
 
     let particles = [];
     let bubbles = [];
-    const PARTICLE_COUNT = Math.floor(70 * intensity);
-    const BUBBLE_COUNT = Math.floor(18 * intensity);
+    let lastFrame = 0;
+    let stopped = false;
+    const effectiveIntensity = Math.max(0.2, Math.min(1.2, reduceMotion ? Math.min(intensity, 0.4) : intensity));
+    const PARTICLE_COUNT = Math.max(8, Math.floor((reduceMotion ? 28 : 48) * effectiveIntensity));
+    const BUBBLE_COUNT = Math.max(3, Math.floor((reduceMotion ? 8 : 12) * effectiveIntensity));
+    const FRAME_MS = 1000 / 30;
+    const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const tintR = tintMatch ? Number(tintMatch[1]) : 30;
+    const tintG = tintMatch ? Number(tintMatch[2]) : 41;
+    const tintB = tintMatch ? Number(tintMatch[3]) : 59;
+    const particleColor = (alpha) => `rgba(${tintR}, ${tintG}, ${tintB}, ${alpha.toFixed(2)})`;
 
     const resize = () => {
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+      const pixelRatio = reduceMotion ? 1 : Math.min(window.devicePixelRatio || 1, 1.25);
       canvas.width = Math.floor(window.innerWidth * pixelRatio);
       canvas.height = Math.floor(window.innerHeight * pixelRatio);
       canvas.style.width = `${window.innerWidth}px`;
@@ -73,107 +83,152 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     const spawnBubbles = () => {
       bubbles = Array.from({ length: BUBBLE_COUNT }, () => spawnBubble(false));
     };
-    spawnParticles();
-    spawnBubbles();
 
-    const onResize = () => { resize(); spawnParticles(); spawnBubbles(); };
+    const renderScene = (advance = false) => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      ctx.clearRect(0, 0, width, height);
+
+      if (advance) {
+        mouseRef.current.x += (mouseRef.current.tx - mouseRef.current.x) * 0.04;
+        mouseRef.current.y += (mouseRef.current.ty - mouseRef.current.y) * 0.04;
+      }
+
+      const grad = ctx.createRadialGradient(
+        width / 2, height * 0.4, 0,
+        width / 2, height * 0.4, Math.max(width, height) * 0.7
+      );
+
+      if (mode === 'light') {
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        grad.addColorStop(0.26, 'rgba(255, 246, 228, 0.12)');
+        grad.addColorStop(0.58, `rgba(${tintR}, ${tintG}, ${tintB}, 0.1)`);
+        grad.addColorStop(1, `rgba(${Math.min(255, Math.floor(tintR + 26))}, ${Math.min(255, Math.floor(tintG + 18))}, ${Math.max(104, Math.floor(tintB * 0.45))}, 0.16)`);
+      } else {
+        grad.addColorStop(0, 'rgba(30, 41, 59, 0.0)');
+        grad.addColorStop(1, `rgba(${Math.floor(tintR * 0.1)}, ${Math.floor(tintG * 0.1)}, ${Math.floor(tintB * 0.1)}, 0.4)`);
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.shadowColor = tint;
+      ctx.shadowBlur = reduceMotion ? 0 : 4;
+      for (const p of particles) {
+        if (advance) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life += p.pulse;
+          if (p.x < 0) p.x = width;
+          if (p.x > width) p.x = 0;
+          if (p.y < 0) p.y = height;
+          if (p.y > height) p.y = 0;
+        }
+
+        const alpha = reduceMotion ? 0.24 : 0.20 + Math.abs(Math.sin(p.life)) * 0.48;
+        const offX = mouseRef.current.x * p.depth;
+        const offY = mouseRef.current.y * p.depth;
+        ctx.beginPath();
+        ctx.arc(p.x + offX, p.y + offY, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = particleColor(alpha);
+        ctx.fill();
+      }
+      ctx.shadowBlur = 0;
+
+      for (let i = 0; i < bubbles.length; i++) {
+        const bubble = bubbles[i];
+        if (advance) {
+          bubble.y += bubble.vy;
+          bubble.sway += 0.02;
+          if (bubble.y < -20) {
+            bubbles[i] = spawnBubble(true);
+            continue;
+          }
+        }
+
+        const swayX = Math.sin(bubble.sway) * bubble.swayAmp;
+        const offX = mouseRef.current.x * bubble.depth * 0.6;
+        const offY = mouseRef.current.y * bubble.depth * 0.6;
+        ctx.beginPath();
+        ctx.arc(bubble.x + swayX + offX, bubble.y + offY, bubble.r, 0, Math.PI * 2);
+        ctx.strokeStyle = mode === 'light'
+          ? `rgba(${Math.min(255, tintR + 48)}, ${Math.min(255, tintG + 34)}, 198, ${0.12 * bubble.depth})`
+          : `rgba(186, 230, 253, ${0.28 * bubble.depth})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(bubble.x + swayX + offX - bubble.r * 0.35, bubble.y + offY - bubble.r * 0.35, bubble.r * 0.25, 0, Math.PI * 2);
+        ctx.fillStyle = mode === 'light'
+          ? `rgba(255, 255, 255, ${0.7 * bubble.depth})`
+          : `rgba(255, 255, 255, ${0.45 * bubble.depth})`;
+        ctx.fill();
+      }
+    };
+
+    const resetScene = () => {
+      spawnParticles();
+      spawnBubbles();
+      renderScene(false);
+    };
+
+    resize();
+    resetScene();
+
+    const onResize = () => {
+      resize();
+      resetScene();
+    };
     const onMouse = (e) => {
       mouseRef.current.tx = (e.clientX / window.innerWidth - 0.5) * 30;
       mouseRef.current.ty = (e.clientY / window.innerHeight - 0.5) * 30;
     };
     window.addEventListener('resize', onResize);
-    window.addEventListener('mousemove', onMouse);
+    if (!reduceMotion) {
+      window.addEventListener('mousemove', onMouse, { passive: true });
+    }
 
-    const step = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // ease parallax
-      mouseRef.current.x += (mouseRef.current.tx - mouseRef.current.x) * 0.04;
-      mouseRef.current.y += (mouseRef.current.ty - mouseRef.current.y) * 0.04;
-
-      // gradient overlay - use theme colors
-      const grad = ctx.createRadialGradient(
-        width / 2, height * 0.4, 0,
-        width / 2, height * 0.4, Math.max(width, height) * 0.7
-      );
-      // parse tint to get base color for gradient
-      const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-      const r = tintMatch ? tintMatch[1] : '30';
-      const g = tintMatch ? tintMatch[2] : '41';
-      const b = tintMatch ? tintMatch[3] : '59';
-      if (mode === 'light') {
-        grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-        grad.addColorStop(0.26, 'rgba(255, 246, 228, 0.12)');
-        grad.addColorStop(0.58, `rgba(${r}, ${g}, ${b}, 0.1)`);
-        grad.addColorStop(1, `rgba(${Math.min(255, Math.floor(Number(r) + 26))}, ${Math.min(255, Math.floor(Number(g) + 18))}, ${Math.max(104, Math.floor(Number(b) * 0.45))}, 0.16)`);
-      } else {
-        grad.addColorStop(0, 'rgba(30, 41, 59, 0.0)');
-        grad.addColorStop(1, `rgba(${Math.floor(Number(r)*0.1)}, ${Math.floor(Number(g)*0.1)}, ${Math.floor(Number(b)*0.1)}, 0.4)`);
+    const stopAnimation = () => {
+      if (animRef.current) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = null;
       }
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
+    };
 
-      // particles
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life += p.pulse;
-        if (p.x < 0) p.x = window.innerWidth;
-        if (p.x > window.innerWidth) p.x = 0;
-        if (p.y < 0) p.y = window.innerHeight;
-        if (p.y > window.innerHeight) p.y = 0;
-        const alpha = 0.20 + Math.abs(Math.sin(p.life)) * 0.55;
-        const offX = mouseRef.current.x * p.depth;
-        const offY = mouseRef.current.y * p.depth;
-        ctx.beginPath();
-        ctx.arc(p.x + offX, p.y + offY, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = tint.replace(/[\d.]+\)$/, `${alpha.toFixed(2)})`);
-        ctx.shadowColor = tint;
-        ctx.shadowBlur = 9;
-        ctx.fill();
+    const step = (timestamp) => {
+      if (stopped) return;
+      if (timestamp - lastFrame >= FRAME_MS) {
+        lastFrame = timestamp;
+        renderScene(true);
       }
-      ctx.shadowBlur = 0;
-
-      // bubbles
-      for (let i = 0; i < bubbles.length; i++) {
-        const b = bubbles[i];
-        b.y += b.vy;
-        b.sway += 0.02;
-        const swayX = Math.sin(b.sway) * b.swayAmp;
-        const offX = mouseRef.current.x * b.depth * 0.6;
-        const offY = mouseRef.current.y * b.depth * 0.6;
-        if (b.y < -20) {
-          bubbles[i] = spawnBubble(true);
-          continue;
-        }
-        ctx.beginPath();
-        ctx.arc(b.x + swayX + offX, b.y + offY, b.r, 0, Math.PI * 2);
-        ctx.strokeStyle = mode === 'light'
-          ? `rgba(${Math.min(255, Number(r) + 48)}, ${Math.min(255, Number(g) + 34)}, 198, ${0.12 * b.depth})`
-          : `rgba(186, 230, 253, ${0.28 * b.depth})`;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // highlight
-        ctx.beginPath();
-        ctx.arc(b.x + swayX + offX - b.r * 0.35, b.y + offY - b.r * 0.35, b.r * 0.25, 0, Math.PI * 2);
-        ctx.fillStyle = mode === 'light'
-          ? `rgba(255, 255, 255, ${0.7 * b.depth})`
-          : `rgba(255, 255, 255, ${0.45 * b.depth})`;
-        ctx.fill();
-      }
-
       animRef.current = requestAnimationFrame(step);
     };
-    step();
+
+    const startAnimation = () => {
+      if (reduceMotion || animRef.current) return;
+      lastFrame = 0;
+      animRef.current = requestAnimationFrame(step);
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopAnimation();
+      } else {
+        startAnimation();
+      }
+    };
+
+    if (!reduceMotion) {
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      if (!document.hidden) startAnimation();
+    }
 
     return () => {
-      cancelAnimationFrame(animRef.current);
+      stopped = true;
+      stopAnimation();
       window.removeEventListener('resize', onResize);
       window.removeEventListener('mousemove', onMouse);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [intensity, tint, mode]);
+  }, [intensity, tint, mode, reduceMotion]);
 
   const isLight = mode === 'light';
   const shellGridOpacity = isLight ? 'opacity-80' : 'opacity-50';
@@ -199,7 +254,7 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       <div className="absolute inset-0" style={{ background: overlayWash }} />
       <div className="absolute inset-0" style={{ backgroundImage: `${radialLightA}, ${radialLightB}, ${radialLightC}` }} />
       <div className={`absolute inset-0 grid-pattern ${shellGridOpacity}`} />
-      <canvas ref={canvasRef} className="absolute inset-0" />
+      <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
       <div className="ambient-orb absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full blur-[130px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(primary, 0.18) : rgba(primary, 0.2) }} />
       <div className="ambient-orb absolute -bottom-24 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] animate-pulse-slower" style={{ backgroundColor: isLight ? rgba(secondary, 0.16) : rgba(secondary, 0.18) }} />
       <div className="ambient-orb absolute top-[28%] left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full blur-[150px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(accent, 0.13) : rgba(accent, 0.12) }} />

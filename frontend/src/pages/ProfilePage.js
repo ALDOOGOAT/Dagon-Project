@@ -6,11 +6,11 @@ import { sounds } from '../lib/SoundEngine';
 import { DagonMascot } from '../components/DagonMascot';
 import {
   ArrowLeft, BookOpen, Code, Flame, Trophy, Target, Award, BarChart3,
-  Sparkles, Crown, Shield, Zap, Camera, ChevronRight
+  Sparkles, Crown, Shield, Zap, Camera, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import apiClient from '../services/apiClient';
 import { API_BASE } from '../config/api';
 import { LEARNING_CONCEPTS } from '../lib/learningProgress';
@@ -127,6 +127,7 @@ export const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [showAchievements, setShowAchievements] = useState(false);
   const avatarInputRef = useRef(null);
 
   const userLevel = Math.floor(stats.xp / 100) + 1;
@@ -254,7 +255,7 @@ export const ProfilePage = () => {
     };
   });
 
-  const achievements = [
+	  const achievements = [
     {
       id: 'first_query', title: 'Primera Consulta', desc: 'Completaste tu primer ejercicio',
       icon: <Target className="w-6 h-6" />, xpReward: '+10 XP',
@@ -290,8 +291,11 @@ export const ProfilePage = () => {
       gradient: 'from-yellow-500/30 to-yellow-600/10', border: 'border-yellow-500/40',
       iconColor: 'text-yellow-400',
     },
-    ...conceptAchievements,
-  ];
+	    ...conceptAchievements,
+	  ];
+	  const unlockedAchievements = achievements.filter((achievement) => achievement.unlocked);
+	  const nextAchievement = achievements.find((achievement) => !achievement.unlocked);
+	  const displayedAchievements = showAchievements ? achievements : achievements.slice(0, 3);
 
   if (loading) {
     return (
@@ -312,7 +316,7 @@ export const ProfilePage = () => {
 
   return (
     <div className="min-h-screen" data-testid="profile-page">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="dagon-page-shell dagon-page-shell--wide">
 
         <div className="flex items-center mb-8">
           <Button onClick={() => navigate('/dashboard')} variant="ghost" className="transition-colors" style={{ color: mutedColor }}>
@@ -322,56 +326,17 @@ export const ProfilePage = () => {
           <p className="text-xs font-bold tracking-[0.4em] uppercase" style={{ color: colors.primary }}>Ficha de personaje</p>
         </div>
 
-        {/* PERSONALIZACIÓN DE TEMA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card-apple rounded-3xl p-6 border mb-8"
-          style={{ borderColor: colors.border }}
-        >
-          <h3 className="font-display text-xl font-black mb-4 flex items-center gap-2" style={{ color: headingColor }}>
-            <Sparkles className="w-5 h-5" style={{ color: colors.primary }} />
-            Personalización
-          </h3>
-          <p className="text-sm mb-4" style={{ color: mutedColor }}>Elige el tema de color que más te guste</p>
-          
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {Object.entries(palettes).map(([key, theme]) => (
-              <button
-                key={key}
-                onClick={() => changePalette(key)}
-                className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${
-                  palette === key 
-                    ? 'border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] scale-105' 
-                    : 'border-transparent hover:border-white/30 hover:scale-105'
-                }`}
-                style={palette === key ? { borderColor: colors.primary, boxShadow: `0 0 20px ${colors.primary}40` } : {}}
-              >
-                <div className="flex flex-col gap-1">
-                  <div 
-                    className="w-full h-8 rounded-lg"
-                    style={{ 
-                      background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 100%)` 
-                    }}
-                  />
-                  <span className="text-xs font-medium truncate" style={{ color: isLight ? '#5b4636' : '#cbd5e1' }}>{theme.name}</span>
-                </div>
-                {palette === key && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.primary }}>
-                    <Sparkles className="w-2 h-2" style={{ color: isLight ? '#ffffff' : '#000000' }} />
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* HERO: avatar + stats principales */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 holo-border mb-8 relative overflow-hidden"
-          style={{ borderColor: colors.border }}
-        >
+	        {/* HERO: avatar + stats principales */}
+	        <motion.div
+	          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+	          className="profile-identity-hero glass-card-apple dagon-compact-card rounded-3xl p-6 lg:p-8 border holo-border mb-8 relative overflow-hidden"
+	          style={{
+	            borderColor: colors.border,
+	            '--profile-accent': colors.primary,
+	            '--profile-secondary': colors.secondary,
+	            '--profile-surface': colors.surface
+	          }}
+	        >
           <div
             className={`absolute -top-32 -right-32 w-96 h-96 rounded-full blur-3xl pointer-events-none ${isLight ? '' : 'bg-fuchsia-600/15'}`}
             style={heroOrbStyle}
@@ -441,21 +406,79 @@ export const ProfilePage = () => {
               </div>
             </div>
 
-            <div className="text-center lg:text-right">
-              <p className="font-display text-5xl sm:text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
-                {stats.xp}
-              </p>
-              <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP totales</p>
-            </div>
-          </div>
-        </motion.div>
+	            <div className="text-center lg:text-right">
+	              <p className="font-display text-5xl sm:text-6xl font-black leading-none drop-shadow-[0_0_30px_rgba(250,204,21,0.3)]" style={{ color: colors.primary }}>
+	                {stats.xp}
+	              </p>
+	              <p className="text-xs uppercase tracking-[0.4em] font-bold mt-2" style={{ color: mutedColor }}>XP totales</p>
+	              <div className="mt-4 rounded-2xl border px-4 py-3 text-left" style={{ borderColor: `${colors.primary}32`, backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(15,23,42,0.48)' }}>
+	                <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: colors.accent }}>Siguiente meta</p>
+	                <p className="mt-1 text-sm font-gameui" style={{ color: headingColor }}>
+	                  {nextAchievement ? nextAchievement.title : 'Perfil completado'}
+	                </p>
+	              </div>
+	            </div>
+	          </div>
+	        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+	        {/* FORJA VISUAL */}
+	        <motion.div
+	          initial={{ opacity: 0, y: 20 }}
+	          animate={{ opacity: 1, y: 0 }}
+	          transition={{ delay: 0.05 }}
+	          className="profile-theme-forge glass-card-apple dagon-compact-card rounded-3xl p-5 lg:p-6 border mb-8"
+	          style={{
+	            borderColor: colors.border,
+	            '--profile-accent': colors.primary,
+	            '--profile-secondary': colors.secondary,
+	            '--profile-surface': colors.surface
+	          }}
+	        >
+	          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+	            <div className="min-w-0">
+	              <h3 className="font-display text-xl font-black flex items-center gap-2" style={{ color: headingColor }}>
+	                <Sparkles className="w-5 h-5" style={{ color: colors.primary }} />
+	                Forja visual
+	              </h3>
+	              <p className="mt-1 text-sm" style={{ color: mutedColor }}>Tu paleta modifica el perfil, el mapa y los nodos de progreso.</p>
+	            </div>
+	            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:min-w-[520px]">
+	              {Object.entries(palettes).map(([key, theme]) => (
+	                <button
+	                  key={key}
+	                  onClick={() => changePalette(key)}
+	                  className={`profile-palette-chip relative rounded-2xl border p-2 transition-all duration-200 ${
+	                    palette === key ? 'is-active scale-[1.03]' : 'hover:-translate-y-0.5'
+	                  }`}
+	                  style={{
+	                    borderColor: palette === key ? colors.primary : (isLight ? 'rgba(217,119,6,0.16)' : 'rgba(255,255,255,0.08)'),
+	                    '--swatch-primary': theme.primary,
+	                    '--swatch-secondary': theme.secondary,
+	                    '--profile-accent': colors.primary
+	                  }}
+	                  aria-label={`Usar tema ${theme.name}`}
+	                >
+	                  <div className="h-8 rounded-xl" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }} />
+	                  <span className="mt-2 block truncate text-[10px] font-bold uppercase tracking-widest" style={{ color: palette === key ? colors.primary : mutedColor }}>
+	                    {theme.name}
+	                  </span>
+	                  {palette === key && (
+	                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary }}>
+	                      <Sparkles className="h-3 w-3" style={{ color: isLight ? '#ffffff' : '#020617' }} />
+	                    </span>
+	                  )}
+	                </button>
+	              ))}
+	            </div>
+	          </div>
+	        </motion.div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] gap-8 xl:gap-10">
+          <div className="space-y-8">
             {/* RESUMEN DE BATALLA */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple rounded-3xl p-6 lg:p-8 border"
+              className="glass-card-apple dagon-compact-card rounded-3xl p-6 lg:p-8 border"
               style={{ borderColor: colors.border }}
             >
               <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
@@ -486,7 +509,7 @@ export const ProfilePage = () => {
             {/* DISTRIBUCIÓN XP */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10"
+              className="glass-card-apple dagon-compact-card rounded-3xl p-6 lg:p-8 border border-white/10"
               style={{ borderColor: colors.border }}
             >
               <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
@@ -523,57 +546,125 @@ export const ProfilePage = () => {
             </motion.div>
           </div>
 
-          {/* LOGROS */}
-          <div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
-              className="glass-card-apple rounded-3xl p-6 lg:p-8 border border-white/10 lg:sticky lg:top-8"
-              style={{ borderColor: colors.border }}
-            >
-              <h2 className="font-display text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-wide" style={{ color: headingColor }}>
-                <Award style={{ color: isLight ? '#d97706' : '#fde047' }} /> Trofeos
-              </h2>
+	          {/* LOGROS */}
+	          <div>
+	            <motion.div
+	              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}
+	              className="profile-achievement-vault glass-card-apple dagon-compact-card rounded-3xl p-5 lg:p-6 border xl:sticky xl:top-8"
+	              style={{
+	                borderColor: colors.border,
+	                '--profile-accent': colors.primary,
+	                '--profile-secondary': colors.secondary,
+	                '--profile-surface': colors.surface
+	              }}
+	            >
+	              <button
+	                type="button"
+	                onClick={() => setShowAchievements((prev) => !prev)}
+	                className="w-full text-left"
+	                aria-expanded={showAchievements}
+	              >
+	                <div className="flex items-center justify-between gap-4">
+	                  <div className="flex items-center gap-3 min-w-0">
+	                    <div className="profile-vault-orb">
+	                      <Award className="w-6 h-6" />
+	                    </div>
+	                    <div className="min-w-0">
+	                      <p className="text-[10px] uppercase tracking-[0.3em] font-black" style={{ color: colors.accent }}>Bóveda de trofeos</p>
+	                      <h2 className="font-display text-xl font-black" style={{ color: headingColor }}>
+	                        {unlockedAchievements.length}/{achievements.length} desbloqueados
+	                      </h2>
+	                    </div>
+	                  </div>
+	                  <motion.div animate={{ rotate: showAchievements ? 180 : 0 }} transition={{ duration: 0.22 }}>
+	                    <ChevronDown className="w-5 h-5" style={{ color: colors.primary }} />
+	                  </motion.div>
+	                </div>
+	                <div className="mt-4 h-2 rounded-full overflow-hidden border" style={progressTrackStyle}>
+	                  <motion.div
+	                    initial={{ width: 0 }}
+	                    animate={{ width: `${Math.round((unlockedAchievements.length / achievements.length) * 100)}%` }}
+	                    transition={{ duration: 0.7, ease: 'easeOut' }}
+	                    className="h-full"
+	                    style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})` }}
+	                  />
+	                </div>
+	                {!showAchievements && (
+	                  <p className="mt-3 text-xs font-gameui" style={{ color: mutedColor }}>
+	                    Toca la bóveda para desplegar todos tus trofeos.
+	                  </p>
+	                )}
+	              </button>
 
-              <div className="space-y-3">
-                {achievements.map((a) => (
-                  <motion.div
-                    key={a.id}
-                    whileHover={a.unlocked ? { scale: 1.02 } : {}}
-                    className={`relative overflow-hidden rounded-2xl p-4 border transition-all duration-300 ${
-                      a.unlocked
-                        ? `bg-gradient-to-br ${a.gradient} ${a.border} shadow-lg`
-                        : 'border-slate-800 bg-slate-900/30 opacity-50 grayscale'
-                    }`}
-                    style={!a.unlocked ? lockedAchievementStyle : undefined}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`p-2.5 rounded-xl ${a.iconColor}`}
-                        style={{ backgroundColor: a.unlocked ? (isLight ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.5)') : (isLight ? 'rgba(255,255,255,0.42)' : 'rgba(15,23,42,0.3)') }}
-                      >
-                        {a.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-display font-black text-sm" style={{ color: headingColor }}>{a.title}</h3>
-                        <p className="text-xs font-gameui" style={{ color: mutedColor }}>{a.desc}</p>
-                      </div>
-                      <span className="font-display font-black text-xs" style={{ color: isLight ? '#b45309' : '#fde047' }}>{a.xpReward}</span>
-                    </div>
-                    {a.unlocked && (
-                      <div className="absolute top-2 right-2">
-                        <Sparkles className="w-4 h-4 animate-pulse" style={{ color: isLight ? '#d97706' : '#fde047' }} />
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
+	              {nextAchievement && (
+	                <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: `${colors.primary}28`, backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(15,23,42,0.42)' }}>
+	                  <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: colors.primary }}>Próximo trofeo</p>
+	                  <p className="mt-1 font-display font-black" style={{ color: headingColor }}>{nextAchievement.title}</p>
+	                  <p className="mt-1 text-xs font-gameui" style={{ color: mutedColor }}>{nextAchievement.desc}</p>
+	                </div>
+	              )}
 
-              <div className="mt-6 text-center">
-                <p className="text-xs font-gameui" style={{ color: mutedColor }}>
-                  {achievements.filter(a => a.unlocked).length}/{achievements.length} desbloqueados
-                </p>
-              </div>
-            </motion.div>
+	              <AnimatePresence initial={false}>
+	                <motion.div
+	                  key={showAchievements ? 'all-achievements' : 'preview-achievements'}
+	                  initial={{ opacity: 0, height: 0 }}
+	                  animate={{ opacity: 1, height: 'auto' }}
+	                  exit={{ opacity: 0, height: 0 }}
+	                  transition={{ duration: 0.24 }}
+	                  className="overflow-hidden"
+	                >
+	                  <div className="mt-4 space-y-3">
+	                    {displayedAchievements.map((a) => (
+	                      <motion.div
+	                        key={a.id}
+	                        whileHover={a.unlocked ? { y: -2, scale: 1.01 } : {}}
+	                        className={`profile-achievement-card relative overflow-hidden rounded-2xl p-4 border transition-all duration-300 ${
+	                          a.unlocked
+	                            ? `bg-gradient-to-br ${a.gradient} ${a.border} shadow-lg`
+	                            : 'border-slate-800 bg-slate-900/30 opacity-60 grayscale'
+	                        }`}
+	                        style={!a.unlocked ? lockedAchievementStyle : {
+	                          '--profile-accent': colors.primary,
+	                          '--profile-secondary': colors.secondary
+	                        }}
+	                      >
+	                        <div className="flex items-center gap-3">
+	                          <div
+	                            className={`p-2.5 rounded-xl ${a.iconColor}`}
+	                            style={{ backgroundColor: a.unlocked ? (isLight ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.5)') : (isLight ? 'rgba(255,255,255,0.42)' : 'rgba(15,23,42,0.3)') }}
+	                          >
+	                            {a.icon}
+	                          </div>
+	                          <div className="flex-1 min-w-0">
+	                            <h3 className="font-display font-black text-sm" style={{ color: headingColor }}>{a.title}</h3>
+	                            <p className="text-xs font-gameui" style={{ color: mutedColor }}>{a.desc}</p>
+	                          </div>
+	                          <span className="font-display font-black text-xs" style={{ color: isLight ? '#b45309' : '#fde047' }}>{a.xpReward}</span>
+	                        </div>
+	                        {a.unlocked && (
+	                          <div className="absolute top-2 right-2">
+	                            <Sparkles className="w-4 h-4 animate-pulse" style={{ color: isLight ? '#d97706' : '#fde047' }} />
+	                          </div>
+	                        )}
+	                      </motion.div>
+	                    ))}
+	                  </div>
+                </motion.div>
+	              </AnimatePresence>
+
+	              {!showAchievements && achievements.length > displayedAchievements.length && (
+	                <Button
+	                  type="button"
+	                  onClick={() => setShowAchievements(true)}
+	                  variant="ghost"
+	                  className="mt-4 w-full rounded-2xl border font-display font-black"
+	                  style={{ borderColor: `${colors.primary}32`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(15,23,42,0.42)' }}
+	                >
+	                  Ver todos los trofeos
+	                  <ChevronDown className="ml-2 h-4 w-4" />
+	                </Button>
+	              )}
+	            </motion.div>
 
             {/* BOTÓN SALÓN DE LA FAMA */}
             <motion.div

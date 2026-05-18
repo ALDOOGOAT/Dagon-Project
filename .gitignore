@@ -78,3 +78,37 @@ agenthub/agents/youtube/db
 *credentials.json*
 *.pem
 *.key
+
+# Variables locales
+.env
+.env.*
+!.env.example
+
+# Frontend env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+
+# Backend env/local configs
+backend/.env
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+
+# Builds
+frontend/build/
+backend/target/
+
+# Uploads locales
+uploads/
+backend/uploads/
+
+# Backups o dumps sensibles
+*.dump
+*.backup
+*backup*.sql
+*respaldo*.sql
+*dump*.sql
+
+# Sistema
+.DS_Store

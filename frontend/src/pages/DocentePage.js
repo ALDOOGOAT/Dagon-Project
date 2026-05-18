@@ -165,7 +165,7 @@ export const DocentePage = () => {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto print:p-2 print:max-w-none">
+    <div className="min-h-screen dagon-page-shell dagon-page-shell--wide print:p-2 print:max-w-none">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -228,7 +228,7 @@ export const DocentePage = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="glass-card-apple rounded-2xl p-4 border mb-6 print:hidden"
+        className="glass-card-apple dagon-compact-card rounded-2xl p-4 border mb-6 print:hidden"
         style={{ borderColor }}
       >
         <p className="text-xs font-bold uppercase mb-3" style={{ color: mutedColor }}>Filtros</p>
@@ -279,7 +279,7 @@ export const DocentePage = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+        className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6"
       >
         {[
           { label: 'Total alumnos', value: data?.total_alumnos ?? 0, icon: Users, accent: colors.primary },
@@ -291,7 +291,7 @@ export const DocentePage = () => {
           return (
             <div
               key={m.label}
-              className="glass-card-apple rounded-2xl p-4 border"
+              className="glass-card-apple dagon-compact-card rounded-2xl p-4 border"
               style={{ borderColor }}
             >
               <div className="flex items-center gap-2 text-xs font-bold uppercase mb-2" style={{ color: mutedColor }}>
@@ -312,7 +312,7 @@ export const DocentePage = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-card-apple rounded-2xl p-5 border mb-6"
+          className="glass-card-apple dagon-compact-card rounded-2xl p-5 border mb-6"
           style={{ borderColor }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -369,7 +369,7 @@ export const DocentePage = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="glass-card-apple rounded-2xl p-5 border mb-6"
+          className="glass-card-apple dagon-compact-card rounded-2xl p-5 border mb-6"
           style={{ borderColor }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -424,7 +424,7 @@ export const DocentePage = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-card-apple rounded-2xl p-5 border mb-6"
+          className="glass-card-apple dagon-compact-card rounded-2xl p-5 border mb-6"
           style={{ borderColor }}
         >
           <div className="flex items-center gap-2 mb-4">
@@ -465,7 +465,7 @@ export const DocentePage = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
-        className="glass-card-apple rounded-2xl p-5 border mb-6"
+        className="glass-card-apple dagon-compact-card rounded-2xl p-5 border mb-6"
         style={{ borderColor }}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">

@@ -1,80 +1,38 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DagonMascot } from './DagonMascot';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { 
   Zap, Timer, Flame, Trophy, Star, 
-  RefreshCw, ChevronRight, X, Target, Lock, Unlock,
+  RefreshCw, X, Target, Lock, Unlock,
   ArrowUp, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../services/apiClient';
 import { sounds } from '../lib/SoundEngine';
 
-const QUERY_TEMPLATES = {
-  'nivel-0': [
-    { words: ['SELECT', '*', 'FROM', 'usuarios'], answer: 'SELECT * FROM usuarios', hint: 'Selecciona todo de la tabla usuarios', difficulty: 1 },
-    { words: ['SELECT', '*', 'FROM', 'productos'], answer: 'SELECT * FROM productos', hint: 'Selecciona todo de la tabla productos', difficulty: 1 },
-    { words: ['SELECT', 'nombre', 'FROM', 'clientes'], answer: 'SELECT nombre FROM clientes', hint: 'Selecciona solo el nombre', difficulty: 1 },
-    { words: ['SELECT', 'email', 'FROM', 'usuarios'], answer: 'SELECT email FROM usuarios', hint: 'Selecciona el email de usuarios', difficulty: 1 },
-    { words: ['SELECT', '*', 'FROM', 'pedidos'], answer: 'SELECT * FROM pedidos', hint: 'Mira todos los pedidos', difficulty: 1 },
-    { words: ['SELECT', 'apellido', 'FROM', 'empleados'], answer: 'SELECT apellido FROM empleados', hint: 'Selecciona los apellidos', difficulty: 1 },
-    { words: ['SELECT', 'id', ',', 'nombre', 'FROM', 'categorias'], answer: 'SELECT id , nombre FROM categorias', hint: 'Selecciona ID y nombre', difficulty: 1 },
-  ],
-  'basico': [
-    { words: ['SELECT', '*', 'FROM', 'usuarios', 'WHERE', 'edad', '>', '18'], answer: 'SELECT * FROM usuarios WHERE edad > 18', hint: 'Filtra usuarios mayores de 18', difficulty: 2 },
-    { words: ['SELECT', 'nombre', ',', 'email', 'FROM', 'usuarios'], answer: 'SELECT nombre , email FROM usuarios', hint: 'Selecciona dos columnas', difficulty: 2 },
-    { words: ['SELECT', '*', 'FROM', 'pedidos', 'ORDER BY', 'fecha'], answer: 'SELECT * FROM pedidos ORDER BY fecha', hint: 'Ordena por fecha', difficulty: 2 },
-    { words: ['SELECT', '*', 'FROM', 'usuarios', 'WHERE', 'ciudad', '=', 'Madrid'], answer: 'SELECT * FROM usuarios WHERE ciudad = Madrid', hint: 'Filtra usuarios de Madrid', difficulty: 2 },
-    { words: ['SELECT', 'nombre', 'FROM', 'productos', 'WHERE', 'precio', '<', '50'], answer: 'SELECT nombre FROM productos WHERE precio < 50', hint: 'Productos baratos', difficulty: 2 },
-    { words: ['SELECT', '*', 'FROM', 'clientes', 'ORDER BY', 'nombre', 'DESC'], answer: 'SELECT * FROM clientes ORDER BY nombre DESC', hint: 'Ordena por nombre descendente', difficulty: 2 },
-    { words: ['SELECT', 'DISTINCT', 'ciudad', 'FROM', 'usuarios'], answer: 'SELECT DISTINCT ciudad FROM usuarios', hint: 'Ciudades sin duplicados', difficulty: 2 },
-    { words: ['SELECT', 'COUNT(*)', 'FROM', 'usuarios'], answer: 'SELECT COUNT(*) FROM usuarios', hint: 'Cuenta todos los usuarios', difficulty: 2 },
-    { words: ['SELECT', '*', 'FROM', 'pedidos', 'WHERE', 'estado', '=', 'pendiente'], answer: 'SELECT * FROM pedidos WHERE estado = pendiente', hint: 'Pedidos pendientes', difficulty: 2 },
-  ],
-  'medio': [
-    { words: ['SELECT', 'COUNT(*)', 'FROM', 'usuarios', 'GROUP BY', 'ciudad'], answer: 'SELECT COUNT(*) FROM usuarios GROUP BY ciudad', hint: 'Cuenta usuarios por ciudad', difficulty: 3 },
-    { words: ['SELECT', '*', 'FROM', 'usuarios', 'u', 'JOIN', 'pedidos', 'p', 'ON', 'u.id', '=', 'p.usuario_id'], answer: 'SELECT * FROM usuarios u JOIN pedidos p ON u.id = p.usuario_id', hint: 'Une usuarios con sus pedidos', difficulty: 3 },
-    { words: ['SELECT', 'AVG', '(', 'edad', ')', 'FROM', 'usuarios'], answer: 'SELECT AVG ( edad ) FROM usuarios', hint: 'Promedio de edad', difficulty: 3 },
-    { words: ['SELECT', 'ciudad', ',', 'COUNT(*)', 'FROM', 'clientes', 'GROUP BY', 'ciudad'], answer: 'SELECT ciudad , COUNT(*) FROM clientes GROUP BY ciudad', hint: 'Clientes por ciudad', difficulty: 3 },
-    { words: ['SELECT', '*', 'FROM', 'productos', 'WHERE', 'precio', 'BETWEEN', '10', 'AND', '50'], answer: 'SELECT * FROM productos WHERE precio BETWEEN 10 AND 50', hint: 'Productos en rango de precio', difficulty: 3 },
-    { words: ['SELECT', 'MAX', '(', 'salario', ')', 'FROM', 'empleados'], answer: 'SELECT MAX ( salario ) FROM empleados', hint: 'Salario más alto', difficulty: 3 },
-    { words: ['SELECT', 'u.nombre', ',', 'p.total', 'FROM', 'usuarios', 'u', 'JOIN', 'pedidos', 'p', 'ON', 'u.id', '=', 'p.usuario_id'], answer: 'SELECT u.nombre , p.total FROM usuarios u JOIN pedidos p ON u.id = p.usuario_id', hint: 'Nombre y total del pedido', difficulty: 3 },
-  ],
-  'avanzado': [
-    { words: ['SELECT', 'ciudad', ',', 'AVG', '(', 'edad', ')', 'FROM', 'usuarios', 'GROUP BY', 'ciudad', 'HAVING', 'AVG', '(', 'edad', ')', '>', '25'], answer: 'SELECT ciudad , AVG ( edad ) FROM usuarios GROUP BY ciudad HAVING AVG ( edad ) > 25', hint: 'Ciudades con promedio mayor a 25', difficulty: 4 },
-    { words: ['SELECT', 'nombre', 'FROM', 'usuarios', 'WHERE', 'id', 'IN', '(', 'SELECT', 'usuario_id', 'FROM', 'pedidos', ')'], answer: 'SELECT nombre FROM usuarios WHERE id IN ( SELECT usuario_id FROM pedidos )', hint: 'Usuarios que han pedido', difficulty: 4 },
-    { words: ['SELECT', 'p.nombre', ',', 'COUNT', '(', 'DISTINCT', 'u.id', ')', 'FROM', 'productos', 'p', 'LEFT', 'JOIN', 'detalles_pedido', 'dp', 'ON', 'p.id', '=', 'dp.producto_id', 'LEFT', 'JOIN', 'pedidos', 'u', 'ON', 'dp.pedido_id', '=', 'u.id', 'GROUP BY', 'p.nombre'], answer: 'SELECT p.nombre , COUNT ( DISTINCT u.id ) FROM productos p LEFT JOIN detalles_pedido dp ON p.id = dp.producto_id LEFT JOIN pedidos u ON dp.pedido_id = u.id GROUP BY p.nombre', hint: 'Contar pedidos por producto', difficulty: 5 },
-    { words: ['SELECT', 'TO_CHAR', '(', 'fecha_registro', ',', "'YYYY-MM'", ')', ',', 'COUNT(*)', 'FROM', 'usuarios', 'GROUP BY', 'TO_CHAR', '(', 'fecha_registro', ',', "'YYYY-MM'", ')'], answer: "SELECT TO_CHAR ( fecha_registro , 'YYYY-MM' ) , COUNT(*) FROM usuarios GROUP BY TO_CHAR ( fecha_registro , 'YYYY-MM' )", hint: 'Usuarios por mes', difficulty: 5 },
-    { words: ['SELECT', 'nombre', 'FROM', 'clientes', 'WHERE', 'id', 'NOT', 'IN', '(', 'SELECT', 'cliente_id', 'FROM', 'pedidos', 'WHERE', 'YEAR', '(', 'fecha', ')', '=', '2024', ')'], answer: 'SELECT nombre FROM clientes WHERE id NOT IN ( SELECT cliente_id FROM pedidos WHERE YEAR ( fecha ) = 2024 )', hint: 'Clientes sin pedidos en 2024', difficulty: 5 },
-  ],
-  'experto': [
-    { words: ['WITH', 'ventas_mes', 'AS', '(', 'SELECT', 'producto_id', ',', 'SUM(cantidad)', 'as', 'total', 'FROM', 'ventas', 'GROUP BY', 'producto_id', ')', 'SELECT', 'p.nombre', ',', 'v.total', 'FROM', 'ventas_mes', 'v', 'JOIN', 'productos', 'p', 'ON', 'v.producto_id', '=', 'p.id', 'ORDER BY', 'v.total', 'DESC'], answer: 'WITH ventas_mes AS ( SELECT producto_id , SUM(cantidad) as total FROM ventas GROUP BY producto_id ) SELECT p.nombre , v.total FROM ventas_mes v JOIN productos p ON v.producto_id = p.id ORDER BY v.total DESC', hint: 'CTE para top productos', difficulty: 5 },
-    { words: ['SELECT', 'u.nombre', ',', 'COALESCE', '(', 'SUM', '(', 'p.total', ')', ',', '0', ')', 'as', 'gasto_total', 'FROM', 'usuarios', 'u', 'LEFT', 'JOIN', 'pedidos', 'p', 'ON', 'u.id', '=', 'p.usuario_id', 'GROUP BY', 'u.nombre', 'HAVING', 'COALESCE', '(', 'SUM', '(', 'p.total', ')', ',', '0', ')', '>', '100'], answer: 'SELECT u.nombre , COALESCE ( SUM ( p.total ) , 0 ) as gasto_total FROM usuarios u LEFT JOIN pedidos p ON u.id = p.usuario_id GROUP BY u.nombre HAVING COALESCE ( SUM ( p.total ) , 0 ) > 100', hint: 'Gasto total por usuario', difficulty: 5 },
-  ]
-};
-
 const LEVEL_NAMES = {
-  'nivel-0': { name: 'Básico', icon: '📖', description: 'SELECT simple', color: 'from-green-500 to-emerald-600' },
-  'basico': { name: 'Intermedio', icon: '🔧', description: 'WHERE y ORDER BY', color: 'from-blue-500 to-cyan-600' },
-  'medio': { name: 'Medio', icon: '⚡', description: 'JOIN y GROUP BY', color: 'from-purple-500 to-pink-600' },
-  'avanzado': { name: 'Avanzado', icon: '🔥', description: 'Subconsultas complejas', color: 'from-orange-500 to-red-600' },
-  'experto': { name: 'Experto', icon: '👑', description: 'CTEs y funciones', color: 'from-yellow-500 to-amber-600' },
+  'nivel-0': { name: 'Inicial', icon: 'SQL', description: 'SELECT de una tabla', color: 'from-green-500 to-emerald-600' },
+  'basico': { name: 'Básico', icon: 'WH', description: 'Filtros y orden', color: 'from-blue-500 to-cyan-600' },
+  'medio': { name: 'Intermedio', icon: 'JN', description: 'JOIN y agrupaciones', color: 'from-purple-500 to-pink-600' },
+  'avanzado': { name: 'Avanzado', icon: 'AV', description: 'Subconsultas y composición', color: 'from-orange-500 to-red-600' },
+  'experto': { name: 'Experto', icon: 'EX', description: 'DDL, DML y reglas', color: 'from-yellow-500 to-amber-600' },
 };
 
 const DAILY_CHALLENGES = [
-  { id: 1, title: 'Maestro SELECT', description: 'Completa 5 consultas SELECT', target: 5, reward: 50, icon: '🎯' },
-  { id: 2, title: 'Velocista SQL', description: 'Resuelve 3 en menos de 30s cada una', target: 3, reward: 75, icon: '⚡' },
-  { id: 3, title: 'Racha Perfecta', description: 'Completa 5 sin errores', target: 5, reward: 100, icon: '🔥' },
+  { id: 1, title: 'Maestro SELECT', description: 'Completa 5 relámpagos correctos', target: 5, rewardLabel: 'Sello de precisión', icon: 'MS' },
+  { id: 2, title: 'Velocista SQL', description: 'Resuelve 3 antes de que el reloj entre en rojo', target: 3, rewardLabel: 'Sello de velocidad', icon: 'VS' },
+  { id: 3, title: 'Racha Perfecta', description: 'Encadena 5 aciertos sin error', target: 5, rewardLabel: 'Sello de constancia', icon: 'RC' },
 ];
 
 const inferPracticeLearning = (query) => {
-  const answer = (query?.answer || '').toUpperCase();
-  if (answer.includes('JOIN')) return 'Relaciones entre tablas';
-  if (answer.includes('GROUP BY') || answer.includes('COUNT') || answer.includes('AVG') || answer.includes('SUM')) return 'Agrupaciones y funciones';
-  if (answer.includes('WHERE') || answer.includes('ORDER BY') || answer.includes('DISTINCT')) return 'Filtros y ordenamiento';
-  if (answer.includes('WITH')) return 'Consultas avanzadas con CTE';
+  if (query?.concept) return query.concept;
+  const texto = `${query?.title || ''} ${query?.description || ''}`.toUpperCase();
+  if (texto.includes('JOIN')) return 'Relaciones entre tablas';
+  if (texto.includes('GROUP') || texto.includes('COUNT') || texto.includes('AVG') || texto.includes('SUM')) return 'Agrupaciones y funciones';
+  if (texto.includes('WHERE') || texto.includes('ORDER') || texto.includes('BETWEEN')) return 'Filtros y ordenamiento';
+  if (texto.includes('CREATE') || texto.includes('ALTER')) return 'DDL y reglas';
   return 'Lectura basica con SELECT';
 };
 
@@ -86,27 +44,55 @@ const buildPracticeRecommendation = (query, success) => {
   return `Vuelve a separar la consulta en bloques: SELECT, FROM y la parte de ${concept.toLowerCase()}.`;
 };
 
-export const QuickPracticeMode = ({ 
-  userLevel = 'nivel-0', 
+const shuffleWords = (words) => [...words].sort(() => Math.random() - 0.5);
+
+const buildWordObjects = (words) => shuffleWords(words || []).map((word, idx) => ({
+  id: `qp-${Date.now()}-${idx}-${String(word).replace(/\W/g, '')}`,
+  word
+}));
+
+const normalizeExercise = (exercise) => ({
+  id: exercise.id,
+  title: exercise.title || 'Misión Relámpago',
+  description: exercise.description || 'Arma la consulta solicitada.',
+  hint: exercise.hint || 'Ordena los bloques de izquierda a derecha.',
+  wordBank: Array.isArray(exercise.wordBank) ? exercise.wordBank : [],
+  difficulty: Number(exercise.difficulty || 1),
+  xpReward: Number(exercise.xpReward || 5),
+  timeLimitSeconds: Number(exercise.timeLimitSeconds || 35),
+  concept: exercise.concept || inferPracticeLearning(exercise),
+});
+
+const completeSqlStatement = (words) => {
+  const raw = words.map(w => w.word).join(' ').replace(/\s+;/g, ';').trim();
+  if (!raw) return raw;
+  return raw.endsWith(';') ? raw : `${raw};`;
+};
+
+export const QuickPracticeMode = ({
   userXP = 0,
   userStreak = 0,
   onXPGain = () => {},
-  onClose = () => {} 
+  onClose = () => {}
 }) => {
   const [currentChallenge, setCurrentChallenge] = useState(null);
+  const [practicePool, setPracticePool] = useState([]);
+  const [poolIndex, setPoolIndex] = useState(0);
   const [query, setQuery] = useState(null);
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
   const [timer, setTimer] = useState(30);
   const [isRunning, setIsRunning] = useState(false);
+  const [loadingPractice, setLoadingPractice] = useState(false);
+  const [validatingAnswer, setValidatingAnswer] = useState(false);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [showResult, setShowResult] = useState(false);
   const [lastResult, setLastResult] = useState(null);
-  const [completedLevels, setCompletedLevels] = useState([1, 2]);
   const [selectedDifficulty, setSelectedDifficulty] = useState(null);
+  const [dailyQuickRemaining, setDailyQuickRemaining] = useState(null);
   const [showDifficultySelect, setShowDifficultySelect] = useState(true);
   const [dailyProgress, setDailyProgress] = useState(() => {
     const saved = localStorage.getItem('dagon_daily_progress');
@@ -118,82 +104,100 @@ export const QuickPracticeMode = ({
     return { date: new Date().toDateString(), challenges: {}, totalCompleted: 0 };
   });
 
-  useEffect(() => {
-    const fetchCompletedLevels = async () => {
-      try {
-        const response = await apiClient.get('/api/modulos/completados');
-        const data = response.data;
-        setCompletedLevels(data);
-      } catch {
-        // La practica rapida puede funcionar con el progreso local si falla la red.
-      }
-    };
-    fetchCompletedLevels();
-  }, []);
-
   const getAvailableLevels = useCallback(() => {
     const xpLevel = Math.floor(userXP / 100);
-    const levelKeys = Object.keys(QUERY_TEMPLATES);
+    const levelKeys = Object.keys(LEVEL_NAMES);
     const available = [];
-    
+
     levelKeys.forEach((key, index) => {
       if (index <= xpLevel + 1) {
         available.push(key);
       }
     });
-    
+
     return available;
   }, [userXP]);
 
-  const getRandomQueryFromLevels = useCallback((levels, allowChallenge = true) => {
-    if (!levels || levels.length === 0) {
-      levels = ['nivel-0'];
-    }
-    
-    let pool = [];
-    
-    if (allowChallenge && Math.random() > 0.5 && levels.length > 1) {
-      const challengeLevel = levels[Math.min(levels.length - 1, Math.floor(Math.random() * levels.length))];
-      pool = [...QUERY_TEMPLATES[challengeLevel]];
-    } else {
-      const randomLevel = levels[Math.floor(Math.random() * levels.length)];
-      pool = [...QUERY_TEMPLATES[randomLevel]];
-    }
-    
-    if (pool.length === 0) pool = QUERY_TEMPLATES['nivel-0'];
-    
-    const template = pool[Math.floor(Math.random() * pool.length)];
-    
-    const shuffled = [...template.words].sort(() => Math.random() - 0.5);
-    const wordObjects = shuffled.map((word, idx) => ({ id: `qp-${idx}-${Date.now()}`, word }));
-    
-    return { template, wordObjects };
-  }, []);
-
-  const generateNewQuery = useCallback(() => {
-    const availableLevels = getAvailableLevels();
-    const { template, wordObjects } = getRandomQueryFromLevels(availableLevels);
-    
-    setQuery(template);
-    setAvailableWords(wordObjects);
+  const activateExercise = useCallback((exercise) => {
+    const normalized = normalizeExercise(exercise);
+    setQuery(normalized);
+    setAvailableWords(buildWordObjects(normalized.wordBank));
     setDroppedWords([]);
-    setTimer(Math.max(15, 35 - template.difficulty * 3));
+    setTimer(Math.max(20, normalized.timeLimitSeconds));
     setIsRunning(true);
     setShowResult(false);
-    
+    setLastResult(null);
+
     sounds.playMagic();
-  }, [getAvailableLevels, getRandomQueryFromLevels]);
+  }, []);
+
+  const fetchPracticeSet = useCallback(async (difficulty) => {
+    const response = await apiClient.get('/api/practica-rapida', {
+      params: {
+        nivel: difficulty || 'mixto',
+        limite: 8
+      }
+    });
+    const exercises = (response.data?.exercises || []).map(normalizeExercise);
+    if (exercises.length === 0) {
+      throw new Error('No hay ejercicios relámpago disponibles para este nivel.');
+    }
+    return exercises;
+  }, []);
+
+  const startChallenge = useCallback(async (challenge, difficulty = selectedDifficulty || 'mixto') => {
+    setLoadingPractice(true);
+    setCurrentChallenge(challenge);
+    setScore(0);
+    setCombo(0);
+    setQuestionsAnswered(0);
+    setCorrectAnswers(0);
+    setShowResult(false);
+
+    try {
+      const exercises = await fetchPracticeSet(difficulty);
+      setPracticePool(exercises);
+      setPoolIndex(1);
+      setShowDifficultySelect(false);
+      activateExercise(exercises[0]);
+    } catch (error) {
+      setCurrentChallenge(null);
+      setShowDifficultySelect(true);
+      toast.error(error?.response?.data?.message || error.message || 'No se pudo cargar la práctica relámpago.');
+    } finally {
+      setLoadingPractice(false);
+    }
+  }, [activateExercise, fetchPracticeSet, selectedDifficulty]);
+
+  const generateNewQuery = useCallback(async () => {
+    if (practicePool.length > poolIndex) {
+      activateExercise(practicePool[poolIndex]);
+      setPoolIndex(prev => prev + 1);
+      return;
+    }
+
+    setLoadingPractice(true);
+    try {
+      const exercises = await fetchPracticeSet(selectedDifficulty || 'mixto');
+      setPracticePool(exercises);
+      setPoolIndex(1);
+      activateExercise(exercises[0]);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || 'No se pudo cargar otra misión relámpago.');
+    } finally {
+      setLoadingPractice(false);
+    }
+  }, [activateExercise, fetchPracticeSet, poolIndex, practicePool, selectedDifficulty]);
 
   const handleDifficultySelect = (difficulty) => {
     setSelectedDifficulty(difficulty);
-    setShowDifficultySelect(false);
     sounds.playSelect();
-    startChallenge({ 
-      id: 'custom', 
-      title: LEVEL_NAMES[difficulty]?.name || 'Práctica', 
-      target: Infinity, 
-      reward: 0 
-    });
+    startChallenge({
+      id: 'custom',
+      title: LEVEL_NAMES[difficulty]?.name || 'Práctica',
+      target: Infinity,
+      reward: 0
+    }, difficulty);
   };
 
   useEffect(() => {
@@ -214,7 +218,12 @@ export const QuickPracticeMode = ({
       setIsRunning(false);
       setCombo(0);
       setQuestionsAnswered(prev => prev + 1);
-      setLastResult({ success: false, timeout: true, correctAnswer: query?.answer || '' });
+      setLastResult({
+        success: false,
+        timeout: true,
+        message: 'El reloj se agotó. No se pierde progreso, pero este intento no salva racha ni entrega XP.',
+        correctAnswer: ''
+      });
       setShowResult(true);
       sounds.playTimeWarning();
     }
@@ -270,54 +279,112 @@ export const QuickPracticeMode = ({
     setAvailableWords(prev => [...prev, wordObj]);
   };
 
-  const checkAnswer = () => {
-    setIsRunning(false);
-    const userAnswer = droppedWords.map(w => w.word).join(' ');
-    const isCorrect = userAnswer === query.answer;
-    
-    setQuestionsAnswered(prev => prev + 1);
-    
-    if (isCorrect) {
-      const baseXP = 10 + (query.difficulty || 1) * 5;
-      const timeBonus = Math.floor(timer * 2);
-      const comboBonus = combo * 5;
-      const totalXP = baseXP + timeBonus + comboBonus;
-      
-      setCorrectAnswers(prev => prev + 1);
-      setCombo(prev => prev + 1);
-      setScore(prev => prev + totalXP);
-      setLastResult({ success: true, xp: totalXP, timeBonus, comboBonus, difficulty: query.difficulty });
-      onXPGain(totalXP);
-      sounds.playSuccess();
-      
-      setDailyProgress(prev => ({
-        ...prev,
-        totalCompleted: prev.totalCompleted + 1
-      }));
-    } else {
-      setCombo(0);
-      setLastResult({ success: false, correctAnswer: query.answer });
-      sounds.playError();
-    }
-    
-    setShowResult(true);
-  };
+  const checkAnswer = async () => {
+    if (!query?.id || validatingAnswer || droppedWords.length === 0) return;
 
-  const startChallenge = (challenge) => {
-    setCurrentChallenge(challenge);
-    setScore(0);
-    setCombo(0);
-    setQuestionsAnswered(0);
-    setCorrectAnswers(0);
-    setShowDifficultySelect(false);
-    generateNewQuery();
+    setIsRunning(false);
+    setValidatingAnswer(true);
+    const userAnswer = completeSqlStatement(droppedWords);
+
+    setQuestionsAnswered(prev => prev + 1);
+
+    try {
+      const response = await apiClient.post(`/api/exercises/${query.id}/validate`, { query: userAnswer });
+      const result = response.data || {};
+      const isCorrect = Boolean(result.success);
+      const xpGained = Number(result.xp_gained || 0);
+
+      if (isCorrect) {
+        const nextCombo = combo + 1;
+        setCorrectAnswers(prev => prev + 1);
+        setCombo(nextCombo);
+        setScore(prev => prev + xpGained);
+        if (xpGained > 0) {
+          onXPGain(xpGained);
+        }
+        if (typeof result.daily_quick_xp_remaining === 'number') {
+          setDailyQuickRemaining(result.daily_quick_xp_remaining);
+        }
+        setLastResult({
+          success: true,
+          xp: xpGained,
+          difficulty: query.difficulty,
+          backendMessage: result.message,
+          streakSaved: result.streak_saved || result.quick_practice,
+          xpCapReached: xpGained === 0 && result.daily_quick_xp_remaining === 0,
+          dailyQuickRemaining: result.daily_quick_xp_remaining,
+          combo: nextCombo,
+          userAnswer
+        });
+        sounds.playSuccess();
+
+        setDailyProgress(prev => ({
+          ...prev,
+          totalCompleted: prev.totalCompleted + 1,
+          challenges: {
+            ...prev.challenges,
+            ...(currentChallenge?.id ? {
+              [currentChallenge.id]: Math.min((prev.challenges[currentChallenge.id] || 0) + 1, currentChallenge.target || 999)
+            } : {}),
+            1: Math.min((prev.challenges[1] || 0) + 1, DAILY_CHALLENGES[0].target),
+            ...(timer > 10 ? { 2: Math.min((prev.challenges[2] || 0) + 1, DAILY_CHALLENGES[1].target) } : {}),
+            ...(nextCombo >= 1 ? { 3: Math.min((prev.challenges[3] || 0) + 1, DAILY_CHALLENGES[2].target) } : {})
+          }
+        }));
+      } else {
+        setCombo(0);
+        setLastResult({
+          success: false,
+          backendMessage: result.message || 'La consulta no coincide con el objetivo esperado.',
+          correctAnswer: result.queryMaestra || result.correctAnswer || '',
+          userAnswer,
+          errorDb: result.errorDb
+        });
+        sounds.playError();
+      }
+    } catch (error) {
+      setCombo(0);
+      setLastResult({
+        success: false,
+        backendMessage: error?.response?.data?.message || 'No se pudo validar el intento. Revisa conexión y sesión.',
+        correctAnswer: '',
+        userAnswer
+      });
+      sounds.playError();
+    } finally {
+      setValidatingAnswer(false);
+      setShowResult(true);
+    }
   };
 
   const handleFreePractice = () => {
-    startChallenge({ id: 'free', title: 'Práctica Libre', target: Infinity, reward: 0 });
+    setSelectedDifficulty('mixto');
+    startChallenge({ id: 'free', title: 'Práctica Libre', target: Infinity, reward: 0 }, 'mixto');
   };
 
   const accuracy = questionsAnswered > 0 ? Math.round((correctAnswers / questionsAnswered) * 100) : 0;
+
+  if (loadingPractice) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-4"
+      >
+        <div className="glass-card-apple rounded-3xl p-8 text-center max-w-md w-full">
+          <DagonMascot size="large" mood="excited" />
+          <div className="mt-4 flex items-center justify-center gap-3 text-cyan-200">
+            <RefreshCw className="h-5 w-5 animate-spin" />
+            <span className="text-lg font-black">Preparando práctica relámpago</span>
+          </div>
+          <p className="mt-3 text-sm text-slate-400">
+            Cargando ejercicios reales de tu nivel y ajustando el reloj.
+          </p>
+        </div>
+      </motion.div>
+    );
+  }
 
   if (showDifficultySelect) {
     const availableLevels = getAvailableLevels();
@@ -375,7 +442,8 @@ export const QuickPracticeMode = ({
                 Entrenamiento con presión controlada
               </p>
               <p className="text-sm text-slate-300 leading-relaxed">
-                El tiempo sirve para practicar fluidez. Si fallas, el sistema te muestra la respuesta y puedes repetir sin perder tu avance principal.
+                Cada acierto correcto protege o revive tu racha. La XP es real y limitada a 25 XP diarios para que ayude sin romper tu progreso principal.
+                {dailyQuickRemaining !== null && ` Restan ${dailyQuickRemaining} XP relámpago por ganar hoy.`}
               </p>
             </div>
 
@@ -386,7 +454,7 @@ export const QuickPracticeMode = ({
               </h3>
               <div className="difficulty-grid">
                 {availableLevels.map((levelKey) => {
-                  const level = LEVEL_NAMES[levelKey] || { name: levelKey, icon: '📚', description: '', color: 'from-gray-500 to-slate-600' };
+                  const level = LEVEL_NAMES[levelKey] || { name: levelKey, icon: 'SQL', description: '', color: 'from-gray-500 to-slate-600' };
                   const isUnlocked = true;
                   const isRecommended = levelKey === recommendedLevelKey;
                   
@@ -396,6 +464,7 @@ export const QuickPracticeMode = ({
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleDifficultySelect(levelKey)}
+                      disabled={loadingPractice}
                       className={`p-3 sm:p-4 rounded-xl border text-left transition-all ${
                         isUnlocked
                           ? `bg-gradient-to-r ${level.color} ${isRecommended ? 'border-yellow-300/80 shadow-[0_0_22px_rgba(250,204,21,0.22)]' : 'border-white/20 hover:border-white/40'}`
@@ -404,7 +473,9 @@ export const QuickPracticeMode = ({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-xl sm:text-2xl">{level.icon}</span>
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-black/20 font-mono text-xs font-black text-white ring-1 ring-white/20">
+                            {level.icon}
+                          </span>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-bold text-white text-sm sm:text-base">{level.name}</p>
@@ -458,16 +529,18 @@ export const QuickPracticeMode = ({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-xl sm:text-2xl">{challenge.icon}</span>
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-500/10 font-mono text-xs font-black text-cyan-100 ring-1 ring-cyan-300/20">
+                            {challenge.icon}
+                          </span>
                           <div>
                             <p className="font-semibold text-white text-sm sm:text-base">{challenge.title}</p>
                             <p className="text-xs sm:text-sm text-slate-400">{challenge.description}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-yellow-400 font-bold text-sm sm:text-base">+{challenge.reward} XP</p>
+                          <p className="text-yellow-400 font-bold text-xs sm:text-sm">{challenge.rewardLabel}</p>
                           {completed ? (
-                            <span className="text-green-400 text-xs sm:text-sm">✓ Completado</span>
+                            <span className="text-green-400 text-xs sm:text-sm">Completado</span>
                           ) : (
                             <span className="text-slate-500 text-xs sm:text-sm">{progress}/{challenge.target}</span>
                           )}
@@ -621,15 +694,34 @@ export const QuickPracticeMode = ({
             className="glass-card-apple rounded-2xl p-4 sm:p-6"
           >
             <div className="flex flex-col sm:flex-row items-start sm:justify-between sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
-              <p className="text-slate-300 text-base sm:text-lg">💡 {query.hint}</p>
-              <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${
-                query.difficulty <= 2 ? 'bg-green-500/20 text-green-400' :
-                query.difficulty <= 3 ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-red-500/20 text-red-400'
-              }`}>
-                Nivel {query.difficulty}
-              </span>
+              <div>
+                <p className="text-white text-base sm:text-lg font-bold">{query.description}</p>
+                <p className="mt-1 flex items-start gap-2 text-slate-300 text-sm sm:text-base">
+                  <Target className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
+                  <span>{query.hint}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-bold ${
+                  query.difficulty <= 2 ? 'bg-green-500/20 text-green-400' :
+                  query.difficulty <= 3 ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  Nivel {query.difficulty}
+                </span>
+                <span className="rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-bold text-cyan-200">
+                  {query.concept}
+                </span>
+                <span className="rounded-full bg-yellow-500/15 px-3 py-1 text-xs font-bold text-yellow-200">
+                  +{query.xpReward} XP
+                </span>
+              </div>
             </div>
+
+            <Progress
+              value={(timer / Math.max(query.timeLimitSeconds || 30, 1)) * 100}
+              className="h-1.5 mb-4"
+            />
             
             <div 
               onDragOver={handleDragOver}
@@ -671,10 +763,10 @@ export const QuickPracticeMode = ({
             
             <Button
               onClick={checkAnswer}
-              disabled={droppedWords.length === 0}
+              disabled={droppedWords.length === 0 || validatingAnswer}
               className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 py-3 sm:py-4 text-base sm:text-lg font-bold rounded-xl"
             >
-              Verificar Respuesta
+              {validatingAnswer ? 'Validando en el sandbox...' : 'Verificar Respuesta'}
             </Button>
           </motion.div>
         )}
@@ -695,17 +787,40 @@ export const QuickPracticeMode = ({
               
               {lastResult.success ? (
                 <div className="mt-3 sm:mt-4 space-y-2">
-                  <p className="text-xl sm:text-2xl text-yellow-400 font-bold">+{lastResult.xp} XP</p>
-                  <div className="text-xs sm:text-sm text-slate-400">
-                    <span>Base: {10 + (lastResult.difficulty || 1) * 5} XP</span>
-                    {lastResult.timeBonus > 0 && <span> • Tiempo: +{lastResult.timeBonus}</span>}
-                    {lastResult.comboBonus > 0 && <span> • Combo: +{lastResult.comboBonus}</span>}
-                  </div>
+                  <p className="text-xl sm:text-2xl text-yellow-400 font-bold">
+                    {lastResult.xp > 0 ? `+${lastResult.xp} XP reales` : 'Racha protegida'}
+                  </p>
+                  <p className="text-xs sm:text-sm text-slate-400">
+                    {lastResult.backendMessage || 'Intento correcto registrado en el backend.'}
+                  </p>
+                  {lastResult.streakSaved && (
+                    <p className="text-xs sm:text-sm font-bold text-orange-300">
+                      Este acierto cuenta para revivir o proteger tu racha de hoy.
+                    </p>
+                  )}
+                  {lastResult.xpCapReached && (
+                    <p className="text-xs sm:text-sm text-cyan-200">
+                      Ya cubriste el cupo diario de 25 XP relámpago; puedes seguir practicando por racha y fluidez.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-slate-800/50 rounded-xl">
-                  <p className="text-slate-400 text-xs sm:text-sm mb-2">Respuesta correcta:</p>
-                  <p className="text-white font-mono text-sm sm:text-lg">{lastResult.correctAnswer}</p>
+                  <p className="text-slate-300 text-sm mb-2">
+                    {lastResult.backendMessage || lastResult.message || 'La consulta necesita corrección.'}
+                  </p>
+                  {lastResult.userAnswer && (
+                    <>
+                      <p className="text-slate-500 text-xs sm:text-sm mb-1">Tu intento:</p>
+                      <p className="mb-3 text-white font-mono text-xs sm:text-sm break-words">{lastResult.userAnswer}</p>
+                    </>
+                  )}
+                  {lastResult.correctAnswer && (
+                    <>
+                      <p className="text-slate-500 text-xs sm:text-sm mb-1">Consulta esperada:</p>
+                      <p className="text-cyan-100 font-mono text-xs sm:text-sm break-words">{lastResult.correctAnswer}</p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -727,6 +842,11 @@ export const QuickPracticeMode = ({
                     <p className="mt-1 text-lg font-black text-yellow-300">{score}</p>
                   </div>
                 </div>
+                {dailyQuickRemaining !== null && (
+                  <p className="mt-3 text-xs font-bold uppercase tracking-widest text-cyan-300">
+                    XP relámpago restante hoy: {dailyQuickRemaining}
+                  </p>
+                )}
                 <p className="mt-3 text-sm leading-relaxed text-slate-300">
                   {buildPracticeRecommendation(query, lastResult.success)}
                 </p>

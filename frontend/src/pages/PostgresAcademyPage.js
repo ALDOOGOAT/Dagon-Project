@@ -320,8 +320,8 @@ export const PostgresAcademyPage = () => {
   };
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:px-6 lg:px-8" data-testid="postgres-academy-page">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen" data-testid="postgres-academy-page">
+      <div className="dagon-page-shell dagon-page-shell--wide">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Button
             variant="ghost"
@@ -364,7 +364,7 @@ export const PostgresAcademyPage = () => {
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[32px] border p-5 sm:p-7 lg:p-10"
+          className="relative overflow-hidden rounded-[32px] border p-5 sm:p-7 lg:p-10 dagon-compact-card"
           style={panelStyle}
         >
           <div
@@ -377,7 +377,7 @@ export const PostgresAcademyPage = () => {
               : `linear-gradient(135deg, ${colors.primary}16, transparent 48%, ${colors.secondary}12)`
           }} />
 
-          <div className="relative z-10 grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div className="relative z-10 grid gap-8 xl:grid-cols-[0.85fr_1.15fr] xl:items-center">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.28em]" style={{
                 color: colors.primary,
@@ -513,12 +513,12 @@ export const PostgresAcademyPage = () => {
           </div>
         </motion.section>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+        <section className="mt-8 grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.08 }}
-            className="rounded-[28px] border p-5 sm:p-6"
+            className="rounded-[28px] border p-5 sm:p-6 dagon-compact-card"
             style={panelStyle}
           >
             <div className="mb-5 flex items-center justify-between gap-3">
@@ -572,7 +572,7 @@ export const PostgresAcademyPage = () => {
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
-            className="rounded-[28px] border p-5 sm:p-6"
+            className="rounded-[28px] border p-5 sm:p-6 dagon-compact-card"
             style={panelStyle}
           >
             <AnimatePresence mode="wait">

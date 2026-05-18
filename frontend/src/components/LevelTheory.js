@@ -1508,7 +1508,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
 
   return (
     <div className="w-full h-full overflow-y-auto scroll-fancy">
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-8">
+      <div className="dagon-page-shell dagon-page-shell--reading">
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div className="flex-1">
             <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
@@ -1570,7 +1570,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="glass-card-apple rounded-3xl p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
+            className="glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
           >
             <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
             <div className="relative z-10">

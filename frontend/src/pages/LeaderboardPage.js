@@ -326,7 +326,7 @@ export const LeaderboardPage = () => {
 
   return (
     <div className="min-h-screen py-10" data-testid="leaderboard-page">
-      <div className="container mx-auto px-4 max-w-5xl">
+      <div className="dagon-page-shell dagon-page-shell--reading">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" onClick={() => navigate('/dashboard')} style={{ color: mutedColor }}>
             <ArrowLeft className="w-5 h-5 mr-2" /> Volver
@@ -357,7 +357,7 @@ export const LeaderboardPage = () => {
         {top3.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="glass-card-apple rounded-3xl p-6 lg:p-10 border mb-8 holo-border relative overflow-hidden"
+            className="glass-card-apple dagon-compact-card rounded-3xl p-6 lg:p-10 border mb-8 holo-border relative overflow-hidden"
             style={{ borderColor: colors.border }}
           >
             <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: isLight ? 'rgba(250,204,21,0.16)' : 'rgba(234,179,8,0.10)' }} />
@@ -425,7 +425,7 @@ export const LeaderboardPage = () => {
         )}
 
         {/* LISTA REST */}
-        <div className="glass-card-apple rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
+        <div className="glass-card-apple dagon-compact-card rounded-3xl p-6 lg:p-8 border relative overflow-hidden" style={{ borderColor: colors.border }}>
           <div className="absolute -bottom-32 -right-32 w-72 h-72 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.12)' : 'rgba(217,70,239,0.10)' }} />
 
           <div className="flex justify-between items-center px-3 sm:px-4 py-3 mb-3 border-b text-[10px] font-bold uppercase tracking-[0.24em] sm:tracking-[0.3em]" style={{ borderColor: isLight ? 'rgba(217,119,6,0.10)' : 'rgba(255,255,255,0.05)', color: mutedColor }}>

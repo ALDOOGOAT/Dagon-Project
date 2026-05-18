@@ -101,7 +101,7 @@ export const LoginPage = () => {
         <div className="login-orbit login-orbit-one" />
         <div className="login-orbit login-orbit-two" />
 
-        <div className="relative z-10 w-full max-w-2xl px-12 text-center">
+        <div className="relative z-10 w-full max-w-3xl px-12 text-center">
           <motion.div
             initial={{ y: 28, opacity: 0, scale: 0.96 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -179,7 +179,7 @@ export const LoginPage = () => {
           initial={{ x: 26, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="relative z-10 w-full max-w-md space-y-5 sm:space-y-7"
+          className="relative z-10 w-full max-w-lg space-y-5 sm:space-y-7"
         >
           <div className="text-center lg:hidden">
             <div className="relative mx-auto inline-flex h-36 w-36 items-center justify-center">
