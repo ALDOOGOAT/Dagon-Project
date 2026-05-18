@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { DagonMascot } from '../components/DagonMascot';
 import { Button } from '../components/ui/button';
 import { RewardAnimation } from '../components/RewardAnimation';
+import { StreakAnimation } from '../components/StreakAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
@@ -12,16 +13,15 @@ import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, BookOpen, Target, Film, Award, TrendingUp, Eye, EyeOff
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, Film, TrendingUp,
+  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 import apiClient from '../services/apiClient';
-import { formatAIMessage, isTransactionExercise, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
+import { formatAIMessage, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
 import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
-import { TransactionPedagogyCard } from '../components/TransactionPanels';
 import { QueryResultShowcase } from '../components/QueryResultShowcase';
 
 const XPPop = ({ amount }) => (
@@ -53,10 +53,73 @@ const SuccessBurst = () => (
   </div>
 );
 
+const motionIn = {
+  hidden: { opacity: 0, y: 14, scale: 0.985 },
+  visible: { opacity: 1, y: 0, scale: 1 },
+};
+
+const buildWordObjects = (words, exerciseId = 'actual') => (
+  (words || []).map((word, idx) => ({
+    id: `word-${exerciseId}-${idx}-${String(word).replace(/[^\w]+/g, '_')}`,
+    word
+  }))
+);
+
+const normalizeWordList = (words = []) => (
+  (Array.isArray(words) ? words : [])
+    .filter((item) => item && typeof item.word !== 'undefined' && item.id)
+);
+
+const reorderWordList = (list, sourceIndex, destinationIndex) => {
+  const copy = normalizeWordList(list);
+  const [moved] = copy.splice(sourceIndex, 1);
+  if (!moved) return copy;
+  copy.splice(destinationIndex, 0, moved);
+  return copy;
+};
+
+const insertWordAt = (list, word, destinationIndex) => {
+  const copy = normalizeWordList(list);
+  if (!word?.id || copy.some((item) => item.id === word.id)) return copy;
+  copy.splice(destinationIndex, 0, word);
+  return copy;
+};
+
+const formatSqlPreview = (words) => (
+  normalizeWordList(words)
+    .map((w) => w.word)
+    .join(' ')
+    .replace(/\s+;/g, ';')
+    .replace(/\s+,/g, ',')
+    .trim()
+);
+
+const runTokenActionFromKeyboard = (event, action) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  action();
+};
+
+const buildExerciseSpeech = (exerciseToRead, exerciseIndex) => {
+  if (!exerciseToRead) return '';
+  const title = exerciseToRead.title ? `Misión: ${exerciseToRead.title}.` : `Misión ${exerciseIndex + 1}.`;
+  const description = exerciseToRead.description ? `Tu reto es: ${exerciseToRead.description}.` : '';
+  const hint = exerciseToRead.hint ? `Pista breve: ${exerciseToRead.hint}.` : '';
+  return [title, description, hint].filter(Boolean).join(' ');
+};
+
+const splitStatementSentences = (text = '') => (
+  String(text)
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+);
+
 export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
-  const { user, token, updateUserXP } = useAuth();
+  const { user, token, updateUserXP, updateUserStreak } = useAuth();
   const { colors } = useTheme();
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
@@ -74,7 +137,6 @@ export const ExercisePage = () => {
   const [loading, setLoading] = useState(true);
   const [validating, setValidating] = useState(false);
 
-  const cinematicSeenKey = useMemo(() => `dagon_module_cinematic_seen_${user?.idUsuario || 'local'}_${levelId}`, [levelId, user?.idUsuario]);
   const [moduleMetadata, setModuleMetadata] = useState(null);
   const [showTheory, setShowTheory] = useState(true);
   const [showModuleCinematic, setShowModuleCinematic] = useState(true);
@@ -82,14 +144,18 @@ export const ExercisePage = () => {
   const [currentSubTopic, setCurrentSubTopic] = useState(null);
   const [shownSubTopics, setShownSubTopics] = useState(new Set());
   const [showHint, setShowHint] = useState(false);
-  const [showGuidePanel, setShowGuidePanel] = useState(true);
-  const [showLearningStrip, setShowLearningStrip] = useState(false);
   const [showReward, setShowReward] = useState(false);
+  const [showStreakAnimation, setShowStreakAnimation] = useState(false);
+  const [isReadingStatement, setIsReadingStatement] = useState(false);
+  const [streakData, setStreakData] = useState(null);
   const [lastXPGained, setLastXPGained] = useState(0);
   const [levelUpData, setLevelUpData] = useState(null);
+  const [lastAlertedExerciseKey, setLastAlertedExerciseKey] = useState(null);
 
   const [droppedWords, setDroppedWords] = useState([]);
   const [availableWords, setAvailableWords] = useState([]);
+  const [draggingWord, setDraggingWord] = useState(null);
+  const [dragDestination, setDragDestination] = useState(null);
 
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
@@ -97,7 +163,6 @@ export const ExercisePage = () => {
   const [clawbotThinking, setClawbotThinking] = useState(false);
   const [clawbotMessage, setClawbotMessage] = useState(null);
   const [intentosFallidos, setIntentosFallidos] = useState(0);
-  const [learningProgressEvent, setLearningProgressEvent] = useState(null);
   const [progressiveHint, setProgressiveHint] = useState(null);
   const [reinforcementPlan, setReinforcementPlan] = useState(null);
 
@@ -113,6 +178,11 @@ export const ExercisePage = () => {
   const [dagonOriginalQuery, setDagonOriginalQuery] = useState('');
   const dagonTypingIntervalRef = useRef(null);
   const dagonPostMessageTimeoutRef = useRef(null);
+  const dragClickGuardRef = useRef(false);
+  const dropZoneScrollRef = useRef(null);
+  const wordBankScrollRef = useRef(null);
+  const spokenExerciseRef = useRef(null);
+  const lastTypingSoundRef = useRef(0);
 
   useEffect(() => { 
     setIsMounted(true); 
@@ -129,20 +199,49 @@ export const ExercisePage = () => {
       if (dagonPostMessageTimeoutRef.current) {
         clearTimeout(dagonPostMessageTimeoutRef.current);
       }
+      sounds.stopSpeech?.();
     };
   }, []);
 
   useEffect(() => {
+    let isActive = true;
+
     const fetchExercises = async () => {
+      setLoading(true);
+      setExercises([]);
+      setCurrentExerciseIndex(0);
+      setExecutionResult(null);
+      setEditorCode('');
+      setDroppedWords([]);
+      setAvailableWords([]);
+      setCurrentSubTopic(null);
+      setShownSubTopics(new Set());
+      setShowHint(false);
+      setClawbotMessage(null);
+      setProgressiveHint(null);
+      setReinforcementPlan(null);
+      setIntentosFallidos(0);
+      setCombo(0);
+      setShowReward(false);
+      setShowStreakAnimation(false);
+      setStreakData(null);
+      setLevelUpData(null);
+      setLastXPGained(0);
+      setLastAlertedExerciseKey(null);
+      setResumeTheoryAfterCinematic(true);
+      setShowModuleCinematic(true);
+      setShowTheory(false);
+
       try {
         const response = await apiClient.get(`/api/exercises/${levelId}`);
+        if (!isActive) return;
+
         const data = response.data;
         const loaded = data.exercises || [];
-        const alreadySeen = localStorage.getItem(cinematicSeenKey) === 'true';
         setExercises(loaded);
         setModuleMetadata(data.module || null);
         setResumeTheoryAfterCinematic(true);
-        setShowModuleCinematic(!alreadySeen);
+        setShowModuleCinematic(true);
         setShowTheory(true);
 
         // Establecer el subtema inicial basado en el primer ejercicio
@@ -154,13 +253,17 @@ export const ExercisePage = () => {
           }
         }
       } catch (error) {
-        toast.error('Error al cargar ejercicios desde el servidor');
+        if (isActive) toast.error('Error al cargar ejercicios desde el servidor');
       } finally {
-        setLoading(false);
+        if (isActive) setLoading(false);
       }
     };
     if (token && levelId) fetchExercises();
-  }, [cinematicSeenKey, levelId, token]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [levelId, token]);
 
   useEffect(() => {
     if (exercises.length > 0) {
@@ -172,6 +275,8 @@ export const ExercisePage = () => {
         clearTimeout(dagonPostMessageTimeoutRef.current);
         dagonPostMessageTimeoutRef.current = null;
       }
+      sounds.stopSpeech?.();
+      setIsReadingStatement(false);
 
       const exercise = exercises[currentExerciseIndex];
 
@@ -183,8 +288,7 @@ export const ExercisePage = () => {
       }
 
       if (exercise.type === 'drag_drop') {
-        const wordObjects = (exercise.wordBank || []).map((word, idx) => ({ id: `word-${idx}`, word }));
-        setAvailableWords(wordObjects);
+        setAvailableWords(buildWordObjects(exercise.wordBank || [], exercise.id || currentExerciseIndex));
         setDroppedWords([]);
       } else {
         setEditorCode(exercise.starterCode || '');
@@ -198,28 +302,81 @@ export const ExercisePage = () => {
   }, [currentExerciseIndex, exercises, levelId, shownSubTopics]);
 
   const handleDragEnd = (result) => {
+    window.setTimeout(() => {
+      dragClickGuardRef.current = false;
+    }, 120);
+
     if (!result.destination) return;
     const { source, destination } = result;
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    const currentAvailableWords = normalizeWordList(availableWords);
+    const currentDroppedWords = normalizeWordList(droppedWords);
+    sounds.playStep?.();
+
     if (source.droppableId === 'wordBank' && destination.droppableId === 'dropZone') {
-      const wordObj = availableWords[source.index];
-      setAvailableWords(prev => prev.filter((_, i) => i !== source.index));
-      setDroppedWords(prev => {
-        const copy = [...prev];
-        copy.splice(destination.index, 0, wordObj);
-        return copy;
-      });
+      const wordObj = currentAvailableWords[source.index];
+      if (!wordObj) return;
+      setAvailableWords(currentAvailableWords.filter((_, i) => i !== source.index));
+      setDroppedWords(insertWordAt(currentDroppedWords, wordObj, destination.index));
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'wordBank') {
-      const wordObj = droppedWords[source.index];
-      setDroppedWords(prev => prev.filter((_, i) => i !== source.index));
-      setAvailableWords(prev => [...prev, wordObj]);
+      const wordObj = currentDroppedWords[source.index];
+      if (!wordObj) return;
+      setDroppedWords(currentDroppedWords.filter((_, i) => i !== source.index));
+      setAvailableWords(insertWordAt(currentAvailableWords, wordObj, destination.index));
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'dropZone') {
-      setDroppedWords(prev => {
-        const copy = [...prev];
-        const [moved] = copy.splice(source.index, 1);
-        copy.splice(destination.index, 0, moved);
-        return copy;
-      });
+      setDroppedWords(reorderWordList(currentDroppedWords, source.index, destination.index));
+    } else if (source.droppableId === 'wordBank' && destination.droppableId === 'wordBank') {
+      setAvailableWords(reorderWordList(currentAvailableWords, source.index, destination.index));
     }
+  };
+
+  const scrollDragRail = (ref, target = 'end') => {
+    const element = ref.current;
+    if (!element) return;
+    const left = target === 'start' ? 0 : element.scrollWidth;
+    element.scrollTo({ left, behavior: 'smooth' });
+  };
+
+  const handleUseWord = (wordObj) => {
+    if (dragClickGuardRef.current || !wordObj?.id) return;
+    setAvailableWords(prev => {
+      const clean = normalizeWordList(prev);
+      if (!clean.some(item => item.id === wordObj.id)) return clean;
+      return clean.filter(item => item.id !== wordObj.id);
+    });
+    setDroppedWords(prev => {
+      const clean = normalizeWordList(prev);
+      if (clean.some(item => item.id === wordObj.id)) return clean;
+      return [...clean, wordObj];
+    });
+    sounds.playSelect?.();
+  };
+
+  const handleReturnWord = (wordObj) => {
+    if (dragClickGuardRef.current || !wordObj?.id) return;
+    setDroppedWords(prev => {
+      const clean = normalizeWordList(prev);
+      if (!clean.some(item => item.id === wordObj.id)) return clean;
+      return clean.filter(item => item.id !== wordObj.id);
+    });
+    setAvailableWords(prev => {
+      const clean = normalizeWordList(prev);
+      if (clean.some(item => item.id === wordObj.id)) return clean;
+      return [...clean, wordObj];
+    });
+    sounds.playSelect?.();
+  };
+
+  const resetDragDropAnswer = () => {
+    const exercise = exercises[currentExerciseIndex];
+    if (!exercise || exercise.type !== 'drag_drop') return;
+    dragClickGuardRef.current = false;
+    setDraggingWord(null);
+    setDragDestination(null);
+    setDroppedWords([]);
+    setAvailableWords(buildWordObjects(exercise.wordBank || [], exercise.id || currentExerciseIndex));
+    sounds.playStep?.();
   };
 
   const invokeClawbot = async (errorData) => {
@@ -246,7 +403,6 @@ export const ExercisePage = () => {
       focus,
     });
 
-    setLearningProgressEvent(event);
     setProgressiveHint(success ? null : event.progressiveHint);
     setReinforcementPlan(success ? null : event.reinforcement);
 
@@ -275,7 +431,7 @@ export const ExercisePage = () => {
     try {
       // El editorCode guardará el texto SQL, o el JSON si es un diagrama
       const query = exercise.type === 'drag_drop'
-        ? droppedWords.map(w => w.word).join(' ')
+        ? formatSqlPreview(droppedWords)
         : editorCode;
 
       const response = await apiClient.post(`/api/exercises/${exercise.id}/validate`, { query });
@@ -323,7 +479,6 @@ export const ExercisePage = () => {
           setIsDagonIntervening(false);
         }
         // =================================
-        
         const prevXP = user?.xp || 0;
         const gained = result.xp_gained || 0;
         const newXP = prevXP + gained;
@@ -338,6 +493,15 @@ export const ExercisePage = () => {
             setLevelUpData({ newLevel: newLvl });
             sounds.playUnlock?.();
           }
+        }
+
+        if (result.streak_activated_today) {
+          updateUserStreak(result.new_streak);
+          setStreakData({ count: result.new_streak });
+          setShowStreakAnimation(true);
+        }
+
+        if (gained > 0 || result.streak_activated_today) {
           setShowReward(true);
         } else {
           toast.success(result.message);
@@ -394,13 +558,15 @@ export const ExercisePage = () => {
       }
     } catch (error) {
       toast.error('Error al validar ejercicio');
+      const nuevos = Math.max(intentosFallidos + 1, 1);
+      setIntentosFallidos(nuevos);
       setClawbotMessage(buildLocalClawbotFallback({
         errorDb: 'No se pudo validar contra el servidor en este momento.',
-        intentos: Math.max(intentosFallidos, 1),
+        intentos: nuevos,
         nivelId: parseInt(levelId),
         tituloEjercicio: exercise.title,
       }, exercise));
-      registerGamifiedAttempt({ exercise, success: false, attempts: Math.max(intentosFallidos + 1, 1) });
+      registerGamifiedAttempt({ exercise, success: false, attempts: nuevos });
     } finally {
       setValidating(false);
     }
@@ -475,6 +641,50 @@ export const ExercisePage = () => {
     setShowHint(false);
   };
 
+  const exerciseForSpeech = exercises[currentExerciseIndex] || null;
+  const readExerciseStatement = useCallback((manual = false) => {
+    if (!exerciseForSpeech) return;
+
+    if (isReadingStatement) {
+      sounds.stopSpeech?.();
+      setIsReadingStatement(false);
+      return;
+    }
+
+    const text = buildExerciseSpeech(exerciseForSpeech, currentExerciseIndex);
+    const utterance = sounds.speakTTS?.(text, {
+      rate: 0.96,
+      pitch: 1.01,
+      onStart: () => setIsReadingStatement(true),
+      onEnd: () => setIsReadingStatement(false),
+      onError: () => setIsReadingStatement(false),
+    });
+
+    if (!utterance) {
+      setIsReadingStatement(false);
+      if (manual) {
+        toast.message('Activa el sonido para escuchar el enunciado.');
+      }
+    }
+  }, [currentExerciseIndex, exerciseForSpeech, isReadingStatement]);
+
+  useEffect(() => {
+    if (!exerciseForSpeech || loading || showModuleCinematic || showTheory) return;
+    const speechKey = `${exerciseForSpeech.id || currentExerciseIndex}-${exerciseForSpeech.orden || currentExerciseIndex}`;
+    if (spokenExerciseRef.current === speechKey) return;
+    spokenExerciseRef.current = speechKey;
+    if (lastAlertedExerciseKey !== speechKey) {
+      setLastAlertedExerciseKey(speechKey);
+      sounds.playMissionStart?.();
+    }
+
+    const timeout = window.setTimeout(() => {
+      readExerciseStatement(false);
+    }, 650);
+
+    return () => window.clearTimeout(timeout);
+  }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, readExerciseStatement, showModuleCinematic, showTheory]);
+
   if (loading || !isMounted) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
@@ -505,24 +715,230 @@ export const ExercisePage = () => {
   const exercise = exercises[currentExerciseIndex];
   const isDragDrop = exercise.type === 'drag_drop';
   const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
-  const isTransactionLab = isTransactionExercise(exercise, levelId);
   const learningFocus = inferLearningFocus(exercise, levelId);
   const learningFeedback = buildLearningFeedback(executionResult, learningFocus, intentosFallidos);
-  const activeConceptKey = learningProgressEvent?.conceptKey || inferConceptKey(exercise, levelId);
+  const statementSentences = splitStatementSentences(exercise.description);
+  const safeDroppedWords = normalizeWordList(droppedWords);
+  const safeAvailableWords = normalizeWordList(availableWords);
+  const assembledSql = isDragDrop ? formatSqlPreview(safeDroppedWords) : '';
+  const totalDragBlocks = isDragDrop ? safeAvailableWords.length + safeDroppedWords.length : 0;
+  const placedDragBlocks = isDragDrop ? safeDroppedWords.length : 0;
+  const modeMeta = isDiagram
+    ? { icon: Layers, label: 'Modelo visual', detail: 'Construye entidades y relaciones' }
+    : isDragDrop
+      ? { icon: MousePointer2, label: 'Bloques SQL', detail: 'Arma la consulta con un banco compacto' }
+      : { icon: Code2, label: 'Editor SQL', detail: 'Escribe y valida contra el sandbox' };
+  const ModeIcon = modeMeta.icon;
+  const guideSteps = [
+    ['1', 'Identifica', 'Qué datos pide el enunciado.'],
+    ['2', 'Construye', isDragDrop ? 'Coloca solo los bloques necesarios.' : 'Escribe la estructura principal.'],
+    ['3', 'Valida', 'Ejecuta y compara el resultado.'],
+  ];
+  const isFailureResult = executionResult && !executionResult.success && !executionResult.isWarning;
+  const hasTopSupport = isFailureResult || clawbotThinking || clawbotMessage || progressiveHint || isDagonIntervening;
+  const resultTone = executionResult?.isWarning
+    ? {
+        icon: AlertTriangle,
+        label: 'Advertencia',
+        accent: isLight ? '#b45309' : '#fbbf24',
+        border: 'rgba(245,158,11,0.36)',
+        surface: isLight ? 'rgba(255,251,235,0.90)' : 'rgba(120,53,15,0.20)'
+      }
+    : executionResult?.success
+      ? {
+          icon: CheckCircle,
+          label: 'Respuesta correcta',
+          accent: isLight ? '#047857' : '#34d399',
+          border: 'rgba(16,185,129,0.36)',
+          surface: isLight ? 'rgba(236,253,245,0.90)' : 'rgba(6,78,59,0.20)'
+        }
+      : {
+          icon: XCircle,
+          label: 'Ajuste necesario',
+          accent: isLight ? '#be123c' : '#fb7185',
+          border: 'rgba(244,63,94,0.36)',
+          surface: isLight ? 'rgba(255,241,242,0.90)' : 'rgba(127,29,29,0.20)'
+        };
+  const ResultIcon = resultTone.icon;
+  const activeConceptKey = inferConceptKey(exercise, levelId);
   const activeConcept = LEARNING_CONCEPTS[activeConceptKey] || LEARNING_CONCEPTS.select;
-  const conceptMasteryValue = learningProgressEvent?.mastery || 0;
+  const rescueScaffold = {
+    title: `Plantilla guiada de ${activeConcept.label}`,
+    reason: `Usala como estructura de ${learningFocus.concept}; reemplaza los marcadores con datos del enunciado sin copiar una respuesta final.`,
+    scaffold: activeConcept.scaffold,
+  };
+  const scaffoldUnlocked = isFailureResult && intentosFallidos > 3;
+  const attemptsUntilScaffold = Math.max(0, 4 - intentosFallidos);
   const applyReinforcementScaffold = () => {
-    if (isDragDrop || isDiagram || !reinforcementPlan?.scaffold) return;
-    setEditorCode(reinforcementPlan.scaffold);
+    if (!scaffoldUnlocked) return;
     sounds.playSelect?.();
+    if (isDragDrop || isDiagram) {
+      setShowHint(true);
+      toast.message('Plantilla de referencia activada', {
+        description: 'Usala como mapa de estructura sin completar automaticamente la respuesta.',
+      });
+      return;
+    }
+    setEditorCode(rescueScaffold.scaffold);
     toast.message('Plantilla de refuerzo cargada', {
-      description: 'Completa los nombres reales de columnas, tablas y condiciones antes de validar.',
+      description: 'Completa los marcadores con columnas, tablas y condiciones del enunciado.',
     });
+  };
+  const rescueScaffoldPanel = isFailureResult ? (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: 'easeOut' }}
+      className="mt-4 rounded-2xl border p-4"
+      style={{
+        borderColor: scaffoldUnlocked ? 'rgba(34,211,238,0.34)' : (isLight ? 'rgba(245,158,11,0.26)' : 'rgba(250,204,21,0.18)'),
+        backgroundColor: scaffoldUnlocked
+          ? (isLight ? 'rgba(236,254,255,0.76)' : 'rgba(8,47,73,0.22)')
+          : (isLight ? 'rgba(255,251,235,0.72)' : 'rgba(113,63,18,0.14)')
+      }}
+    >
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Sparkles className="h-4 w-4" style={{ color: scaffoldUnlocked ? colors.secondary : (isLight ? '#b45309' : '#fbbf24') }} />
+            <p className="text-[10px] font-display font-black uppercase tracking-[0.24em]" style={{ color: scaffoldUnlocked ? colors.secondary : mutedColor }}>
+              Plantilla de rescate
+            </p>
+            {!scaffoldUnlocked && (
+              <span className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest" style={{ borderColor: isLight ? 'rgba(245,158,11,0.24)' : 'rgba(250,204,21,0.20)', color: isLight ? '#92400e' : '#fde68a' }}>
+                Faltan {attemptsUntilScaffold} intento{attemptsUntilScaffold === 1 ? '' : 's'}
+              </span>
+            )}
+          </div>
+          <h3 className="mt-2 font-display text-base font-black" style={{ color: headingColor }}>
+            {rescueScaffold.title}
+          </h3>
+          <p className="mt-1 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+            {scaffoldUnlocked
+              ? rescueScaffold.reason
+              : 'Se desbloquea despues de mas de 3 fallos en este ejercicio para evitar darte demasiada ayuda antes de tiempo.'}
+          </p>
+        </div>
+        <Button
+          type="button"
+          onClick={applyReinforcementScaffold}
+          disabled={!scaffoldUnlocked}
+          className="shrink-0 rounded-xl bg-cyan-500 px-4 font-display font-black text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-45"
+        >
+          Cargar plantilla
+        </Button>
+      </div>
+      <pre
+        className="mt-3 max-h-36 overflow-x-auto rounded-xl border p-3 text-xs font-mono leading-relaxed"
+        style={{
+          borderColor: isLight ? 'rgba(14,116,144,0.14)' : 'rgba(255,255,255,0.08)',
+          backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(2,6,23,0.56)',
+          color: scaffoldUnlocked ? headingColor : mutedColor,
+          opacity: scaffoldUnlocked ? 1 : 0.78
+        }}
+      >
+        {scaffoldUnlocked ? rescueScaffold.scaffold : '-- La plantilla se muestra a partir del cuarto fallo --'}
+      </pre>
+      {(isDragDrop || isDiagram) && (
+        <p className="mt-2 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
+          En este tipo de ejercicio la plantilla funciona como mapa de estructura para no resolverlo automaticamente por ti.
+        </p>
+      )}
+    </motion.div>
+  ) : null;
+
+  const renderDragChip = (word, provided, snapshot, variant = 'bank', marker = {}) => {
+    if (!word) return null;
+    const isPlaced = variant === 'placed';
+    const isClone = snapshot.isDragging;
+    const showInsertBefore = Boolean(marker.insertBefore && !isClone);
+    const showInsertAfter = Boolean(marker.insertAfter && !isClone);
+    const chipTone = isPlaced
+      ? {
+          color: isLight ? '#064e3b' : '#bbf7d0',
+          backgroundColor: isLight ? 'rgba(209,250,229,0.94)' : 'rgba(6,78,59,0.86)',
+          borderColor: isLight ? 'rgba(5,150,105,0.46)' : 'rgba(52,211,153,0.58)',
+          glow: 'rgba(16,185,129,0.46)',
+          ring: 'ring-emerald-400/20'
+        }
+      : {
+          color: isLight ? '#164e63' : '#cffafe',
+          backgroundColor: isLight ? 'rgba(236,254,255,0.92)' : 'rgba(15,23,42,0.86)',
+          borderColor: isLight ? 'rgba(14,116,144,0.22)' : 'rgba(34,211,238,0.24)',
+          glow: 'rgba(34,211,238,0.45)',
+          ring: 'ring-cyan-400/20'
+        };
+
+    return (
+      <div
+        role={!isPlaced ? 'button' : undefined}
+        tabIndex={!isPlaced ? 0 : undefined}
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        onClick={!isPlaced ? () => handleUseWord(word) : undefined}
+        onKeyDown={!isPlaced ? (event) => runTokenActionFromKeyboard(event, () => handleUseWord(word)) : undefined}
+        aria-label={isPlaced
+          ? `Bloque colocado ${word.word}. Arrastra para reordenar o usa quitar para regresarlo al banco.`
+          : `Agregar bloque ${word.word}`}
+        className={`touch-drag-none relative shrink-0 border-2 px-3 py-2 sm:px-4 rounded-xl font-mono text-sm sm:text-base cursor-grab active:cursor-grabbing min-h-[50px] flex items-center gap-2 transition-all ${
+          isPlaced ? 'animate-dnd-placed font-bold' : 'font-semibold'
+        } ${isClone ? `scale-105 z-[9999] border-white ring-4 ${chipTone.ring}` : 'mr-3 hover:-translate-y-0.5'}`}
+        style={{
+          ...provided.draggableProps.style,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          touchAction: 'none',
+          pointerEvents: 'auto',
+          color: chipTone.color,
+          backgroundColor: chipTone.backgroundColor,
+          borderColor: isClone ? '#ffffff' : chipTone.borderColor,
+          boxShadow: isClone ? `0 0 40px ${chipTone.glow}` : '0 10px 22px rgba(2,6,23,0.10)'
+        }}
+      >
+        {showInsertBefore && (
+          <span
+            className="pointer-events-none absolute -left-2 top-1/2 h-14 w-1 -translate-y-1/2 rounded-full shadow-[0_0_18px_rgba(34,211,238,0.80)]"
+            style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary})` }}
+          />
+        )}
+        {showInsertAfter && (
+          <span
+            className="pointer-events-none absolute -right-2 top-1/2 h-14 w-1 -translate-y-1/2 rounded-full shadow-[0_0_18px_rgba(34,211,238,0.80)]"
+            style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary})` }}
+          />
+        )}
+        <GripHorizontal className="h-3.5 w-3.5 opacity-60" />
+        <span className="whitespace-nowrap">{word.word}</span>
+        {isPlaced && !isClone && (
+          <button
+            type="button"
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleReturnWord(word);
+            }}
+            className="ml-1 grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition-colors hover:bg-white/20"
+            style={{ borderColor: isLight ? 'rgba(5,150,105,0.28)' : 'rgba(187,247,208,0.22)' }}
+            aria-label={`Quitar bloque ${word.word}`}
+          >
+            <XCircle className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="min-h-screen flex flex-col" data-testid="exercise-page">
-      {showReward && (
+      {showStreakAnimation && streakData && (
+        <StreakAnimation
+          streakCount={streakData.count}
+          onComplete={() => { setShowStreakAnimation(false); setStreakData(null); }}
+        />
+      )}
+      {showReward && !showStreakAnimation && (
         <RewardAnimation
           type="success" xpGained={lastXPGained} isLevelUp={!!levelUpData}
           newLevel={levelUpData?.newLevel}
@@ -628,14 +1044,13 @@ export const ExercisePage = () => {
       </header>
 
       {/* MAIN */}
-      <main className="flex-1 overflow-y-auto scroll-fancy pb-24 sm:pb-8">
+      <main className="flex-1 overflow-y-auto scroll-fancy pb-10">
         {showModuleCinematic ? (
           <ModuleCinematic
             moduleId={levelId}
             moduleMetadata={moduleMetadata}
             exercises={exercises}
             onComplete={() => {
-              localStorage.setItem(cinematicSeenKey, 'true');
               setShowModuleCinematic(false);
               setShowTheory(resumeTheoryAfterCinematic);
             }}
@@ -652,160 +1067,428 @@ export const ExercisePage = () => {
             }}
           />
         ) : (
-          <div className={`dagon-page-shell dagon-page-shell--workbench dagon-relaxed-flow ${shake ? 'animate-shake-x' : ''}`}>
+          <div className={`w-full max-w-[1880px] mx-auto px-4 py-5 sm:px-6 lg:px-8 grid gap-5 lg:gap-6 ${shake ? 'animate-shake-x' : ''}`}>
 
-            <div
-              className="glass-card-apple dagon-compact-card rounded-3xl border px-4 py-3 lg:px-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+            <motion.div
+              variants={motionIn}
+              initial="hidden"
+              animate="visible"
+              transition={{ duration: 0.32, ease: 'easeOut' }}
+              className="glass-card-apple dagon-compact-card rounded-3xl border px-5 py-5 sm:px-6 lg:px-7 relative overflow-hidden"
               style={{ borderColor: colors.border }}
             >
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: colors.accent }}>
-                  Laboratorio amplio
-                </p>
-                <p className="mt-1 text-sm font-gameui truncate" style={{ color: mutedColor }}>
-                  {learningFocus.concept} · {activeConcept.label}: {conceptMasteryValue}%
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowLearningStrip((prev) => !prev)}
-                  className="rounded-xl border font-display font-black"
-                  style={{ borderColor: `${colors.primary}35`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.52)' }}
-                >
-                  {showLearningStrip ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                  {showLearningStrip ? 'Ocultar objetivos' : 'Ver objetivos'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowGuidePanel((prev) => !prev)}
-                  className="rounded-xl border font-display font-black"
-                  style={{ borderColor: showGuidePanel ? `${colors.secondary}55` : `${colors.primary}55`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.52)' }}
-                >
-                  {showGuidePanel ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                  {showGuidePanel ? 'Modo foco' : 'Mostrar guía'}
-                </Button>
-              </div>
-            </div>
-
-            <AnimatePresence initial={false}>
-              {showLearningStrip && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0, y: -8 }}
-                  animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -8 }}
-                  transition={{ duration: 0.24 }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border p-4" style={{ borderColor: `${colors.primary}30`, backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.62)' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-4 h-4" style={{ color: colors.primary }} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.primary }}>Meta</span>
-                      </div>
-                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                        {learningFocus.objective}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(251,146,60,0.30)', backgroundColor: isLight ? 'rgba(255,247,237,0.82)' : 'rgba(124,45,18,0.16)' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Flame className="w-4 h-4" style={{ color: isLight ? '#c2410c' : '#fdba74' }} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#c2410c' : '#fdba74' }}>Presión sana</span>
-                      </div>
-                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                        {intentosFallidos > 0
-                          ? `Intento ${intentosFallidos}. Corrige una parte y vuelve a probar.`
-                          : 'Puedes fallar sin perder avance; lo importante es entender el error.'}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(34,211,238,0.30)', backgroundColor: isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.20)' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <BookOpen className="w-4 h-4" style={{ color: isLight ? '#0891b2' : '#67e8f9' }} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#0891b2' : '#67e8f9' }}>Concepto</span>
-                      </div>
-                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                        {learningFocus.concept}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border p-4" style={{ borderColor: 'rgba(168,85,247,0.30)', backgroundColor: isLight ? 'rgba(250,245,255,0.78)' : 'rgba(88,28,135,0.18)' }}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Award className="w-4 h-4" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }} />
-                        <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#7e22ce' : '#d8b4fe' }}>Dominio</span>
-                      </div>
-                      <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                        {activeConcept.label}: {conceptMasteryValue}% · {activeConcept.badge}
-                      </p>
+              <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})` }} />
+              <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${colors.primary}12` }} />
+              <div className="relative z-10 grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+                <div className="min-w-0 flex flex-col gap-4 md:flex-row md:items-start">
+                  <div className="shrink-0 self-start">
+                    <div className="relative">
+                      <div className="absolute -inset-4 rounded-full blur-2xl" style={{ backgroundColor: `${colors.primary}18` }} />
+                      <DagonMascot size="medium" mood={mascotMood} />
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border px-3 py-1 text-[10px] font-display font-black uppercase tracking-[0.22em]" style={{ borderColor: `${colors.primary}32`, color: colors.primary, backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(15,23,42,0.46)' }}>
+                        Dagon explica el reto
+                      </span>
+                      <span className="rounded-full border px-3 py-1 text-[10px] font-display font-black uppercase tracking-[0.18em]" style={{ borderColor: `${colors.secondary}26`, color: mutedColor, backgroundColor: isLight ? 'rgba(255,255,255,0.52)' : 'rgba(15,23,42,0.36)' }}>
+                        {modeMeta.label}
+                      </span>
+                    </div>
+                    <h2 className="font-display text-2xl font-black leading-tight sm:text-3xl" style={{ color: headingColor }}>
+                      {exercise.title}
+                    </h2>
+                    <div
+                      className="mt-4 rounded-3xl border p-4 sm:p-5"
+                      style={{
+                        borderColor: isLight ? 'rgba(14,116,144,0.22)' : 'rgba(34,211,238,0.22)',
+                        background: isLight
+                          ? 'linear-gradient(135deg, rgba(236,254,255,0.86), rgba(255,255,255,0.72))'
+                          : 'linear-gradient(135deg, rgba(8,47,73,0.36), rgba(2,6,23,0.44))',
+                        boxShadow: isLight ? '0 18px 46px -34px rgba(8,145,178,0.38)' : '0 18px 46px -34px rgba(34,211,238,0.40)'
+                      }}
+                    >
+                      <p className="text-[10px] font-display font-black uppercase tracking-[0.26em]" style={{ color: isLight ? '#0e7490' : '#67e8f9' }}>
+                        Premisa del ejercicio
+                      </p>
+                      <div className="mt-3 grid gap-2">
+                        {statementSentences.length > 0 ? statementSentences.map((sentence, index) => (
+                          <p
+                            key={`${sentence}-${index}`}
+                            className="font-gameui text-base font-semibold leading-relaxed sm:text-lg"
+                            style={{ color: index === 0 ? (isLight ? '#0f172a' : '#f8fafc') : (isLight ? '#334155' : '#cbd5e1') }}
+                          >
+                            {sentence}
+                          </p>
+                        )) : (
+                          <p className="font-gameui text-base font-semibold leading-relaxed sm:text-lg" style={{ color: headingColor }}>
+                            {exercise.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-stretch">
+                      <div className="rounded-2xl border px-4 py-3" style={{ borderColor: `${colors.primary}22`, backgroundColor: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(2,6,23,0.28)' }}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: colors.accent }}>
+                          Objetivo de aprendizaje
+                        </p>
+                        <p className="mt-1 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                          {learningFocus.objective}
+                        </p>
+                      </div>
+                      <div className="grid min-w-[180px] content-center rounded-2xl border px-4 py-3 text-sm font-display font-black" style={{ borderColor: `${colors.primary}28`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(15,23,42,0.40)' }}>
+                        <span>Nivel {exercise.difficulty || 1}</span>
+                        <span className="text-xs font-gameui font-bold" style={{ color: mutedColor }}>{exercise.xpReward || 0} XP al completar</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            <div className={`dagon-workbench-grid ${showGuidePanel ? '' : 'dagon-workbench-grid--focus'}`}>
-              {showGuidePanel && (
-              <div className="dagon-workbench-rail space-y-5">
+                <div className="flex flex-col gap-2 sm:flex-row xl:flex-col xl:items-stretch xl:justify-self-end">
+                  <Button
+                    type="button"
+                    onClick={() => readExerciseStatement(true)}
+                    className="min-h-11 rounded-2xl px-5 font-display font-black text-white shadow-[0_16px_34px_rgba(16,185,129,0.24)]"
+                    style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}
+                    aria-label={isReadingStatement ? 'Detener lectura del enunciado' : 'Leer enunciado de la misión'}
+                  >
+                    <Volume2 className="mr-2 h-4 w-4" />
+                    {isReadingStatement ? 'Detener lectura' : 'Leer enunciado'}
+                  </Button>
+                </div>
+
+                <AnimatePresence initial={false}>
+                  {hasTopSupport && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 12, height: 0 }}
+                      animate={{ opacity: 1, y: 0, height: 'auto' }}
+                      exit={{ opacity: 0, y: 8, height: 0 }}
+                      transition={{ duration: 0.26, ease: 'easeOut' }}
+                      className="xl:col-span-2 overflow-hidden"
+                    >
+                      <div className="grid gap-4 lg:grid-cols-[minmax(300px,0.78fr)_minmax(0,1.22fr)]">
+                        <div
+                          className="rounded-3xl border p-4"
+                          style={{
+                            borderColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)',
+                            backgroundColor: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(2,6,23,0.30)'
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+                              <Lightbulb className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[10px] font-display font-black uppercase tracking-[0.24em]" style={{ color: colors.accent }}>
+                                  Guía rápida
+                                </p>
+                                {intentosFallidos > 0 && !executionResult?.success && (
+                                  <span className="rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest" style={{ borderColor: 'rgba(251,146,60,0.30)', color: isLight ? '#c2410c' : '#fdba74', backgroundColor: isLight ? 'rgba(255,237,213,0.70)' : 'rgba(154,52,18,0.18)' }}>
+                                    Intento {intentosFallidos}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 font-display text-base font-black leading-tight" style={{ color: headingColor }}>
+                                {learningFocus.concept}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 2xl:grid-cols-3">
+                            {guideSteps.map(([step, title, detail]) => (
+                              <div
+                                key={step}
+                                className="grid grid-cols-[auto_minmax(0,1fr)] gap-2 rounded-2xl border px-3 py-2.5"
+                                style={{
+                                  borderColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)',
+                                  backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(15,23,42,0.36)'
+                                }}
+                              >
+                                <span className="grid h-7 w-7 place-items-center rounded-xl font-display text-xs font-black" style={{ color: '#fff', background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+                                  {step}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-display text-sm font-black leading-tight" style={{ color: headingColor }}>{title}</p>
+                                  <p className="mt-0.5 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>{detail}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {exercise.hint && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                sounds.playMagic?.();
+                                setShowHint(!showHint);
+                              }}
+                              aria-expanded={showHint}
+                              className="mt-3 inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-display font-black transition-colors"
+                              style={{
+                                color: isLight ? '#b45309' : '#fcd34d',
+                                borderColor: isLight ? 'rgba(245,158,11,0.22)' : 'rgba(252,211,77,0.22)',
+                                backgroundColor: isLight ? 'rgba(255,251,235,0.72)' : 'rgba(120,53,15,0.18)'
+                              }}
+                            >
+                              <Lightbulb className="h-3.5 w-3.5" />
+                              {showHint ? 'Ocultar pista' : 'Ver pista'}
+                            </button>
+                          )}
+                          <AnimatePresence>
+                            {showHint && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-2 overflow-hidden rounded-2xl border px-3 py-2 text-sm font-gameui leading-snug"
+                                style={{
+                                  borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(252,211,77,0.14)',
+                                  backgroundColor: isLight ? 'rgba(255,251,235,0.64)' : 'rgba(2,6,23,0.28)',
+                                  color: isLight ? '#92400e' : '#fde68a'
+                                }}
+                              >
+                                {exercise.hint}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </div>
+
+                        <div
+                          className="rounded-3xl border p-4"
+                          style={{
+                            borderColor: clawbotMessage || clawbotThinking
+                              ? (isLight ? 'rgba(14,116,144,0.20)' : 'rgba(34,211,238,0.20)')
+                              : (isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)'),
+                            background: clawbotMessage || clawbotThinking
+                              ? (isLight ? 'linear-gradient(135deg, rgba(236,254,255,0.78), rgba(255,255,255,0.64))' : 'linear-gradient(135deg, rgba(8,47,73,0.30), rgba(15,23,42,0.38))')
+                              : (isLight ? 'rgba(255,255,255,0.58)' : 'rgba(15,23,42,0.32)')
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl" style={{ background: `linear-gradient(135deg, ${colors.secondary}, ${colors.accent})` }}>
+                              {clawbotThinking || clawbotMessage ? (
+                                <Bot className="h-5 w-5 text-white" />
+                              ) : isDagonIntervening ? (
+                                <Lightbulb className="h-5 w-5 text-white" />
+                              ) : progressiveHint ? (
+                                <TrendingUp className="h-5 w-5 text-white" />
+                              ) : (
+                                <ModeIcon className="h-5 w-5 text-white" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] font-display font-black uppercase tracking-[0.24em]" style={{ color: colors.secondary }}>
+                                {clawbotThinking || clawbotMessage ? 'Dagon responde' : 'Soporte de resolución'}
+                              </p>
+                              <p className="mt-1 text-sm font-gameui leading-snug" style={{ color: mutedColor }}>
+                                {clawbotThinking
+                                  ? 'Analizando tu intento...'
+                                  : clawbotMessage
+                                    ? 'Respuesta de IA junto al enunciado.'
+                                    : isDagonIntervening
+                                      ? 'Dagon está modelando una corrección.'
+                                      : progressiveHint
+                                        ? `Pista progresiva nivel ${progressiveHint.level}`
+                                        : 'Consulta aquí lo mínimo para avanzar sin perder el contexto.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            {clawbotThinking ? (
+                              <div className="flex items-center gap-2 rounded-2xl border px-4 py-3" style={{ borderColor: isLight ? 'rgba(14,116,144,0.14)' : 'rgba(34,211,238,0.16)', backgroundColor: isLight ? 'rgba(255,255,255,0.66)' : 'rgba(2,6,23,0.34)' }}>
+                                {[0, 1, 2].map((i) => (
+                                  <span key={i} className="h-2 w-2 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                                ))}
+                                <span className="ml-2 text-sm font-gameui" style={{ color: mutedColor }}>
+                                  Dagon prepara una explicación corta.
+                                </span>
+                              </div>
+                            ) : clawbotMessage ? (
+                              <div className="max-h-[22rem] overflow-y-auto scroll-fancy rounded-2xl border p-4" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.78)' : '#0f172a', borderColor: isLight ? 'rgba(14,116,144,0.14)' : '#334155' }}>
+                                <div className="text-sm font-gameui leading-relaxed">
+                                  {formatAIMessage(clawbotMessage, colors)}
+                                </div>
+                              </div>
+                            ) : isDagonIntervening ? (
+                              <div className="grid gap-3">
+                                <div className="rounded-2xl border p-3" style={{ borderColor: 'rgba(245,158,11,0.28)', backgroundColor: isLight ? 'rgba(255,251,235,0.72)' : 'rgba(120,53,15,0.18)' }}>
+                                  <p className="text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                                    {executionResult?.dagonMessage}
+                                  </p>
+                                  <p className="mt-2 text-xs font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                                    {executionResult?.dagonExplanation}
+                                  </p>
+                                </div>
+                                <div className="rounded-2xl border bg-black/80 p-3 font-mono text-xs" style={{ borderColor: 'rgba(34,197,94,0.32)' }}>
+                                  <div className="mb-2 flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[10px] uppercase text-green-400">Sandbox</span>
+                                  </div>
+                                  <pre className="max-h-28 overflow-y-auto whitespace-pre-wrap break-all text-green-300">{dagonTypingQuery}</pre>
+                                </div>
+                                {dagonShowPostMessage && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="rounded-2xl border p-3"
+                                    style={{ borderColor: 'rgba(16,185,129,0.28)', backgroundColor: isLight ? 'rgba(236,253,245,0.78)' : 'rgba(6,78,59,0.18)' }}
+                                  >
+                                    <p className="text-sm font-gameui" style={{ color: headingColor }}>
+                                      {executionResult?.dagonPostMessage}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditorCode(dagonOriginalQuery);
+                                        setIsDagonIntervening(false);
+                                        setDagonTypingQuery('');
+                                        setDagonShowPostMessage(false);
+                                        setExecutionResult(null);
+                                      }}
+                                      aria-label="Ejecutar mi consulta original"
+                                      className="mt-3 inline-flex items-center rounded-xl bg-cyan-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-cyan-500"
+                                    >
+                                      Ejecutar mi query <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                                    </button>
+                                  </motion.div>
+                                )}
+                              </div>
+                            ) : progressiveHint ? (
+                              <div className="rounded-2xl border p-4" style={{ borderColor: progressiveHint.level >= 3 ? 'rgba(244,63,94,0.34)' : 'rgba(245,158,11,0.34)', backgroundColor: progressiveHint.level >= 3 ? (isLight ? 'rgba(255,241,242,0.78)' : 'rgba(127,29,29,0.16)') : (isLight ? 'rgba(255,251,235,0.78)' : 'rgba(120,53,15,0.18)') }}>
+                                <h3 className="font-display text-base font-black" style={{ color: headingColor }}>
+                                  {progressiveHint.title}
+                                </h3>
+                                <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                                  {progressiveHint.message}
+                                </p>
+                                {progressiveHint.action.includes('\n') ? (
+                                  <pre className="mt-3 max-h-36 overflow-x-auto rounded-xl border p-3 text-xs font-mono" style={{ borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(2,6,23,0.62)', color: isLight ? '#92400e' : '#fde68a' }}>
+                                    {progressiveHint.action}
+                                  </pre>
+                                ) : (
+                                  <p className="mt-3 text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
+                                    {progressiveHint.action}
+                                  </p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="rounded-2xl border px-4 py-3" style={{ borderColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(2,6,23,0.22)' }}>
+                                <p className="text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                                  Lee la premisa, ubica qué columna o tabla se está pidiendo y valida con calma. La ayuda aparecerá aquí cuando necesites otra pista.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+
+            <div className="grid gap-5 lg:gap-6">
+              {false && (
+              <div className="space-y-4">
             {/* MASCOTA + INSTRUCCIONES */}
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-              className="glass-card-apple dagon-compact-card rounded-3xl p-5 lg:p-6 border relative overflow-hidden"
+              className="glass-card-apple dagon-compact-card rounded-3xl p-4 border relative overflow-hidden"
               style={{ borderColor: colors.border }}
             >
               <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: `${colors.primary}12` }} />
-              <div className="relative z-10 flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
-                <div className="shrink-0">
-                  <div className="relative">
-                    <div className={`absolute -inset-4 rounded-full blur-xl transition-colors duration-500 ${
+              <div className="relative z-10">
+                <div className="flex items-start gap-3">
+                  <div className="relative shrink-0">
+                    <div className={`absolute -inset-3 rounded-full blur-xl transition-colors duration-500 ${
                       mascotMood === 'nervous' ? 'bg-orange-500/20' :
                       mascotMood === 'excited' ? 'bg-emerald-500/20' :
                       mascotMood === 'sad' ? 'bg-rose-500/15' : 'bg-cyan-500/15'
                     }`} />
-                    <DagonMascot size="medium" mood={mascotMood} />
+                    <DagonMascot size="small" mood={mascotMood} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-[10px] font-display font-black tracking-[0.24em] uppercase" style={{ color: colors.accent }}>
+                        Guía rápida
+                      </span>
+                      {intentosFallidos > 0 && !executionResult?.success && (
+                        <span className="text-orange-300 text-[10px] font-bold tracking-widest uppercase bg-orange-500/10 border border-orange-400/30 px-2 py-0.5 rounded-full">
+                          Intento {intentosFallidos}
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-display text-base font-black leading-tight" style={{ color: headingColor }}>
+                      {learningFocus.concept}
+                    </p>
+                    <p className="mt-1 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
+                      Usa esta guía solo para ubicar el siguiente paso.
+                    </p>
                   </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-[10px] font-bold tracking-[0.35em] uppercase" style={{ color: colors.accent }}>
-                      {exercise.title}
-                    </span>
-                    {intentosFallidos > 0 && !executionResult?.success && (
-                      <span className="text-orange-300 text-[10px] font-bold tracking-widest uppercase bg-orange-500/10 border border-orange-400/30 px-2 py-0.5 rounded-full">
-                        Intento {intentosFallidos}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-gameui text-base leading-relaxed" style={{ color: headingColor }}>
-                    {exercise.description}
-                  </p>
 
-                  {isTransactionLab && (
-                    <TransactionPedagogyCard pedagogia={exercise.pedagogia} colors={colors} />
-                  )}
+                <div className="mt-4 grid gap-2">
+                  {[
+                    ['1', 'Identifica', 'Qué datos pide el enunciado.'],
+                    ['2', 'Construye', isDragDrop ? 'Coloca solo los bloques necesarios.' : 'Escribe la estructura principal.'],
+                    ['3', 'Valida', 'Ejecuta y compara el resultado.'],
+                  ].map(([step, title, detail]) => (
+                    <div
+                      key={step}
+                      className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl border px-3 py-2.5"
+                      style={{
+                        borderColor: isLight ? 'rgba(15,23,42,0.08)' : 'rgba(255,255,255,0.08)',
+                        backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(2,6,23,0.24)'
+                      }}
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-xl font-display text-xs font-black" style={{ color: '#fff', background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
+                        {step}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-display text-sm font-black leading-tight" style={{ color: headingColor }}>{title}</p>
+                        <p className="mt-0.5 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>{detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
                   {/* Pista inline */}
                   {exercise.hint && !clawbotMessage && (
                     <button
-                      onClick={() => setShowHint(!showHint)}
+                      onClick={() => {
+                        sounds.playMagic?.();
+                        setShowHint(!showHint);
+                      }}
                       aria-expanded={showHint}
-                      className="mt-3 text-xs font-bold flex items-center gap-1 transition-colors"
-                      style={{ color: isLight ? '#b45309' : '#fcd34d' }}
+                      className="mt-3 inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-display font-black transition-colors"
+                      style={{
+                        color: isLight ? '#b45309' : '#fcd34d',
+                        borderColor: isLight ? 'rgba(245,158,11,0.22)' : 'rgba(252,211,77,0.22)',
+                        backgroundColor: isLight ? 'rgba(255,251,235,0.72)' : 'rgba(120,53,15,0.18)'
+                      }}
                     >
                       <Lightbulb className="w-3 h-3" />
-                      {showHint ? 'Ocultar pista' : 'Necesito una pista'}
+                      {showHint ? 'Ocultar pista' : 'Ver pista'}
                     </button>
                   )}
                   <AnimatePresence>
                     {showHint && !clawbotMessage && (
                       <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }} className="mt-2 text-sm font-gameui italic"
-                        style={{ color: isLight ? '#92400e' : '#fde68a' }}
+                        exit={{ opacity: 0, height: 0 }} className="mt-2 rounded-2xl border px-3 py-2 text-sm font-gameui leading-snug"
+                        style={{
+                          borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(252,211,77,0.14)',
+                          backgroundColor: isLight ? 'rgba(255,251,235,0.64)' : 'rgba(2,6,23,0.28)',
+                          color: isLight ? '#92400e' : '#fde68a'
+                        }}
                       >
                         {exercise.hint}
                       </motion.p>
                     )}
                   </AnimatePresence>
 
-                  {progressiveHint && !executionResult?.success && (
+                  {progressiveHint && !executionResult?.success && !clawbotMessage && !clawbotThinking && (
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -842,7 +1525,6 @@ export const ExercisePage = () => {
                       </div>
                     </motion.div>
                   )}
-                </div>
               </div>
 
               {/* Clawbot message */}
@@ -890,7 +1572,7 @@ export const ExercisePage = () => {
                 )}
               </AnimatePresence>
 
-              {reinforcementPlan && !executionResult?.success && (
+              {reinforcementPlan && !executionResult?.success && !clawbotMessage && !clawbotThinking && (
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1004,39 +1686,62 @@ export const ExercisePage = () => {
               </div>
               )}
 
-              <div className="dagon-workbench-main">
+              <div className="grid gap-5 lg:gap-6">
 
             {/* ARENA DE CÓDIGO O DIAGRAMA */}
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="glass-card-apple dagon-compact-card rounded-3xl border border-white/10 overflow-hidden relative"
+            <motion.div
+              variants={motionIn}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.08, duration: 0.34, ease: 'easeOut' }}
+              className="glass-card-apple dagon-compact-card rounded-3xl border overflow-hidden relative"
+              style={{ borderColor: colors.border }}
             >
               {/* Barra superior */}
-              <div className="bg-slate-900/80 px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-3 h-3 rounded-full bg-rose-500/70" />
-                  <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                  <span className="w-3 h-3 rounded-full bg-emerald-500/70" />
-                  <span className="ml-3 text-xs font-mono text-slate-400 truncate">
-                    {isDiagram ? 'Diseña el Modelo Entidad-Relación' : isDragDrop ? 'Arrastra para construir tu consulta' : 'Escribe tu consulta SQL'}
-                  </span>
+              <div
+                className="px-5 py-4 flex flex-col gap-4 border-b lg:flex-row lg:items-center lg:justify-between"
+                style={{
+                  borderColor: isLight ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.08)',
+                  background: isLight
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.90), rgba(255,247,237,0.76))'
+                    : 'linear-gradient(135deg, rgba(2,6,23,0.88), rgba(15,23,42,0.78))'
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="hidden sm:flex items-center gap-1.5 rounded-full border px-2.5 py-2" style={{ borderColor: isLight ? 'rgba(245,158,11,0.18)' : 'rgba(255,255,255,0.10)', backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(2,6,23,0.46)' }}>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: colors.accent }}>
+                      {modeMeta.label}
+                    </p>
+                    <p className="mt-1 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                      {modeMeta.detail}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setShowGuidePanel((prev) => !prev)}
-                    className="w-full sm:w-auto justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 font-display font-black"
-                    aria-label={showGuidePanel ? 'Ocultar guía lateral' : 'Mostrar guía lateral'}
-                  >
-                    {showGuidePanel ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                    {showGuidePanel ? 'Foco' : 'Guía'}
-                  </Button>
+                  {isDragDrop && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={resetDragDropAnswer}
+                      disabled={safeDroppedWords.length === 0}
+                      className="w-full sm:w-auto justify-center rounded-xl border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10 font-display font-black disabled:opacity-45"
+                      aria-label="Limpiar bloques colocados"
+                    >
+                      <Eraser className="w-4 h-4 mr-2" />
+                      Limpiar
+                    </Button>
+                  )}
                   <Button
                     onClick={() => {
                       sounds.playStep();
                       handleValidate();
                     }}
-                    disabled={validating || (isDragDrop && droppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
+                    disabled={validating || (isDragDrop && safeDroppedWords.length === 0) || (!isDragDrop && !isDiagram && !editorCode) || clawbotThinking}
                     className="w-full sm:w-auto justify-center bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-display font-black px-6 shadow-[0_0_25px_rgba(16,185,129,0.35)] hover:scale-[1.02] transition-all"
                     aria-label="Ejecutar y validar la respuesta del ejercicio"
                   >
@@ -1050,143 +1755,244 @@ export const ExercisePage = () => {
               </div>
 
               {/* Contenedor Principal (Diagrama / Editor / Drag-drop) */}
-              <div className="p-4 sm:p-5">
+              <div className="p-5 sm:p-6">
                 {isDiagram ? (
-                  <div className="h-[360px] sm:h-[420px] lg:h-[540px] xl:h-[620px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
-                    <MerDiagramBuilder 
-                      onChangeData={(graphData) => {
-                        setEditorCode(JSON.stringify(graphData)); 
-                      }} 
-                    />
-                  </div>
+                  <>
+                    <div className="h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                      <MerDiagramBuilder
+                        onChangeData={(graphData) => {
+                          setEditorCode(JSON.stringify(graphData));
+                        }}
+                      />
+                    </div>
+                    {rescueScaffoldPanel}
+                  </>
                 ) : isDragDrop ? (
-                  <DragDropContext onDragEnd={handleDragEnd}>
-                    <div className="space-y-4 sm:space-y-5">
-                      {/* Zona de armado */}
-                      <div>
-                        <div className="flex flex-col gap-1 mb-2">
-                          <p className="text-xs text-cyan-300 uppercase tracking-[0.3em] font-bold">Tu consulta:</p>
-                          <p className="text-[11px] font-gameui text-slate-400">
-                            En teléfono, mantén presionado un bloque y arrástralo con el dedo hasta la zona de armado.
-                          </p>
+                  <DragDropContext
+                    onDragStart={(start) => {
+                      dragClickGuardRef.current = true;
+                      setDragDestination(null);
+                      const sourceList = start.source.droppableId === 'dropZone' ? safeDroppedWords : safeAvailableWords;
+                      setDraggingWord(sourceList[start.source.index] || null);
+                    }}
+                    onDragUpdate={(update) => {
+                      setDragDestination(update.destination || null);
+                    }}
+                    onDragEnd={(result) => {
+                      setDraggingWord(null);
+                      setDragDestination(null);
+                      handleDragEnd(result);
+                    }}
+                  >
+                    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.14fr)_minmax(320px,0.86fr)]">
+                      <motion.div
+                        variants={motionIn}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                        className="rounded-3xl border p-4 sm:p-5 flex flex-col"
+                        style={{
+                          borderColor: isLight ? 'rgba(16,185,129,0.24)' : 'rgba(16,185,129,0.18)',
+                          backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(2,6,23,0.36)'
+                        }}
+                      >
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <ListChecks className="h-4 w-4" style={{ color: colors.primary }} />
+                              <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: colors.primary }}>
+                                Consulta en armado
+                              </p>
+                            </div>
+                            <p className="mt-1 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
+                              Arrastra para reordenar. Usa la X para quitar un bloque.
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => scrollDragRail(dropZoneScrollRef, 'start')}
+                              className="rounded-xl border px-3 py-2 text-xs font-display font-black transition-colors hover:bg-white/10"
+                              style={{ borderColor: `${colors.primary}24`, color: mutedColor, backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(15,23,42,0.36)' }}
+                            >
+                              Inicio
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => scrollDragRail(dropZoneScrollRef, 'end')}
+                              className="rounded-xl border px-3 py-2 text-xs font-display font-black transition-colors hover:bg-white/10"
+                              style={{ borderColor: `${colors.primary}24`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(15,23,42,0.36)' }}
+                            >
+                              Final
+                            </button>
+                            <div className="rounded-2xl border px-3 py-2 text-left sm:text-right" style={{ borderColor: `${colors.primary}24`, backgroundColor: isLight ? 'rgba(255,255,255,0.64)' : 'rgba(15,23,42,0.46)' }}>
+                              <p className="text-[9px] font-black uppercase tracking-[0.22em]" style={{ color: mutedColor }}>Bloques usados</p>
+                              <p className="font-display text-lg font-black leading-none" style={{ color: headingColor }}>
+                                {placedDragBlocks}<span className="text-xs" style={{ color: mutedColor }}>/{totalDragBlocks}</span>
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <Droppable droppableId="dropZone" direction="horizontal">
+                        {draggingWord && (
+                          <div className="mb-3 flex items-center gap-2 rounded-2xl border px-3 py-2" style={{ borderColor: isLight ? 'rgba(16,185,129,0.20)' : 'rgba(52,211,153,0.18)', backgroundColor: isLight ? 'rgba(236,253,245,0.74)' : 'rgba(6,78,59,0.16)' }}>
+                            <GripHorizontal className="h-4 w-4" style={{ color: isLight ? '#047857' : '#86efac' }} />
+                            <p className="text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
+                              Moviendo <span className="font-mono font-bold" style={{ color: headingColor }}>{draggingWord.word}</span>. Usa los botones Inicio/Final o arrastra hacia los bordes de la cinta.
+                            </p>
+                          </div>
+                        )}
+                        <Droppable
+                          droppableId="dropZone"
+                          direction="horizontal"
+                          renderClone={(provided, snapshot, rubric) => renderDragChip(safeDroppedWords[rubric.source.index], provided, snapshot, 'placed')}
+                        >
                           {(provided, snapshot) => (
                             <div
-                              ref={provided.innerRef} {...provided.droppableProps}
-                              className={`min-h-[120px] sm:min-h-[92px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-wrap gap-2.5 sm:gap-3 items-start content-start transition-all ${
-                                snapshot.isDraggingOver ? 'border-cyan-400' : 'border-slate-600'
+                              ref={(node) => {
+                                provided.innerRef(node);
+                                dropZoneScrollRef.current = node;
+                              }}
+                              {...provided.droppableProps}
+                              className={`min-h-[142px] overflow-x-auto overflow-y-hidden scroll-fancy rounded-2xl border-2 border-dashed p-4 flex flex-nowrap items-center transition-all relative ${
+                                snapshot.isDraggingOver ? 'border-emerald-400 animate-dnd-glow' : ''
                               }`}
                               style={{
-                                backgroundColor: snapshot.isDraggingOver ? '#10b9811A' : '#1e293b66'
+                                borderColor: snapshot.isDraggingOver ? '#34d399' : (isLight ? 'rgba(16,185,129,0.30)' : 'rgba(148,163,184,0.22)'),
+                                background: snapshot.isDraggingOver
+                                  ? 'linear-gradient(135deg, rgba(16,185,129,0.18), rgba(34,211,238,0.12))'
+                                  : (isLight ? 'rgba(255,255,255,0.64)' : 'rgba(15,23,42,0.48)')
                               }}
                             >
-                              {droppedWords.length === 0 && (
-                                <span className="text-slate-500 font-mono text-xs sm:text-sm italic w-full text-center py-4">
-                                  Arrastra los bloques aquí para armar tu SQL...
-                                </span>
+                              {safeDroppedWords.length === 0 && (
+                                <div className="grid min-h-[160px] w-full place-items-center rounded-xl border border-dashed" style={{ borderColor: isLight ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.08)', color: mutedColor }}>
+                                  <div className="text-center">
+                                    <Sparkles className="mx-auto mb-2 h-5 w-5" style={{ color: colors.primary }} />
+                                    <p className="font-display text-sm font-black" style={{ color: headingColor }}>Coloca aquí la consulta</p>
+                                    <p className="mt-1 text-xs font-gameui">Arrastra desde el banco o toca un bloque para agregarlo.</p>
+                                  </div>
+                                </div>
                               )}
-                              {droppedWords.map((w, i) => (
-                                <Draggable key={`d-${w.id}`} draggableId={`d-${w.id}`} index={i}>
-                                  {(prov, snap) => {
-                                    const child = (
-                                      <div 
-                                        ref={prov.innerRef} 
-                                        {...prov.draggableProps} 
-                                        {...prov.dragHandleProps}
-                                        style={{
-                                          ...prov.draggableProps.style,
-                                          userSelect: 'none',
-                                          WebkitUserSelect: 'none',
-                                          touchAction: 'none',
-                                          pointerEvents: 'auto',
-                                        }}
-                                        className={`touch-drag-none bg-emerald-900/90 border-2 border-emerald-400/60 text-emerald-200 px-3 py-3 sm:px-4 sm:py-2 rounded-xl font-mono font-bold text-sm sm:text-base cursor-grab active:cursor-grabbing min-h-[52px] flex items-center ${
-                                          snap.isDragging ? 'shadow-[0_0_40px_rgba(16,185,129,0.6)] scale-110 z-[9999] border-white ring-4 ring-emerald-400/20' : 'hover:bg-emerald-800'
-                                        }`}
-                                      >
-                                        {w.word}
-                                      </div>
-                                    );
-                                    
-                                    if (snap.isDragging) {
-                                      return createPortal(child, document.body);
-                                    }
-                                    return child;
-                                  }}
-                                </Draggable>
-                              ))}
-                              {provided.placeholder}
-                            </div>
-                          )}
-                        </Droppable>
-                      </div>
-                      {/* Banco de palabras */}
-                      <div>
-                        <p className="text-xs text-slate-400 uppercase tracking-[0.3em] font-bold mb-2">Bloques disponibles:</p>
-                        <Droppable droppableId="wordBank" direction="horizontal">
-                          {(provided, snapshot) => (
-                            <div ref={provided.innerRef} {...provided.droppableProps}
-                              className={`min-h-[132px] sm:min-h-[100px] rounded-2xl border-2 p-3 sm:p-4 flex flex-wrap gap-2.5 sm:gap-3 items-start content-start transition-all duration-300 ${
-                                snapshot.isDraggingOver ? 'border-cyan-500/50 bg-slate-800/60 shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]' : 'border-white/5 bg-slate-900/30'
-                              }`}
-                            >
-                              {availableWords.map((w, i) => (
+                              {safeDroppedWords.map((w, i) => (
                                 <Draggable key={w.id} draggableId={w.id} index={i}>
-                                  {(prov, snap) => {
-                                    const child = (
-                                      <div 
-                                        ref={prov.innerRef} 
-                                        {...prov.draggableProps} 
-                                        {...prov.dragHandleProps}
-                                        style={{
-                                          ...prov.draggableProps.style,
-                                          userSelect: 'none',
-                                          WebkitUserSelect: 'none',
-                                          touchAction: 'none',
-                                          pointerEvents: 'auto',
-                                        }}
-                                        className={`touch-drag-none bg-slate-800 border-2 border-slate-600 text-slate-200 px-3 py-3 sm:px-4 sm:py-2 rounded-xl font-mono font-medium text-sm sm:text-base cursor-grab active:cursor-grabbing flex items-center gap-2 min-h-[52px] ${
-                                          snap.isDragging ? 'shadow-[0_0_40px_rgba(34,211,238,0.6)] scale-110 border-cyan-400 z-[9999] bg-slate-700 ring-4 ring-cyan-400/20' : 'hover:bg-slate-700 hover:-translate-y-1 hover:border-cyan-400/40'
-                                        }`}
-                                      >
-                                        <GripHorizontal className="w-3 h-3 text-slate-500" />
-                                        {w.word}
-                                      </div>
-                                    );
-
-                                    if (snap.isDragging) {
-                                      return createPortal(child, document.body);
-                                    }
-                                    return child;
-                                  }}
+                                  {(prov, snap) => renderDragChip(w, prov, snap, 'placed', {
+                                    insertBefore: dragDestination?.droppableId === 'dropZone' && dragDestination.index === i,
+                                    insertAfter: dragDestination?.droppableId === 'dropZone' && dragDestination.index === safeDroppedWords.length && i === safeDroppedWords.length - 1,
+                                  })}
                                 </Draggable>
                               ))}
                               {provided.placeholder}
                             </div>
                           )}
                         </Droppable>
-                      </div>
+
+                        <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: isLight ? 'rgba(14,165,233,0.18)' : 'rgba(34,211,238,0.14)', backgroundColor: isLight ? 'rgba(240,249,255,0.72)' : 'rgba(8,47,73,0.22)' }}>
+                          <div className="flex items-center gap-2">
+                            <Code2 className="h-4 w-4" style={{ color: isLight ? '#0284c7' : '#67e8f9' }} />
+                            <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: isLight ? '#0369a1' : '#67e8f9' }}>
+                              Vista previa
+                            </p>
+                          </div>
+                          <pre className="mt-3 min-h-[3rem] max-h-[8rem] overflow-y-auto scroll-fancy whitespace-pre-wrap break-words rounded-xl border px-4 py-3 font-mono text-sm leading-relaxed" style={{ borderColor: isLight ? 'rgba(14,165,233,0.16)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.78)' : 'rgba(2,6,23,0.58)', color: assembledSql ? headingColor : mutedColor }}>
+                            {assembledSql || '-- Tu SQL aparecerá aquí conforme coloques bloques'}
+                          </pre>
+                        </div>
+                        {rescueScaffoldPanel}
+                      </motion.div>
+
+                      <motion.div
+                        variants={motionIn}
+                        initial="hidden"
+                        animate="visible"
+                        transition={{ delay: 0.06, duration: 0.28, ease: 'easeOut' }}
+                        className="rounded-3xl border p-4 sm:p-5 flex flex-col"
+                        style={{
+                          borderColor: isLight ? 'rgba(14,165,233,0.24)' : 'rgba(34,211,238,0.16)',
+                          backgroundColor: isLight ? 'rgba(255,255,255,0.66)' : 'rgba(15,23,42,0.34)'
+                        }}
+                      >
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Layers className="h-4 w-4" style={{ color: colors.secondary }} />
+                              <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: colors.secondary }}>
+                                Banco filtrado
+                              </p>
+                            </div>
+                            <p className="mt-1 text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
+                              Toca para agregar. También puedes arrastrar al área verde.
+                            </p>
+                          </div>
+                          <span className="shrink-0 rounded-full border px-3 py-1 text-[10px] font-display font-black" style={{ borderColor: `${colors.secondary}32`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.64)' : 'rgba(2,6,23,0.42)' }}>
+                              {safeAvailableWords.length} libres
+                          </span>
+                        </div>
+                        <Droppable
+                          droppableId="wordBank"
+                          direction="horizontal"
+                          renderClone={(provided, snapshot, rubric) => renderDragChip(safeAvailableWords[rubric.source.index], provided, snapshot, 'bank')}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={(node) => {
+                                provided.innerRef(node);
+                                wordBankScrollRef.current = node;
+                              }}
+                              {...provided.droppableProps}
+                              className={`min-h-[142px] overflow-x-auto overflow-y-hidden scroll-fancy rounded-2xl border-2 p-4 flex flex-nowrap items-center transition-all duration-300 ${
+                                snapshot.isDraggingOver ? 'shadow-[inset_0_0_24px_rgba(34,211,238,0.14)]' : ''
+                              }`}
+                              style={{
+                                borderColor: snapshot.isDraggingOver ? 'rgba(34,211,238,0.55)' : (isLight ? 'rgba(14,165,233,0.18)' : 'rgba(255,255,255,0.08)'),
+                                backgroundColor: snapshot.isDraggingOver
+                                  ? (isLight ? 'rgba(236,254,255,0.78)' : 'rgba(8,47,73,0.36)')
+                                  : (isLight ? 'rgba(255,255,255,0.62)' : 'rgba(2,6,23,0.38)')
+                              }}
+                            >
+                              {safeAvailableWords.length === 0 && (
+                                <div className="grid w-full min-h-[120px] place-items-center rounded-xl border border-dashed text-center" style={{ borderColor: isLight ? 'rgba(14,165,233,0.18)' : 'rgba(255,255,255,0.08)', color: mutedColor }}>
+                                  <p className="font-gameui text-sm">No quedan bloques libres. Revisa la vista previa antes de ejecutar.</p>
+                                </div>
+                              )}
+                              {safeAvailableWords.map((w, i) => (
+                                <Draggable key={w.id} draggableId={w.id} index={i}>
+                                  {(prov, snap) => renderDragChip(w, prov, snap, 'bank')}
+                                </Draggable>
+                              ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </motion.div>
                     </div>
                   </DragDropContext>
                 ) : (
-                  <div className="h-[340px] sm:h-[420px] xl:h-[620px] 2xl:h-[680px] rounded-2xl overflow-hidden border border-white/10">
-                    <Editor
-                      height="100%"
-                      defaultLanguage="sql"
-                      theme="vs-dark"
-                      value={editorCode}
-                      onChange={(value) => setEditorCode(value || '')}
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 16,
-                        lineNumbers: 'on',
-                        padding: { top: 16 },
-                        scrollBeyondLastLine: false,
-                        wordWrap: 'on',
-                      }}
-                    />
-                  </div>
+                  <>
+                    <div className="h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
+                      <Editor
+                        height="100%"
+                        defaultLanguage="sql"
+                        theme="vs-dark"
+                        value={editorCode}
+                        onChange={(value) => {
+                          setEditorCode(value || '');
+                          const now = Date.now();
+                          if (now - lastTypingSoundRef.current > 900) {
+                            lastTypingSoundRef.current = now;
+                            sounds.playClockTicking?.();
+                          }
+                        }}
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 16,
+                          lineNumbers: 'on',
+                          padding: { top: 16 },
+                          scrollBeyondLastLine: false,
+                          wordWrap: 'on',
+                        }}
+                      />
+                    </div>
+                    {rescueScaffoldPanel}
+                  </>
                 )}
               </div>
             </motion.div>
@@ -1195,44 +2001,49 @@ export const ExercisePage = () => {
             <AnimatePresence>
               {executionResult && (
                 <motion.div
-                  initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                  className={`rounded-3xl border overflow-hidden ${
-                    executionResult.isWarning
-                      ? 'glass-card-apple border-amber-400/30 shadow-[0_0_30px_rgba(245,158,11,0.15)]'
-                      : executionResult.success
-                        ? 'glass-card-apple border-emerald-400/30 shadow-[0_0_30px_rgba(16,185,129,0.15)]'
-                        : 'glass-card-apple border-rose-400/30 shadow-[0_0_30px_rgba(244,63,94,0.15)]'
-                  }`}
+                  initial={{ opacity: 0, y: 18, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.99 }}
+                  transition={{ duration: 0.32, ease: 'easeOut' }}
+                  className="glass-card-apple rounded-3xl border overflow-hidden relative"
+                  style={{
+                    borderColor: resultTone.border,
+                    boxShadow: `0 24px 70px -42px ${resultTone.accent}55`
+                  }}
                 >
-                  <div className={`px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 border-b ${
-                    executionResult.isWarning 
-                      ? 'border-amber-500/30 bg-amber-500/10'
-                      : executionResult.success 
-                        ? 'border-emerald-500/20 bg-emerald-500/5' 
-                        : 'border-rose-500/20 bg-rose-500/5'
-                  }`}>
-                    {executionResult.isWarning
-                      ? <span className="text-2xl">⚠️</span>
-                      : executionResult.success
-                        ? <CheckCircle className="w-5 h-5 text-emerald-400" />
-                        : <XCircle className="w-5 h-5 text-rose-400" />
-                    }
-                    <span className={`font-display font-black ${
-                      executionResult.isWarning 
-                        ? 'text-amber-200' 
-                        : executionResult.success 
-                          ? 'text-emerald-200' 
-                          : 'text-rose-200'
-                    }`}>
-                      {executionResult.isWarning ? '⚠️ Advertencia' : executionResult.success ? '¡Correcto!' : 'No es correcto'}
-                    </span>
-                    <span className="font-gameui text-sm text-slate-300 ml-2">{executionResult.message}</span>
+                  <div className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${resultTone.accent}, ${colors.secondary})` }} />
+                  <div
+                    className="px-4 sm:px-5 py-5 flex flex-col gap-3 border-b sm:flex-row sm:items-start"
+                    style={{ borderColor: resultTone.border, backgroundColor: resultTone.surface }}
+                  >
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border shadow-lg" style={{ borderColor: resultTone.border, backgroundColor: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(2,6,23,0.42)' }}>
+                      <ResultIcon className="h-6 w-6" style={{ color: resultTone.accent }} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.28em]" style={{ color: resultTone.accent }}>
+                        {resultTone.label}
+                      </p>
+                      <h3 className="mt-1 font-display text-xl font-black leading-tight" style={{ color: headingColor }}>
+                        {executionResult.success || executionResult.isWarning ? 'Respuesta procesada' : 'Revisa una parte de la consulta'}
+                      </h3>
+                      <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                        {executionResult.message}
+                      </p>
+                    </div>
+                    {(executionResult.xp_gained || 0) > 0 && (
+                      <div className="shrink-0 rounded-2xl border px-4 py-3 text-left sm:text-right" style={{ borderColor: 'rgba(250,204,21,0.34)', backgroundColor: isLight ? 'rgba(255,251,235,0.82)' : 'rgba(113,63,18,0.22)' }}>
+                        <p className="text-[9px] font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#b45309' : '#fde68a' }}>Ganancia</p>
+                        <p className="font-display text-2xl font-black leading-none" style={{ color: isLight ? '#a16207' : '#fef08a' }}>
+                          +{executionResult.xp_gained} XP
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {learningFeedback && (
-                    <div className="p-5 border-b" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)' }}>
+                    <div className="px-4 py-3 border-b" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)' }}>
                       <div
-                        className="rounded-2xl border p-4"
+                        className="grid gap-3 rounded-2xl border p-3 lg:grid-cols-[auto_minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center"
                         style={{
                           borderColor: learningFeedback.tone === 'success'
                             ? 'rgba(16,185,129,0.35)'
@@ -1246,8 +2057,8 @@ export const ExercisePage = () => {
                               : (isLight ? 'rgba(255,241,242,0.82)' : 'rgba(127,29,29,0.18)')
                         }}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.55)' }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.55)' }}>
                             {learningFeedback.tone === 'success'
                               ? <CheckCircle className="w-5 h-5 text-emerald-400" />
                               : learningFeedback.tone === 'warning'
@@ -1256,25 +2067,36 @@ export const ExercisePage = () => {
                             }
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.28em] font-black" style={{ color: mutedColor }}>
-                              Retroalimentación de aprendizaje
+                            <p className="text-[10px] uppercase tracking-[0.24em] font-black" style={{ color: mutedColor }}>
+                              Guía breve
                             </p>
-                            <h3 className="mt-1 font-display text-lg font-black" style={{ color: headingColor }}>
+                            <h3 className="mt-0.5 font-display text-sm font-black sm:text-base" style={{ color: headingColor }}>
                               {learningFeedback.title}
                             </h3>
-                            <p className="mt-2 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
-                              {learningFeedback.message}
-                            </p>
-                            <p className="mt-3 text-sm font-gameui leading-relaxed" style={{ color: headingColor }}>
-                              Siguiente acción: {learningFeedback.next}
-                            </p>
                           </div>
                         </div>
+                        <p className="rounded-xl border px-3 py-2 text-sm font-gameui leading-snug" style={{ color: mutedColor, borderColor: isLight ? 'rgba(2,6,23,0.08)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(2,6,23,0.22)' }}>
+                          {learningFeedback.message}
+                        </p>
+                        <p className="rounded-xl border px-3 py-2 text-sm font-gameui leading-snug" style={{ color: headingColor, borderColor: isLight ? 'rgba(2,6,23,0.08)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(2,6,23,0.22)' }}>
+                          Siguiente: {learningFeedback.next}
+                        </p>
                       </div>
                     </div>
                   )}
 
-                  <QueryResultShowcase result={executionResult} exercise={exercise} colors={colors} />
+                  {isFailureResult ? (
+                    <div className="px-4 py-3">
+                      <div className="flex items-start gap-3 rounded-2xl border px-3 py-2.5" style={{ borderColor: isLight ? 'rgba(14,116,144,0.14)' : 'rgba(34,211,238,0.14)', backgroundColor: isLight ? 'rgba(236,254,255,0.64)' : 'rgba(8,47,73,0.18)' }}>
+                        <Bot className="mt-0.5 h-4 w-4 shrink-0" style={{ color: colors.secondary }} />
+                        <p className="text-sm font-gameui leading-snug" style={{ color: mutedColor }}>
+                          La explicación de Dagon, las pistas y la respuesta de IA están arriba junto a la premisa para que corrijas sin perder el contexto.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <QueryResultShowcase result={executionResult} exercise={exercise} colors={colors} />
+                  )}
 
                   {/* Siguiente misión */}
                   {(executionResult.success || executionResult.isWarning) && (
@@ -1304,7 +2126,7 @@ export const ExercisePage = () => {
                       >
                         {currentExerciseIndex < exercises.length - 1
                           ? <>Siguiente misión <ChevronRight className="w-5 h-5 ml-1 inline" /></>
-                          : 'Completar módulo 🏆'
+                          : <>Completar módulo <Trophy className="w-5 h-5 ml-1 inline" /></>
                         }
                       </Button>
                     </div>

@@ -308,6 +308,24 @@ export const StreakPage = () => {
 
   const diasConsecutivos = obtenerDiasConsecutivos();
 
+  const ultimosSieteDias = useMemo(() => {
+    const hoy = new Date();
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const fecha = new Date(hoy);
+      fecha.setDate(hoy.getDate() - (6 - index));
+      const fechaStr = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
+      const diaSemana = DIAS_SEMANA[fecha.getDay() === 0 ? 6 : fecha.getDay() - 1];
+
+      return {
+        fecha: fechaStr,
+        dia: fecha.getDate(),
+        etiqueta: diaSemana,
+        activo: stats.diasActivos?.has(fechaStr),
+      };
+    });
+  }, [stats.diasActivos]);
+
   const mesAnterior = () => setMesActual(new Date(mesActual.getFullYear(), mesActual.getMonth() - 1, 1));
 
   const mesSiguiente = () => {
@@ -409,290 +427,400 @@ export const StreakPage = () => {
                   : 'Hoy es buen día para encender la primera chispa.';
   const heroPanelStyle = {
     background: isLight
-      ? 'linear-gradient(155deg, rgba(255,248,238,0.94) 0%, rgba(255,240,222,0.92) 48%, rgba(250,228,192,0.86) 100%)'
-      : 'linear-gradient(155deg, rgba(15,23,42,0.94) 0%, rgba(24,24,27,0.96) 46%, rgba(68,25,18,0.92) 100%)',
-    borderColor: isLight ? 'rgba(198,122,29,0.24)' : 'rgba(249,115,22,0.18)',
+      ? 'linear-gradient(145deg, rgba(255,248,238,0.96) 0%, rgba(255,243,226,0.90) 48%, rgba(253,230,181,0.84) 100%)'
+      : 'linear-gradient(145deg, rgba(15,23,42,0.94) 0%, rgba(24,24,27,0.96) 50%, rgba(67,20,7,0.88) 100%)',
+    borderColor: isLight ? 'rgba(198,122,29,0.24)' : 'rgba(251,146,60,0.20)',
     boxShadow: isLight
-      ? '0 34px 90px -42px rgba(161, 98, 7, 0.42)'
-      : '0 34px 90px -38px rgba(249,115,22,0.24)',
+      ? '0 28px 80px -44px rgba(161, 98, 7, 0.44)'
+      : '0 28px 82px -44px rgba(249,115,22,0.34)',
   };
   const panelStyle = {
-    background: isLight ? 'rgba(255,248,238,0.78)' : 'rgba(15,23,42,0.56)',
+    background: isLight ? 'rgba(255,248,238,0.78)' : 'rgba(15,23,42,0.58)',
     borderColor: isLight ? 'rgba(198,122,29,0.16)' : colors.border,
     boxShadow: isLight
-      ? '0 24px 64px -36px rgba(161, 98, 7, 0.28)'
-      : '0 24px 64px -36px rgba(2, 6, 23, 0.5)',
+      ? '0 22px 58px -38px rgba(161, 98, 7, 0.28)'
+      : '0 22px 58px -38px rgba(2, 6, 23, 0.54)',
   };
   const helperText = isLight ? '#7c5f3b' : '#94a3b8';
   const headingText = isLight ? '#352517' : '#ffffff';
   const accentWarm = isLight ? '#b45309' : '#fdba74';
   const accentFire = isLight ? '#ea580c' : '#fb923c';
+  const statusAccent = rachaEnRiesgo || rachaExpirada ? '#ef4444' : rachaCelebradaHoy ? '#10b981' : accentFire;
+  const diasParaMeta = Math.max(0, nextMilestone.days - stats.racha);
+  const diasParaRecord = Math.max(0, stats.mejor_racha - stats.racha + 1);
+  const progresoRecord = stats.mejor_racha > 0 ? Math.min(100, (stats.racha / stats.mejor_racha) * 100) : (stats.racha > 0 ? 100 : 0);
+  const actividadReciente = ultimosSieteDias.filter(dia => dia.activo).length;
+  const MilestoneIcon = nextMilestone.icon;
+  const statCards = [
+    {
+      label: 'Meta',
+      value: nextMilestone.label,
+      detail: diasParaMeta === 0 ? 'Meta desbloqueada' : `${diasParaMeta} día${diasParaMeta === 1 ? '' : 's'} restante${diasParaMeta === 1 ? '' : 's'}`,
+      icon: <MilestoneIcon className="h-4 w-4" />,
+      accent: isLight ? '#b45309' : '#fbbf24',
+    },
+    {
+      label: 'Récord',
+      value: `${stats.mejor_racha}`,
+      detail: diasParaRecord === 0 ? 'Estás superando tu marca' : `${diasParaRecord} día${diasParaRecord === 1 ? '' : 's'} para romperlo`,
+      icon: <Trophy className="h-4 w-4" />,
+      accent: isLight ? '#a16207' : '#facc15',
+    },
+    {
+      label: 'Mes activo',
+      value: `${diasActivosEsteMes}`,
+      detail: `${actividadReciente}/7 días recientes`,
+      icon: <CalendarCheck className="h-4 w-4" />,
+      accent: isLight ? '#047857' : '#34d399',
+    },
+  ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden" data-testid="streak-page">
+    <div className="min-h-screen overflow-x-hidden" style={{ backgroundColor: colors.background }} data-testid="streak-page">
       <div className="dagon-page-shell dagon-page-shell--wide streak-page-shell">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center mb-4"
+          className="mb-4 flex flex-col gap-3 lg:mb-5 lg:flex-row lg:items-center lg:justify-between"
         >
-          <Button onClick={() => navigate('/dashboard')} variant="ghost" style={{ color: helperText }}>
-            <ArrowLeft className="w-5 h-5 mr-2" /> Volver
-          </Button>
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              onClick={() => navigate('/dashboard')}
+              variant="ghost"
+              className="shrink-0 rounded-2xl px-3"
+              style={{ color: helperText }}
+              aria-label="Volver al dashboard"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.32em]" style={{ color: accentFire }}>
+                Ritual diario
+              </p>
+              <h1 className="font-display text-2xl font-black leading-tight sm:text-3xl" style={{ color: headingText }}>
+                Racha de constancia
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[11px] font-black uppercase tracking-[0.22em]"
+              style={{
+                color: rachaCelebradaHoy ? (isLight ? '#047857' : '#bbf7d0') : statusAccent,
+                borderColor: `${statusAccent}55`,
+                backgroundColor: isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.54)',
+              }}
+            >
+              <StatusIcon className="h-3.5 w-3.5" />
+              {streakStatus.title}
+            </span>
+            <Button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="rounded-2xl px-4 py-3 font-display text-xs font-black uppercase tracking-widest shadow-lg transition-transform hover:-translate-y-0.5"
+              style={{
+                background: `linear-gradient(135deg, ${statusAccent}, ${isLight ? '#f59e0b' : '#22d3ee'})`,
+                color: isLight ? '#1f2937' : '#06111f',
+              }}
+            >
+              <Target className="mr-2 h-4 w-4" />
+              {streakStatus.action}
+            </Button>
+          </div>
         </motion.div>
 
-        <AnimatePresence mode="wait">
+        <div className="grid items-stretch gap-4 xl:grid-cols-12 xl:gap-5">
           <motion.div
             key={stats.racha}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -20 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative overflow-hidden rounded-3xl mb-5 dagon-compact-card"
+            className="glass-card-apple dagon-compact-card relative flex flex-col overflow-hidden rounded-3xl border p-4 shadow-2xl sm:p-5 xl:col-span-4 xl:min-h-[calc(100vh-10rem)]"
             style={heroPanelStyle}
           >
-            <div className="absolute inset-0" style={{ background: heroPanelStyle.background }} />
-            
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              animate={{ opacity: [0.3, 0.5, 0.3] }}
-              transition={{ duration: 3, repeat: Infinity }}
+              animate={shouldReduceMotion ? undefined : { opacity: [0.32, 0.58, 0.32] }}
+              transition={shouldReduceMotion ? undefined : { duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
             >
               <div className="absolute top-0 right-0 w-full h-full" style={{ background: `radial-gradient(ellipse at top right, ${isLight ? 'rgba(234,88,12,0.18)' : 'rgba(249,115,22,0.16)'}, transparent 70%)` }} />
-              <div className="absolute bottom-0 left-0 w-full h-full" style={{ background: `radial-gradient(ellipse at bottom left, ${isLight ? 'rgba(217,119,6,0.12)' : 'rgba(239,68,68,0.1)'}, transparent 50%)` }} />
+              <div className="absolute bottom-0 left-0 w-full h-full" style={{ background: `radial-gradient(ellipse at bottom left, ${isLight ? 'rgba(6,182,212,0.12)' : 'rgba(34,211,238,0.10)'}, transparent 54%)` }} />
             </motion.div>
             <EmberField amount={shouldReduceMotion ? 3 : 10} color={isLight ? '#ea580c' : '#fb923c'} />
             <FireEffect intensity={stats.racha > 0 ? Math.min(1.35, 0.7 + stats.racha * 0.06) : 0.35} />
 
-            <div className="relative z-10 p-4 sm:p-5 lg:p-6">
-              <div className="flex flex-col lg:flex-row items-center gap-5 lg:gap-8">
-                <div className="relative">
+            <div className="relative z-10 flex h-full flex-col gap-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-display text-xs font-black uppercase tracking-[0.28em]" style={{ color: accentWarm }}>
+                    Estado {streakTier}
+                  </p>
+                  <p className="mt-1 max-w-[18rem] text-sm font-gameui leading-relaxed" style={{ color: helperText }}>
+                    {streakMessage}
+                  </p>
+                </div>
+                <div
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border"
+                  style={{
+                    borderColor: `${statusAccent}55`,
+                    background: `linear-gradient(135deg, ${statusAccent}28, ${isLight ? 'rgba(255,255,255,0.72)' : 'rgba(15,23,42,0.74)'})`,
+                    color: statusAccent,
+                  }}
+                >
+                  {rachaCelebradaHoy ? <PartyPopper className="h-5 w-5" /> : <StatusIcon className="h-5 w-5" />}
+                </div>
+              </div>
+
+              <div className="grid flex-1 items-center gap-4 sm:grid-cols-[auto_1fr] xl:grid-cols-1">
+                <div className="relative mx-auto w-full max-w-[15.5rem]">
                   <motion.div
-                    className="absolute -inset-10 rounded-full blur-3xl"
-                    style={{ background: `radial-gradient(circle, ${isLight ? 'rgba(234,88,12,0.16)' : 'rgba(249,115,22,0.22)'} 0%, transparent 68%)` }}
-                    animate={{ scale: [0.92, 1.08, 0.92], opacity: [0.4, 0.72, 0.4] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute -inset-8 rounded-full blur-3xl"
+                    style={{ background: `radial-gradient(circle, ${isLight ? 'rgba(234,88,12,0.18)' : 'rgba(249,115,22,0.24)'} 0%, transparent 68%)` }}
+                    animate={shouldReduceMotion ? undefined : { scale: [0.94, 1.08, 0.94], opacity: [0.44, 0.76, 0.44] }}
+                    transition={shouldReduceMotion ? undefined : { duration: 4, repeat: Infinity, ease: 'easeInOut' }}
                   />
                   <motion.div
-                    className="relative"
+                    className="relative grid place-items-center"
                     initial={{ scale: 0.92, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: 'spring', stiffness: 280, damping: 20 }}
                   >
-                    <StreakDagonStage state={streakState} mood={streakMood} showFire={stats.racha > 3 || rachaCelebradaHoy} />
-                  </motion.div>
-                  
-                  {stats.racha > 0 && (
-                    <motion.div
-                      initial={{ scale: 0, rotate: -180 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: 'spring', delay: 0.2 }}
-	                      className="absolute -top-1 -right-2"
-                    >
-                      <motion.div
-                      animate={{ scale: [1, 1.15, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    >
-                        <StreakFlame size="md" className="drop-shadow-2xl" />
-                      </motion.div>
-                    </motion.div>
-                  )}
-                  {stats.racha >= 7 && (
-                    <motion.div
-                      className="absolute -inset-6 rounded-full border"
-                      style={{ borderColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(251,146,60,0.2)' }}
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                    />
-                  )}
-                </div>
-
-                <div className="flex-1 text-center lg:text-left">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                  >
-                    <div
-                      className="inline-flex items-center gap-3 px-4 py-3 rounded-2xl border backdrop-blur-xl"
-                      style={{
-                        background: isLight
-                          ? 'linear-gradient(135deg, rgba(255,255,255,0.62), rgba(255,237,213,0.48))'
-                          : 'linear-gradient(135deg, rgba(249,115,22,0.1), rgba(244,63,94,0.08))',
-                        borderColor: isLight ? 'rgba(217,119,6,0.22)' : 'rgba(249,115,22,0.2)'
-                      }}
-                    >
-                      <motion.div
-                        animate={stats.racha > 0 ? { rotate: [-8, 8, -8], scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      >
-                        <StreakFlame size="md" />
-                      </motion.div>
-                      
-                      <motion.span
-                        initial={{ scale: 0, rotateZ: -12 }}
-                        animate={{ scale: 1, rotateZ: 0 }}
-                        transition={{ type: 'spring', delay: 0.3, stiffness: 400, damping: 12 }}
-                        className="font-display text-5xl sm:text-6xl lg:text-7xl font-black text-gradient-fire relative"
-                      >
-                        <motion.span
-                          animate={stats.racha > 0 ? {
-                            textShadow: [
-                              '0 0 20px rgba(251,191,36,0.3)',
-                              '0 0 40px rgba(249,115,22,0.5)',
-                              '0 0 20px rgba(251,191,36,0.3)'
-                            ]
-                          } : {}}
-                          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                          {stats.racha}
-                        </motion.span>
-                      </motion.span>
-                    </div>
-                    
-                    <p className="font-display text-xl lg:text-2xl font-black uppercase tracking-[0.15em] mt-3" style={{ color: accentWarm }}>
-                      {stats.racha === 1 ? 'día' : 'días'} de racha
-                    </p>
-                    <div className="flex items-center justify-center lg:justify-start gap-2 mt-3">
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-[0.35em] border" style={{
-                        color: accentFire,
-                        borderColor: isLight ? 'rgba(217,119,6,0.22)' : 'rgba(251,146,60,0.24)',
-                        backgroundColor: isLight ? 'rgba(255,247,237,0.74)' : 'rgba(251,146,60,0.08)'
-                      }}>
-                        Estado {streakTier}
-                      </span>
-                    </div>
-                  </motion.div>
-
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="mt-3 text-sm sm:text-base font-gameui leading-relaxed max-w-2xl"
-                    style={{ color: helperText }}
-                  >
-                    {streakMessage}
-                  </motion.p>
-
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mt-4"
-                  >
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border" style={{
-                      backgroundColor: isLight ? 'rgba(255,245,227,0.66)' : 'rgba(245,158,11,0.1)',
-                      borderColor: isLight ? 'rgba(217,119,6,0.18)' : 'rgba(245,158,11,0.3)'
-                    }}>
-                      <Trophy className="w-5 h-5" style={{ color: isLight ? '#b45309' : '#fbbf24' }} />
-                      <span className="font-display font-black" style={{ color: isLight ? '#8a4b11' : '#fde68a' }}>Mejor: {stats.mejor_racha}</span>
-                    </div>
-                    
+                    <StreakDagonStage state={streakState} mood={streakMood} showFire={stats.racha > 3 || rachaCelebradaHoy} size="large" />
                     {stats.racha > 0 && (
                       <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border"
-                        style={{
-                          backgroundColor: isLight ? 'rgba(255,240,220,0.66)' : 'rgba(16,185,129,0.1)',
-                          borderColor: isLight ? 'rgba(194,95,26,0.16)' : 'rgba(16,185,129,0.3)'
-                        }}
+                        initial={{ scale: 0, rotate: -140 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: 'spring', delay: 0.2 }}
+                        className="absolute right-4 top-2"
                       >
-                        <Zap className="w-5 h-5" style={{ color: isLight ? '#c65f1a' : '#34d399' }} />
-                        <span className="font-display font-black" style={{ color: isLight ? '#9a4a16' : '#bbf7d0' }}>+{stats.racha * 5} XP diario</span>
+                        <motion.div animate={shouldReduceMotion ? undefined : { y: [-2, 2, -2], scale: [1, 1.12, 1] }} transition={shouldReduceMotion ? undefined : { duration: 1.2, repeat: Infinity }}>
+                          <StreakFlame size="md" className="drop-shadow-2xl" />
+                        </motion.div>
                       </motion.div>
                     )}
-                    {stats.racha >= 3 && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl border" style={{
-                        backgroundColor: isLight ? 'rgba(255,244,229,0.7)' : 'rgba(244,63,94,0.08)',
-                        borderColor: isLight ? 'rgba(217,119,6,0.14)' : 'rgba(244,63,94,0.2)'
-                      }}>
-                        <PartyPopper className="w-4 h-4" style={{ color: accentFire }} />
-                        <span className="font-display font-black text-sm" style={{ color: isLight ? '#7c3d12' : '#fecdd3' }}>Cadencia encendida</span>
-                      </div>
+                    {stats.racha >= 7 && (
+                      <motion.div
+                        className="absolute inset-6 rounded-full border border-dashed"
+                        style={{ borderColor: isLight ? 'rgba(217,119,6,0.25)' : 'rgba(251,146,60,0.3)' }}
+                        animate={shouldReduceMotion ? undefined : { rotate: 360 }}
+                        transition={shouldReduceMotion ? undefined : { duration: 25, repeat: Infinity, ease: 'linear' }}
+                      />
                     )}
                   </motion.div>
+                </div>
 
-                  <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.38 }}
-                    className={`streak-status-ribbon streak-status-ribbon--${streakState} mt-4`}
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="min-w-0 text-center sm:text-left xl:text-center"
+                >
+                  <div
+                    className="mx-auto inline-flex items-end justify-center gap-3 rounded-[2rem] border px-5 py-4 shadow-xl backdrop-blur-xl sm:mx-0 xl:mx-auto"
                     style={{
-                      '--streak-accent': accentFire,
-                      '--streak-secondary': isLight ? '#f59e0b' : '#fbbf24',
-                      '--streak-text': headingText,
-                      '--streak-muted': helperText,
+                      background: isLight
+                        ? 'linear-gradient(135deg, rgba(255,255,255,0.82), rgba(255,237,213,0.66))'
+                        : 'linear-gradient(135deg, rgba(249,115,22,0.15), rgba(34,211,238,0.08))',
+                      borderColor: isLight ? 'rgba(217,119,6,0.30)' : 'rgba(251,146,60,0.26)'
                     }}
                   >
-                    <div className="streak-status-ribbon__icon">
-                      <StatusIcon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-sm font-black uppercase tracking-[0.18em]">{streakStatus.title}</p>
-                      <p className="mt-1 text-sm font-gameui leading-relaxed">{streakStatus.body}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      onClick={() => navigate('/dashboard')}
-                      className="shrink-0 rounded-xl px-4 py-2 font-display text-xs font-black uppercase tracking-widest"
-                      style={{ background: `linear-gradient(135deg, ${accentFire}, ${isLight ? '#f59e0b' : '#fbbf24'})`, color: isLight ? '#1f2937' : '#111827' }}
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', delay: 0.22, stiffness: 400 }}
+                      className="font-display text-7xl font-black leading-none text-gradient-fire sm:text-8xl xl:text-7xl 2xl:text-8xl"
                     >
-                      {streakStatus.action}
-                    </Button>
-                  </motion.div>
+                      {stats.racha}
+                    </motion.span>
+                    <span className="pb-2 font-display text-lg font-black uppercase tracking-[0.16em]" style={{ color: accentWarm }}>
+                      {stats.racha === 1 ? 'día' : 'días'}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start xl:justify-center">
+                    <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em]" style={{
+                      color: accentFire,
+                      borderColor: isLight ? 'rgba(217,119,6,0.30)' : 'rgba(251,146,60,0.30)',
+                      backgroundColor: isLight ? 'rgba(255,247,237,0.82)' : 'rgba(251,146,60,0.10)'
+                    }}>
+                      <Star className="h-3.5 w-3.5" />
+                      {streakTier}
+                    </span>
+                    {stats.racha > 0 && (
+                      <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.18em]" style={{
+                        color: isLight ? '#047857' : '#34d399',
+                        borderColor: isLight ? 'rgba(4,120,87,0.22)' : 'rgba(16,185,129,0.30)',
+                        backgroundColor: isLight ? 'rgba(236,253,245,0.72)' : 'rgba(16,185,129,0.10)'
+                      }}>
+                        <Zap className="h-3.5 w-3.5" />
+                        +{stats.racha * 5} XP
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.24 }}
+                className={`streak-status-ribbon streak-status-ribbon--${streakState} w-full rounded-2xl p-3 text-left shadow-lg`}
+                style={{
+                  '--streak-accent': accentFire,
+                  '--streak-secondary': isLight ? '#f59e0b' : '#fbbf24',
+                  '--streak-text': headingText,
+                  '--streak-muted': helperText,
+                  border: `1px solid ${statusAccent}55`,
+                  background: isLight ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.65)',
+                  backdropFilter: 'blur(20px)'
+                }}
+              >
+                <div className="streak-status-ribbon__icon shrink-0 shadow-lg" style={{ background: `linear-gradient(135deg, ${statusAccent}, ${isLight ? '#f59e0b' : '#22d3ee'})`}}>
+                  <StatusIcon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-xs font-black uppercase tracking-[0.18em]" style={{ color: headingText }}>{streakStatus.title}</p>
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={streakState}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="mt-1 text-xs font-gameui leading-relaxed"
+                      style={{ color: helperText }}
+                    >
+                      {streakStatus.body}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+
+              <div className="mt-auto">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: helperText }}>
+                    Últimos 7 días
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: accentFire }}>
+                    {actividadReciente}/7
+                  </span>
+                </div>
+                <div className="grid grid-cols-7 gap-1.5">
+                  {ultimosSieteDias.map((dia, index) => (
+                    <motion.div
+                      key={dia.fecha}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.04 * index }}
+                      className="rounded-2xl border px-1.5 py-2 text-center"
+                      style={{
+                        borderColor: dia.activo ? 'rgba(251,146,60,0.42)' : (isLight ? 'rgba(198,122,29,0.16)' : 'rgba(255,255,255,0.08)'),
+                        background: dia.activo
+                          ? 'linear-gradient(145deg, rgba(251,191,36,0.95), rgba(249,115,22,0.86), rgba(225,29,72,0.78))'
+                          : (isLight ? 'rgba(255,255,255,0.58)' : 'rgba(15,23,42,0.48)'),
+                        color: dia.activo ? '#fff7ed' : helperText,
+                      }}
+                    >
+                      <p className="text-[9px] font-black uppercase tracking-wider">{dia.etiqueta}</p>
+                      <p className="font-display text-sm font-black leading-tight">{dia.dia}</p>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
             </div>
           </motion.div>
-        </AnimatePresence>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] gap-4 xl:gap-5">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15, type: 'spring', stiffness: 200, damping: 24 }}
-            className="min-w-0"
+            className="flex min-w-0 flex-col gap-4 xl:col-span-8 xl:min-h-[calc(100vh-10rem)]"
           >
-            <div className="streak-calendar-panel rounded-3xl border p-4 overflow-hidden relative" style={panelStyle}>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {statCards.map((card, index) => (
+                <motion.div
+                  key={card.label}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.16 + index * 0.05, type: 'spring', stiffness: 260, damping: 22 }}
+                  className="glass-card-apple dagon-compact-card relative overflow-hidden rounded-2xl border p-4"
+                  style={{
+                    borderColor: `${card.accent}44`,
+                    background: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(15,23,42,0.54)',
+                  }}
+                >
+                  <div className="absolute inset-y-0 right-0 w-1/2 pointer-events-none" style={{ background: `linear-gradient(90deg, transparent, ${card.accent}16)` }} />
+                  <div className="relative z-10 flex items-center gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border" style={{ color: card.accent, borderColor: `${card.accent}44`, backgroundColor: `${card.accent}16` }}>
+                      {card.icon}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: helperText }}>{card.label}</p>
+                      <p className="truncate font-display text-xl font-black leading-tight" style={{ color: headingText }}>{card.value}</p>
+                      <p className="truncate text-[11px] font-gameui" style={{ color: helperText }}>{card.detail}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="streak-calendar-panel relative flex flex-1 flex-col overflow-hidden rounded-3xl border p-4 shadow-sm sm:p-5 lg:p-6" style={panelStyle}>
               <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'linear-gradient(180deg, rgba(255,255,255,0.16), transparent 35%)' : 'linear-gradient(180deg, rgba(251,146,60,0.05), transparent 35%)' }} />
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5" style={{ color: accentFire }} />
-                  <h3 className="font-display text-lg font-black uppercase tracking-wide" style={{ color: headingText }}>Calendario de fuego</h3>
+              
+              <div className="relative z-10 mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <CalendarCheck className="h-5 w-5 shrink-0" style={{ color: accentFire }} />
+                  <div className="min-w-0">
+                    <h3 className="font-display text-xl font-black uppercase tracking-wide" style={{ color: headingText }}>Historial mensual</h3>
+                    <p className="text-xs font-gameui" style={{ color: helperText }}>
+                      {nextMilestone.reward} · {stats.racha}/{nextMilestone.days} días
+                    </p>
+                  </div>
                 </div>
                 
-                <div className="flex items-center gap-1 rounded-xl p-1 self-start sm:self-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.54)' : 'rgba(30,41,59,0.5)' }}>
-                  <button
-                    onClick={mesAnterior}
-                    className="p-2 rounded-lg transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5" style={{ color: helperText }} />
+                <div className="flex items-center gap-1 self-start rounded-2xl p-1.5 backdrop-blur-sm lg:self-auto" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.64)' : 'rgba(30,41,59,0.60)' }}>
+                  <button type="button" onClick={mesAnterior} className="rounded-xl p-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5" aria-label="Mes anterior">
+                    <ChevronLeft className="h-5 w-5" style={{ color: helperText }} />
                   </button>
-                  <span className="px-3 sm:px-4 font-display font-black min-w-[136px] sm:min-w-[160px] text-center text-sm sm:text-base" style={{ color: accentFire }}>
+                  <span className="min-w-[136px] px-3 text-center font-display text-sm font-black sm:min-w-[168px] sm:text-base" style={{ color: accentFire }}>
                     {MESES[mesActual.getMonth()]} {mesActual.getFullYear()}
                   </span>
-                  <button
-                    onClick={mesSiguiente}
-                    disabled={!tieneSiguiente()}
-                    className={`p-2 rounded-lg transition-colors ${
-                      tieneSiguiente() ? '' : 'opacity-30 cursor-not-allowed'
-                    }`}
-                  >
-                    <ChevronRight className="w-5 h-5" style={{ color: tieneSiguiente() ? helperText : (isLight ? '#c4b29a' : '#475569') }} />
+                  <button type="button" onClick={mesSiguiente} disabled={!tieneSiguiente()} className={`rounded-xl p-2 transition-colors ${tieneSiguiente() ? 'hover:bg-black/5 dark:hover:bg-white/5' : 'opacity-30 cursor-not-allowed'}`} aria-label="Mes siguiente">
+                    <ChevronRight className="h-5 w-5" style={{ color: tieneSiguiente() ? helperText : (isLight ? '#c4b29a' : '#475569') }} />
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+              <div className="relative z-10 mb-3 grid grid-cols-[1fr_auto] items-center gap-4 rounded-2xl border px-3 py-3" style={{ borderColor: isLight ? 'rgba(198,122,29,0.15)' : 'rgba(255,255,255,0.08)', backgroundColor: isLight ? 'rgba(255,255,255,0.48)' : 'rgba(15,23,42,0.38)' }}>
+                <div className="min-w-0">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: helperText }}>Progreso a meta</span>
+                    <span className="font-display text-xs font-black" style={{ color: accentFire }}>{Math.round(msProgress)}%</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full" style={{ backgroundColor: isLight ? 'rgba(120,53,15,0.10)' : 'rgba(255,255,255,0.08)' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${msProgress}%` }}
+                      transition={{ duration: 1.2, ease: 'easeOut', delay: 0.25 }}
+                      className="h-full"
+                      style={{ background: isLight ? 'linear-gradient(90deg, #ea580c, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #fb923c, #22d3ee)' }}
+                    />
+                  </div>
+                </div>
+                <div className="hidden min-w-[7rem] border-l pl-4 text-right sm:block" style={{ borderColor: isLight ? 'rgba(198,122,29,0.15)' : 'rgba(255,255,255,0.08)' }}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.20em]" style={{ color: helperText }}>Récord</p>
+                  <p className="font-display text-lg font-black" style={{ color: headingText }}>{Math.round(progresoRecord)}%</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1.5 sm:gap-2 mb-2 relative z-10">
                 {DIAS_SEMANA.map((dia) => (
-                  <div key={dia} className="text-center text-[10px] font-black uppercase tracking-widest py-1.5" style={{ color: helperText }}>
+                  <div key={dia} className="py-1 text-center text-[10px] font-black uppercase tracking-widest sm:text-xs" style={{ color: helperText }}>
                     {dia}
                   </div>
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-1.5">
+              <div className="relative z-10 grid flex-1 grid-cols-7 gap-1.5 sm:gap-2">
                 {diasEnMes.map((dia, idx) => {
                   const esDiaDeRacha = dia.fecha && diasConsecutivos.includes(dia.fecha);
                   const esRachaActivo = esDiaDeRacha && dia.tieneActividad;
@@ -701,17 +829,12 @@ export const StreakPage = () => {
                   return (
                     <motion.div
                       key={idx}
-                      initial={{ opacity: 0, scale: 0.3, y: 12 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      transition={{ delay: idx * 0.018, type: 'spring', stiffness: 400, damping: 20 }}
-                      className={`streak-calendar-day aspect-square rounded-xl flex items-center justify-center text-xs sm:text-sm font-display font-black relative overflow-hidden ${
-                        !dia.num ? 'invisible' :
-                        esRachaActivo ? '' :
-                        esDiaDeRacha ? '' :
-                        dia.tieneActividad ? '' :
-                        esHoyActual ? '' :
-                        ''
-                      } ${esRachaActivo ? 'is-streak' : ''} ${esHoyActual ? 'is-today' : ''} ${rachaEnRiesgo && esHoyActual ? 'is-danger' : ''} ${tieneActividadHoy && esHoyActual ? 'is-complete' : ''}`}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.01, duration: 0.3 }}
+                      className={`streak-calendar-day !min-h-[2.25rem] h-9 sm:h-10 lg:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-display font-black relative overflow-hidden transition-transform hover:scale-105 ${
+                        !dia.num ? 'invisible' : ''
+                      } ${esRachaActivo ? 'is-streak' : ''} ${esHoyActual ? 'is-today shadow-xl ring-2 ring-orange-500/50' : ''} ${esHoyActual && rachaEnRiesgo ? 'is-danger' : ''} ${esHoyActual && tieneActividadHoy ? 'is-complete' : ''}`}
                       style={{
                         background: !dia.num
                           ? undefined
@@ -722,15 +845,15 @@ export const StreakPage = () => {
                               : dia.tieneActividad
                                 ? (isLight ? 'linear-gradient(145deg, rgba(234,88,12,0.82), rgba(190,24,93,0.8))' : 'linear-gradient(145deg, rgba(234,88,12,0.75), rgba(190,24,93,0.82))')
                                 : esHoyActual
-                                  ? (isLight ? 'rgba(255,247,237,0.9)' : 'rgba(34,211,238,0.08)')
-                                  : (isLight ? 'rgba(255,255,255,0.56)' : 'rgba(30,41,59,0.42)'),
+                                  ? (isLight ? 'rgba(255,247,237,0.95)' : 'rgba(34,211,238,0.12)')
+                                  : (isLight ? 'rgba(255,255,255,0.6)' : 'rgba(30,41,59,0.5)'),
                         borderColor: !dia.num
                           ? 'transparent'
                           : esRachaActivo
-                            ? 'rgba(255,255,255,0.18)'
+                            ? 'rgba(255,255,255,0.2)'
                             : esHoyActual
-                              ? (isLight ? 'rgba(194,95,26,0.34)' : 'rgba(34,211,238,0.34)')
-                              : (isLight ? 'rgba(198,122,29,0.12)' : 'rgba(255,255,255,0.05)'),
+                              ? (isLight ? 'rgba(194,95,26,0.4)' : 'rgba(34,211,238,0.4)')
+                              : (isLight ? 'rgba(198,122,29,0.15)' : 'rgba(255,255,255,0.08)'),
                         color: !dia.num
                           ? undefined
                           : esRachaActivo || esDiaDeRacha || dia.tieneActividad
@@ -738,211 +861,55 @@ export const StreakPage = () => {
                             : esHoyActual
                               ? (isLight ? '#9a4a16' : '#67e8f9')
                               : (isLight ? '#8b6f4e' : '#64748b'),
-                        boxShadow: esRachaActivo
-                          ? '0 0 22px rgba(249,115,22,0.55)'
-                          : undefined
+                        boxShadow: esRachaActivo ? '0 0 15px rgba(249,115,22,0.4)' : undefined
                       }}
                     >
                       {dia.num}
                       
                       {esRachaActivo && (
-                        <motion.div
-                          className="absolute inset-0 flex items-center justify-center"
-                          initial={{ opacity: 0, scale: 0 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 500, damping: 15, delay: idx * 0.02 }}
-                        >
-                          <motion.div
-                            animate={{
-                              scale: [0.7, 1.15, 0.85, 1],
-                              rotate: [-3, 3, -3],
-                              y: [0, -2, 0]
-                            }}
-                            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                          >
-                            <Flame className="w-4 h-4 text-white fill-current drop-shadow-[0_0_4px_rgba(255,200,50,0.8)]" />
-                          </motion.div>
-                        </motion.div>
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                           <Flame className="h-4 w-4 text-white/80 fill-current drop-shadow-md sm:h-5 sm:w-5" />
+                        </div>
                       )}
                       
                       {dia.tieneActividad && !esRachaActivo && (
-                        <Flame className="w-3 h-3 text-white/50 absolute bottom-1" />
+                        <Flame className="absolute bottom-1 h-3 w-3 text-white/40 pointer-events-none sm:h-3.5 sm:w-3.5" />
                       )}
 
                       {esHoyActual && rachaEnRiesgo && (
-                        <motion.div
-                          className="absolute bottom-1 right-1"
-                          animate={{ scale: [1, 1.18, 1], rotate: [-6, 6, -6] }}
-                          transition={{ duration: 0.7, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                          <ShieldAlert className="h-3.5 w-3.5 text-red-100 drop-shadow" />
-                        </motion.div>
+                        <div className="absolute bottom-0.5 right-0.5">
+                          <ShieldAlert className="h-3.5 w-3.5 text-red-500 drop-shadow" />
+                        </div>
                       )}
 
                       {esHoyActual && tieneActividadHoy && (
-                        <motion.div
-                          className="absolute bottom-1 right-1"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ type: 'spring', stiffness: 420, damping: 14 }}
-                        >
-                          <CalendarCheck className="h-3.5 w-3.5 text-emerald-100 drop-shadow" />
-                        </motion.div>
+                        <div className="absolute bottom-0.5 right-0.5">
+                          <CalendarCheck className="h-3.5 w-3.5 text-emerald-400 drop-shadow" />
+                        </div>
                       )}
                     </motion.div>
                   );
                 })}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t" style={{ borderColor: isLight ? 'rgba(198,122,29,0.12)' : 'rgba(255,255,255,0.05)' }}>
-                <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4" style={{ borderColor: isLight ? 'rgba(198,122,29,0.15)' : 'rgba(255,255,255,0.08)' }}>
+                <div className="flex flex-wrap items-center gap-4 text-xs font-medium sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-gradient-to-br from-yellow-400 via-orange-500 to-rose-600" />
+                    <div className="h-3.5 w-3.5 rounded-full bg-gradient-to-br from-yellow-400 via-orange-500 to-rose-600 shadow-sm" />
                     <span style={{ color: helperText }}>Racha</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-gradient-to-br from-orange-600 to-rose-700" />
+                    <div className="h-3.5 w-3.5 rounded-full bg-gradient-to-br from-orange-600 to-rose-700 shadow-sm" />
                     <span style={{ color: helperText }}>Activo</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded border" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(30,41,59,0.42)', borderColor: isLight ? 'rgba(198,122,29,0.1)' : 'rgba(255,255,255,0.05)' }} />
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-dashed" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.56)' : 'rgba(30,41,59,0.42)', borderColor: helperText }} />
                     <span style={{ color: helperText }}>Sin actividad</span>
                   </div>
                 </div>
-                <span className="text-xs font-bold uppercase tracking-wider" style={{ color: accentFire }}>
-                  {diasActivosEsteMes} días
+                <span className="rounded-xl px-3 py-2 text-xs font-black uppercase tracking-wider sm:text-sm" style={{ color: accentFire, backgroundColor: isLight ? 'rgba(234,88,12,0.1)' : 'rgba(251,146,60,0.1)' }}>
+                  {diasActivosEsteMes} días activos
                 </span>
-              </div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.25, type: 'spring', stiffness: 200, damping: 24 }}
-            className="space-y-3"
-          >
-            <div
-              className={`streak-daily-card streak-daily-card--${streakState} rounded-3xl border p-4 relative overflow-hidden`}
-              style={{
-                ...panelStyle,
-                '--streak-accent': accentFire,
-                '--streak-secondary': isLight ? '#f59e0b' : '#fbbf24',
-              }}
-            >
-              <EmberField amount={shouldReduceMotion ? 2 : 6} color={rachaEnRiesgo ? '#ef4444' : '#fb923c'} areaClassName="opacity-70" />
-              <div className="relative z-10 flex items-start gap-3">
-                <div className="streak-daily-card__seal">
-                  <StatusIcon className="h-6 w-6" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-[0.34em]" style={{ color: rachaEnRiesgo ? (isLight ? '#b91c1c' : '#fca5a5') : accentFire }}>
-                    Misión de hoy
-                  </p>
-                  <h3 className="mt-2 font-display text-lg font-black" style={{ color: headingText }}>
-                    {rachaEnRiesgo ? 'No dejes que se apague' : rachaCelebradaHoy ? 'Día conquistado' : 'Un paso mantiene el fuego'}
-                  </h3>
-                  <p className="mt-2 text-sm leading-relaxed" style={{ color: helperText }}>
-                    {streakStatus.body}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
-              <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'radial-gradient(circle at top right, rgba(217,119,6,0.12), transparent 48%)' : 'radial-gradient(circle at top right, rgba(217,70,239,0.1), transparent 48%)' }} />
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4" style={{ color: isLight ? '#c65f1a' : '#e879f9' }} />
-                <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: isLight ? '#a16207' : '#f0abfc' }}>Próxima meta</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-display font-black text-lg" style={{ color: headingText }}>{nextMilestone.label}</p>
-                <nextMilestone.icon className="w-5 h-5" style={{ color: accentFire }} />
-              </div>
-              <p className="text-sm mb-3" style={{ color: helperText }}>{nextMilestone.reward}</p>
-              
-              <div className="h-2 rounded-full overflow-hidden relative" style={{ backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(30,41,59,0.9)' }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${msProgress}%` }}
-                  transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
-                  className="h-full relative xp-bar-shine"
-                  style={{ background: isLight ? 'linear-gradient(90deg, #ea580c, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #d946ef, #22d3ee)' }}
-                />
-              </div>
-              <p className="text-xs mt-2 text-right" style={{ color: helperText }}>
-                {stats.racha}/{nextMilestone.days} días ({Math.round(msProgress)}%)
-              </p>
-            </div>
-
-            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
-              <div className="absolute inset-0 pointer-events-none" style={{ background: isLight ? 'radial-gradient(circle at bottom left, rgba(234,88,12,0.1), transparent 45%)' : 'radial-gradient(circle at bottom left, rgba(250,204,21,0.08), transparent 45%)' }} />
-              <div className="flex items-center gap-2 mb-3">
-                <Trophy className="w-4 h-4" style={{ color: isLight ? '#b45309' : '#facc15' }} />
-                <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: isLight ? '#a16207' : '#fde047' }}>Récord</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-display text-4xl font-black text-gradient-gold">{stats.mejor_racha}</span>
-                <span className="text-lg font-bold" style={{ color: helperText }}>días</span>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Star className="w-4 h-4" style={{ color: accentFire }} />
-                <p className="text-sm leading-relaxed" style={{ color: helperText }}>
-                  Superar tu récord requiere {Math.max(0, stats.mejor_racha - stats.racha + 1)} día{Math.max(0, stats.mejor_racha - stats.racha + 1) === 1 ? '' : 's'} más.
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border p-4 relative overflow-hidden" style={panelStyle}>
-              <div className="flex items-center gap-2 mb-3">
-                <Flame className="w-4 h-4" style={{ color: accentFire }} />
-                <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: accentWarm }}>Cadena actual</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {Array.from({ length: Math.min(10, Math.max(3, stats.racha || 3)) }).map((_, i) => {
-                  const active = i < Math.min(stats.racha, 10);
-                  return (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 20, scale: 0.5, rotateZ: -10 }}
-                      animate={{ opacity: 1, y: 0, scale: 1, rotateZ: 0 }}
-                      transition={{ delay: 0.07 * i, type: 'spring', stiffness: 350, damping: 18 }}
-                      className="w-8 h-10 rounded-2xl border flex items-center justify-center relative overflow-hidden"
-                      style={{
-                        background: active
-                          ? 'linear-gradient(180deg, #fbbf24 0%, #f97316 58%, #ea580c 100%)'
-                          : (isLight ? 'rgba(255,255,255,0.56)' : 'rgba(30,41,59,0.42)'),
-                        borderColor: active
-                          ? 'rgba(255,255,255,0.16)'
-                          : (isLight ? 'rgba(198,122,29,0.1)' : 'rgba(255,255,255,0.05)'),
-                        boxShadow: active ? '0 12px 25px -14px rgba(249,115,22,0.65)' : undefined
-                      }}
-                    >
-                      {active && (
-                        <motion.div
-                          className="absolute inset-0 rounded-2xl"
-                          animate={{
-                            boxShadow: [
-                              '0 0 8px rgba(251,191,36,0.3)',
-                              '0 0 18px rgba(249,115,22,0.6)',
-                              '0 0 8px rgba(251,191,36,0.3)'
-                            ]
-                          }}
-                          transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.12 }}
-                        />
-                      )}
-                      <motion.div
-                        animate={active ? {
-                          y: [0, -2, 0],
-                          scale: [1, 1.15, 1],
-                        } : {}}
-                        transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.1, ease: 'easeInOut' }}
-                      >
-                        <Flame className="w-4 h-4" style={{ color: active ? '#fff7ed' : helperText }} />
-                      </motion.div>
-                    </motion.div>
-                  );
-                })}
               </div>
             </div>
           </motion.div>

@@ -211,6 +211,30 @@ const buildMetadataCheckpoint = ({ objetivos, erroresComunes, focus }) => ({
   ],
 });
 
+const buildSceneTeachingPoints = (scene = {}, focus = DEFAULT_THEME) => {
+  const hasCode = Boolean(scene.code);
+  const hasInteraction = Boolean(scene.interaction?.options?.length);
+
+  return [
+    {
+      label: 'Idea',
+      text: scene.title || focus.title,
+    },
+    {
+      label: 'Acción',
+      text: hasCode
+        ? 'Lee el SQL por bloques: comando, tabla, condición y resultado.'
+        : 'Convierte la explicación en una pregunta concreta antes de escribir.',
+    },
+    {
+      label: 'Verificación',
+      text: hasInteraction
+        ? 'Responde la mini interacción y usa la retroalimentación como pista.'
+        : 'Predice qué filas cambiarán o aparecerán antes de validar.',
+    },
+  ];
+};
+
 const buildPedagogicalScenes = ({ moduleId, exercises, focus, curated, moduleMetadata }) => {
   const metadata = moduleMetadata || {};
   const objetivos = asArray(metadata.objetivos);
@@ -316,6 +340,7 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
   const isLast = sceneIndex === scenes.length - 1;
   const VisualIcon = resolveVisual(scene?.visual || focus.visual);
   const sceneDuration = scene?.duration || 7600;
+  const teachingPoints = useMemo(() => buildSceneTeachingPoints(scene, focus), [scene, focus]);
 
   useEffect(() => {
     setSceneIndex(0);
@@ -621,6 +646,19 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
                   <p className="mt-2 text-base leading-relaxed text-slate-300 sm:text-lg font-gameui">
                     {scene.body}
                   </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                    {teachingPoints.map((point) => (
+                      <div key={point.label} className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-200">
+                          {point.label}
+                        </p>
+                        <p className="mt-2 text-xs leading-relaxed text-slate-300 font-gameui">
+                          {point.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
 
                   {scene.code && (
                     <pre className="mt-5 overflow-x-auto rounded-2xl border border-cyan-400/20 bg-slate-950 p-4 text-sm text-emerald-300 shadow-[inset_0_0_24px_rgba(34,211,238,0.08)]">

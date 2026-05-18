@@ -307,7 +307,7 @@ export const DashboardPage = () => {
           userLevel={user?.level || 'nivel-0'}
           userXP={userXP}
           userStreak={userStreak}
-          onXPGain={(xp) => updateUserXP(userXP + xp)}
+          onXPGain={(xp) => updateUserXP((currentXP) => (Number(currentXP) || 0) + xp)}
           onClose={() => setShowQuickPractice(false)}
         />
       )}

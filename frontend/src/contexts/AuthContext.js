@@ -106,15 +106,25 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const updateUserXP = useCallback((newXP) => {
+  const updateUserXP = useCallback((newXPOrUpdater) => {
     setUser(prev => {
+      const newXP = typeof newXPOrUpdater === 'function'
+        ? newXPOrUpdater(prev?.xp || 0, prev)
+        : newXPOrUpdater;
       if (!prev || prev.xp === newXP) return prev;
       return { ...prev, xp: newXP };
     });
   }, []);
 
+  const updateUserStreak = useCallback((newStreak) => {
+    setUser(prev => {
+      if (!prev || prev.racha === newStreak) return prev;
+      return { ...prev, racha: newStreak };
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP, updateUserStreak }}>
       {children}
     </AuthContext.Provider>
   );
