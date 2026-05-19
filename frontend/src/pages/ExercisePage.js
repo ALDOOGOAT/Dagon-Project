@@ -12,7 +12,7 @@ import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
-  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronRight, RotateCcw, Film, TrendingUp,
+  Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Film, TrendingUp,
   AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -60,7 +60,8 @@ const motionIn = {
 const buildWordObjects = (words, exerciseId = 'actual') => (
   (words || []).map((word, idx) => ({
     id: `word-${exerciseId}-${idx}-${String(word).replace(/[^\w]+/g, '_')}`,
-    word
+    word,
+    originIndex: idx
   }))
 );
 
@@ -81,6 +82,30 @@ const insertWordAt = (list, word, destinationIndex) => {
   const copy = normalizeWordList(list);
   if (!word?.id || copy.some((item) => item.id === word.id)) return copy;
   copy.splice(destinationIndex, 0, word);
+  return copy;
+};
+
+const returnWordToBank = (list, word) => {
+  const copy = normalizeWordList(list);
+  if (!word?.id || copy.some((item) => item.id === word.id)) return copy;
+
+  return [...copy, word].sort((a, b) => {
+    const left = Number.isFinite(a.originIndex) ? a.originIndex : Number.MAX_SAFE_INTEGER;
+    const right = Number.isFinite(b.originIndex) ? b.originIndex : Number.MAX_SAFE_INTEGER;
+    return left - right;
+  });
+};
+
+const moveWordById = (list, wordId, offset) => {
+  const copy = normalizeWordList(list);
+  const currentIndex = copy.findIndex((item) => item.id === wordId);
+  if (currentIndex === -1) return copy;
+
+  const nextIndex = Math.max(0, Math.min(copy.length - 1, currentIndex + offset));
+  if (nextIndex === currentIndex) return copy;
+
+  const [moved] = copy.splice(currentIndex, 1);
+  copy.splice(nextIndex, 0, moved);
   return copy;
 };
 
@@ -176,6 +201,8 @@ export const ExercisePage = () => {
   const dagonTypingIntervalRef = useRef(null);
   const dagonPostMessageTimeoutRef = useRef(null);
   const dragClickGuardRef = useRef(false);
+  const dragStartedAtRef = useRef(0);
+  const dragEndedAtRef = useRef(0);
   const dropZoneScrollRef = useRef(null);
   const wordBankScrollRef = useRef(null);
   const spokenExerciseRef = useRef(null);
@@ -296,10 +323,34 @@ export const ExercisePage = () => {
     }
   }, [currentExerciseIndex, exercises, levelId, shownSubTopics]);
 
-  const handleDragEnd = (result) => {
+  const armDragClickGuard = () => {
+    dragClickGuardRef.current = true;
+    dragStartedAtRef.current = Date.now();
+    dragEndedAtRef.current = 0;
+  };
+
+  const releaseDragClickGuard = () => {
+    dragEndedAtRef.current = Date.now();
     window.setTimeout(() => {
       dragClickGuardRef.current = false;
     }, 120);
+  };
+
+  const shouldIgnoreTokenClick = () => {
+    if (!dragClickGuardRef.current) return false;
+
+    const now = Date.now();
+    if (dragEndedAtRef.current && now - dragEndedAtRef.current < 160) return true;
+    if (!dragEndedAtRef.current && now - dragStartedAtRef.current > 900) {
+      dragClickGuardRef.current = false;
+      return false;
+    }
+
+    return !dragEndedAtRef.current;
+  };
+
+  const handleDragEnd = (result) => {
+    releaseDragClickGuard();
 
     if (!result.destination) return;
     const { source, destination } = result;
@@ -313,12 +364,12 @@ export const ExercisePage = () => {
       const wordObj = currentAvailableWords[source.index];
       if (!wordObj) return;
       setAvailableWords(currentAvailableWords.filter((_, i) => i !== source.index));
-      setDroppedWords(insertWordAt(currentDroppedWords, wordObj, destination.index));
+      setDroppedWords(insertWordAt(currentDroppedWords, wordObj, currentDroppedWords.length));
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'wordBank') {
       const wordObj = currentDroppedWords[source.index];
       if (!wordObj) return;
       setDroppedWords(currentDroppedWords.filter((_, i) => i !== source.index));
-      setAvailableWords(insertWordAt(currentAvailableWords, wordObj, destination.index));
+      setAvailableWords(returnWordToBank(currentAvailableWords, wordObj));
     } else if (source.droppableId === 'dropZone' && destination.droppableId === 'dropZone') {
       setDroppedWords(reorderWordList(currentDroppedWords, source.index, destination.index));
     } else if (source.droppableId === 'wordBank' && destination.droppableId === 'wordBank') {
@@ -334,7 +385,7 @@ export const ExercisePage = () => {
   };
 
   const handleUseWord = (wordObj) => {
-    if (dragClickGuardRef.current || !wordObj?.id) return;
+    if (shouldIgnoreTokenClick() || !wordObj?.id) return;
     setAvailableWords(prev => {
       const clean = normalizeWordList(prev);
       if (!clean.some(item => item.id === wordObj.id)) return clean;
@@ -349,24 +400,30 @@ export const ExercisePage = () => {
   };
 
   const handleReturnWord = (wordObj) => {
-    if (dragClickGuardRef.current || !wordObj?.id) return;
+    if (shouldIgnoreTokenClick() || !wordObj?.id) return;
     setDroppedWords(prev => {
       const clean = normalizeWordList(prev);
       if (!clean.some(item => item.id === wordObj.id)) return clean;
       return clean.filter(item => item.id !== wordObj.id);
     });
     setAvailableWords(prev => {
-      const clean = normalizeWordList(prev);
-      if (clean.some(item => item.id === wordObj.id)) return clean;
-      return [...clean, wordObj];
+      return returnWordToBank(prev, wordObj);
     });
     sounds.playSelect?.();
+  };
+
+  const handleMovePlacedWord = (wordObj, offset) => {
+    if (!wordObj?.id) return;
+    setDroppedWords(prev => moveWordById(prev, wordObj.id, offset));
+    sounds.playStep?.();
   };
 
   const resetDragDropAnswer = () => {
     const exercise = exercises[currentExerciseIndex];
     if (!exercise || exercise.type !== 'drag_drop') return;
     dragClickGuardRef.current = false;
+    dragStartedAtRef.current = 0;
+    dragEndedAtRef.current = 0;
     setDraggingWord(null);
     setDragDestination(null);
     setDroppedWords([]);
@@ -844,9 +901,14 @@ export const ExercisePage = () => {
   const renderDragChip = (word, provided, snapshot, variant = 'bank', marker = {}) => {
     if (!word) return null;
     const isPlaced = variant === 'placed';
-    const isClone = snapshot.isDragging;
+    const isClone = Boolean(snapshot?.isDragging);
     const showInsertBefore = Boolean(marker.insertBefore && !isClone);
     const showInsertAfter = Boolean(marker.insertAfter && !isClone);
+    const isFirstPlaced = Boolean(marker.isFirst);
+    const isLastPlaced = Boolean(marker.isLast);
+    const stopDragHandlePropagation = (event) => {
+      event.stopPropagation();
+    };
     const chipTone = isPlaced
       ? {
           color: isLight ? '#064e3b' : '#bbf7d0',
@@ -867,22 +929,22 @@ export const ExercisePage = () => {
       <div
         role={!isPlaced ? 'button' : undefined}
         tabIndex={!isPlaced ? 0 : undefined}
-        ref={provided.innerRef}
-        {...provided.draggableProps}
-        {...provided.dragHandleProps}
+        ref={provided?.innerRef}
+        {...(provided?.draggableProps || {})}
+        {...(provided?.dragHandleProps || {})}
         onClick={!isPlaced ? () => handleUseWord(word) : undefined}
         onKeyDown={!isPlaced ? (event) => runTokenActionFromKeyboard(event, () => handleUseWord(word)) : undefined}
         aria-label={isPlaced
-          ? `Bloque colocado ${word.word}. Arrastra para reordenar o usa quitar para regresarlo al banco.`
+          ? `Bloque colocado ${word.word}. Usa los botones para moverlo o quitarlo.`
           : `Agregar bloque ${word.word}`}
-        className={`touch-drag-none relative shrink-0 border-2 px-3 py-2 sm:px-4 rounded-xl font-mono text-sm sm:text-base cursor-grab active:cursor-grabbing min-h-[50px] flex items-center gap-2 transition-all ${
+        className={`touch-drag-none relative max-w-[calc(100vw-4rem)] shrink-0 border-2 px-2.5 py-2 sm:max-w-none sm:px-4 rounded-xl font-mono text-sm sm:text-base min-h-[52px] flex items-center gap-2 transition-all ${
           isPlaced ? 'animate-dnd-placed font-bold' : 'font-semibold'
-        } ${isClone ? `scale-105 z-[9999] border-white ring-4 ${chipTone.ring}` : 'hover:-translate-y-0.5'}`}
+        } ${isPlaced ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} ${isClone ? `scale-105 z-[9999] border-white ring-4 ${chipTone.ring}` : 'hover:-translate-y-0.5'}`}
         style={{
-          ...provided.draggableProps.style,
+          ...(provided?.draggableProps?.style || {}),
           userSelect: 'none',
           WebkitUserSelect: 'none',
-          touchAction: 'none',
+          touchAction: isPlaced ? 'manipulation' : 'none',
           pointerEvents: 'auto',
           color: chipTone.color,
           backgroundColor: chipTone.backgroundColor,
@@ -902,23 +964,57 @@ export const ExercisePage = () => {
             style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary})` }}
           />
         )}
-        <GripHorizontal className="h-3.5 w-3.5 opacity-60" />
-        <span className="whitespace-nowrap">{word.word}</span>
+        {isPlaced
+          ? <ListChecks className="h-3.5 w-3.5 opacity-60" />
+          : <GripHorizontal className="h-3.5 w-3.5 opacity-60" />}
+        <span className="max-w-[42vw] truncate whitespace-nowrap sm:max-w-none">{word.word}</span>
         {isPlaced && !isClone && (
-          <button
-            type="button"
-            onMouseDown={(event) => event.stopPropagation()}
-            onTouchStart={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              handleReturnWord(word);
-            }}
-            className="ml-1 grid h-6 w-6 shrink-0 place-items-center rounded-lg border transition-colors hover:bg-white/20"
-            style={{ borderColor: isLight ? 'rgba(5,150,105,0.28)' : 'rgba(187,247,208,0.22)' }}
-            aria-label={`Quitar bloque ${word.word}`}
-          >
-            <XCircle className="h-3.5 w-3.5" />
-          </button>
+          <div className="ml-1 flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onMouseDown={stopDragHandlePropagation}
+              onTouchStart={stopDragHandlePropagation}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleMovePlacedWord(word, -1);
+              }}
+              disabled={isFirstPlaced}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-35"
+              style={{ borderColor: isLight ? 'rgba(5,150,105,0.28)' : 'rgba(187,247,208,0.22)' }}
+              aria-label={`Mover bloque ${word.word} a la izquierda`}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onMouseDown={stopDragHandlePropagation}
+              onTouchStart={stopDragHandlePropagation}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleMovePlacedWord(word, 1);
+              }}
+              disabled={isLastPlaced}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-35"
+              style={{ borderColor: isLight ? 'rgba(5,150,105,0.28)' : 'rgba(187,247,208,0.22)' }}
+              aria-label={`Mover bloque ${word.word} a la derecha`}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onMouseDown={stopDragHandlePropagation}
+              onTouchStart={stopDragHandlePropagation}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleReturnWord(word);
+              }}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border transition-colors hover:bg-white/20"
+              style={{ borderColor: isLight ? 'rgba(5,150,105,0.28)' : 'rgba(187,247,208,0.22)' }}
+              aria-label={`Quitar bloque ${word.word}`}
+            >
+              <XCircle className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
       </div>
     );
@@ -1758,7 +1854,7 @@ export const ExercisePage = () => {
                 ) : isDragDrop ? (
                   <DragDropContext
                     onDragStart={(start) => {
-                      dragClickGuardRef.current = true;
+                      armDragClickGuard();
                       setDragDestination(null);
                       const sourceList = start.source.droppableId === 'dropZone' ? safeDroppedWords : safeAvailableWords;
                       setDraggingWord(sourceList[start.source.index] || null);
@@ -1825,14 +1921,13 @@ export const ExercisePage = () => {
                           <div className="mb-3 flex items-center gap-2 rounded-2xl border px-3 py-2" style={{ borderColor: isLight ? 'rgba(16,185,129,0.20)' : 'rgba(52,211,153,0.18)', backgroundColor: isLight ? 'rgba(236,253,245,0.74)' : 'rgba(6,78,59,0.16)' }}>
                             <GripHorizontal className="h-4 w-4" style={{ color: isLight ? '#047857' : '#86efac' }} />
                             <p className="text-xs font-gameui leading-snug" style={{ color: mutedColor }}>
-                              Moviendo <span className="font-mono font-bold" style={{ color: headingColor }}>{draggingWord.word}</span>. Usa los botones Inicio/Final o arrastra hacia los bordes de la cinta.
+                              Moviendo <span className="font-mono font-bold" style={{ color: headingColor }}>{draggingWord.word}</span> desde el banco. Al soltarlo, usa las flechas del bloque para ajustar su posición.
                             </p>
                           </div>
                         )}
                         <Droppable
                           droppableId="dropZone"
                           direction="horizontal"
-                          renderClone={(provided, snapshot, rubric) => renderDragChip(safeDroppedWords[rubric.source.index], provided, snapshot, 'placed')}
                         >
                           {(provided, snapshot) => (
                             <div
@@ -1841,7 +1936,7 @@ export const ExercisePage = () => {
                                 dropZoneScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[142px] rounded-2xl border-2 border-dashed p-4 flex flex-wrap content-start gap-y-3 gap-x-2 transition-all relative ${
+                              className={`min-h-[132px] sm:min-h-[142px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all relative ${
                                 snapshot.isDraggingOver ? 'border-emerald-400 animate-dnd-glow' : ''
                               }`}
                               style={{
@@ -1852,7 +1947,7 @@ export const ExercisePage = () => {
                               }}
                             >
                               {safeDroppedWords.length === 0 && (
-                                <div className="grid min-h-[160px] w-full place-items-center rounded-xl border border-dashed" style={{ borderColor: isLight ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.08)', color: mutedColor }}>
+                                <div className="grid min-h-[120px] sm:min-h-[160px] w-full place-items-center rounded-xl border border-dashed" style={{ borderColor: isLight ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.08)', color: mutedColor }}>
                                   <div className="text-center">
                                     <Sparkles className="mx-auto mb-2 h-5 w-5" style={{ color: colors.primary }} />
                                     <p className="font-display text-sm font-black" style={{ color: headingColor }}>Coloca aquí la consulta</p>
@@ -1861,12 +1956,14 @@ export const ExercisePage = () => {
                                 </div>
                               )}
                               {safeDroppedWords.map((w, i) => (
-                                <Draggable key={w.id} draggableId={w.id} index={i}>
-                                  {(prov, snap) => renderDragChip(w, prov, snap, 'placed', {
-                                    insertBefore: dragDestination?.droppableId === 'dropZone' && dragDestination.index === i,
-                                    insertAfter: dragDestination?.droppableId === 'dropZone' && dragDestination.index === safeDroppedWords.length && i === safeDroppedWords.length - 1,
+                                <div key={w.id} className="shrink-0">
+                                  {renderDragChip(w, null, { isDragging: false }, 'placed', {
+                                    insertBefore: false,
+                                    insertAfter: dragDestination?.droppableId === 'dropZone' && i === safeDroppedWords.length - 1,
+                                    isFirst: i === 0,
+                                    isLast: i === safeDroppedWords.length - 1,
                                   })}
-                                </Draggable>
+                                </div>
                               ))}
                               {provided.placeholder}
                             </div>
@@ -1926,7 +2023,7 @@ export const ExercisePage = () => {
                                 wordBankScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[142px] rounded-2xl border-2 p-4 flex flex-wrap content-start gap-y-3 gap-x-2 transition-all duration-300 ${
+                              className={`min-h-[128px] sm:min-h-[142px] rounded-2xl border-2 p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all duration-300 ${
                                 snapshot.isDraggingOver ? 'shadow-[inset_0_0_24px_rgba(34,211,238,0.14)]' : ''
                               }`}
                               style={{
