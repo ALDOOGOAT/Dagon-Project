@@ -13,12 +13,12 @@ import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Film, TrendingUp,
-  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2
+  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, BadgeCheck, Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import apiClient from '../services/apiClient';
+import apiClient, { cachedGet } from '../services/apiClient';
 import { formatAIMessage, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
 import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
 import { QueryResultShowcase } from '../components/QueryResultShowcase';
@@ -205,6 +205,7 @@ export const ExercisePage = () => {
   const dragEndedAtRef = useRef(0);
   const dropZoneScrollRef = useRef(null);
   const wordBankScrollRef = useRef(null);
+  const resultPanelRef = useRef(null);
   const spokenExerciseRef = useRef(null);
   const lastTypingSoundRef = useRef(0);
 
@@ -255,7 +256,7 @@ export const ExercisePage = () => {
       setShowTheory(false);
 
       try {
-        const response = await apiClient.get(`/api/exercises/${levelId}`);
+        const response = await cachedGet(`/api/exercises/${levelId}`, {}, { ttl: 30_000 });
         if (!isActive) return;
 
         const data = response.data;
@@ -640,6 +641,30 @@ export const ExercisePage = () => {
     return ((currentExerciseIndex + (executionResult?.success ? 1 : 0)) / exercises.length) * 100;
   }, [currentExerciseIndex, exercises.length, executionResult]);
 
+  useEffect(() => {
+    if (!(executionResult?.success || executionResult?.isWarning) || !resultPanelRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      resultPanelRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      resultPanelRef.current?.focus({ preventScroll: true });
+    }, 180);
+
+    return () => window.clearTimeout(timeout);
+  }, [executionResult]);
+
+  useEffect(() => {
+    if (!executionResult?.success || currentExerciseIndex < exercises.length - 1) return;
+    const nextLevelId = Number(levelId) + 1;
+    if (!Number.isFinite(nextLevelId)) return;
+
+    cachedGet(`/api/exercises/${nextLevelId}`, {}, { ttl: 30_000 }).catch(() => {
+      // Prefetch silencioso: si no existe el siguiente modulo, no afecta la experiencia actual.
+    });
+  }, [currentExerciseIndex, executionResult?.success, exercises.length, levelId]);
+
   const handleResetSandbox = async () => {
     const confirmed = window.confirm(
       '🔄 ¿RESTABLECER BASE DE DATOS?\n\n' +
@@ -722,19 +747,32 @@ export const ExercisePage = () => {
   useEffect(() => {
     if (!exerciseForSpeech || loading || showModuleCinematic || showTheory) return;
     const speechKey = `${exerciseForSpeech.id || currentExerciseIndex}-${exerciseForSpeech.orden || currentExerciseIndex}`;
-    if (spokenExerciseRef.current === speechKey) return;
+
+    // We remove the strict return if spokenExerciseRef.current === speechKey,
+    // to ensure it always plays on visit. We just update it to avoid rapid repeats.
     spokenExerciseRef.current = speechKey;
     if (lastAlertedExerciseKey !== speechKey) {
       setLastAlertedExerciseKey(speechKey);
       sounds.playMissionStart?.();
     }
 
+    // Always attempt to speak TTS when loading a new screen/exercise
     const timeout = window.setTimeout(() => {
-      readExerciseStatement(false);
+      // Force read by bypassing the isReadingStatement check temporarily
+      // or trusting that the cleanup in other places stopped previous readings
+      sounds.stopSpeech?.();
+      const text = buildExerciseSpeech(exerciseForSpeech, currentExerciseIndex);
+      sounds.speakTTS?.(text, {
+        rate: 0.96,
+        pitch: 1.01,
+        onStart: () => setIsReadingStatement(true),
+        onEnd: () => setIsReadingStatement(false),
+        onError: () => setIsReadingStatement(false),
+      });
     }, 650);
 
     return () => window.clearTimeout(timeout);
-  }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, readExerciseStatement, showModuleCinematic, showTheory]);
+  }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, showModuleCinematic, showTheory]);
 
   if (loading || !isMounted) {
     return (
@@ -764,6 +802,8 @@ export const ExercisePage = () => {
   }
 
   const exercise = exercises[currentExerciseIndex];
+  const isDocenteMode = user?.idRol === 2 || user?.idRol === 3;
+  const teacherExpectedQuery = isDocenteMode ? exercise.expectedQuery : null;
   const isDragDrop = exercise.type === 'drag_drop';
   const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
   const learningFocus = inferLearningFocus(exercise, levelId);
@@ -1226,6 +1266,46 @@ export const ExercisePage = () => {
                         <span className="text-xs font-gameui font-bold" style={{ color: mutedColor }}>{exercise.xpReward || 0} XP al completar</span>
                       </div>
                     </div>
+
+                    {teacherExpectedQuery && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-4 overflow-hidden rounded-3xl border"
+                        style={{
+                          borderColor: isLight ? 'rgba(124,58,237,0.28)' : 'rgba(196,181,253,0.26)',
+                          background: isLight
+                            ? 'linear-gradient(135deg, rgba(245,243,255,0.90), rgba(255,255,255,0.74))'
+                            : 'linear-gradient(135deg, rgba(46,16,101,0.32), rgba(15,23,42,0.52))'
+                        }}
+                      >
+                        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-2 text-[10px] font-display font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#6d28d9' : '#c4b5fd' }}>
+                              <BadgeCheck className="h-4 w-4" /> Vista docente
+                            </p>
+                            <p className="mt-1 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                              Respuesta esperada para guiar revisión, explicar variantes y preparar retroalimentación sin afectar el intento del alumno.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(teacherExpectedQuery);
+                              toast.success('Query esperada copiada');
+                            }}
+                            className="min-h-10 shrink-0 rounded-xl font-display font-black"
+                            style={{ borderColor: isLight ? 'rgba(124,58,237,0.30)' : 'rgba(196,181,253,0.28)', color: isLight ? '#5b21b6' : '#ddd6fe' }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copiar
+                          </Button>
+                        </div>
+                        <pre className="mx-4 mb-4 max-h-44 overflow-auto rounded-2xl border p-4 font-mono text-xs leading-relaxed" style={{ borderColor: isLight ? 'rgba(124,58,237,0.18)' : 'rgba(196,181,253,0.16)', backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(2,6,23,0.72)', color: isLight ? '#312e81' : '#e0e7ff' }}>
+                          {teacherExpectedQuery}
+                        </pre>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
@@ -2086,11 +2166,14 @@ export const ExercisePage = () => {
             <AnimatePresence>
               {executionResult && (
                 <motion.div
+                  ref={resultPanelRef}
+                  tabIndex={-1}
+                  aria-live={executionResult.success || executionResult.isWarning ? 'polite' : undefined}
                   initial={{ opacity: 0, y: 18, scale: 0.985 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.99 }}
                   transition={{ duration: 0.32, ease: 'easeOut' }}
-                  className="glass-card-apple rounded-3xl border overflow-hidden relative"
+                  className="glass-card-apple rounded-3xl border overflow-hidden relative scroll-mt-24 focus:outline-none"
                   style={{
                     borderColor: resultTone.border,
                     boxShadow: `0 24px 70px -42px ${resultTone.accent}55`

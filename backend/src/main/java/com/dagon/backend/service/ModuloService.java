@@ -20,6 +20,8 @@ public class ModuloService {
 
     public List<Map<String, Object>> obtenerModulosConEstado(String identificadorUsuario) {
 
+        boolean accesoDocente = usuarioEsDocenteOAdmin(identificadorUsuario);
+
         String sqlXp = "SELECT xp_total FROM lms_core.v_ranking_alumnos WHERE email = ? OR id_usuario::varchar = ?";
         Integer xpUsuario = 0;
         try {
@@ -50,8 +52,9 @@ public class ModuloService {
                 if (mod.get("id_curso").equals(idCursoActual)) {
                     Map<String, Object> moduloConEstado = new HashMap<>(mod);
                     Integer xpReq = (Integer) mod.get("xp_requerida");
-                    boolean bloqueado = xpUsuario < (xpReq != null ? xpReq : 0);
+                    boolean bloqueado = !accesoDocente && xpUsuario < (xpReq != null ? xpReq : 0);
                     moduloConEstado.put("bloqueado", bloqueado);
+                    moduloConEstado.put("desbloqueado_por_rol", accesoDocente);
                     modulosDelCurso.add(moduloConEstado);
                 }
             }
@@ -60,6 +63,21 @@ public class ModuloService {
         }
 
         return resultadoEstructurado;
+    }
+
+    private boolean usuarioEsDocenteOAdmin(String identificadorUsuario) {
+        if (identificadorUsuario == null || identificadorUsuario.isBlank()) return false;
+        try {
+            Integer idRol = jdbcTemplate.queryForObject(
+                    "SELECT id_rol FROM lms_core.usuarios WHERE email = ? OR id_usuario::varchar = ?",
+                    Integer.class,
+                    identificadorUsuario,
+                    identificadorUsuario
+            );
+            return idRol != null && (idRol == 2 || idRol == 3);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public List<Integer> obtenerModulosCompletados(String identificadorUsuario) {

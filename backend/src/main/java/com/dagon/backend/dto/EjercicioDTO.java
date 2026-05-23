@@ -16,6 +16,10 @@ public class EjercicioDTO {
     private Integer xpReward;
     private Integer timeLimitSeconds;
     private String concept;
+    private String expectedQuery;
+    private String visibilidad;
+    private Long idGrupo;
+    private Boolean recursoDocente;
     private List<String> wordBank;
     private Map<String, Object> pedagogia;
     // --- GETTERS Y SETTERS ---
@@ -54,6 +58,18 @@ public class EjercicioDTO {
 
     public String getConcept() { return concept; }
     public void setConcept(String concept) { this.concept = concept; }
+
+    public String getExpectedQuery() { return expectedQuery; }
+    public void setExpectedQuery(String expectedQuery) { this.expectedQuery = expectedQuery; }
+
+    public String getVisibilidad() { return visibilidad; }
+    public void setVisibilidad(String visibilidad) { this.visibilidad = visibilidad; }
+
+    public Long getIdGrupo() { return idGrupo; }
+    public void setIdGrupo(Long idGrupo) { this.idGrupo = idGrupo; }
+
+    public Boolean getRecursoDocente() { return recursoDocente; }
+    public void setRecursoDocente(Boolean recursoDocente) { this.recursoDocente = recursoDocente; }
 
     public List<String> getWordBank() { return wordBank; }
     public void setWordBank(List<String> wordBank) { this.wordBank = wordBank; }

@@ -1,7 +1,28 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import apiClient from '../services/apiClient';
+import apiClient, { cachedGet, invalidateApiCache } from '../services/apiClient';
 
 const AuthContext = createContext(null);
+
+const persistUser = (nextUser) => {
+  if (nextUser) {
+    localStorage.setItem('dagon_user_cache', JSON.stringify(nextUser));
+  }
+};
+
+const mergeUserProfile = (profile, previous) => {
+  if (!profile) return previous || null;
+  const merged = { ...(previous || {}), ...profile };
+
+  // El perfil publico no incluye metricas calculadas; no borres XP/racha frescas del dashboard.
+  if (profile.xp == null && previous?.xp != null) {
+    merged.xp = previous.xp;
+  }
+  if (profile.racha == null && previous?.racha != null) {
+    merged.racha = previous.racha;
+  }
+
+  return merged;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -37,9 +58,22 @@ export const AuthProvider = ({ children }) => {
           const payload = JSON.parse(jsonPayload);
           const userId = payload.sub; 
 
-          const response = await apiClient.get(`/api/usuarios/${userId}/profile`);
-          
-          setUser(response.data); 
+          const cachedUserRaw = localStorage.getItem('dagon_user_cache');
+          if (cachedUserRaw) {
+            const cachedUser = JSON.parse(cachedUserRaw);
+            if (String(cachedUser?.idUsuario) === String(userId)) {
+              setUser(cachedUser);
+              setLoading(false);
+            }
+          }
+
+          const response = await cachedGet(`/api/usuarios/${userId}/profile`, {}, { ttl: 30_000 });
+
+          setUser(prev => {
+            const merged = mergeUserProfile(response.data, prev);
+            persistUser(merged);
+            return merged;
+          });
           
         } catch {
           logout();
@@ -65,6 +99,7 @@ export const AuthProvider = ({ children }) => {
       const { token: newToken, user: newUser } = response.data;
       
       localStorage.setItem('token', newToken);
+      persistUser(newUser);
       setToken(newToken);
       setUser(newUser);
 
@@ -74,20 +109,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password, rol = 'alumno') => {
+  const register = async (name, email, password, rol = 'alumno', options = {}) => {
     try {
       const response = await apiClient.post('/api/usuarios/registro', {
         nombre: name,
         email: email,
         passwordHash: password,
-        rol: rol
+        rol: rol,
+        codigoGrupo: options.codigoGrupo || undefined,
+        codigoDocente: options.codigoDocente || undefined
       });
 
       const { token: newToken, user: newUser } = response.data;
 
       localStorage.setItem('token', newToken);
+      persistUser(newUser);
       localStorage.setItem('dagon_first_login', 'true');
       localStorage.setItem('dagon_tutorial_pending', 'true');
+      if (rol === 'docente') {
+        localStorage.setItem('dagon_docente_tutorial_pending', 'true');
+      }
       localStorage.removeItem('dagon_tutorial_completed');
       setToken(newToken);
       setUser(newUser);
@@ -100,8 +141,10 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('dagon_user_cache');
     localStorage.removeItem('userAvatar');
     localStorage.removeItem('userPalette');
+    invalidateApiCache();
     setToken(null);
     setUser(null);
   };
@@ -112,14 +155,18 @@ export const AuthProvider = ({ children }) => {
         ? newXPOrUpdater(prev?.xp || 0, prev)
         : newXPOrUpdater;
       if (!prev || prev.xp === newXP) return prev;
-      return { ...prev, xp: newXP };
+      const updated = { ...prev, xp: newXP };
+      persistUser(updated);
+      return updated;
     });
   }, []);
 
   const updateUserStreak = useCallback((newStreak) => {
     setUser(prev => {
       if (!prev || prev.racha === newStreak) return prev;
-      return { ...prev, racha: newStreak };
+      const updated = { ...prev, racha: newStreak };
+      persistUser(updated);
+      return updated;
     });
   }, []);
 

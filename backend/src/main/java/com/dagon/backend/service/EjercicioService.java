@@ -51,19 +51,59 @@ public class EjercicioService {
     private String sandboxPassword;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
+        return obtenerTodosLosNiveles(null);
+    }
+
+    public List<NivelDTO> obtenerTodosLosNiveles(String usuarioId) {
+        Integer xpUsuario = obtenerXpUsuario(usuarioId);
+        boolean accesoDocente = usuarioEsDocenteOAdmin(usuarioId);
+
+        String sql = "SELECT id_modulo, titulo, descripcion, xp_requerida " +
+                "FROM lms_core.modulos ORDER BY id_curso ASC, orden ASC, id_modulo ASC";
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
         List<NivelDTO> modulos = new ArrayList<>();
-        NivelDTO modulo1 = new NivelDTO();
-        modulo1.setId(1);
-        modulo1.setName("Módulo 1: Selección Básica");
-        modulo1.setDescription("Aprende a consultar datos con SELECT y filtros WHERE.");
-        modulo1.setLocked(false);
-        modulos.add(modulo1);
+
+        for (Map<String, Object> row : rows) {
+            NivelDTO modulo = new NivelDTO();
+            modulo.setId(obtenerEntero(row.get("id_modulo"), null));
+            modulo.setName(Objects.toString(row.get("titulo"), "Modulo SQL"));
+            modulo.setDescription(Objects.toString(row.get("descripcion"), ""));
+
+            int xpRequerida = obtenerEntero(row.get("xp_requerida"), 0);
+            modulo.setLocked(!accesoDocente && xpUsuario < xpRequerida);
+            modulos.add(modulo);
+        }
+
         return modulos;
     }
 
+    private Integer obtenerXpUsuario(String usuarioId) {
+        if (usuarioId == null || usuarioId.isBlank()) return 0;
+        try {
+            Number xp = jdbcTemplate.queryForObject(
+                    "SELECT xp_total FROM lms_core.v_ranking_alumnos WHERE id_usuario::varchar = ? OR email = ?",
+                    Number.class,
+                    usuarioId,
+                    usuarioId
+            );
+            return xp != null ? xp.intValue() : 0;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private boolean usuarioEsDocenteOAdmin(String usuarioId) {
+        Integer rol = obtenerRolUsuario(usuarioId);
+        return rol != null && (rol == 2 || rol == 3);
+    }
     public List<EjercicioDTO> obtenerEjerciciosPorModulo(Integer moduloId) {
-        List<EjercicioPractico> crudos = repository.findByIdModuloOrderByOrdenAsc(moduloId);
+        return obtenerEjerciciosPorModulo(moduloId, null);
+    }
+    public List<EjercicioDTO> obtenerEjerciciosPorModulo(Integer moduloId, String usuarioId) {
+        List<EjercicioPractico> crudos = repository.findDisponiblesPorModulo(moduloId, usuarioId);
         List<EjercicioDTO> dtos = new ArrayList<>();
+        boolean mostrarRespuestaEsperada = usuarioPuedeVerSoluciones(usuarioId);
 
         int contador = 1;
         for(EjercicioPractico ej : crudos) {
@@ -77,6 +117,12 @@ public class EjercicioService {
             dto.setXpReward("RAPIDA".equals(ej.getTipoMision()) ? PRACTICA_RAPIDA_XP : dto.getDifficulty() * 10);
             dto.setTimeLimitSeconds(calcularTiempoPractica(ej.getQueryMaestra(), dto.getDifficulty()));
             dto.setConcept(construirConceptoPractica(ej.getQueryMaestra(), ej.getIdModulo()));
+            dto.setVisibilidad(ej.getVisibilidad() != null ? ej.getVisibilidad() : "GLOBAL");
+            dto.setIdGrupo(ej.getIdGrupo());
+            dto.setRecursoDocente(!"GLOBAL".equalsIgnoreCase(dto.getVisibilidad()));
+            if (mostrarRespuestaEsperada) {
+                dto.setExpectedQuery(ej.getQueryMaestra());
+            }
 
             String formato = ej.getFormato();
 
@@ -133,6 +179,56 @@ public class EjercicioService {
             contador++;
         }
         return dtos;
+    }
+
+    private boolean usuarioPuedeVerSoluciones(String usuarioId) {
+        Integer rol = obtenerRolUsuario(usuarioId);
+        return rol != null && (rol == 2 || rol == 3);
+    }
+
+    private boolean usuarioEsAdmin(String usuarioId) {
+        Integer rol = obtenerRolUsuario(usuarioId);
+        return rol != null && rol == 3;
+    }
+
+    private Integer obtenerRolUsuario(String usuarioId) {
+        if (usuarioId == null || usuarioId.isBlank()) return null;
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT id_rol FROM lms_core.usuarios " +
+                            "WHERE (id_usuario::varchar = ? OR LOWER(email) = LOWER(?)) AND activo = true",
+                    Integer.class,
+                    usuarioId,
+                    usuarioId
+            );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean usuarioPuedeAccederEjercicio(EjercicioPractico ejercicio, String usuarioId) {
+        if (ejercicio == null) return false;
+        String visibilidad = ejercicio.getVisibilidad() != null ? ejercicio.getVisibilidad().trim().toUpperCase(Locale.ROOT) : "GLOBAL";
+        if ("GLOBAL".equals(visibilidad)) return true;
+        if (usuarioId == null || usuarioId.isBlank()) return false;
+        if (usuarioEsAdmin(usuarioId)) return true;
+
+        if (ejercicio.getCreadoPor() != null && ejercicio.getCreadoPor().toString().equals(usuarioId)) {
+            return true;
+        }
+
+        if ("GRUPO".equals(visibilidad) && ejercicio.getIdGrupo() != null) {
+            Integer total = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM lms_core.grupo_alumnos " +
+                            "WHERE id_grupo = ? AND id_alumno = ?::uuid AND activo = true",
+                    Integer.class,
+                    ejercicio.getIdGrupo(),
+                    usuarioId
+            );
+            return total != null && total > 0;
+        }
+
+        return false;
     }
 
     public Map<String, Object> obtenerMetadataModulo(Integer moduloId) {
@@ -544,6 +640,11 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
 
     // --- 1. INTERCEPCIÓN ESTRATÉGICA (Antes del Escudo) ---
     EjercicioPractico ejercicioActual = repository.findById(ejercicioId).orElse(null);
+    if (ejercicioActual != null && !usuarioPuedeAccederEjercicio(ejercicioActual, usuarioId)) {
+        respuesta.put("success", false);
+        respuesta.put("message", "No tienes permiso para resolver este ejercicio.");
+        return respuesta;
+    }
 
     // Verificamos si este ejercicio tiene el pase VIP (Validación Textual)
     if (ejercicioActual != null && ejercicioActual.getConfiguracionExtra() != null) {
@@ -591,6 +692,12 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         if (ejercicio == null) {
             respuesta.put("success", false);
             respuesta.put("message", "Error: Ejercicio no encontrado.");
+            return respuesta;
+        }
+
+        if (!usuarioPuedeAccederEjercicio(ejercicio, usuarioId)) {
+            respuesta.put("success", false);
+            respuesta.put("message", "No tienes permiso para resolver este ejercicio.");
             return respuesta;
         }
 

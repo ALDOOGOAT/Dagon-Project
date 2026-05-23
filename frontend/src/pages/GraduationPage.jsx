@@ -207,7 +207,7 @@ export const GraduationPage = () => {
   }
 
   return (
-    <div className="min-h-screen abyss-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen abyss-bg flex flex-col items-center justify-center py-12 px-4 relative overflow-x-hidden overflow-y-auto">
       {showConfetti && <Confetti />}
 
       <AnimatePresence mode="wait">
@@ -346,21 +346,21 @@ export const GraduationPage = () => {
             </motion.div>
 
             <motion.div
-              className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
+              className="mt-8 flex flex-col sm:flex-row flex-wrap gap-4 justify-center items-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
               <Button
                 onClick={handleShareLinkedIn}
-                className="bg-[#0077b5] hover:bg-[#005885] text-white font-display font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2"
+                className="bg-[#0077b5] hover:bg-[#005885] text-white font-display font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Linkedin className="w-5 h-5" />
                 Compartir en LinkedIn
               </Button>
               <Button
                 onClick={handleDownload}
-                className="bg-slate-700 hover:bg-slate-600 text-white font-display font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2"
+                className="bg-slate-700 hover:bg-slate-600 text-white font-display font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 w-full sm:w-auto"
               >
                 <Download className="w-5 h-5" />
                 Descargar
@@ -371,14 +371,14 @@ export const GraduationPage = () => {
       </AnimatePresence>
 
       <motion.div
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10"
+        className="mt-8 mb-4 z-10 w-full flex justify-center px-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2 }}
       >
         <Button
           onClick={handleGoDashboard}
-          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-bold py-3 px-8 rounded-xl flex items-center gap-2"
+          className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-display font-bold py-3 px-8 rounded-xl flex items-center justify-center gap-2 w-full sm:w-auto max-w-md"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver al Dashboard

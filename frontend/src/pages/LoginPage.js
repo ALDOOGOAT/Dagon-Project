@@ -8,7 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Zap, Trophy, Flame, Database, Mail, Lock, User, BookOpen, GraduationCap } from 'lucide-react';
+import { Sparkles, Zap, Trophy, Flame, Database, Mail, Lock, User, BookOpen, GraduationCap, KeyRound, Users } from 'lucide-react';
 import { sounds } from '../lib/SoundEngine';
 
 const TAGLINES = [
@@ -30,6 +30,8 @@ export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState('alumno');
+  const [codigoGrupo, setCodigoGrupo] = useState('');
+  const [codigoDocente, setCodigoDocente] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
   const [taglineIdx, setTaglineIdx] = useState(0);
@@ -73,7 +75,13 @@ export const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = isLogin ? await login(email, password) : await register(name, email, password, rol);
+      const rolBackend = rol === 'docente' ? 'docente' : 'alumno';
+      const result = isLogin
+        ? await login(email, password)
+        : await register(name, email, password, rolBackend, {
+            codigoGrupo: rol === 'alumno_unach' ? codigoGrupo.trim() : '',
+            codigoDocente: rol === 'docente' ? codigoDocente.trim() : ''
+          });
       if (result.success) {
         sounds.playSuccess();
         toast.success('¡Bienvenido a las profundidades del conocimiento!');
@@ -244,16 +252,17 @@ export const LoginPage = () => {
                       <Label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
                         <GraduationCap className="w-3 h-3" style={{ color: colors.primary }} /> Tipo de cuenta
                       </Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {[
-                          { value: 'alumno', label: 'Alumno', icon: <User className="w-4 h-4" /> },
+                          { value: 'alumno', label: 'Libre', icon: <User className="w-4 h-4" /> },
+                          { value: 'alumno_unach', label: 'Grupo', icon: <Users className="w-4 h-4" /> },
                           { value: 'docente', label: 'Docente', icon: <BookOpen className="w-4 h-4" /> },
                         ].map(opt => (
                           <button
                             key={opt.value}
                             type="button"
                             onClick={() => setRol(opt.value)}
-                            className="flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-bold transition-all"
+                            className="flex items-center justify-center gap-2 min-h-11 rounded-xl border px-3 text-sm font-bold transition-all"
                             style={{
                               borderColor: rol === opt.value ? colors.primary : colors.border,
                               backgroundColor: rol === opt.value
@@ -267,6 +276,52 @@ export const LoginPage = () => {
                           </button>
                         ))}
                       </div>
+                      <AnimatePresence initial={false}>
+                        {rol === 'alumno_unach' && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -6, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            exit={{ opacity: 0, y: -6, height: 0 }}
+                            className="overflow-hidden pt-2"
+                          >
+                            <Label htmlFor="codigo-grupo" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                              <KeyRound className="w-3 h-3" style={{ color: colors.primary }} /> Código de grupo
+                            </Label>
+                            <Input
+                              id="codigo-grupo"
+                              type="text"
+                              placeholder="Ej. A1B2C3D4"
+                              value={codigoGrupo}
+                              onChange={(e) => setCodigoGrupo(e.target.value.toUpperCase())}
+                              className="login-input mt-2 h-12 rounded-xl uppercase"
+                              style={{ backgroundColor: `${colors.surface}b3`, borderColor: colors.border, color: colors.text }}
+                              required={rol === 'alumno_unach'}
+                            />
+                          </motion.div>
+                        )}
+                        {rol === 'docente' && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -6, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            exit={{ opacity: 0, y: -6, height: 0 }}
+                            className="overflow-hidden pt-2"
+                          >
+                            <Label htmlFor="codigo-docente" className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                              <KeyRound className="w-3 h-3" style={{ color: colors.primary }} /> Clave docente
+                            </Label>
+                            <Input
+                              id="codigo-docente"
+                              type="password"
+                              placeholder="Clave institucional"
+                              value={codigoDocente}
+                              onChange={(e) => setCodigoDocente(e.target.value)}
+                              className="login-input mt-2 h-12 rounded-xl"
+                              style={{ backgroundColor: `${colors.surface}b3`, borderColor: colors.border, color: colors.text }}
+                              required={rol === 'docente'}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </motion.div>
                 )}

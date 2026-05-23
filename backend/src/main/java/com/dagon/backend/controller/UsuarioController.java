@@ -49,8 +49,16 @@ public class UsuarioController {
             nuevoUsuario.setEmail((String) body.get("email"));
             nuevoUsuario.setPasswordHash((String) body.get("passwordHash"));
 
-            // El registro publico siempre crea alumnos. Los roles elevados deben asignarse por un flujo docente/admin.
-            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, "alumno");
+            String rolSolicitado = body.get("rol") != null ? body.get("rol").toString() : "alumno";
+            String codigoDocente = body.get("codigoDocente") != null ? body.get("codigoDocente").toString() : null;
+            String codigoGrupo = body.get("codigoGrupo") != null ? body.get("codigoGrupo").toString() : null;
+
+            Usuario usuarioGuardado = usuarioService.registrarUsuario(
+                    nuevoUsuario,
+                    rolSolicitado,
+                    codigoDocente,
+                    codigoGrupo
+            );
 
             String token = jwtUtil.generarToken(usuarioGuardado.getIdUsuario().toString());
 

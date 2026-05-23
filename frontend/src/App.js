@@ -1,25 +1,26 @@
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { sounds } from './lib/SoundEngine';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { ExercisePage } from './pages/ExercisePage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { ProfilePage } from './pages/ProfilePage';
 import { Clawbot } from './components/Clawbot';
 import { AbyssBackground } from './components/AbyssBackground';
 import { Toaster } from 'sonner';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
-import { StreakPage } from './pages/StreakPage';
-import { GraduationPage } from './pages/GraduationPage';
-import { CreditsPage } from './pages/CreditsPage';
-import { PostgresAcademyPage } from './pages/PostgresAcademyPage';
-import { DocentePage } from './pages/DocentePage';
 import { StreakAnimation } from './components/StreakAnimation';
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then(module => ({ default: module.DashboardPage })));
+const ExercisePage = lazy(() => import('./pages/ExercisePage').then(module => ({ default: module.ExercisePage })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then(module => ({ default: module.LeaderboardPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const StreakPage = lazy(() => import('./pages/StreakPage').then(module => ({ default: module.StreakPage })));
+const GraduationPage = lazy(() => import('./pages/GraduationPage').then(module => ({ default: module.GraduationPage })));
+const CreditsPage = lazy(() => import('./pages/CreditsPage').then(module => ({ default: module.CreditsPage })));
+const PostgresAcademyPage = lazy(() => import('./pages/PostgresAcademyPage').then(module => ({ default: module.PostgresAcademyPage })));
+const DocentePage = lazy(() => import('./pages/DocentePage').then(module => ({ default: module.DocentePage })));
 
 const MOTION_STORAGE_KEY = 'dagon_motion_mode';
 
@@ -126,6 +127,17 @@ const AppRoutes = () => {
   const motionSafety = useMotionSafety();
   const [globalStreak, setGlobalStreak] = useState(null);
   const isLightTheme = colors?.mode === 'light';
+  const routeFallback = (
+    <div className="min-h-screen flex items-center justify-center">
+      <div
+        className="h-11 w-11 rounded-full border-4 border-transparent animate-spin"
+        style={{
+          borderTopColor: colors?.primary || '#22d3ee',
+          borderRightColor: colors?.secondary || '#3b82f6',
+        }}
+      />
+    </div>
+  );
   
   useEffect(() => {
     const handleStreak = (e) => {
@@ -146,8 +158,9 @@ const AppRoutes = () => {
         colors={colors}
         reduceMotion={motionSafety.reduceVisuals}
       />
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+      <Suspense fallback={routeFallback}>
+        <AnimatePresence mode="wait">
+          <Routes location={location} key={location.pathname}>
           <Route path="/" element={
             token ? <Navigate to="/dashboard" replace /> :
             <AnimatedPage><LoginPage /></AnimatedPage>
@@ -224,8 +237,9 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-         </Routes>
-      </AnimatePresence>
+           </Routes>
+        </AnimatePresence>
+      </Suspense>
       <Clawbot />
       {globalStreak !== null && (
         <StreakAnimation 

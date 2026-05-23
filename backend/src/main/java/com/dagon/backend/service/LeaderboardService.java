@@ -16,10 +16,21 @@ public class LeaderboardService {
     private JdbcTemplate jdbcTemplate;
 
     public List<Map<String, Object>> obtenerRankingGlobal() {
-        // ¡Mira qué limpio! Java solo llama a tu vista de PostgreSQL
-        String sql = "SELECT id_usuario, nombre, xp_total, ejercicios_resueltos FROM lms_core.v_ranking_alumnos";
+        return obtenerRankingGlobal(0);
+    }
 
-        List<Map<String, Object>> filas = jdbcTemplate.queryForList(sql);
+    public List<Map<String, Object>> obtenerRankingGlobal(int limite) {
+        // ¡Mira qué limpio! Java solo llama a tu vista de PostgreSQL
+        String sql = "SELECT id_usuario, nombre, xp_total, ejercicios_resueltos " +
+                "FROM lms_core.v_ranking_alumnos " +
+                "ORDER BY xp_total DESC, ejercicios_resueltos DESC, nombre ASC";
+        Object[] params = new Object[] {};
+        if (limite > 0) {
+            sql += " LIMIT ?";
+            params = new Object[] { limite };
+        }
+
+        List<Map<String, Object>> filas = jdbcTemplate.queryForList(sql, params);
         List<Map<String, Object>> ranking = new ArrayList<>();
 
         int posicion = 1;
