@@ -258,7 +258,7 @@ export const DashboardPage = () => {
 
   if (loadingModulos) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6">
+      <div className="dashboard-shell dagon-page-shell dagon-page-shell--wide min-h-screen flex flex-col items-center justify-center gap-6">
         <div className="relative">
           <div className="absolute -inset-6 rounded-full blur-2xl animate-pulse" style={{ backgroundColor: `${colors.primary}20` }} />
           <DagonMascot size="large" mood="thinking" />

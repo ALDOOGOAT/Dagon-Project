@@ -1994,10 +1994,83 @@ html[data-theme-mode='light'] .streak-status-ribbon {
 }
 
 .tour-icon-button:hover {
-    transform: translateY(-1px);
-    border-color: rgba(125, 211, 252, 0.48);
-    background: rgba(125, 211, 252, 0.10);
-    color: white;
+transform: translateY(-1px);
+border-color: rgba(125, 211, 252, 0.48);
+background: rgba(125, 211, 252, 0.10);
+color: white;
+}
+
+/* --- MOBILE & VIEWPORT FIXES --- */
+@media (max-width: 1024px) {
+.dagon-page-shell {
+    padding-inline: 1rem !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+}
+
+.dashboard-hud-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+}
+
+.dagon-quest-map {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+    overflow-x: hidden;
+}
+
+.dagon-quest-node:not(:last-child)::after {
+    left: 1.5rem !important;
+    height: 1.5rem !important;
+}
+
+.dagon-quest-node:not(:last-child)::before {
+    left: calc(1.5rem - 4px) !important;
+}
+
+/* Prevent clipping in theory slides */
+.dagon-compact-card {
+    padding: 1.25rem !important;
+}
+
+.glass-card-apple {
+backdrop-filter: blur(16px) saturate(180%) !important;
+-webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+}
+}
+
+@media (max-width: 640px) {
+.dagon-quest-node {
+    min-height: 140px !important;
+}
+
+.dagon-quest-button {
+    padding: 0.75rem !important;
+}
+
+.dagon-quest-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.75rem !important;
+}
+}
+
+/* Handle "Desktop Site" on Mobile (Detecting by touch + large width) */
+@media (hover: none) and (min-width: 1024px) {
+body {
+    cursor: pointer; /* Force touch events recognition */
+}
+
+.glass-card-apple, .glass-card, .glass-card-deep {
+    backdrop-filter: none !important; /* Disable expensive filter on mobile desktop mode to stop flickering */
+    -webkit-backdrop-filter: none !important;
+    background-color: rgba(15, 23, 42, 0.95) !important; /* Fallback to opaque background */
+}
+}
+.pb-safe {
+padding-bottom: env(safe-area-inset-bottom);
 }
 
 .tour-icon-button:focus-visible {

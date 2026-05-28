@@ -226,22 +226,36 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
   const updateTargetRect = useCallback(() => {
     if (!isOpen || !step?.target || typeof document === 'undefined') {
-      setTargetRect(null);
+      setTargetRect((prev) => (prev === null ? prev : null));
       return;
     }
 
     const element = document.querySelector(`[data-tour="${step.target}"]`);
     if (!element) {
-      setTargetRect(null);
+      setTargetRect((prev) => (prev === null ? prev : null));
       return;
     }
 
     const rect = element.getBoundingClientRect();
-    setTargetRect({
-      top: clamp(rect.top - 10, 12, window.innerHeight - 80),
-      left: clamp(rect.left - 10, 12, window.innerWidth - 80),
-      width: Math.min(rect.width + 20, window.innerWidth - 24),
-      height: Math.min(rect.height + 20, window.innerHeight - 24),
+    const vh = document.documentElement.clientHeight || window.innerHeight;
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+    
+    const newTop = clamp(rect.top - 10, 12, vh - 80);
+    const newLeft = clamp(rect.left - 10, 12, vw - 80);
+    const newWidth = Math.min(rect.width + 20, vw - 24);
+    const newHeight = Math.min(rect.height + 20, vh - 24);
+
+    setTargetRect((prev) => {
+      if (
+        prev &&
+        Math.abs(prev.top - newTop) < 1 &&
+        Math.abs(prev.left - newLeft) < 1 &&
+        Math.abs(prev.width - newWidth) < 1 &&
+        Math.abs(prev.height - newHeight) < 1
+      ) {
+        return prev;
+      }
+      return { top: newTop, left: newLeft, width: newWidth, height: newHeight };
     });
   }, [isOpen, step?.target]);
 
@@ -440,19 +454,19 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             />
           )}
 
-          <div className="relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
+          <div className="relative z-[102] flex h-[100dvh] w-full items-end justify-center p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8 overflow-hidden overscroll-none">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
-              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]"
+              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl max-h-[85dvh] overflow-y-auto overflow-x-hidden rounded-[24px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)] overscroll-contain"
             >
               <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/60 to-transparent" />
 
               <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:grid lg:grid-cols-[250px_1fr] lg:p-8 xl:p-10">
-                <aside className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center">
+                <aside className="hidden lg:flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center">
                   <div className="relative tour-mascot-float">
                     <div className="absolute inset-0 scale-150 rounded-full bg-cyan-400/20 blur-2xl" />
                     <DagonMascot size="xlarge" mood={step.mood} animated={false} />
@@ -469,10 +483,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                 <section className="min-w-0">
                   <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-gameui text-[10px] font-black uppercase tracking-[0.32em] text-cyan-200">
+                      <p className="font-gameui text-[9px] font-black uppercase tracking-[0.32em] text-cyan-200 sm:text-[10px]">
                         Capítulo {String(currentStep + 1).padStart(2, '0')} / {String(tutorialSteps.length).padStart(2, '0')} · {step.eyebrow}
                       </p>
-                      <div className="mt-3 h-1.5 w-full max-w-xl overflow-hidden rounded-full border border-white/10 bg-black/45">
+                      <div className="mt-2 h-1.5 w-full max-w-xl overflow-hidden rounded-full border border-white/10 bg-black/45 sm:mt-3">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-200 transition-[width] duration-200 ease-out"
                           style={{ width: `${progress}%` }}
@@ -501,25 +515,25 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                   </div>
 
                   <div className="tour-step-content">
-                    <h2 className="text-arcane-title max-w-4xl font-display text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
+                    <h2 className="text-arcane-title max-w-4xl font-display text-2xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
                       {step.title}
                     </h2>
-                    <p className="text-arcane-body mt-5 max-w-4xl text-base leading-relaxed text-slate-100 sm:text-lg">
+                    <p className="text-arcane-body mt-3 max-w-4xl text-sm leading-relaxed text-slate-100 sm:mt-5 sm:text-lg">
                       {step.content}
                     </p>
                   </div>
 
-                  <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-200">
+                  <div className="mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="hidden items-center gap-2 rounded-2xl border border-white/12 bg-white/[0.06] px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-200 sm:flex">
                       <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(125,211,252,0.8)]" />
-                      {targetRect ? 'Elemento señalado en pantalla' : 'Escena introductoria'}
+                      {targetRect ? 'Elemento señalado' : 'Escena intro'}
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:gap-3">
                       <Button
                         onClick={handleClose}
                         variant="ghost"
-                        className="h-12 rounded-xl border border-white/10 px-5 font-display font-black text-slate-300 hover:bg-white/5 hover:text-white"
+                        className="h-10 rounded-xl border border-white/10 px-4 text-xs font-display font-black text-slate-300 hover:bg-white/5 sm:h-12 sm:px-5 sm:text-sm"
                       >
                         Omitir
                       </Button>
@@ -527,14 +541,13 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                         onClick={handlePrevious}
                         disabled={currentStep === 0}
                         variant="outline"
-                        className="h-12 rounded-xl border-white/15 bg-white/[0.03] px-5 font-display font-black text-white disabled:opacity-40"
+                        className="h-10 rounded-xl border-white/15 bg-white/[0.03] px-4 text-xs font-display font-black text-white disabled:opacity-40 sm:h-12 sm:px-5 sm:text-sm"
                       >
-                        <ChevronLeft className="mr-2 h-4 w-4" />
                         Atrás
                       </Button>
                       <Button
                         onClick={handleNext}
-                        className="h-12 rounded-xl bg-white px-6 font-display font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.24)] transition-all hover:bg-cyan-100"
+                        className="col-span-2 h-12 rounded-xl bg-white px-6 font-display font-black text-slate-950 shadow-[0_0_24px_rgba(255,255,255,0.24)] transition-all hover:bg-cyan-100 sm:col-auto"
                       >
                         {currentStep === tutorialSteps.length - 1 ? 'Comenzar' : 'Siguiente'}
                         <ChevronRight className="ml-2 h-4 w-4" />

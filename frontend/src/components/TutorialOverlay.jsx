@@ -220,13 +220,14 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             ))}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, rotateX: 8, y: 34, scale: 0.96 }}
-            animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
-            exit={{ opacity: 0, rotateX: -6, y: -24, scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-            className={`tour-panel relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-6 md:p-12 shadow-2xl`}
-          >
+          <div className="relative z-[102] flex h-[100dvh] w-full items-center sm:items-end justify-center p-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8 overflow-hidden pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0, rotateX: 8, y: 34, scale: 0.96 }}
+              animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
+              exit={{ opacity: 0, rotateX: -6, y: -24, scale: 0.98 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+              className={`tour-panel relative w-full max-w-3xl max-h-[85dvh] overflow-y-auto bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-6 md:p-12 shadow-2xl pointer-events-auto`}
+            >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
           <div className="absolute top-6 right-6 flex gap-3 z-20">
@@ -334,7 +335,8 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
               </div>
             </div>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

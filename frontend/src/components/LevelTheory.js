@@ -1507,108 +1507,112 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto scroll-fancy">
-      <div className="dagon-page-shell dagon-page-shell--reading">
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-          <div className="flex-1">
-            <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
-              {theory.subtitle}
-            </p>
-            <h1 className="font-display text-2xl lg:text-3xl font-black text-white">
-              {theory.title}
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={speak}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold font-display"
-            >
-              {isSpeaking ? '🛑 Detener' : '🔊 Escuchar'}
-            </button>
-            <button
-              onClick={() => {
-                const enabled = sounds.toggleEnabled({ restart: false });
-                setIsMuted(!enabled);
-                if (!enabled) {
-                  window.speechSynthesis.cancel();
-                  setIsSpeaking(false);
-                } else {
-                  sounds.init();
-                }
-              }}
-              className="p-2 rounded-xl bg-slate-800 text-white"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-            <button onClick={() => {
-              sounds.playStep();
-              onComplete?.();
-            }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
-              Saltar teoría →
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 mb-6">
-          {theory.slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => {
+    <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-slate-950/20">
+      <div className="flex-1 overflow-y-auto scroll-fancy p-4 sm:p-6 lg:p-8">
+        <div className="dagon-page-shell dagon-page-shell--reading !max-w-4xl !p-0">
+          <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+            <div className="flex-1">
+              <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
+                {theory.subtitle}
+              </p>
+              <h1 className="font-display text-2xl lg:text-3xl font-black text-white">
+                {theory.title}
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={speak}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold font-display"
+              >
+                {isSpeaking ? '🛑 Detener' : '🔊 Escuchar'}
+              </button>
+              <button
+                onClick={() => {
+                  const enabled = sounds.toggleEnabled({ restart: false });
+                  setIsMuted(!enabled);
+                  if (!enabled) {
+                    window.speechSynthesis.cancel();
+                    setIsSpeaking(false);
+                  } else {
+                    sounds.init();
+                  }
+                }}
+                className="p-2 rounded-xl bg-slate-800 text-white"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <button onClick={() => {
                 sounds.playStep();
-                setIndex(i);
-              }}
-              className={`h-2 rounded-full transition-all ${
-                i === index ? 'w-10 bg-cyan-400' : i < index ? 'w-6 bg-emerald-400' : 'w-2 bg-slate-700'
-              }`}
-            />
-          ))}
+                onComplete?.();
+              }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
+                Saltar teoría →
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 mb-6">
+            {theory.slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  sounds.playStep();
+                  setIndex(i);
+                }}
+                className={`h-2 rounded-full transition-all ${
+                  i === index ? 'w-10 bg-cyan-400' : i < index ? 'w-6 bg-emerald-400' : 'w-2 bg-slate-700'
+                }`}
+              />
+            ))}
+          </div>
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${theoryKey}-${index}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
+            >
+              <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
+              <div className="relative z-10">
+                <SlideContent slide={slide} isSpeaking={isSpeaking} onSpeak={speak} />
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {isLast && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-6 h-6 text-emerald-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.28em] font-black text-emerald-300 mb-2">
+                    Punto de control
+                  </p>
+                  <h3 className="font-display text-xl font-black text-white">
+                    Entra a la práctica con una idea clara
+                  </h3>
+                  <p className="mt-2 text-sm sm:text-base text-slate-300 font-gameui leading-relaxed">
+                    Antes de ejecutar SQL, di en voz baja que dato quieres obtener, de que tabla sale y que condicion lo limita. Ese habito evita errores de memoria y te obliga a razonar.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
+      </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${theoryKey}-${index}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
-          >
-            <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
-            <div className="relative z-10">
-              <SlideContent slide={slide} isSpeaking={isSpeaking} onSpeak={speak} />
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {isLast && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
-                <Sparkles className="w-6 h-6 text-emerald-300" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.28em] font-black text-emerald-300 mb-2">
-                  Punto de control
-                </p>
-                <h3 className="font-display text-xl font-black text-white">
-                  Entra a la práctica con una idea clara
-                </h3>
-                <p className="mt-2 text-sm sm:text-base text-slate-300 font-gameui leading-relaxed">
-                  Antes de ejecutar SQL, di en voz baja que dato quieres obtener, de que tabla sale y que condicion lo limita. Ese habito evita errores de memoria y te obliga a razonar.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        <div className="flex items-center justify-between">
+      <div className="p-4 bg-black/40 backdrop-blur-xl border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
           <Button variant="ghost" onClick={prev} disabled={index === 0} className="text-slate-300 font-display">
             Anterior
           </Button>
-          <Button onClick={next} className={`bg-gradient-to-r ${theory.color} text-white font-black px-8 py-6 rounded-2xl font-display shadow-lg hover:brightness-110 transition-all`}>
+          <Button onClick={next} className={`flex-1 sm:flex-none bg-gradient-to-r ${theory.color} text-white font-black px-8 py-4 sm:py-6 rounded-2xl font-display shadow-lg hover:brightness-110 transition-all`}>
             {isLast ? 'Comenzar Práctica' : 'Siguiente'}
           </Button>
         </div>
