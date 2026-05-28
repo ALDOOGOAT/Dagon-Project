@@ -12,6 +12,16 @@ class SoundEngine {
     this.activeAssets = new Set();
     this.assetCooldown = new Map();
     this.masterVolume = this.readStoredVolume();
+    
+    // Migración para corregir el bug anterior donde el volumen se guardaba como 0
+    if (typeof window !== 'undefined' && this.masterVolume === 0 && !window.localStorage.getItem('dagon_volume_migrated')) {
+      this.masterVolume = 0.8;
+      this.persistVolume();
+    }
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('dagon_volume_migrated', 'true');
+    }
+
     this.assetBase = `${process.env.PUBLIC_URL || ''}/assets/sounds/kenney-interface`;
     this.assetMap = {
       cinematic: 'open_001.ogg',
@@ -31,7 +41,9 @@ class SoundEngine {
 
   readStoredVolume() {
     if (typeof window === 'undefined') return 0.8;
-    const stored = Number(window.localStorage.getItem(this.volumeStorageKey));
+    const item = window.localStorage.getItem(this.volumeStorageKey);
+    if (item === null) return 0.8;
+    const stored = Number(item);
     if (!Number.isFinite(stored)) return 0.8;
     return Math.min(1, Math.max(0, stored));
   }

@@ -115,7 +115,26 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
   const step = tutorialSteps[currentStep];
 
-  const speak = useCallback((text) => {
+  const handleClose = useCallback(() => {
+    synthRef.current.cancel();
+    setIsSpeaking(false);
+    localStorage.setItem('dagon_tutorial_completed', 'true');
+    if (onClose) onClose();
+  }, [onClose]);
+
+  const handleNext = useCallback(() => {
+    synthRef.current.cancel();
+    setCurrentStep(prev => {
+      if (prev < tutorialSteps.length - 1) {
+        return prev + 1;
+      } else {
+        setTimeout(handleClose, 0);
+        return prev;
+      }
+    });
+  }, [handleClose]);
+
+  const speak = useCallback((text, onFinish) => {
     if (!voiceEnabled || !isOpen) return;
     
     synthRef.current.cancel();
@@ -133,7 +152,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     }
     
     utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      if (onFinish) onFinish();
+    };
     utterance.onerror = () => setIsSpeaking(false);
     
     utteranceRef.current = utterance;
@@ -142,10 +164,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen && step?.voice && voiceEnabled) {
-      const timer = setTimeout(() => speak(step.voice), 600);
+      const timer = setTimeout(() => speak(step.voice, () => handleNext()), 600);
       return () => clearTimeout(timer);
     }
-  }, [currentStep, isOpen, speak, step?.voice, voiceEnabled]);
+  }, [currentStep, isOpen, speak, step?.voice, voiceEnabled, handleNext]);
 
   useEffect(() => {
     const synth = synthRef.current;
@@ -156,22 +178,6 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     }
     return () => synth.cancel();
   }, []);
-
-  const handleNext = () => {
-    synthRef.current.cancel();
-    if (currentStep < tutorialSteps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleClose();
-    }
-  };
-
-  const handleClose = () => {
-    synthRef.current.cancel();
-    setIsSpeaking(false);
-    localStorage.setItem('dagon_tutorial_completed', 'true');
-    if (onClose) onClose();
-  };
 
   const toggleVoice = () => {
     if (isSpeaking) {
@@ -219,7 +225,7 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             animate={{ opacity: 1, rotateX: 0, y: 0, scale: 1 }}
             exit={{ opacity: 0, rotateX: -6, y: -24, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-            className={`tour-panel relative w-full max-w-3xl bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-8 md:p-12 shadow-2xl overflow-hidden`}
+            className={`tour-panel relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-black/80 backdrop-blur-3xl bg-gradient-to-br ${step.color} border border-white/10 ${step.borderColor} rounded-[2rem] p-6 md:p-12 shadow-2xl`}
           >
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
@@ -247,8 +253,8 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 relative z-10 mt-4">
-            <div className="flex flex-col items-center gap-6 w-full md:w-1/3">
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-12 relative z-10 mt-8 md:mt-4">
+            <div className="flex flex-col items-center gap-4 md:gap-6 w-full md:w-1/3">
               <motion.div
                 animate={{ y: [0, -12, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
@@ -274,10 +280,10 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3, duration: 0.5 }}
               >
-                <h2 className="text-arcane-title text-3xl md:text-4xl font-display font-black bg-gradient-to-br from-white via-white/90 to-white/50 bg-clip-text text-transparent mb-4 leading-tight">
+                <h2 className="text-arcane-title text-2xl md:text-4xl font-display font-black bg-gradient-to-br from-white via-white/90 to-white/50 bg-clip-text text-transparent mb-3 md:mb-4 leading-tight">
                   {step.title}
                 </h2>
-                <p className="text-arcane-body text-base md:text-lg text-slate-300 mb-8">
+                <p className="text-arcane-body text-sm md:text-lg text-slate-300 mb-6 md:mb-8">
                   {step.content}
                 </p>
               </motion.div>

@@ -250,11 +250,34 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     setIsSpeaking(false);
   }, []);
 
-  const speak = useCallback((text) => {
+  const handleClose = useCallback(() => {
+    cancelSpeech();
+    localStorage.setItem('dagon_tutorial_completed', 'true');
+    localStorage.removeItem('dagon_tutorial_pending');
+    localStorage.removeItem('dagon_first_login');
+    if (onClose) onClose();
+  }, [cancelSpeech, onClose]);
+
+  const handleNext = useCallback(() => {
+    cancelSpeech();
+    setCurrentStep((value) => {
+      if (value < tutorialSteps.length - 1) {
+        requestAnimationFrame(() => sounds.playStep());
+        return value + 1;
+      }
+      handleClose();
+      return value;
+    });
+  }, [cancelSpeech, handleClose]);
+
+  const speak = useCallback((text, onFinish) => {
     if (!soundEnabled || !isOpen) return;
     sounds.speakTTS(text, {
       onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
+      onEnd: () => {
+        setIsSpeaking(false);
+        if (onFinish) onFinish();
+      },
       onError: () => setIsSpeaking(false)
     });
   }, [isOpen, soundEnabled]);
@@ -291,14 +314,14 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
 
     updateTargetRect();
     const rectTimer = requestAnimationFrame(() => updateTargetRect());
-    const speechTimer = setTimeout(() => speak(step.voice), 150);
+    const speechTimer = setTimeout(() => speak(step.voice, () => handleNext()), 150);
 
     return () => {
       cancelAnimationFrame(rectTimer);
       clearTimeout(speechTimer);
       cancelSpeech();
     };
-  }, [currentStep, isOpen, step, speak, updateTargetRect, cancelSpeech]);
+  }, [currentStep, isOpen, step, speak, updateTargetRect, cancelSpeech, handleNext]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -320,25 +343,6 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     }
     return () => synth.cancel();
   }, []);
-
-  const handleClose = () => {
-    cancelSpeech();
-    localStorage.setItem('dagon_tutorial_completed', 'true');
-    localStorage.removeItem('dagon_tutorial_pending');
-    localStorage.removeItem('dagon_first_login');
-    onClose?.();
-  };
-
-  const handleNext = () => {
-    cancelSpeech();
-    if (currentStep < tutorialSteps.length - 1) {
-      setCurrentStep((value) => value + 1);
-      // Sonido después del cambio de estado para no bloquear
-      requestAnimationFrame(() => sounds.playStep());
-      return;
-    }
-    handleClose();
-  };
 
   const handlePrevious = () => {
     cancelSpeech();
