@@ -374,6 +374,41 @@ SET fecha_entrada = EXCLUDED.fecha_entrada,
     id_huesped = EXCLUDED.id_huesped,
     id_habitacion = EXCLUDED.id_habitacion;
 
+INSERT INTO lms_core.cursos (id_curso, titulo) OVERRIDING SYSTEM VALUE VALUES
+    (3, 'Misterios de Dagon'),
+    (4, 'Laboratorio de Modelado')
+ON CONFLICT (id_curso) DO UPDATE
+SET titulo = EXCLUDED.titulo;
+
+INSERT INTO lms_core.modulos (
+    id_modulo, id_curso, titulo, orden, descripcion, xp_requerida,
+    objetivos, prerequisitos, errores_comunes, cinematica_config
+) OVERRIDING SYSTEM VALUE VALUES
+    (21, 3, 'Misterio 1: Fraude en el Banco Abisal', 1,
+     'Investiga un millon de transferencias simuladas. Las consultas ingenuas se castigan con timeout; las buenas reducen filas temprano.',
+     0,
+     '["Leer planes de ejecucion", "Crear indices utiles", "Filtrar datos masivos", "Usar CTEs y window functions para investigar fraude"]'::jsonb,
+     '["SELECT con WHERE", "CREATE INDEX", "ORDER BY y LIMIT", "Funciones de ventana basicas"]'::jsonb,
+     '["Escanear un millon de filas sin filtro", "Crear indices sobre columnas que no reducen", "Ordenar todo antes de filtrar", "Usar SELECT * en investigaciones masivas"]'::jsonb,
+     '{"slug":"misterio-fraude-bancario","duracion_segundos":130,"escenas":["dataset","timeout","indice","filtro","hallazgo"],"narrador":"dagon","objetivo_visual":"mostrar una investigacion de fraude sobre datos grandes"}'::jsonb),
+    (22, 4, 'Laboratorio 1: DDL a ERD', 1,
+     'Convierte sentencias CREATE TABLE y FOREIGN KEY en un diagrama ERD y vuelve a generar DDL desde el modelo.',
+     0,
+     '["Escribir CREATE TABLE con llaves", "Visualizar relaciones", "Hacer ingenieria inversa desde SQL", "Generar DDL desde un diagrama"]'::jsonb,
+     '["Tablas", "PRIMARY KEY", "FOREIGN KEY"]'::jsonb,
+     '["Crear tablas aisladas sin FK", "Usar nombres ambiguos", "Olvidar la PK antes de una relacion"]'::jsonb,
+     '{"slug":"laboratorio-ddl-erd","duracion_segundos":110,"escenas":["sql","parser","entidades","relaciones","ddl"],"narrador":"dagon","objetivo_visual":"convertir codigo SQL en plano visual"}'::jsonb)
+ON CONFLICT (id_modulo) DO UPDATE SET
+    id_curso = EXCLUDED.id_curso,
+    titulo = EXCLUDED.titulo,
+    orden = EXCLUDED.orden,
+    descripcion = EXCLUDED.descripcion,
+    xp_requerida = EXCLUDED.xp_requerida,
+    objetivos = EXCLUDED.objetivos,
+    prerequisitos = EXCLUDED.prerequisitos,
+    errores_comunes = EXCLUDED.errores_comunes,
+    cinematica_config = EXCLUDED.cinematica_config;
+
 SELECT setval(pg_get_serial_sequence('lms_core.roles', 'id_rol'), COALESCE((SELECT MAX(id_rol) FROM lms_core.roles), 1), true);
 SELECT setval(pg_get_serial_sequence('lms_core.cursos', 'id_curso'), COALESCE((SELECT MAX(id_curso) FROM lms_core.cursos), 1), true);
 SELECT setval(pg_get_serial_sequence('lms_core.modulos', 'id_modulo'), COALESCE((SELECT MAX(id_modulo) FROM lms_core.modulos), 1), true);

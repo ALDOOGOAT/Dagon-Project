@@ -211,6 +211,8 @@ CREATE TABLE lms_core.intentos (
     query_enviada text NOT NULL,
     es_correcto boolean NOT NULL,
     tiempo_ms numeric(8,2),
+    costo_ejecucion numeric(12,2),
+    longitud_caracteres integer,
     fecha_intento timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -446,6 +448,36 @@ ALTER TABLE ONLY lms_core.ejercicios_practicos
 
 ALTER TABLE ONLY lms_core.intentos
     ADD CONSTRAINT intentos_pkey PRIMARY KEY (id_intento);
+
+
+--
+-- Name: intentos intentos_costo_ejecucion_check; Type: CHECK CONSTRAINT; Schema: lms_core; Owner: postgres
+--
+
+ALTER TABLE ONLY lms_core.intentos
+    ADD CONSTRAINT intentos_costo_ejecucion_check CHECK ((costo_ejecucion IS NULL OR costo_ejecucion >= 0));
+
+
+--
+-- Name: intentos intentos_longitud_caracteres_check; Type: CHECK CONSTRAINT; Schema: lms_core; Owner: postgres
+--
+
+ALTER TABLE ONLY lms_core.intentos
+    ADD CONSTRAINT intentos_longitud_caracteres_check CHECK ((longitud_caracteres IS NULL OR longitud_caracteres >= 0));
+
+
+--
+-- Name: idx_intentos_ejercicio_eficiencia; Type: INDEX; Schema: lms_core; Owner: postgres
+--
+
+CREATE INDEX idx_intentos_ejercicio_eficiencia ON lms_core.intentos USING btree (id_ejercicio, es_correcto, costo_ejecucion, tiempo_ms, fecha_intento) WHERE (es_correcto = true);
+
+
+--
+-- Name: idx_intentos_ejercicio_sql_golf; Type: INDEX; Schema: lms_core; Owner: postgres
+--
+
+CREATE INDEX idx_intentos_ejercicio_sql_golf ON lms_core.intentos USING btree (id_ejercicio, es_correcto, longitud_caracteres, costo_ejecucion, fecha_intento) WHERE (es_correcto = true);
 
 
 --
@@ -685,4 +717,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA lms_sandbox GRANT SELECT ON
 --
 
 \unrestrict dRuTMTzperf6LU0rbek1dzP0oDDACpDF1hlN07vAc3MWSrBxetdckwVZwpwFdH6
-

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -39,6 +39,7 @@ const RelationshipEdge = ({
   });
 
   const onCardinalityChange = (evt) => {
+    if (data?.readOnly) return;
     data.onChangeCardinality(id, evt.target.value);
   };
 
@@ -59,6 +60,7 @@ const RelationshipEdge = ({
             <select
               value={data?.cardinality || '1:N'}
               onChange={onCardinalityChange}
+              disabled={data?.readOnly}
               className="bg-transparent text-[10px] font-bold text-cyan-200 outline-none cursor-pointer uppercase"
             >
               <option value="1:1" className="bg-slate-900 text-white">1:1 (Uno a Uno)</option>
@@ -89,6 +91,7 @@ const TableNode = ({ data, id, isConnectable }) => {
             type="text" 
             defaultValue={data.label} 
             onChange={(e) => data.onChangeName(id, e.target.value)}
+            disabled={data.readOnly}
             className="bg-transparent border-none outline-none text-white w-32 placeholder-blue-300 font-bold"
             placeholder="TABLA"
           />
@@ -102,6 +105,7 @@ const TableNode = ({ data, id, isConnectable }) => {
             {/* Selector de Rol (PK, FK, Normal) */}
             <button
               onClick={() => data.onToggleRole(id, index)}
+              disabled={data.readOnly}
               className={`w-10 h-5 rounded flex items-center justify-center text-[8px] font-black transition-all border shrink-0 ${
                 col.role === 'pk' ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400' :
                 col.role === 'fk' ? 'bg-cyan-400/20 border-cyan-400/50 text-cyan-400' :
@@ -116,6 +120,7 @@ const TableNode = ({ data, id, isConnectable }) => {
               type="text" 
               defaultValue={col.name}
               onChange={(e) => data.onChangeColumn(id, index, e.target.value)}
+              disabled={data.readOnly}
               className={`bg-transparent border-none outline-none text-[11px] w-full transition-colors ${
                 col.role === 'pk' ? 'text-yellow-200 font-bold' :
                 col.role === 'fk' ? 'text-cyan-200 font-bold' :
@@ -128,6 +133,7 @@ const TableNode = ({ data, id, isConnectable }) => {
         
         <button 
           onClick={() => data.onAddColumn(id)}
+          disabled={data.readOnly}
           className="w-full mt-2 py-1.5 text-[10px] text-slate-500 hover:text-cyan-400 hover:bg-slate-800/50 rounded-lg flex items-center justify-center gap-1.5 transition-all border border-dashed border-slate-800 hover:border-cyan-500/30 uppercase font-bold tracking-tighter"
         >
           <Plus className="w-3 h-3" /> añadir atributo
@@ -141,15 +147,73 @@ const TableNode = ({ data, id, isConnectable }) => {
 const nodeTypes = { tableNode: TableNode };
 const edgeTypes = { relationshipEdge: RelationshipEdge };
 
+const sanitizeIdentifier = (value, fallback = 'tabla') => {
+  const clean = String(value || '')
+    .trim()
+    .replace(/[^\w]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+  if (!clean) return fallback;
+  return /^\d/.test(clean) ? `_${clean}` : clean;
+};
+
+export const generateSqlFromDiagramData = ({ nodes = [], edges = [] } = {}) => {
+  const nodeById = new Map((nodes || []).map((node) => [node.id, node]));
+  const tableSql = (nodes || []).map((node) => {
+    const tableName = sanitizeIdentifier(node?.data?.label, 'tabla');
+    const columns = Array.isArray(node?.data?.columns) && node.data.columns.length > 0
+      ? node.data.columns
+      : [{ name: 'id', role: 'pk', type: 'INTEGER' }];
+
+    const columnLines = columns.map((column) => {
+      const name = sanitizeIdentifier(column?.name, 'columna');
+      const role = column?.role || 'normal';
+      const fallbackType = role === 'pk' || role === 'fk' ? 'INTEGER' : 'TEXT';
+      const type = String(column?.type || fallbackType).trim() || fallbackType;
+      return `    ${name} ${type}${role === 'pk' ? ' PRIMARY KEY' : ''}`;
+    });
+
+    return `CREATE TABLE ${tableName} (\n${columnLines.join(',\n')}\n);`;
+  });
+
+  const relationSql = (edges || []).map((edge) => {
+    const source = nodeById.get(edge.source);
+    const target = nodeById.get(edge.target);
+    if (!source || !target) return null;
+
+    const sourceTable = sanitizeIdentifier(source?.data?.label, 'origen');
+    const targetTable = sanitizeIdentifier(target?.data?.label, 'destino');
+    const sourceColumns = Array.isArray(source?.data?.columns) ? source.data.columns : [];
+    const targetColumns = Array.isArray(target?.data?.columns) ? target.data.columns : [];
+    const fkColumn = sanitizeIdentifier(
+      edge?.data?.sourceColumn || sourceColumns.find((column) => column.role === 'fk')?.name || `${targetTable}_id`,
+      `${targetTable}_id`
+    );
+    const pkColumn = sanitizeIdentifier(
+      edge?.data?.targetColumn || targetColumns.find((column) => column.role === 'pk')?.name || 'id',
+      'id'
+    );
+
+    return `ALTER TABLE ${sourceTable} ADD CONSTRAINT fk_${sourceTable}_${targetTable} FOREIGN KEY (${fkColumn}) REFERENCES ${targetTable}(${pkColumn});`;
+  }).filter(Boolean);
+
+  return [...tableSql, ...relationSql].join('\n\n');
+};
+
 // --- EL LIENZO PRINCIPAL ---
-export const MerDiagramBuilder = ({ onChangeData }) => {
-  const [nodes, setNodes] = useState([]);
-  const [edges, setEdges] = useState([]);
+export const MerDiagramBuilder = ({ onChangeData = () => {}, initialNodes = [], initialEdges = [], readOnly = false }) => {
+  const [nodes, setNodes] = useState(initialNodes);
+  const [edges, setEdges] = useState(initialEdges);
 
   // Notificar al padre (ExercisePage) cada vez que el diagrama cambia
   const notifyChange = useCallback((newNodes, newEdges) => {
     onChangeData({ nodes: newNodes, edges: newEdges });
   }, [onChangeData]);
+
+  useEffect(() => {
+    setNodes(Array.isArray(initialNodes) ? initialNodes : []);
+    setEdges(Array.isArray(initialEdges) ? initialEdges : []);
+  }, [initialNodes, initialEdges]);
 
   const onNodesChange = useCallback((changes) => {
     setNodes((nds) => {
@@ -181,6 +245,7 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
   }, [nodes, notifyChange]);
 
   const onConnect = useCallback((params) => {
+    if (readOnly) return;
     setEdges((eds) => {
       // Líneas estilo neón cyberpunk con el nuevo tipo custom
       const newEdge = { 
@@ -198,10 +263,11 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
       notifyChange(nodes, updatedEdges);
       return updatedEdges;
     });
-  }, [nodes, handleChangeCardinality, notifyChange]);
+  }, [nodes, handleChangeCardinality, notifyChange, readOnly]);
 
   // --- Funciones de mutación de datos de los nodos ---
-  const updateNodeData = (id, newDataUpdater) => {
+  const updateNodeData = useCallback((id, newDataUpdater) => {
+    if (readOnly) return;
     setNodes((nds) => {
       const updated = nds.map((node) => {
         if (node.id === id) {
@@ -212,32 +278,37 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
       notifyChange(updated, edges);
       return updated;
     });
-  };
+  }, [edges, notifyChange, readOnly]);
 
-  const handleChangeName = (id, newName) => updateNodeData(id, (data) => ({ ...data, label: newName }));
+  const handleChangeName = useCallback((id, newName) => (
+    updateNodeData(id, (data) => ({ ...data, label: newName }))
+  ), [updateNodeData]);
   
-  const handleAddColumn = (id) => updateNodeData(id, (data) => ({ 
-    ...data, 
-    columns: [...(data.columns || []), { name: '', role: 'normal' }] 
-  }));
+  const handleAddColumn = useCallback((id) => (
+    updateNodeData(id, (data) => ({
+      ...data,
+      columns: [...(data.columns || []), { name: '', role: 'normal' }]
+    }))
+  ), [updateNodeData]);
   
-  const handleChangeColumn = (id, index, newVal) => updateNodeData(id, (data) => {
+  const handleChangeColumn = useCallback((id, index, newVal) => updateNodeData(id, (data) => {
     const newCols = [...data.columns];
     newCols[index] = { ...newCols[index], name: newVal };
     return { ...data, columns: newCols };
-  });
+  }), [updateNodeData]);
 
-  const handleToggleRole = (id, index) => updateNodeData(id, (data) => {
+  const handleToggleRole = useCallback((id, index) => updateNodeData(id, (data) => {
     const newCols = [...data.columns];
     const roles = ['normal', 'pk', 'fk'];
     const currentRole = newCols[index].role || 'normal';
     const nextRole = roles[(roles.indexOf(currentRole) + 1) % roles.length];
     newCols[index] = { ...newCols[index], role: nextRole };
     return { ...data, columns: newCols };
-  });
+  }), [updateNodeData]);
 
   // --- Agregar Nueva Tabla ---
   const addTable = () => {
+    if (readOnly) return;
     const newNode = {
       id: uuidv4(),
       type: 'tableNode',
@@ -248,7 +319,8 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
         onChangeName: handleChangeName,
         onAddColumn: handleAddColumn,
         onChangeColumn: handleChangeColumn,
-        onToggleRole: handleToggleRole
+        onToggleRole: handleToggleRole,
+        readOnly
       },
     };
     setNodes((nds) => {
@@ -259,38 +331,69 @@ export const MerDiagramBuilder = ({ onChangeData }) => {
   };
 
   const clearCanvas = () => {
+    if (readOnly) return;
     setNodes([]);
     setEdges([]);
     notifyChange([], []);
   };
 
+  const nodesWithHandlers = useMemo(() => (
+    nodes.map((node) => ({
+      ...node,
+      data: {
+        ...(node.data || {}),
+        onChangeName: handleChangeName,
+        onAddColumn: handleAddColumn,
+        onChangeColumn: handleChangeColumn,
+        onToggleRole: handleToggleRole,
+        readOnly
+      }
+    }))
+  ), [nodes, handleAddColumn, handleChangeColumn, handleChangeName, handleToggleRole, readOnly]);
+
+  const edgesWithHandlers = useMemo(() => (
+    edges.map((edge) => ({
+      ...edge,
+      data: {
+        ...(edge.data || {}),
+        onChangeCardinality: handleChangeCardinality,
+        readOnly
+      }
+    }))
+  ), [edges, handleChangeCardinality, readOnly]);
+
   return (
     <div className="w-full h-full relative bg-[#090b10]">
       {/* Panel de Herramientas Flotante */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
-        <button 
-          onClick={addTable}
-          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all"
-        >
-          <Plus className="w-4 h-4" /> Entidad
-        </button>
-        <button 
-          onClick={clearCanvas}
-          className="bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all"
-          title="Limpiar Lienzo"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="absolute top-4 left-4 z-10 flex gap-2">
+          <button
+            onClick={addTable}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all"
+          >
+            <Plus className="w-4 h-4" /> Entidad
+          </button>
+          <button
+            onClick={clearCanvas}
+            className="bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all"
+            title="Limpiar Lienzo"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={nodesWithHandlers}
+        edges={edgesWithHandlers}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
+        elementsSelectable={!readOnly}
         fitView
         className="cyber-flow"
       >

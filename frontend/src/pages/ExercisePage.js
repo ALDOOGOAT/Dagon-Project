@@ -7,13 +7,13 @@ import { RewardAnimation } from '../components/RewardAnimation';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
-import { MerDiagramBuilder } from '../components/MerDiagramBuilder';
+import { MerDiagramBuilder, generateSqlFromDiagramData } from '../components/MerDiagramBuilder';
 import { ModuleCinematic } from '../components/ModuleCinematic';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Film, TrendingUp,
-  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2
+  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, Clock, Gauge, Medal, Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -51,6 +51,319 @@ const SuccessBurst = () => (
     })}
   </div>
 );
+
+const performanceNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatPerformanceNumber = (value, decimals = 2) => {
+  const parsed = performanceNumber(value);
+  if (parsed === null) return '-';
+  if (Math.abs(parsed) >= 100) return String(Math.round(parsed));
+  return parsed.toFixed(decimals);
+};
+
+const formatPerformanceMs = (value) => {
+  const parsed = performanceNumber(value);
+  if (parsed === null) return '-';
+  if (parsed < 10) return `${parsed.toFixed(2)} ms`;
+  if (parsed < 100) return `${parsed.toFixed(1)} ms`;
+  return `${Math.round(parsed)} ms`;
+};
+
+const PerformanceAnalysisPanel = ({ performance, colors, isLight, headingColor, mutedColor }) => {
+  if (!performance?.available) return null;
+
+  const borderColor = isLight ? 'rgba(14,116,144,0.18)' : 'rgba(34,211,238,0.18)';
+  const surfaceColor = isLight ? 'rgba(236,254,255,0.70)' : 'rgba(8,47,73,0.18)';
+  const metrics = [
+    { label: 'Costo', value: formatPerformanceNumber(performance.totalCost), icon: Gauge },
+    { label: 'Motor', value: formatPerformanceMs(performance.executionTimeMs), icon: Clock },
+    { label: 'Nodo', value: performance.topNode || 'Plan SQL', icon: Database },
+    { label: 'Filas', value: formatPerformanceNumber(performance.planRows, 0), icon: TrendingUp },
+  ];
+  const operations = Array.isArray(performance.operations) ? performance.operations.slice(0, 5) : [];
+
+  return (
+    <div className="border-b px-4 py-4" style={{ borderColor }}>
+      <div className="rounded-2xl border p-3 sm:p-4" style={{ borderColor, backgroundColor: surfaceColor }}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: colors.secondary }}>
+              Analista de rendimiento
+            </p>
+            <h3 className="mt-1 flex items-center gap-2 font-display text-lg font-black" style={{ color: headingColor }}>
+              <Gauge className="h-5 w-5" style={{ color: colors.secondary }} />
+              EXPLAIN ANALYZE
+            </h3>
+          </div>
+          <div
+            className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-black uppercase tracking-wider"
+            style={{ borderColor, color: performance.seqScan ? (isLight ? '#b45309' : '#fbbf24') : (isLight ? '#047857' : '#34d399'), backgroundColor: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(2,6,23,0.26)' }}
+          >
+            <Zap className="h-3.5 w-3.5" />
+            {performance.seqScan ? 'Seq Scan detectado' : 'Plan estable'}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          {metrics.map((metric) => {
+            const Icon = metric.icon;
+            return (
+              <div key={metric.label} className="min-w-0 rounded-xl border px-3 py-2" style={{ borderColor, backgroundColor: isLight ? 'rgba(255,255,255,0.60)' : 'rgba(2,6,23,0.20)' }}>
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider" style={{ color: mutedColor }}>
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{metric.label}</span>
+                </div>
+                <p className="mt-1 truncate font-mono text-sm font-black" style={{ color: headingColor }}>
+                  {metric.value}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        {operations.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {operations.map((operation, index) => (
+              <span
+                key={`${operation}-${index}`}
+                className="rounded-full border px-3 py-1 text-[11px] font-mono"
+                style={{ borderColor, color: mutedColor, backgroundColor: isLight ? 'rgba(255,255,255,0.52)' : 'rgba(2,6,23,0.18)' }}
+              >
+                {operation}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {performance.analysis && (
+          <div className="mt-3 rounded-xl border px-3 py-2 text-sm font-gameui leading-relaxed" style={{ borderColor, color: mutedColor, backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(2,6,23,0.24)' }}>
+            {formatAIMessage(performance.analysis, colors)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const ExerciseLeaderboardPanel = ({ leaderboard, loading, colors, isLight, headingColor, mutedColor }) => {
+  const [mode, setMode] = useState('eficiencia');
+  const rows = Array.isArray(leaderboard?.[mode]) ? leaderboard[mode] : [];
+  const borderColor = isLight ? 'rgba(245,158,11,0.20)' : 'rgba(250,204,21,0.18)';
+  const surfaceColor = isLight ? 'rgba(255,251,235,0.70)' : 'rgba(113,63,18,0.14)';
+  const modes = [
+    { id: 'eficiencia', label: 'Eficiencia', icon: Gauge },
+    { id: 'golf', label: 'SQL Golf', icon: Code2 },
+  ];
+
+  return (
+    <div className="border-b px-4 py-4" style={{ borderColor }}>
+      <div className="rounded-2xl border p-3 sm:p-4" style={{ borderColor, backgroundColor: surfaceColor }}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: isLight ? '#b45309' : '#fde047' }}>
+              Batalla por ejercicio
+            </p>
+            <h3 className="mt-1 flex items-center gap-2 font-display text-lg font-black" style={{ color: headingColor }}>
+              <Trophy className="h-5 w-5" style={{ color: isLight ? '#d97706' : '#facc15' }} />
+              Ranking de la misión
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1 rounded-xl border p-1" style={{ borderColor, backgroundColor: isLight ? 'rgba(255,255,255,0.54)' : 'rgba(2,6,23,0.22)' }}>
+            {modes.map((item) => {
+              const Icon = item.icon;
+              const active = mode === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setMode(item.id)}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider transition-colors"
+                  style={{
+                    color: active ? '#fff' : mutedColor,
+                    backgroundColor: active ? colors.primary : 'transparent'
+                  }}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border" style={{ borderColor, backgroundColor: isLight ? 'rgba(255,255,255,0.58)' : 'rgba(2,6,23,0.20)' }}>
+          <div className="grid grid-cols-[52px_1fr_96px] gap-2 border-b px-3 py-2 text-[10px] font-black uppercase tracking-[0.20em]" style={{ borderColor, color: mutedColor }}>
+            <span>Rank</span>
+            <span>Aventurero</span>
+            <span className="text-right">{mode === 'eficiencia' ? 'Costo' : 'Chars'}</span>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center gap-2 px-3 py-4 text-sm" style={{ color: mutedColor }}>
+              <Loader className="h-4 w-4 animate-spin" />
+              Actualizando ranking...
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="px-3 py-4 text-sm font-gameui" style={{ color: mutedColor }}>
+              Aún no hay intentos correctos con métricas para esta misión.
+            </div>
+          ) : (
+            <ul className="divide-y" style={{ borderColor }}>
+              {rows.slice(0, 5).map((row) => {
+                const metric = mode === 'eficiencia'
+                  ? formatPerformanceNumber(row.costoEjecucion)
+                  : row.longitudCaracteres ?? '-';
+                return (
+                  <li key={`${mode}-${row.idUsuario}-${row.rango}`} className="grid grid-cols-[52px_1fr_96px] items-center gap-2 px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      {row.rango <= 3 ? (
+                        <Medal className="h-4 w-4" style={{ color: row.rango === 1 ? '#facc15' : row.rango === 2 ? '#cbd5e1' : '#f59e0b' }} />
+                      ) : (
+                        <span className="font-mono text-xs font-black" style={{ color: mutedColor }}>#{row.rango}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-sm font-black" style={{ color: headingColor }}>{row.nombre || 'Sin nombre'}</p>
+                      <p className="truncate font-mono text-[11px]" style={{ color: mutedColor }}>
+                        {formatPerformanceMs(row.tiempoMs)}
+                      </p>
+                    </div>
+                    <p className="text-right font-mono text-sm font-black" style={{ color: mode === 'eficiencia' ? colors.secondary : (isLight ? '#b45309' : '#fde047') }}>
+                      {metric}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ModelingLabPanel = ({ sql, onUseSql, colors, isLight, headingColor, mutedColor }) => {
+  const [loading, setLoading] = useState(false);
+  const [diagram, setDiagram] = useState(null);
+  const [error, setError] = useState(null);
+  const borderColor = isLight ? 'rgba(14,116,144,0.18)' : 'rgba(34,211,238,0.18)';
+  const surfaceColor = isLight ? 'rgba(236,254,255,0.68)' : 'rgba(8,47,73,0.18)';
+
+  const buildPreview = async () => {
+    if (!sql || !sql.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post('/api/modeling/ddl-to-erd', { sql });
+      setDiagram(response.data);
+    } catch {
+      setError('No se pudo construir el diagrama desde este DDL.');
+      setDiagram(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generatedSql = diagram?.ddl || '';
+
+  return (
+    <div className="mt-4 rounded-2xl border p-4" style={{ borderColor, backgroundColor: surfaceColor }}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.26em]" style={{ color: colors.secondary }}>
+            Laboratorio ERD
+          </p>
+          <h3 className="mt-1 flex items-center gap-2 font-display text-base font-black" style={{ color: headingColor }}>
+            <Network className="h-4 w-4" style={{ color: colors.secondary }} />
+            DDL a diagrama
+          </h3>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            onClick={buildPreview}
+            disabled={loading || !sql?.trim()}
+            className="rounded-xl bg-cyan-500 px-4 font-display font-black text-slate-950 hover:bg-cyan-300"
+          >
+            {loading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <Network className="mr-2 h-4 w-4" />}
+            Visualizar ERD
+          </Button>
+          {generatedSql && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onUseSql(generatedSql)}
+              className="rounded-xl"
+              style={{ borderColor, color: headingColor }}
+            >
+              <Code2 className="mr-2 h-4 w-4" />
+              Usar DDL
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <p className="mt-3 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: 'rgba(244,63,94,0.26)', color: isLight ? '#be123c' : '#fb7185' }}>
+          {error}
+        </p>
+      )}
+
+      {diagram && (
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.78fr)]">
+          <div className="h-[360px] overflow-hidden rounded-2xl border bg-[#090b10]" style={{ borderColor }}>
+            <MerDiagramBuilder
+              initialNodes={diagram.nodes || []}
+              initialEdges={diagram.edges || []}
+              readOnly
+            />
+          </div>
+          <div className="min-w-0 rounded-2xl border p-3" style={{ borderColor, backgroundColor: isLight ? 'rgba(255,255,255,0.62)' : 'rgba(2,6,23,0.24)' }}>
+            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: mutedColor }}>DDL normalizado</p>
+            <pre className="mt-2 max-h-[300px] overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-3 font-mono text-xs leading-relaxed text-cyan-100">
+              {generatedSql || '-- Sin DDL generado'}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DiagramSqlPreview = ({ graphJson, colors, isLight, headingColor, mutedColor }) => {
+  const parsed = useMemo(() => {
+    try {
+      return graphJson ? JSON.parse(graphJson) : null;
+    } catch {
+      return null;
+    }
+  }, [graphJson]);
+
+  const generatedSql = useMemo(() => (
+    parsed ? generateSqlFromDiagramData(parsed) : ''
+  ), [parsed]);
+
+  if (!generatedSql) return null;
+
+  const borderColor = isLight ? 'rgba(245,158,11,0.20)' : 'rgba(250,204,21,0.16)';
+  return (
+    <div className="mt-4 rounded-2xl border p-4" style={{ borderColor, backgroundColor: isLight ? 'rgba(255,251,235,0.72)' : 'rgba(113,63,18,0.14)' }}>
+      <div className="flex items-center gap-2">
+        <Code2 className="h-4 w-4" style={{ color: isLight ? '#b45309' : '#fde047' }} />
+        <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: mutedColor }}>
+          DDL generado
+        </p>
+      </div>
+      <pre className="mt-3 max-h-[260px] overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-3 font-mono text-xs leading-relaxed text-amber-100">
+        {generatedSql}
+      </pre>
+    </div>
+  );
+};
 
 const motionIn = {
   hidden: { opacity: 0, y: 14, scale: 0.985 },
@@ -181,6 +494,8 @@ export const ExercisePage = () => {
 
   const [editorCode, setEditorCode] = useState('');
   const [executionResult, setExecutionResult] = useState(null);
+  const [exerciseLeaderboard, setExerciseLeaderboard] = useState(null);
+  const [exerciseLeaderboardLoading, setExerciseLeaderboardLoading] = useState(false);
 
   const [clawbotThinking, setClawbotThinking] = useState(false);
   const [clawbotMessage, setClawbotMessage] = useState(null);
@@ -227,6 +542,24 @@ export const ExercisePage = () => {
     };
   }, []);
 
+  const fetchExerciseLeaderboard = useCallback(async (exerciseId) => {
+    if (!token || !exerciseId) {
+      setExerciseLeaderboard(null);
+      return;
+    }
+
+    setExerciseLeaderboard(null);
+    setExerciseLeaderboardLoading(true);
+    try {
+      const response = await apiClient.get(`/api/leaderboard/exercises/${exerciseId}`);
+      setExerciseLeaderboard(response.data);
+    } catch {
+      setExerciseLeaderboard(null);
+    } finally {
+      setExerciseLeaderboardLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     let isActive = true;
 
@@ -235,6 +568,8 @@ export const ExercisePage = () => {
       setExercises([]);
       setCurrentExerciseIndex(0);
       setExecutionResult(null);
+      setExerciseLeaderboard(null);
+      setExerciseLeaderboardLoading(false);
       setEditorCode('');
       setDroppedWords([]);
       setAvailableWords([]);
@@ -320,8 +655,9 @@ export const ExercisePage = () => {
       setShowHint(false);
       setProgressiveHint(null);
       setReinforcementPlan(null);
+      fetchExerciseLeaderboard(exercise.id);
     }
-  }, [currentExerciseIndex, exercises, levelId, shownSubTopics]);
+  }, [currentExerciseIndex, exercises, levelId, shownSubTopics, fetchExerciseLeaderboard]);
 
   const armDragClickGuard = () => {
     dragClickGuardRef.current = true;
@@ -559,6 +895,11 @@ export const ExercisePage = () => {
         }
         // Guardamos TODO el resultado para que el componente tenga acceso a isDML, beforeData, etc.
         setExecutionResult({ ...result });
+        if (result.exerciseLeaderboard) {
+          setExerciseLeaderboard(result.exerciseLeaderboard);
+        } else {
+          fetchExerciseLeaderboard(exercise.id);
+        }
         registerGamifiedAttempt({ exercise, success: true, attempts: intentosFallidos + 1 });
         setBurst(true);        setTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
@@ -572,6 +913,11 @@ export const ExercisePage = () => {
           success: true,
           isWarning: true 
         });
+        if (result.exerciseLeaderboard) {
+          setExerciseLeaderboard(result.exerciseLeaderboard);
+        } else {
+          fetchExerciseLeaderboard(exercise.id);
+        }
         sounds.playSoftWarning?.();
       } else {
         toast.error(result.message);
@@ -766,6 +1112,7 @@ export const ExercisePage = () => {
   const exercise = exercises[currentExerciseIndex];
   const isDragDrop = exercise.type === 'drag_drop';
   const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
+  const isModelingLab = exercise.pedagogia?.modo === 'laboratorio_modelado';
   const learningFocus = inferLearningFocus(exercise, levelId);
   const learningFeedback = buildLearningFeedback(executionResult, learningFocus, intentosFallidos);
   const statementSentences = splitStatementSentences(exercise.description);
@@ -1849,6 +2196,15 @@ export const ExercisePage = () => {
                         }}
                       />
                     </div>
+                    {isModelingLab && (
+                      <DiagramSqlPreview
+                        graphJson={editorCode}
+                        colors={colors}
+                        isLight={isLight}
+                        headingColor={headingColor}
+                        mutedColor={mutedColor}
+                      />
+                    )}
                     {rescueScaffoldPanel}
                   </>
                 ) : isDragDrop ? (
@@ -2076,6 +2432,16 @@ export const ExercisePage = () => {
                         }}
                       />
                     </div>
+                    {isModelingLab && (
+                      <ModelingLabPanel
+                        sql={editorCode}
+                        onUseSql={setEditorCode}
+                        colors={colors}
+                        isLight={isLight}
+                        headingColor={headingColor}
+                        mutedColor={mutedColor}
+                      />
+                    )}
                     {rescueScaffoldPanel}
                   </>
                 )}
@@ -2181,6 +2547,27 @@ export const ExercisePage = () => {
                     </div>
                   ) : (
                     <QueryResultShowcase result={executionResult} exercise={exercise} colors={colors} />
+                  )}
+
+                  {!isFailureResult && (
+                    <PerformanceAnalysisPanel
+                      performance={executionResult.performance}
+                      colors={colors}
+                      isLight={isLight}
+                      headingColor={headingColor}
+                      mutedColor={mutedColor}
+                    />
+                  )}
+
+                  {(executionResult.success || executionResult.isWarning || exerciseLeaderboard || exerciseLeaderboardLoading) && (
+                    <ExerciseLeaderboardPanel
+                      leaderboard={executionResult.exerciseLeaderboard || exerciseLeaderboard}
+                      loading={exerciseLeaderboardLoading}
+                      colors={colors}
+                      isLight={isLight}
+                      headingColor={headingColor}
+                      mutedColor={mutedColor}
+                    />
                   )}
 
                   {/* Siguiente misión */}

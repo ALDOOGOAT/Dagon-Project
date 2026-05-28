@@ -100,6 +100,9 @@ Todos bajo `http://localhost:8080/api`. Todos requieren `Authorization: Bearer <
 | POST | `/exercises/validate` | NivelController — valida query SQL |
 | POST | `/clawbot` | ClawbotController — chat Gemini |
 | GET  | `/leaderboard` | LeaderboardController |
+| GET  | `/leaderboard/exercises/{exerciseId}` | LeaderboardController — ranking de eficiencia y SQL Golf por misión |
+| POST | `/modeling/ddl-to-erd` | ModelingController — convierte DDL `CREATE TABLE` en nodos/aristas ERD |
+| POST | `/modeling/erd-to-ddl` | ModelingController — genera DDL desde el diagrama ERD |
 | GET  | `/analytics/mpi` | **AnalyticsController** — proxy al servicio MPI |
 
 ## 7. MPI (Programación Distribuida y Paralela)
@@ -146,7 +149,7 @@ La página `/analytics` en el frontend muestra el resultado con animaciones (Rec
 
 - Branch activa: `feature/conexion-niveles`.
 - Último trabajo: integración del script DB, motor de validación nuevo, Clawbot con rachas.
-- Pendiente/WIP: UX del `/analytics`, pulido del `AbyssBackground` y revisión pedagógica de guiones de cinemáticas por módulo.
+- WIP: Dagon se está especializando en SQL avanzado. El backend registra métricas competitivas por intento (`tiempo_ms`, `costo_ejecucion`, `longitud_caracteres`), ejecuta `EXPLAIN ANALYZE` para consultas SELECT correctas y expone ranking por ejercicio para eficiencia y SQL Golf. También incluye "Misterios de Dagon" con dataset masivo por usuario, timeouts didácticos e índices requeridos, más un laboratorio de modelado que convierte DDL a ERD y ERD a DDL.
 
 ---
 

@@ -112,8 +112,12 @@ CREATE TABLE lms_core.intentos (
     query_enviada text NOT NULL,
     es_correcto boolean NOT NULL,
     tiempo_ms numeric(8,2),
+    costo_ejecucion numeric(12,2),
+    longitud_caracteres integer,
     fecha_intento timestamp without time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT intentos_tiempo_ms_check CHECK (tiempo_ms IS NULL OR tiempo_ms >= 0)
+    CONSTRAINT intentos_tiempo_ms_check CHECK (tiempo_ms IS NULL OR tiempo_ms >= 0),
+    CONSTRAINT intentos_costo_ejecucion_check CHECK (costo_ejecucion IS NULL OR costo_ejecucion >= 0),
+    CONSTRAINT intentos_longitud_caracteres_check CHECK (longitud_caracteres IS NULL OR longitud_caracteres >= 0)
 );
 
 CREATE TABLE lms_core.auditoria_logs (
@@ -128,6 +132,14 @@ CREATE TABLE lms_core.auditoria_logs (
 
 CREATE INDEX idx_intentos_usuario_ejercicio_correcto_fecha
     ON lms_core.intentos (id_usuario, id_ejercicio, es_correcto, fecha_intento DESC);
+
+CREATE INDEX idx_intentos_ejercicio_eficiencia
+    ON lms_core.intentos (id_ejercicio, es_correcto, costo_ejecucion, tiempo_ms, fecha_intento)
+    WHERE es_correcto = true;
+
+CREATE INDEX idx_intentos_ejercicio_sql_golf
+    ON lms_core.intentos (id_ejercicio, es_correcto, longitud_caracteres, costo_ejecucion, fecha_intento)
+    WHERE es_correcto = true;
 
 CREATE INDEX idx_ejercicios_modulo_orden
     ON lms_core.ejercicios_practicos (id_modulo, orden);
