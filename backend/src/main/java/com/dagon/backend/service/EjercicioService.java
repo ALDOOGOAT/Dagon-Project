@@ -41,6 +41,14 @@ public class EjercicioService {
     @Autowired
     private SandboxSqlPolicy sandboxSqlPolicy;
 
+    @Autowired
+    private SqlPerformanceService sqlPerformanceService;
+
+    @Autowired
+    private LeaderboardService leaderboardService;
+
+    private Boolean columnasCompetitivasIntentosDisponibles;
+
     @Value("${dagon.sandbox.url}")
     private String sandboxUrl;
 
@@ -49,6 +57,9 @@ public class EjercicioService {
 
     @Value("${dagon.sandbox.password}")
     private String sandboxPassword;
+
+    @Value("${dagon.sandbox.statement-timeout-ms:8000}")
+    private Integer sandboxStatementTimeoutMs;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
         List<NivelDTO> modulos = new ArrayList<>();
@@ -388,6 +399,10 @@ public class EjercicioService {
     }
 
     private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId) throws java.sql.SQLException {
+        return ejecutarEnSandboxConRollback(query, usuarioId, null);
+    }
+
+    private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId, Integer statementTimeoutMs) throws java.sql.SQLException {
         sandboxSqlPolicy.validarRolSandbox(sandboxUser);
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
@@ -397,6 +412,7 @@ public class EjercicioService {
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
             conn.setAutoCommit(false); // Iniciar transacción
             try (Statement stmt = conn.createStatement()) {
+                aplicarTimeoutSandbox(stmt, statementTimeoutMs);
                 stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
                 
                 boolean tieneResultSet = stmt.execute(query);
@@ -421,6 +437,10 @@ public class EjercicioService {
     }
 
     private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId) throws java.sql.SQLException {
+        return ejecutarEnSandbox(queryUsuario, usuarioId, null);
+    }
+
+    private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId, Integer statementTimeoutMs) throws java.sql.SQLException {
         sandboxSqlPolicy.validarRolSandbox(sandboxUser);
         List<Map<String, Object>> resultados = new ArrayList<>();
         String url = sandboxUrl;
@@ -444,6 +464,8 @@ public class EjercicioService {
 
         try (Connection conn = DriverManager.getConnection(url, user, password);
              Statement stmt = conn.createStatement()) {
+
+            aplicarTimeoutSandbox(stmt, statementTimeoutMs);
 
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                 String searchPath = sandboxSqlPolicy.resolverSearchPath(usuarioId);
@@ -513,6 +535,17 @@ public class EjercicioService {
         return resultados;
     }
 
+    private void aplicarTimeoutSandbox(Statement stmt, Integer statementTimeoutMs) throws java.sql.SQLException {
+        Integer timeoutSeguro = statementTimeoutMs != null ? statementTimeoutMs : sandboxStatementTimeoutMs;
+        if (timeoutSeguro == null || timeoutSeguro <= 0) {
+            return;
+        }
+
+        int segundos = Math.max(1, (int) Math.ceil(timeoutSeguro / 1000.0));
+        stmt.setQueryTimeout(segundos);
+        stmt.execute("SET statement_timeout = " + Math.max(250, timeoutSeguro));
+    }
+
     private String extraerNombreTablaDDL(String upperQuery, String queryOriginal) {
         String tabla = null;
         
@@ -540,6 +573,7 @@ public class EjercicioService {
     }
 
 public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
+    long inicioValidacion = System.nanoTime();
     Map<String, Object> respuesta = new HashMap<>();
 
     // --- 1. INTERCEPCIÓN ESTRATÉGICA (Antes del Escudo) ---
@@ -594,6 +628,12 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             return respuesta;
         }
 
+        Integer statementTimeoutEjercicioMs = resolverStatementTimeoutEjercicio(ejercicio);
+        Optional<Map<String, Object>> errorDataset = prepararDatasetDetectiveSiAplica(ejercicio, queryUsuario, usuarioId);
+        if (errorDataset.isPresent()) {
+            return errorDataset.get();
+        }
+
         Optional<Map<String, Object>> errorPrevalidacion = validationRouter.prevalidar(ejercicio, queryUsuario, usuarioId);
         if (errorPrevalidacion.isPresent()) {
             return errorPrevalidacion.get();
@@ -606,6 +646,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         boolean esMisionTransaccional = esMisionTransaccional(ejercicio);
         boolean esCorrecto = false;
         List<Map<String, Object>> datosAlumno = new ArrayList<>();
+        SqlPerformanceService.SqlPerformanceReport reporteRendimiento = null;
 
         try {
             if ("diagram".equals(formato)) {
@@ -781,12 +822,14 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 boolean isDdlValidation = false;
                 boolean isTextualValidation = false;
                 String expectedRegex = null;
+                JsonNode configValidacion = null;
 
                 String configExtra = ejercicio.getConfiguracionExtra();
                 if (configExtra != null && !configExtra.trim().isEmpty()) {
                     try {
                         ObjectMapper mapper = new ObjectMapper();
                         JsonNode config = mapper.readTree(configExtra);
+                        configValidacion = config;
                         if (config.has("tipo_validacion")) {
                             String tipoVal = config.get("tipo_validacion").asText();
                             if ("ddl".equalsIgnoreCase(tipoVal)) {
@@ -821,8 +864,8 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                         
                         try {
                             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
-                                String insertSql = "INSERT INTO lms_core.intentos (id_usuario, id_ejercicio, query_enviada, es_correcto) VALUES (?::uuid, ?, ?, true)";
-                                jdbcTemplate.update(insertSql, usuarioId, ejercicio.getIdEjercicio(), queryUsuario);
+                                registrarIntento(usuarioId, ejercicio.getIdEjercicio(), queryUsuario, true,
+                                        calcularTiempoMs(inicioValidacion), null);
                                 usuarioService.registrarPracticaDiaria(usuarioId);
                             }
                         } catch (Exception ignored) {}
@@ -868,6 +911,20 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     // Para secuencias o DDL, ejecutamos y si no hay error de SQL, es correcto.
                     datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
                     esCorrecto = true;
+
+                    if (configValidacion != null && configValidacion.has("indice_requerido")) {
+                        esCorrecto = validarIndiceRequerido(configValidacion.get("indice_requerido"), usuarioId);
+                        if (!esCorrecto) {
+                            respuesta.put("success", false);
+                            respuesta.put("message", "El SQL se ejecutó, pero el índice requerido no quedó creado sobre las columnas correctas.");
+                            respuesta.put("xp_gained", 0);
+                            respuesta.put("descripcion", ejercicio.getEnunciado());
+                            respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                            respuesta.put("queryAlumno", queryUsuario);
+                            respuesta.put("errorDb", "No se encontró el índice pedagógico requerido para el laboratorio de rendimiento.");
+                            return respuesta;
+                        }
+                    }
                     
                     // 🌟 MAGIA DIDÁCTICA: Escanear y devolver las Constraints de la tabla
                     String tablaAfectada = extraerNombreTablaDDL(upperQ, queryUsuario);
@@ -929,8 +986,8 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                         } catch (Exception ignored) {}
                     }
 
-                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
-                    List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId);
+                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId, statementTimeoutEjercicioMs);
+                    List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId, statementTimeoutEjercicioMs);
                     esCorrecto = datosAlumno.equals(datosMaestros);
 
                     if (tablaTransaccional != null) {
@@ -952,13 +1009,25 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             }
 
             boolean yaResuelto = false;
+            if (esCorrecto) {
+                reporteRendimiento = sqlPerformanceService
+                        .analizarConsultaExitosa(ejercicio, queryUsuario, usuarioId)
+                        .orElse(null);
+                if (reporteRendimiento != null) {
+                    respuesta.put("performance", reporteRendimiento.toResponseMap());
+                }
+            }
+
             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                 String checkSql = "SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND id_ejercicio = ? AND es_correcto = true";
                 Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, usuarioId, ejercicioId);
                 yaResuelto = (count != null && count > 0);
 
-                String insertSql = "INSERT INTO lms_core.intentos (id_usuario, id_ejercicio, query_enviada, es_correcto) VALUES (?::uuid, ?, ?, ?)";
-                jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto);
+                Double tiempoCompetitivoMs = reporteRendimiento != null && reporteRendimiento.executionTimeMs() != null
+                        ? reporteRendimiento.executionTimeMs()
+                        : calcularTiempoMs(inicioValidacion);
+                Double costoEjecucion = reporteRendimiento != null ? reporteRendimiento.totalCost() : null;
+                registrarIntento(usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoCompetitivoMs, costoEjecucion);
             }
 
             // 🌟 MAGIA DIDÁCTICA: Escanear constraints después de ejecutar la consulta del usuario
@@ -987,6 +1056,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 if (usuarioId != null && !usuarioId.trim().isEmpty()) {
                     usuarioService.registrarPracticaDiaria(usuarioId);
                 }
+                respuesta.put("exerciseLeaderboard", leaderboardService.obtenerRankingEjercicio(ejercicioId));
 
                 String tipo = ejercicio.getTipoMision() != null ? ejercicio.getTipoMision() : "HISTORIA";
                 if ("RAPIDA".equals(tipo)) {
@@ -1031,6 +1101,21 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
 
         } catch (java.sql.SQLException e) {
             String sqlError = e.getMessage();
+
+            if (esTimeoutSql(e)) {
+                respuesta.put("success", false);
+                respuesta.put("message", "La consulta superó el límite del laboratorio. Reduce filas antes de procesar o crea el índice que pide la investigación.");
+                respuesta.put("xp_gained", 0);
+                respuesta.put("descripcion", ejercicio.getEnunciado());
+                respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
+                respuesta.put("queryAlumno", queryUsuario);
+                respuesta.put("errorDb", "Timeout del sandbox: " + sqlError);
+                respuesta.put("performanceTimeout", true);
+                if (esMisionTransaccional) {
+                    anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
+                }
+                return respuesta;
+            }
             
             // === INTERVENCIÓN PEDAGÓGICA: Primary Key Duplicada ===
             if (sqlError != null && sqlError.toLowerCase().contains("multiple primary keys")) {
@@ -1200,6 +1285,223 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             }
         }
         return respuesta;
+    }
+
+    private void registrarIntento(
+            String usuarioId,
+            Integer ejercicioId,
+            String queryUsuario,
+            boolean esCorrecto,
+            Double tiempoMs,
+            Double costoEjecucion
+    ) {
+        if (usuarioId == null || usuarioId.trim().isEmpty()) {
+            return;
+        }
+
+        Integer longitudCaracteres = calcularLongitudSql(queryUsuario);
+        Double tiempoSeguro = tiempoMs != null ? tiempoMs : 0.0;
+
+        if (soportaColumnasCompetitivasIntentos()) {
+            try {
+                String insertSql = "INSERT INTO lms_core.intentos " +
+                        "(id_usuario, id_ejercicio, query_enviada, es_correcto, tiempo_ms, costo_ejecucion, longitud_caracteres) " +
+                        "VALUES (?::uuid, ?, ?, ?, ?, ?, ?)";
+                jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto,
+                        tiempoSeguro, costoEjecucion, longitudCaracteres);
+                return;
+            } catch (Exception ignored) {
+                columnasCompetitivasIntentosDisponibles = false;
+            }
+        }
+
+        String insertSql = "INSERT INTO lms_core.intentos " +
+                "(id_usuario, id_ejercicio, query_enviada, es_correcto, tiempo_ms) " +
+                "VALUES (?::uuid, ?, ?, ?, ?)";
+        jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoSeguro);
+    }
+
+    private boolean soportaColumnasCompetitivasIntentos() {
+        if (columnasCompetitivasIntentosDisponibles != null) {
+            return columnasCompetitivasIntentosDisponibles;
+        }
+
+        try {
+            String sql = "SELECT COUNT(*) FROM information_schema.columns " +
+                    "WHERE table_schema = 'lms_core' " +
+                    "AND table_name = 'intentos' " +
+                    "AND column_name IN ('costo_ejecucion', 'longitud_caracteres')";
+            Integer total = jdbcTemplate.queryForObject(sql, Integer.class);
+            columnasCompetitivasIntentosDisponibles = total != null && total >= 2;
+        } catch (Exception e) {
+            columnasCompetitivasIntentosDisponibles = false;
+        }
+
+        return columnasCompetitivasIntentosDisponibles;
+    }
+
+    private Integer calcularLongitudSql(String queryUsuario) {
+        return queryUsuario != null ? queryUsuario.trim().length() : 0;
+    }
+
+    private Double calcularTiempoMs(long inicioNanos) {
+        double ms = (System.nanoTime() - inicioNanos) / 1_000_000.0;
+        return Math.round(ms * 100.0) / 100.0;
+    }
+
+    private Optional<Map<String, Object>> prepararDatasetDetectiveSiAplica(
+            EjercicioPractico ejercicio,
+            String queryUsuario,
+            String usuarioId
+    ) {
+        if (!requiereDatasetDetective(ejercicio)) {
+            return Optional.empty();
+        }
+
+        try {
+            prepararDatasetFraudeBancario(usuarioId);
+            return Optional.empty();
+        } catch (Exception e) {
+            return Optional.of(RespuestasDatasetDetective.error(
+                    ejercicio,
+                    queryUsuario,
+                    "No fue posible preparar el dataset masivo del misterio: " + e.getMessage()
+            ));
+        }
+    }
+
+    private boolean requiereDatasetDetective(EjercicioPractico ejercicio) {
+        JsonNode config = leerConfiguracionExtra(ejercicio);
+        return config != null
+                && config.has("dataset_detective")
+                && "FRAUDE_BANCARIO".equalsIgnoreCase(config.get("dataset_detective").asText());
+    }
+
+    private void prepararDatasetFraudeBancario(String usuarioId) {
+        String esquema = sandboxSqlPolicy.resolverSearchPath(usuarioId);
+        String schemaSql = quoteIdentifier(esquema);
+        String tableSql = schemaSql + ".transferencias_misteriosas";
+
+        jdbcTemplate.execute("CREATE SCHEMA IF NOT EXISTS " + schemaSql);
+        jdbcTemplate.execute("GRANT USAGE, CREATE ON SCHEMA " + schemaSql + " TO app_sandbox_user");
+        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tableSql + " (" +
+                "id_evento BIGINT PRIMARY KEY, " +
+                "cuenta_origen VARCHAR(32) NOT NULL, " +
+                "cuenta_destino VARCHAR(32) NOT NULL, " +
+                "monto NUMERIC(12,2) NOT NULL, " +
+                "canal VARCHAR(32) NOT NULL, " +
+                "ciudad VARCHAR(64) NOT NULL, " +
+                "fecha_evento TIMESTAMP NOT NULL, " +
+                "riesgo INTEGER NOT NULL, " +
+                "es_fraude BOOLEAN NOT NULL" +
+                ")");
+        jdbcTemplate.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON " + tableSql + " TO app_sandbox_user");
+
+        String seedSql = "INSERT INTO " + tableSql + " " +
+                "(id_evento, cuenta_origen, cuenta_destino, monto, canal, ciudad, fecha_evento, riesgo, es_fraude) " +
+                "SELECT gs, " +
+                "'CTA-' || lpad((gs % 50000)::text, 5, '0'), " +
+                "'CTA-' || lpad(((gs * 37) % 50000)::text, 5, '0'), " +
+                "CASE WHEN gs % 997 = 0 THEN 9900 + (gs % 89) ELSE 20 + (gs % 1500) END, " +
+                "CASE WHEN gs % 5 = 0 THEN 'app' WHEN gs % 5 = 1 THEN 'web' WHEN gs % 5 = 2 THEN 'atm' WHEN gs % 5 = 3 THEN 'sucursal' ELSE 'api' END, " +
+                "CASE WHEN gs % 7 = 0 THEN 'Zacatecas' WHEN gs % 7 = 1 THEN 'Guadalajara' WHEN gs % 7 = 2 THEN 'Monterrey' WHEN gs % 7 = 3 THEN 'CDMX' WHEN gs % 7 = 4 THEN 'Tijuana' WHEN gs % 7 = 5 THEN 'Merida' ELSE 'Queretaro' END, " +
+                "TIMESTAMP '2026-01-01' + ((gs % 180) * INTERVAL '1 day') + ((gs % 86400) * INTERVAL '1 second'), " +
+                "CASE WHEN gs % 997 = 0 THEN 99 WHEN gs % 89 = 0 THEN 87 ELSE (gs % 70) END, " +
+                "(gs % 997 = 0) " +
+                "FROM generate_series(1, 1000000) AS gs " +
+                "WHERE NOT EXISTS (SELECT 1 FROM " + tableSql + " LIMIT 1)";
+        jdbcTemplate.execute(seedSql);
+        try {
+            jdbcTemplate.execute("ALTER TABLE " + tableSql + " OWNER TO app_sandbox_user");
+        } catch (Exception ignored) {}
+    }
+
+    private Integer resolverStatementTimeoutEjercicio(EjercicioPractico ejercicio) {
+        JsonNode config = leerConfiguracionExtra(ejercicio);
+        if (config == null) {
+            return null;
+        }
+        if (config.has("detective_timeout_ms")) {
+            return Math.max(250, config.get("detective_timeout_ms").asInt());
+        }
+        if (config.has("statement_timeout_ms")) {
+            return Math.max(250, config.get("statement_timeout_ms").asInt());
+        }
+        return null;
+    }
+
+    private boolean validarIndiceRequerido(JsonNode indiceConfig, String usuarioId) {
+        if (indiceConfig == null || !indiceConfig.has("tabla") || !indiceConfig.has("columnas")) {
+            return true;
+        }
+
+        String tabla = indiceConfig.get("tabla").asText();
+        List<String> columnas = new ArrayList<>();
+        for (JsonNode columna : indiceConfig.get("columnas")) {
+            columnas.add(columna.asText().toLowerCase(Locale.ROOT));
+        }
+
+        try {
+            String sql = "SELECT indexdef FROM pg_indexes WHERE schemaname = ? AND tablename = ?";
+            List<String> definiciones = jdbcTemplate.queryForList(
+                    sql,
+                    String.class,
+                    sandboxSqlPolicy.resolverSearchPath(usuarioId),
+                    tabla
+            );
+
+            for (String def : definiciones) {
+                String normalizada = def != null ? def.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ") : "";
+                boolean contieneTodas = true;
+                for (String columna : columnas) {
+                    if (!normalizada.contains(columna.toLowerCase(Locale.ROOT))) {
+                        contieneTodas = false;
+                        break;
+                    }
+                }
+                if (contieneTodas) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return false;
+    }
+
+    private JsonNode leerConfiguracionExtra(EjercicioPractico ejercicio) {
+        if (ejercicio == null || ejercicio.getConfiguracionExtra() == null || ejercicio.getConfiguracionExtra().trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return new ObjectMapper().readTree(ejercicio.getConfiguracionExtra());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private boolean esTimeoutSql(java.sql.SQLException error) {
+        String message = error.getMessage() != null ? error.getMessage().toLowerCase(Locale.ROOT) : "";
+        return "57014".equals(error.getSQLState())
+                || message.contains("statement timeout")
+                || message.contains("canceling statement due to");
+    }
+
+    private String quoteIdentifier(String identifier) {
+        return "\"" + identifier.replace("\"", "\"\"") + "\"";
+    }
+
+    private static class RespuestasDatasetDetective {
+        private static Map<String, Object> error(EjercicioPractico ejercicio, String queryUsuario, String errorDb) {
+            Map<String, Object> respuesta = new HashMap<>();
+            respuesta.put("success", false);
+            respuesta.put("message", "El laboratorio de datos masivos no pudo inicializarse.");
+            respuesta.put("xp_gained", 0);
+            respuesta.put("descripcion", ejercicio != null ? ejercicio.getEnunciado() : "");
+            respuesta.put("queryMaestra", ejercicio != null ? ejercicio.getQueryMaestra() : "");
+            respuesta.put("queryAlumno", queryUsuario);
+            respuesta.put("errorDb", errorDb);
+            return respuesta;
+        }
     }
     
     private String extraerNombreTablaDML(String upperQuery, String queryOriginal) {

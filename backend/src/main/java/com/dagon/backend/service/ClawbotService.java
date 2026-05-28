@@ -168,6 +168,45 @@ public class ClawbotService {
         return telemetryService.snapshot();
     }
 
+    public String analizarPlanEjecucion(
+            String descripcion,
+            String queryAlumno,
+            String planJson,
+            Map<String, Object> resumenMetricas
+    ) {
+        String prompt = buildPerformancePrompt(descripcion, queryAlumno, planJson, resumenMetricas);
+
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+            try {
+                String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
+                Map<String, Object> body = buildGeminiBody(prompt, 0.2, 520);
+                ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, jsonHeaders()), Map.class);
+                String respuesta = extractGeminiText(response.getBody());
+                if (hasText(respuesta)) {
+                    telemetryService.recordSource("gemini_performance");
+                    return formatearRespuestaAnalisis(respuesta);
+                }
+            } catch (Exception e) {
+                logger.warn("Clawbot: Error analizando plan con Gemini: {}", e.getMessage());
+            }
+        }
+
+        if (groqApiKey != null && !groqApiKey.isBlank()) {
+            try {
+                String respuesta = callGroqChat(prompt);
+                if (hasText(respuesta)) {
+                    telemetryService.recordSource("groq_performance");
+                    return formatearRespuestaAnalisis(respuesta);
+                }
+            } catch (Exception e) {
+                logger.warn("Clawbot: Error analizando plan con Groq: {}", e.getMessage());
+            }
+        }
+
+        telemetryService.recordSource("local_performance");
+        return buildPerformanceFallback(resumenMetricas);
+    }
+
     private String callGeminiChat(String prompt) {
         if (geminiApiKey == null || geminiApiKey.isBlank()) {
             return null;
@@ -340,6 +379,51 @@ public class ClawbotService {
                 "\n\nLa query maestra no se proporciona a proposito. No inventes una solucion completa.";
     }
 
+    private String buildPerformancePrompt(
+            String descripcion,
+            String queryAlumno,
+            String planJson,
+            Map<String, Object> resumenMetricas
+    ) {
+        StringBuilder resumen = new StringBuilder();
+        if (resumenMetricas != null) {
+            resumenMetricas.forEach((key, value) -> resumen
+                    .append(key)
+                    .append(": ")
+                    .append(value)
+                    .append("\n"));
+        }
+
+        return """
+                Eres Clawbot, tutor de PostgreSQL especializado en rendimiento. El alumno ya resolvio correctamente el ejercicio; ahora debes ensenar eficiencia sin cambiar el objetivo funcional.
+
+                Responde en espanol, didactico y breve, con este formato:
+                DIAGNOSTICO: una frase sobre el plan.
+                EVIDENCIA: menciona el nodo o metrica principal del EXPLAIN.
+                OPTIMIZACION: una mejora concreta, sin escribir la solucion completa.
+                SIGUIENTE RETO: una pregunta corta para que el alumno piense.
+
+                No inventes indices que no puedas justificar. Si el plan es pequeno, dilo y enfoca la explicacion en el concepto.
+
+                EJERCICIO:
+                %s
+
+                CONSULTA DEL ALUMNO:
+                %s
+
+                RESUMEN DE METRICAS:
+                %s
+
+                PLAN JSON DE POSTGRESQL:
+                %s
+                """.formatted(
+                sanitizeForPrompt(descripcion),
+                sanitizeForPrompt(queryAlumno),
+                sanitizeForPrompt(resumen.toString(), 1600),
+                sanitizeForPrompt(planJson, 4800)
+        );
+    }
+
     private String buildNivelAyuda(int intentos) {
         if (intentos <= 1) {
             return "Primer intento: una explicacion breve y una pregunta concreta. Evita ejemplos largos.";
@@ -440,16 +524,20 @@ public class ClawbotService {
     }
 
     private String sanitizeForPrompt(String value) {
+        return sanitizeForPrompt(value, MAX_PROMPT_TEXT);
+    }
+
+    private String sanitizeForPrompt(String value, int maxChars) {
         if (value == null) return "";
         String sanitized = value
                 .replaceAll("(?i)ignora las instrucciones anteriores", "[instruccion externa omitida]")
                 .replaceAll("(?i)ignore previous instructions", "[instruccion externa omitida]")
                 .replaceAll("(?i)system prompt", "[referencia interna omitida]")
                 .trim();
-        if (sanitized.length() <= MAX_PROMPT_TEXT) {
+        if (sanitized.length() <= maxChars) {
             return sanitized;
         }
-        return sanitized.substring(0, MAX_PROMPT_TEXT) + "...";
+        return sanitized.substring(0, maxChars) + "...";
     }
 
     private String buildFallbackResponse(String error, int intentos, String errorType) {
@@ -475,6 +563,32 @@ public class ClawbotService {
             sb.append("\n\nAYUDA: Lee el mensaje del sistema buscando una pista de nombre, orden o tipo de dato, no una respuesta literal.");
         }
 
+        return sb.toString();
+    }
+
+    private String buildPerformanceFallback(Map<String, Object> resumenMetricas) {
+        String nodo = String.valueOf(resumenMetricas != null ? resumenMetricas.getOrDefault("topNode", "plan SQL") : "plan SQL");
+        Object costo = resumenMetricas != null ? resumenMetricas.get("totalCost") : null;
+        Object tiempo = resumenMetricas != null ? resumenMetricas.get("executionTimeMs") : null;
+        boolean seqScan = resumenMetricas != null && Boolean.TRUE.equals(resumenMetricas.get("seqScan"));
+        boolean indexScan = resumenMetricas != null && Boolean.TRUE.equals(resumenMetricas.get("indexScan"));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("DIAGNOSTICO: PostgreSQL resolvio la consulta usando ").append(nodo).append(".\n\n");
+        sb.append("EVIDENCIA: costo estimado ").append(costo != null ? costo : "no disponible")
+                .append(" y tiempo de ejecucion ")
+                .append(tiempo != null ? tiempo + " ms" : "no disponible")
+                .append(".\n\n");
+
+        if (seqScan) {
+            sb.append("OPTIMIZACION: aparece un Seq Scan; revisa si el filtro o el JOIN podria aprovechar un indice sobre la columna que reduce mas filas.\n\n");
+        } else if (indexScan) {
+            sb.append("OPTIMIZACION: el plan ya usa indice; compara si el filtro devuelve pocas filas y si el ordenamiento agrega costo adicional.\n\n");
+        } else {
+            sb.append("OPTIMIZACION: identifica que clausula domina el costo antes de tocar la consulta; no toda consulta correcta necesita un indice.\n\n");
+        }
+
+        sb.append("SIGUIENTE RETO: ¿que parte de tu consulta reduce mas datos: FROM, JOIN, WHERE, GROUP BY u ORDER BY?");
         return sb.toString();
     }
 

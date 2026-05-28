@@ -165,6 +165,12 @@ public class ModuloService {
 
     public void reiniciarDatosUsuario(String usuarioId) {
         String esquema = "sandbox_usuario_" + usuarioId;
+
+        try {
+            jdbcTemplate.execute("DROP TABLE IF EXISTS \"" + esquema + "\".\"transferencias_misteriosas\" CASCADE");
+        } catch (Exception e) {
+            logger.warn("Error limpiando dataset detective: {}", e.getMessage());
+        }
         
         // 1. Obtener lista de tablas del template
         String sqlTablas = "SELECT tablename FROM pg_tables WHERE schemaname = 'lms_sandbox_template'";
