@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -47,10 +48,13 @@ public class UsuarioController {
             Usuario nuevoUsuario = new Usuario();
             nuevoUsuario.setNombre((String) body.get("nombre"));
             nuevoUsuario.setEmail((String) body.get("email"));
-            nuevoUsuario.setPasswordHash((String) body.get("passwordHash"));
+            nuevoUsuario.setPasswordHash((String) body.get("password")); // React envía 'password', nosotros lo guardamos como hash después
 
-            // El registro publico siempre crea alumnos. Los roles elevados deben asignarse por un flujo docente/admin.
-            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, "alumno");
+            String rol = (String) body.getOrDefault("rol", "alumno");
+            String codigoClase = (String) body.get("codigoClase");
+            String claveDocente = (String) body.get("claveDocente");
+
+            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, rol, codigoClase, claveDocente);
 
             String token = jwtUtil.generarToken(usuarioGuardado.getIdUsuario().toString());
 
@@ -81,6 +85,31 @@ public class UsuarioController {
             throw e;
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // PUERTA 3: GOOGLE LOGIN (Simplificado)
+    @PostMapping("/login-google")
+    public ResponseEntity<?> loginGoogle(@RequestBody Map<String, Object> body) {
+        try {
+            String email = (String) body.get("email");
+            String nombre = (String) body.get("nombre");
+            
+            // Buscamos si el usuario ya existe
+            Usuario usuario = usuarioService.obtenerPorEmail(email).orElseGet(() -> {
+                // Si no existe, lo creamos como alumno por defecto
+                Usuario nuevo = new Usuario();
+                nuevo.setEmail(email);
+                nuevo.setNombre(nombre);
+                nuevo.setPasswordHash("GOOGLE_AUTH_" + UUID.randomUUID()); // Password dummy
+                nuevo.setMetodoAuth("google");
+                return usuarioService.registrarUsuario(nuevo, "alumno", null, null);
+            });
+
+            String token = jwtUtil.generarToken(usuario.getIdUsuario().toString());
+            return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuario)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Error en autenticación con Google: " + e.getMessage());
         }
     }
     // --- TEMPORAL: Puerta provisional para obtener el perfil ---

@@ -30,10 +30,12 @@ export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rol, setRol] = useState('alumno');
+  const [codigoClase, setCodigoClase] = useState('');
+  const [claveDocente, setClaveDocente] = useState('');
   const [loading, setLoading] = useState(false);
   const [isPageReady, setIsPageReady] = useState(false);
   const [taglineIdx, setTaglineIdx] = useState(0);
-  const { login, register } = useAuth();
+  const { login, register, loginGoogle } = useAuth();
   const { colors } = useTheme();
   const navigate = useNavigate();
   const isLight = colors.mode === 'light';
@@ -73,7 +75,17 @@ export const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = isLogin ? await login(email, password) : await register(name, email, password, rol);
+      let result;
+      if (isLogin) {
+        result = await login(email, password);
+      } else {
+        const extraData = {};
+        if (rol === 'alumno' && codigoClase) extraData.codigoClase = codigoClase;
+        if (rol === 'docente') extraData.claveDocente = claveDocente;
+        
+        result = await register(name, email, password, rol, extraData);
+      }
+
       if (result.success) {
         sounds.playSuccess();
         toast.success('¡Bienvenido a las profundidades del conocimiento!');
@@ -85,6 +97,27 @@ export const LoginPage = () => {
       toast.error('Ocurrió un error inesperado');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    toast.info('Iniciando sesión con Google...');
+    // Simulamos la respuesta de Google para esta implementación
+    // En una implementación real, aquí se usaría el token obtenido del SDK de Google
+    const mockGoogleUser = {
+      email: email || 'aventurero@gmail.com',
+      name: name || 'Aventurero Google'
+    };
+    
+    setLoading(true);
+    const result = await loginGoogle(mockGoogleUser);
+    setLoading(false);
+    
+    if (result.success) {
+      toast.success('¡Autenticado con Google!');
+      navigate('/dashboard');
+    } else {
+      toast.error(result.error);
     }
   };
 
@@ -244,8 +277,9 @@ export const LoginPage = () => {
                       <Label className="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
                         <GraduationCap className="w-3 h-3" style={{ color: colors.primary }} /> Tipo de cuenta
                       </Label>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-3 gap-2">
                         {[
+                          { value: 'free', label: 'Libre', icon: <Sparkles className="w-4 h-4" /> },
                           { value: 'alumno', label: 'Alumno', icon: <User className="w-4 h-4" /> },
                           { value: 'docente', label: 'Docente', icon: <BookOpen className="w-4 h-4" /> },
                         ].map(opt => (
@@ -253,7 +287,7 @@ export const LoginPage = () => {
                             key={opt.value}
                             type="button"
                             onClick={() => setRol(opt.value)}
-                            className="flex items-center justify-center gap-2 h-11 rounded-xl border text-sm font-bold transition-all"
+                            className="flex items-center justify-center gap-2 h-11 rounded-xl border text-[10px] sm:text-xs font-bold transition-all"
                             style={{
                               borderColor: rol === opt.value ? colors.primary : colors.border,
                               backgroundColor: rol === opt.value
@@ -268,6 +302,51 @@ export const LoginPage = () => {
                         ))}
                       </div>
                     </div>
+
+                    <AnimatePresence>
+                      {rol === 'alumno' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-2 pt-1"
+                        >
+                          <Label htmlFor="codigoClase" className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                            <Zap className="w-3 h-3" style={{ color: colors.primary }} /> Código de Clase (Opcional)
+                          </Label>
+                          <Input
+                            id="codigoClase"
+                            placeholder="Ej: CLASE-2026"
+                            value={codigoClase}
+                            onChange={(e) => setCodigoClase(e.target.value)}
+                            className="login-input h-10 rounded-xl text-sm"
+                            style={{ backgroundColor: `${colors.surface}b3`, borderColor: colors.border }}
+                          />
+                        </motion.div>
+                      )}
+                      {rol === 'docente' && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-2 pt-1"
+                        >
+                          <Label htmlFor="claveDocente" className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2" style={{ color: labelColor }}>
+                            <Lock className="w-3 h-3" style={{ color: colors.accent }} /> Clave Maestra Docente
+                          </Label>
+                          <Input
+                            id="claveDocente"
+                            type="password"
+                            placeholder="Clave otorgada por Admin"
+                            value={claveDocente}
+                            onChange={(e) => setClaveDocente(e.target.value)}
+                            className="login-input h-10 rounded-xl text-sm"
+                            style={{ backgroundColor: `${colors.surface}b3`, borderColor: colors.accent }}
+                            required
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -336,6 +415,40 @@ export const LoginPage = () => {
                 )}
               </Button>
             </form>
+
+            <div className="relative flex items-center gap-4 my-2">
+              <div className="flex-1 h-px bg-border" style={{ backgroundColor: colors.border }}></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: mutedColor }}>O entra con</span>
+              <div className="flex-1 h-px bg-border" style={{ backgroundColor: colors.border }}></div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleGoogleLogin}
+              variant="outline"
+              className="w-full h-12 rounded-xl flex items-center justify-center gap-3 font-bold border-2 transition-all hover:bg-muted"
+              style={{ borderColor: colors.border, backgroundColor: 'transparent', color: colors.text }}
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Google
+            </Button>
 
             <div className="text-center pt-2">
               <button

@@ -35,7 +35,11 @@ public class Usuario {
     @Column(nullable = false)
     private Boolean activo = true;
 
-@Column(name = "fecha_registro", insertable = false, updatable = false)
+    @Column(name = "metodo_auth", length = 20)
+    private String metodoAuth = "local";
+
+    @Column(name = "fecha_registro", insertable = false, updatable = false)
+
     private LocalDateTime fechaRegistro;
 
     @Transient

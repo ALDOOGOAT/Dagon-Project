@@ -1082,6 +1082,10 @@ export const ExercisePage = () => {
     return () => window.clearTimeout(timeout);
   }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, readExerciseStatement, showModuleCinematic, showTheory]);
 
+  const handleDiagramChange = useCallback((graphData) => {
+    setEditorCode(JSON.stringify(graphData));
+  }, []);
+
   if (loading || !isMounted) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6">
@@ -2191,9 +2195,7 @@ export const ExercisePage = () => {
                   <>
                     <div className="h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
                       <MerDiagramBuilder
-                        onChangeData={(graphData) => {
-                          setEditorCode(JSON.stringify(graphData));
-                        }}
+                        onChangeData={handleDiagramChange}
                       />
                     </div>
                     {isModelingLab && (

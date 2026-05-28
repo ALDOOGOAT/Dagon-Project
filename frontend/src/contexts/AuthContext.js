@@ -74,13 +74,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (name, email, password, rol = 'alumno') => {
+  const register = async (name, email, password, rol = 'alumno', extraData = {}) => {
     try {
       const response = await apiClient.post('/api/usuarios/registro', {
         nombre: name,
         email: email,
-        passwordHash: password,
-        rol: rol
+        password: password,
+        rol: rol,
+        ...extraData
       });
 
       const { token: newToken, user: newUser } = response.data;
@@ -95,6 +96,25 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: newUser };
     } catch (error) {
       return { success: false, error: error.response?.data || 'Error al registrarse en el servidor' };
+    }
+  };
+
+  const loginGoogle = async (googleData) => {
+    try {
+      const response = await apiClient.post('/api/usuarios/login-google', {
+        email: googleData.email,
+        nombre: googleData.name
+      });
+      
+      const { token: newToken, user: newUser } = response.data;
+      
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(newUser);
+
+      return { success: true, user: newUser };
+    } catch (error) {
+      return { success: false, error: error.response?.data || 'Error al entrar con Google' };
     }
   };
 
@@ -124,7 +144,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP, updateUserStreak }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, loginGoogle, logout, updateUserXP, updateUserStreak }}>
       {children}
     </AuthContext.Provider>
   );

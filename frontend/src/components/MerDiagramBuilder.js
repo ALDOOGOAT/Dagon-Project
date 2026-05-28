@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -202,52 +202,77 @@ export const generateSqlFromDiagramData = ({ nodes = [], edges = [] } = {}) => {
 
 // --- EL LIENZO PRINCIPAL ---
 export const MerDiagramBuilder = ({ onChangeData = () => {}, initialNodes = [], initialEdges = [], readOnly = false }) => {
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const [nodes, setNodes] = useState(Array.isArray(initialNodes) ? initialNodes : []);
+  const [edges, setEdges] = useState(Array.isArray(initialEdges) ? initialEdges : []);
+
+  // Sincronizar con props externos (solo si realmente cambiaron y no somos los mismos)
+  useEffect(() => {
+    if (Array.isArray(initialNodes) && initialNodes.length > 0) {
+      // Solo actualizamos si es diferente a lo que ya tenemos
+      // para evitar bucles si el padre reacciona a nuestros cambios
+      const currentNodesStr = JSON.stringify(nodes);
+      const newNodesStr = JSON.stringify(initialNodes);
+      if (currentNodesStr !== newNodesStr) {
+        setNodes(initialNodes);
+      }
+    }
+    if (Array.isArray(initialEdges) && initialEdges.length > 0) {
+      const currentEdgesStr = JSON.stringify(edges);
+      const newEdgesStr = JSON.stringify(initialEdges);
+      if (currentEdgesStr !== newEdgesStr) {
+        setEdges(initialEdges);
+      }
+    }
+  }, [initialNodes, initialEdges]);
 
   // Notificar al padre (ExercisePage) cada vez que el diagrama cambia
   const notifyChange = useCallback((newNodes, newEdges) => {
+    // Usamos un timeout o useEffect para evitar colapsar el ciclo de renderizado de React
     onChangeData({ nodes: newNodes, edges: newEdges });
   }, [onChangeData]);
-
-  useEffect(() => {
-    setNodes(Array.isArray(initialNodes) ? initialNodes : []);
-    setEdges(Array.isArray(initialEdges) ? initialEdges : []);
-  }, [initialNodes, initialEdges]);
 
   const onNodesChange = useCallback((changes) => {
     setNodes((nds) => {
       const updatedNodes = applyNodeChanges(changes, nds);
-      notifyChange(updatedNodes, edges);
       return updatedNodes;
     });
-  }, [edges, notifyChange]);
+  }, []);
 
   const onEdgesChange = useCallback((changes) => {
     setEdges((eds) => {
       const updatedEdges = applyEdgeChanges(changes, eds);
-      notifyChange(nodes, updatedEdges);
       return updatedEdges;
     });
-  }, [nodes, notifyChange]);
+  }, []);
+
+  const lastNotifiedRef = useRef('');
+
+  // Notificar cambios de forma segura fuera del ciclo de renderizado inmediato
+  useEffect(() => {
+    const currentState = JSON.stringify({ nodes, edges });
+    if (currentState === lastNotifiedRef.current) return;
+    
+    const timeout = setTimeout(() => {
+      lastNotifiedRef.current = currentState;
+      notifyChange(nodes, edges);
+    }, 50);
+    return () => clearTimeout(timeout);
+  }, [nodes, edges, notifyChange]);
 
   const handleChangeCardinality = useCallback((edgeId, newCardinality) => {
     setEdges((eds) => {
-      const updatedEdges = eds.map((edge) => {
+      return eds.map((edge) => {
         if (edge.id === edgeId) {
           return { ...edge, data: { ...edge.data, cardinality: newCardinality } };
         }
         return edge;
       });
-      notifyChange(nodes, updatedEdges);
-      return updatedEdges;
     });
-  }, [nodes, notifyChange]);
+  }, []);
 
   const onConnect = useCallback((params) => {
     if (readOnly) return;
     setEdges((eds) => {
-      // Líneas estilo neón cyberpunk con el nuevo tipo custom
       const newEdge = { 
         ...params, 
         id: `e-${uuidv4()}`,
@@ -259,26 +284,22 @@ export const MerDiagramBuilder = ({ onChangeData = () => {}, initialNodes = [], 
           onChangeCardinality: handleChangeCardinality
         }
       };
-      const updatedEdges = addEdge(newEdge, eds);
-      notifyChange(nodes, updatedEdges);
-      return updatedEdges;
+      return addEdge(newEdge, eds);
     });
-  }, [nodes, handleChangeCardinality, notifyChange, readOnly]);
+  }, [handleChangeCardinality, readOnly]);
 
   // --- Funciones de mutación de datos de los nodos ---
   const updateNodeData = useCallback((id, newDataUpdater) => {
     if (readOnly) return;
     setNodes((nds) => {
-      const updated = nds.map((node) => {
+      return nds.map((node) => {
         if (node.id === id) {
           return { ...node, data: newDataUpdater(node.data) };
         }
         return node;
       });
-      notifyChange(updated, edges);
-      return updated;
     });
-  }, [edges, notifyChange, readOnly]);
+  }, [readOnly]);
 
   const handleChangeName = useCallback((id, newName) => (
     updateNodeData(id, (data) => ({ ...data, label: newName }))

@@ -47,8 +47,11 @@ public class UsuarioService {
     @Value("${dagon.streak.zone:America/Mexico_City}")
     private String streakZone;
 
+    @Value("${dagon.teacher.master-key:DAGON_MASTER_2026}")
+    private String teacherMasterKey;
+
     // --- FUNCION 1: REGISTRO ---
-    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
+    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol, String codigoClase, String claveDocente) {
         if (nuevoUsuario.getEmail() == null || nuevoUsuario.getEmail().isBlank()) {
             throw new RuntimeException("Error: El correo es obligatorio.");
         }
@@ -61,6 +64,19 @@ public class UsuarioService {
         if (usuarioExistente.isPresent()) {
             throw new RuntimeException("Error: Este correo ya está registrado en Dagon.");
         }
+
+        // Validaciones por Rol
+        if ("docente".equalsIgnoreCase(rol)) {
+            if (claveDocente == null || !teacherMasterKey.equals(claveDocente)) {
+                throw new RuntimeException("Error: La clave de docente proporcionada no es válida.");
+            }
+        } else if ("alumno".equalsIgnoreCase(rol)) {
+            // Si viene un código de clase, validamos que exista antes de crear al usuario
+            if (codigoClase != null && !codigoClase.isBlank()) {
+                validarCodigoClase(codigoClase);
+            }
+        }
+
         if (nuevoUsuario.getActivo() == null) {
             nuevoUsuario.setActivo(true);
         }
@@ -69,11 +85,40 @@ public class UsuarioService {
         nuevoUsuario.setIdRol(idRol);
         nuevoUsuario.setPasswordHash(passwordEncoder.encode(nuevoUsuario.getPasswordHash()));
 
-        return usuarioRepository.save(nuevoUsuario);
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+
+        // Si es alumno y tiene código, lo unimos al grupo
+        if ("alumno".equalsIgnoreCase(rol) && codigoClase != null && !codigoClase.isBlank()) {
+            vincularUsuarioAGrupo(usuarioGuardado.getIdUsuario(), codigoClase);
+        }
+
+        return usuarioGuardado;
+    }
+
+    private void validarCodigoClase(String codigo) {
+        Integer existe = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM lms_core.grupos WHERE codigo_acceso = ?",
+                Integer.class, codigo);
+        if (existe == null || existe == 0) {
+            throw new RuntimeException("Error: El código de clase '" + codigo + "' no existe.");
+        }
+    }
+
+    private void vincularUsuarioAGrupo(UUID idUsuario, String codigo) {
+        try {
+            UUID idGrupo = jdbcTemplate.queryForObject(
+                    "SELECT id_grupo FROM lms_core.grupos WHERE codigo_acceso = ?",
+                    UUID.class, codigo);
+            jdbcTemplate.update(
+                    "INSERT INTO lms_core.usuario_grupos (id_usuario, id_grupo) VALUES (?, ?) ON CONFLICT DO NOTHING",
+                    idUsuario, idGrupo);
+        } catch (Exception e) {
+            logger.error("No se pudo vincular al usuario al grupo: {}", e.getMessage());
+        }
     }
 
     public Usuario registrarUsuario(Usuario nuevoUsuario) {
-        return registrarUsuario(nuevoUsuario, "alumno");
+        return registrarUsuario(nuevoUsuario, "alumno", null, null);
     }
 
     private Integer resolverIdRol(String rol) {
@@ -86,6 +131,10 @@ public class UsuarioService {
             logger.warn("Rol '{}' no encontrado, asignando alumno por defecto", rol);
             return 1;
         }
+    }
+
+    public Optional<Usuario> obtenerPorEmail(String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email.trim().toLowerCase());
     }
 
     // --- FUNCION 2: LOGIN ---
