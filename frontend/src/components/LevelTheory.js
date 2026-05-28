@@ -18,7 +18,7 @@ const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
 const VennRelationalAlgebra = lazy(() => import('./VennRelationalAlgebra'));
 
 const CodeBox = ({ code, label }) => (
-  <div className="rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
+  <div className="theory-code-box rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
     <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
       <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
@@ -34,12 +34,12 @@ const CodeBox = ({ code, label }) => (
 );
 
 const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [] }) => (
-  <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-950/80 max-w-md mx-auto shadow-xl">
+  <div className="theory-table-shell rounded-2xl border border-white/10 bg-slate-950/80 max-w-full mx-auto shadow-xl">
     <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <Grid3x3 className="w-3 h-3 text-cyan-300" />
       <span className="text-[10px] font-mono text-slate-400 tracking-widest uppercase">{title}</span>
     </div>
-    <table className="w-full text-sm">
+    <table className="min-w-full text-sm">
       <thead>
         <tr className="bg-slate-900/70">
           {columns?.map((c, i) => (
@@ -1507,9 +1507,9 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto scroll-fancy">
+    <div className="level-theory-shell w-full h-full overflow-y-auto scroll-fancy">
       <div className="dagon-page-shell dagon-page-shell--reading">
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        <div className="level-theory-header flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div className="flex-1">
             <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
               {theory.subtitle}
@@ -1518,12 +1518,13 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
               {theory.title}
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="level-theory-actions flex items-center gap-3">
             <button
               onClick={speak}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold font-display"
             >
-              {isSpeaking ? '🛑 Detener' : '🔊 Escuchar'}
+              {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {isSpeaking ? 'Detener' : 'Escuchar'}
             </button>
             <button
               onClick={() => {
@@ -1537,19 +1538,20 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
                 }
               }}
               className="p-2 rounded-xl bg-slate-800 text-white"
+              aria-label={isMuted ? 'Activar narración' : 'Silenciar narración'}
             >
               {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             <button onClick={() => {
               sounds.playStep();
               onComplete?.();
-            }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
-              Saltar teoría →
+            }} className="inline-flex items-center gap-1 text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
+              Saltar teoría <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mb-6">
+        <div className="level-theory-progress flex items-center gap-2 mb-6">
           {theory.slides.map((_, i) => (
             <button
               key={i}
@@ -1570,7 +1572,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
+            className="level-theory-card glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
           >
             <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
             <div className="relative z-10">
@@ -1604,7 +1606,7 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
           </motion.div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="level-theory-nav flex items-center justify-between">
           <Button variant="ghost" onClick={prev} disabled={index === 0} className="text-slate-300 font-display">
             Anterior
           </Button>

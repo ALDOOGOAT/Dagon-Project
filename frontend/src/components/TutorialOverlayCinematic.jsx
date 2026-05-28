@@ -196,6 +196,20 @@ const tutorialSteps = [
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const getVisualViewportBounds = () => {
+  if (typeof window === 'undefined') {
+    return { width: 1024, height: 768, offsetTop: 0, offsetLeft: 0 };
+  }
+
+  const viewport = window.visualViewport;
+  return {
+    width: viewport?.width || window.innerWidth,
+    height: viewport?.height || window.innerHeight,
+    offsetTop: viewport?.offsetTop || 0,
+    offsetLeft: viewport?.offsetLeft || 0,
+  };
+};
+
 const createTourParticles = () => Array.from({ length: 8 }, (_, index) => {
   const angle = index * 2.399963229728653;
   const radius = 20 + (index % 4) * 12;
@@ -236,12 +250,15 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
       return;
     }
 
+    const viewport = getVisualViewportBounds();
     const rect = element.getBoundingClientRect();
+    const top = rect.top + viewport.offsetTop;
+    const left = rect.left + viewport.offsetLeft;
     setTargetRect({
-      top: clamp(rect.top - 10, 12, window.innerHeight - 80),
-      left: clamp(rect.left - 10, 12, window.innerWidth - 80),
-      width: Math.min(rect.width + 20, window.innerWidth - 24),
-      height: Math.min(rect.height + 20, window.innerHeight - 24),
+      top: clamp(top - 10, viewport.offsetTop + 12, viewport.offsetTop + viewport.height - 80),
+      left: clamp(left - 10, viewport.offsetLeft + 12, viewport.offsetLeft + viewport.width - 80),
+      width: Math.min(rect.width + 20, viewport.width - 24),
+      height: Math.min(rect.height + 20, viewport.height - 24),
     });
   }, [isOpen, step?.target]);
 
@@ -289,12 +306,18 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     const target = step.target ? document.querySelector(`[data-tour="${step.target}"]`) : null;
     target?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' });
 
-    updateTargetRect();
-    const rectTimer = requestAnimationFrame(() => updateTargetRect());
+    let firstFrame = 0;
+    let secondFrame = 0;
+    const settleTimer = setTimeout(updateTargetRect, 90);
+    firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(updateTargetRect);
+    });
     const speechTimer = setTimeout(() => speak(step.voice), 150);
 
     return () => {
-      cancelAnimationFrame(rectTimer);
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      clearTimeout(settleTimer);
       clearTimeout(speechTimer);
       cancelSpeech();
     };
@@ -304,9 +327,16 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
     if (!isOpen) return undefined;
 
     const handleResize = () => updateTargetRect();
+    const viewport = window.visualViewport;
     window.addEventListener('resize', handleResize);
+    viewport?.addEventListener?.('resize', handleResize);
+    viewport?.addEventListener?.('scroll', handleResize);
 
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      viewport?.removeEventListener?.('resize', handleResize);
+      viewport?.removeEventListener?.('scroll', handleResize);
+    };
   }, [isOpen, updateTargetRect]);
 
   useEffect(() => {
@@ -436,19 +466,19 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             />
           )}
 
-          <div className="relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
+          <div className="tour-panel-stage relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
-              className="tour-panel tour-cinematic-panel relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]"
+              className="tour-panel tour-cinematic-panel tour-bottom-sheet relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]"
             >
               <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/60 to-transparent" />
 
-              <div className="relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:grid lg:grid-cols-[250px_1fr] lg:p-8 xl:p-10">
-                <aside className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center">
+              <div className="tour-panel-scroll relative z-10 flex flex-col gap-6 p-5 sm:p-7 lg:grid lg:grid-cols-[250px_1fr] lg:p-8 xl:p-10">
+                <aside className="tour-mascot-card flex flex-col items-center justify-center gap-4 rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center">
                   <div className="relative tour-mascot-float">
                     <div className="absolute inset-0 scale-150 rounded-full bg-cyan-400/20 blur-2xl" />
                     <DagonMascot size="xlarge" mood={step.mood} animated={false} />

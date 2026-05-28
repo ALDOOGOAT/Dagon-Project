@@ -32,18 +32,37 @@ export const AcademyBook = ({
   const isNarratingRef = useRef(isNarrating);
   const onNarrationStopRef = useRef(onNarrationStop);
 
+  const [singlePageMode, setSinglePageMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia?.('(max-width: 1024px)').matches ?? false;
+  });
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(max-width: 1024px)');
+    if (!query) return undefined;
+    const syncMode = () => setSinglePageMode(query.matches);
+    syncMode();
+    query.addEventListener?.('change', syncMode);
+    query.addListener?.(syncMode);
+    return () => {
+      query.removeEventListener?.('change', syncMode);
+      query.removeListener?.(syncMode);
+    };
+  }, []);
+
   const pages = useMemo(() => {
     return buildBookPagesFromCommand(command);
   }, [command]);
 
+  const pageStep = singlePageMode ? 1 : 2;
   const leftPage = pages[pageIndex] || pages[0];
-  const rightPage = pages[pageIndex + 1] || null;
+  const rightPage = singlePageMode ? null : pages[pageIndex + 1] || null;
 
-  const currentSpread = Math.floor(pageIndex / 2) + 1;
-  const totalSpreads = Math.max(1, Math.ceil(pages.length / 2));
+  const currentSpread = singlePageMode ? pageIndex + 1 : Math.floor(pageIndex / 2) + 1;
+  const totalSpreads = singlePageMode ? Math.max(1, pages.length) : Math.max(1, Math.ceil(pages.length / 2));
 
   const canGoPreviousPage = pageIndex > 0;
-  const canGoNextPage = pageIndex + 2 < pages.length;
+  const canGoNextPage = pageIndex + pageStep < pages.length;
 
   const narration = [leftPage?.narration, rightPage?.narration]
     .filter(Boolean)
@@ -53,6 +72,12 @@ export const AcademyBook = ({
     isNarratingRef.current = isNarrating;
     onNarrationStopRef.current = onNarrationStop;
   }, [isNarrating, onNarrationStop]);
+
+  useEffect(() => {
+    if (pageIndex >= pages.length) {
+      setPageIndex(Math.max(0, pages.length - 1));
+    }
+  }, [pageIndex, pages.length, setPageIndex]);
 
   useEffect(() => {
     sounds.stopSpeech();
@@ -66,7 +91,7 @@ export const AcademyBook = ({
     sounds.playClick();
 
     if (canGoPreviousPage) {
-      setPageIndex(Math.max(0, pageIndex - 2));
+      setPageIndex(Math.max(0, pageIndex - pageStep));
       return;
     }
 
@@ -78,7 +103,7 @@ export const AcademyBook = ({
     sounds.playClick();
 
     if (canGoNextPage) {
-      setPageIndex(pageIndex + 2);
+      setPageIndex(pageIndex + pageStep);
       return;
     }
 
@@ -189,7 +214,7 @@ export const AcademyBook = ({
               duration: 0.36,
               ease: 'easeInOut'
             }}
-            className="book-spread"
+            className={`book-spread ${singlePageMode ? 'book-spread--single' : ''}`}
             style={{
               '--book-page-bg': isLight
                 ? 'linear-gradient(145deg, rgba(255,251,244,0.98), rgba(255,244,226,0.94))'
@@ -209,14 +234,16 @@ export const AcademyBook = ({
               codeStyle={codeStyle}
             />
 
-            <BookPage
-              page={rightPage}
-              pageNumber={pageIndex + 2}
-              side="right"
-              colors={colors}
-              isLight={isLight}
-              codeStyle={codeStyle}
-            />
+            {!singlePageMode && (
+              <BookPage
+                page={rightPage}
+                pageNumber={pageIndex + 2}
+                side="right"
+                colors={colors}
+                isLight={isLight}
+                codeStyle={codeStyle}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -234,7 +261,7 @@ export const AcademyBook = ({
           }}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Hoja anterior
+          {singlePageMode ? 'Página anterior' : 'Hoja anterior'}
         </Button>
 
         <Button
@@ -244,7 +271,7 @@ export const AcademyBook = ({
             background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`
           }}
         >
-          Siguiente hoja
+          {singlePageMode ? 'Siguiente página' : 'Siguiente hoja'}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>

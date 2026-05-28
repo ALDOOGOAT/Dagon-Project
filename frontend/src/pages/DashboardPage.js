@@ -104,6 +104,26 @@ export const DashboardPage = () => {
     boxShadow: isLight ? '0 14px 32px -20px rgba(180,83,9,0.62)' : '0 16px 40px -22px rgba(34,211,238,0.62)'
   };
 
+  const [canUseHover, setCanUseHover] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? true;
+  });
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(hover: hover) and (pointer: fine)');
+    if (!query) return undefined;
+    const syncHover = () => setCanUseHover(query.matches);
+    syncHover();
+    query.addEventListener?.('change', syncHover);
+    query.addListener?.(syncHover);
+    return () => {
+      query.removeEventListener?.('change', syncHover);
+      query.removeListener?.(syncHover);
+    };
+  }, []);
+
+  const hoverMotion = (motionValue) => (canUseHover ? motionValue : undefined);
+
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('dagon_tutorial_pending') === 'true' || !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
   const [showCertificado, setShowCertificado] = useState(false);
@@ -395,7 +415,7 @@ export const DashboardPage = () => {
             <div className="dashboard-hud-zone dashboard-hud-zone--identity">
               <div className="relative shrink-0">
                 <div className={`absolute -inset-2 rounded-[32px] ${tierRing(title.tier)}`} />
-                <div className={`relative flex h-24 w-20 items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-br ${tierGradient(title.tier)} shadow-xl sm:h-28 sm:w-24`}>
+                <div className={`dashboard-mascot-card relative flex h-24 w-20 items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-br ${tierGradient(title.tier)} shadow-xl sm:h-28 sm:w-24`}>
                   <DagonMascot size="medium" mood={dashboardMood} />
                 </div>
               </div>
@@ -626,7 +646,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, y: 24, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: stat.delay, type: 'spring', stiffness: 300, damping: 22 }}
-              whileHover={{ y: -4, scale: 1.03, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -4, scale: 1.03, transition: { duration: 0.2 } })}
               whileTap={{ scale: 0.97 }}
               className={`glass-card-apple rounded-2xl p-4 border transition-colors group text-left ${stat.borderColor || ''}`}
               style={stat.borderStyle || {}}
@@ -635,7 +655,7 @@ export const DashboardPage = () => {
                 <motion.div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.iconBg || ''} ${stat.iconBorder || ''}`}
                   style={stat.iconStyle || {}}
-                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  whileHover={hoverMotion({ scale: 1.15, rotate: 5 })}
                   transition={{ type: 'spring', stiffness: 400 }}
                 >
                   {stat.icon}
@@ -653,20 +673,20 @@ export const DashboardPage = () => {
           <DidacticCard />
 
           {/* SELECTOR DE CURSOS / SENDAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
+        <div className="dashboard-course-selector grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
             {cursos.map((curso, i) => (
                 <motion.button
                   key={curso.id_curso}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 250, damping: 22 }}
-                  whileHover={{ y: -3, scale: 1.015, transition: { duration: 0.2 } }}
+                  whileHover={hoverMotion({ y: -3, scale: 1.015, transition: { duration: 0.2 } })}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     sounds.playClick();
                     setCursoActivoId(curso.id_curso);
                   }}
-                  className={`p-6 rounded-2xl border-2 transition-colors flex items-center justify-between group ${
+                  className={`dashboard-course-card p-6 rounded-2xl border-2 transition-colors flex items-center justify-between group ${
                       cursoVisualActivoId === curso.id_curso
                         ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]'
                         : 'border-white/10 hover:border-slate-500'
@@ -856,7 +876,7 @@ export const DashboardPage = () => {
                 <motion.button
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={hoverMotion({ scale: 1.05 })}
                   onClick={async () => {
                     const cert = await generarCertificado(cursoVisualActivoId);
                     if (cert) {
@@ -875,14 +895,12 @@ export const DashboardPage = () => {
               )}
             </div>
 
-            <AnimatePresence mode="wait">
-                <motion.div 
-                    key={cursoVisualActivoId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
+            <motion.div
+              layout
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, ease: 'easeOut' }}
+            >
                 {modulos.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-slate-700/50 rounded-2xl bg-slate-900/30">
                         <Swords className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -952,7 +970,7 @@ export const DashboardPage = () => {
                             <motion.button
                             onClick={() => handleModuloClick(mod)}
                             aria-current={isCurrentMission ? 'step' : undefined}
-                            whileHover={!mod.bloqueado ? { y: -6, scale: 1.015, transition: { duration: 0.2 } } : {}}
+                            whileHover={!mod.bloqueado ? hoverMotion({ y: -6, scale: 1.015, transition: { duration: 0.2 } }) : undefined}
                             whileTap={!mod.bloqueado ? { scale: 0.98 } : {}}
 	                            className={`dagon-quest-button h-full w-full rounded-[24px] border text-left transition-all duration-300 group relative overflow-hidden ${isFinalMission ? 'dagon-quest-button--final' : ''} ${
 	                                mod.bloqueado
@@ -1020,7 +1038,6 @@ export const DashboardPage = () => {
                 </div>
                 )}
                 </motion.div>
-            </AnimatePresence>
           </div>
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
@@ -1029,7 +1046,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
@@ -1054,7 +1071,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border"
               data-tour="ranking"
               style={{ borderColor: colors.border }}
@@ -1114,7 +1131,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.4, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, scale: 1.01, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border cursor-pointer group"
               style={{ borderColor: colors.border }}
               onClick={() => navigate('/credits')}

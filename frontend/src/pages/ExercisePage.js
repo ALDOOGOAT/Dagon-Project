@@ -209,6 +209,17 @@ export const ExercisePage = () => {
   const spokenExerciseRef = useRef(null);
   const lastTypingSoundRef = useRef(0);
 
+  const managedTimeoutsRef = useRef(new Set());
+
+  const setManagedTimeout = useCallback((callback, delay) => {
+    const timeoutId = window.setTimeout(() => {
+      managedTimeoutsRef.current.delete(timeoutId);
+      callback();
+    }, delay);
+    managedTimeoutsRef.current.add(timeoutId);
+    return timeoutId;
+  }, []);
+
   useEffect(() => { 
     setIsMounted(true); 
     sounds.init();
@@ -217,6 +228,7 @@ export const ExercisePage = () => {
   }, []);
 
   useEffect(() => {
+    const managedTimeouts = managedTimeoutsRef.current;
     return () => {
       if (dagonTypingIntervalRef.current) {
         clearInterval(dagonTypingIntervalRef.current);
@@ -224,6 +236,8 @@ export const ExercisePage = () => {
       if (dagonPostMessageTimeoutRef.current) {
         clearTimeout(dagonPostMessageTimeoutRef.current);
       }
+      managedTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      managedTimeouts.clear();
       sounds.stopSpeech?.();
     };
   }, []);
@@ -332,7 +346,7 @@ export const ExercisePage = () => {
 
   const releaseDragClickGuard = () => {
     dragEndedAtRef.current = Date.now();
-    window.setTimeout(() => {
+    setManagedTimeout(() => {
       dragClickGuardRef.current = false;
     }, 120);
   };
@@ -539,7 +553,7 @@ export const ExercisePage = () => {
           updateUserXP(newXP);
           setLastXPGained(gained);
           setXpPop(gained);
-          setTimeout(() => setXpPop(null), 1700);
+          setManagedTimeout(() => setXpPop(null), 1700);
           const prevLvl = Math.floor(prevXP / 100) + 1;
           const newLvl = Math.floor(newXP / 100) + 1;
           if (newLvl > prevLvl) {
@@ -561,7 +575,7 @@ export const ExercisePage = () => {
         // Guardamos TODO el resultado para que el componente tenga acceso a isDML, beforeData, etc.
         setExecutionResult({ ...result });
         registerGamifiedAttempt({ exercise, success: true, attempts: intentosFallidos + 1 });
-        setBurst(true);        setTimeout(() => setBurst(false), 1300);
+        setBurst(true);        setManagedTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
         setCombo(c => c + 1);
         sounds.playSuccess();
@@ -580,7 +594,7 @@ export const ExercisePage = () => {
         setIsDagonIntervening(false);
         setExecutionResult({ ...result, success: false, message: result.message });
         setShake(true);
-        setTimeout(() => setShake(false), 500);
+        setManagedTimeout(() => setShake(false), 500);
         setCombo(0);
         sounds.playError();
         if (result.descripcion) {
@@ -645,9 +659,10 @@ export const ExercisePage = () => {
     if (!(executionResult?.success || executionResult?.isWarning) || !resultPanelRef.current) return;
 
     const timeout = window.setTimeout(() => {
+      const mobileResultViewport = window.matchMedia?.('(max-width: 640px)').matches;
       resultPanelRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
+        behavior: mobileResultViewport ? 'auto' : 'smooth',
+        block: mobileResultViewport ? 'nearest' : 'center',
       });
       resultPanelRef.current?.focus({ preventScroll: true });
     }, 180);
@@ -773,6 +788,11 @@ export const ExercisePage = () => {
 
     return () => window.clearTimeout(timeout);
   }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, showModuleCinematic, showTheory]);
+
+  const scrollToExerciseSection = (sectionId) => {
+    const target = document.getElementById(`exercise-${sectionId}`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   if (loading || !isMounted) {
     return (
@@ -1007,7 +1027,7 @@ export const ExercisePage = () => {
         {isPlaced
           ? <ListChecks className="h-3.5 w-3.5 opacity-60" />
           : <GripHorizontal className="h-3.5 w-3.5 opacity-60" />}
-        <span className="max-w-[42vw] truncate whitespace-nowrap sm:max-w-none">{word.word}</span>
+        <span className="max-w-[56vw] whitespace-normal break-words leading-tight sm:max-w-none sm:whitespace-nowrap">{word.word}</span>
         {isPlaced && !isClone && (
           <div className="ml-1 flex shrink-0 items-center gap-1">
             <button
@@ -1192,13 +1212,35 @@ export const ExercisePage = () => {
           />
         ) : (
           <div className={`w-full max-w-[1880px] mx-auto px-4 py-5 sm:px-6 lg:px-8 grid gap-5 lg:gap-6 ${shake ? 'animate-shake-x' : ''}`}>
+            <nav className="exercise-mobile-stepper" aria-label="Secciones del ejercicio">
+              {[
+                ['reto', 'Reto'],
+                ['editor', isDragDrop ? 'Armar' : isDiagram ? 'Diagrama' : 'Editor'],
+                ['resultado', 'Resultado'],
+              ].map(([sectionId, label]) => {
+                const disabled = sectionId === 'resultado' && !executionResult;
+                return (
+                  <button
+                    key={sectionId}
+                    type="button"
+                    onClick={() => !disabled && scrollToExerciseSection(sectionId)}
+                    disabled={disabled}
+                    className="exercise-mobile-stepper__item"
+                    aria-label={`Ir a ${label.toLowerCase()}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </nav>
 
             <motion.div
               variants={motionIn}
               initial="hidden"
               animate="visible"
               transition={{ duration: 0.32, ease: 'easeOut' }}
-              className="glass-card-apple dagon-compact-card rounded-3xl border px-5 py-5 sm:px-6 lg:px-7 relative overflow-hidden"
+              id="exercise-reto"
+              className="glass-card-apple dagon-compact-card rounded-3xl border px-5 py-5 sm:px-6 lg:px-7 relative overflow-hidden scroll-mt-24"
               style={{ borderColor: colors.border }}
             >
               <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})` }} />
@@ -1858,7 +1900,8 @@ export const ExercisePage = () => {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.08, duration: 0.34, ease: 'easeOut' }}
-              className="glass-card-apple dagon-compact-card rounded-3xl border overflow-hidden relative"
+              id="exercise-editor"
+              className="glass-card-apple dagon-compact-card rounded-3xl border overflow-hidden relative scroll-mt-24"
               style={{ borderColor: colors.border }}
             >
               {/* Barra superior */}
@@ -1922,7 +1965,7 @@ export const ExercisePage = () => {
               <div className="p-5 sm:p-6">
                 {isDiagram ? (
                   <>
-                    <div className="h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                    <div className="exercise-workbench-frame h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
                       <MerDiagramBuilder
                         onChangeData={(graphData) => {
                           setEditorCode(JSON.stringify(graphData));
@@ -2016,7 +2059,7 @@ export const ExercisePage = () => {
                                 dropZoneScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[132px] sm:min-h-[142px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all relative ${
+                              className={`exercise-drop-rail min-h-[132px] sm:min-h-[142px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all relative ${
                                 snapshot.isDraggingOver ? 'border-emerald-400 animate-dnd-glow' : ''
                               }`}
                               style={{
@@ -2103,7 +2146,7 @@ export const ExercisePage = () => {
                                 wordBankScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[128px] sm:min-h-[142px] rounded-2xl border-2 p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all duration-300 ${
+                              className={`exercise-word-rail min-h-[128px] sm:min-h-[142px] rounded-2xl border-2 p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all duration-300 ${
                                 snapshot.isDraggingOver ? 'shadow-[inset_0_0_24px_rgba(34,211,238,0.14)]' : ''
                               }`}
                               style={{
@@ -2132,7 +2175,7 @@ export const ExercisePage = () => {
                   </DragDropContext>
                 ) : (
                   <>
-                    <div className="h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
+                    <div className="exercise-workbench-frame h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
                       <Editor
                         height="100%"
                         defaultLanguage="sql"
@@ -2166,6 +2209,7 @@ export const ExercisePage = () => {
             <AnimatePresence>
               {executionResult && (
                 <motion.div
+                  id="exercise-resultado"
                   ref={resultPanelRef}
                   tabIndex={-1}
                   aria-live={executionResult.success || executionResult.isWarning ? 'polite' : undefined}
