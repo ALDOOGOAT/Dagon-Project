@@ -5,7 +5,7 @@
 ![Dagon](https://img.shields.io/badge/Dagon-SQL%20Learning-DC2626?style=for-the-badge&logo=postgresql&logoColor=white)
 ![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-4.5-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Postgres](https://img.shields.io/badge/Postgres-47A248?style=for-the-badge&logo=Postgress&logoColor=white)
 
 Una plataforma educativa moderna e interactiva para aprender SQL y administración de bases de datos PostgreSQL.
 
@@ -391,12 +391,4 @@ Este proyecto fue creado como MVP educativo. Usa las guías de diseño y arquite
 - **Componentes**: Shadcn/UI
 - **Editor**: Monaco Editor (VS Code)
 
----
 
-<div align="center">
-
-**Desarrollado con 🔴 por la comunidad de Emergent**
-
-¿Preguntas? Abre un issue o contacta al soporte.
-
-</div>
