@@ -1,0 +1,75 @@
+# ==============================================================
+# Dagon Backend — Configuración Local
+# ==============================================================
+# Copia este archivo como application.properties y llena tus datos:
+#   cp application.properties.example application.properties
+# ==============================================================
+
+spring.application.name=dagon-backend
+spring.config.import=optional:file:.env[.properties],optional:file:../.env[.properties]
+
+# ==============================================================
+# 1. CONEXIÓN DE BASE DE DATOS
+# ==============================================================
+spring.datasource.url=jdbc:postgresql://localhost:5432/dagon_local
+spring.datasource.username=postgres
+# 👇 Pon tu contraseña de PostgreSQL aquí (o déjalo vacío si no tienes)
+spring.datasource.password=
+
+# ==============================================================
+# 2. CONFIGURACIÓN DE HIBERNATE/JPA
+# ==============================================================
+# "none" = Java NUNCA crea ni modifica tablas. Todo se maneja con scripts SQL.
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.open-in-view=false
+
+# ==============================================================
+# 3. POOL DE CONEXIONES HIKARI
+# ==============================================================
+spring.datasource.hikari.maximum-pool-size=${DB_POOL_MAX_SIZE:8}
+spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
+spring.datasource.hikari.connection-timeout=${DB_POOL_CONNECTION_TIMEOUT_MS:5000}
+spring.datasource.hikari.idle-timeout=${DB_POOL_IDLE_TIMEOUT_MS:120000}
+spring.datasource.hikari.max-lifetime=${DB_POOL_MAX_LIFETIME_MS:300000}
+spring.datasource.hikari.leak-detection-threshold=${DB_POOL_LEAK_DETECTION_MS:20000}
+spring.datasource.hikari.initialization-fail-timeout=${DB_POOL_INITIALIZATION_FAIL_TIMEOUT_MS:1}
+
+# ==============================================================
+# 4. SANDBOX SQL (motor de validación de ejercicios)
+# ==============================================================
+dagon.sandbox.url=jdbc:postgresql://localhost:5432/dagon_local
+dagon.sandbox.username=postgres
+# 👇 Pon tu contraseña aquí también
+dagon.sandbox.password=
+
+dagon.sandbox.pool.maximum-size=${DAGON_SANDBOX_POOL_MAX_SIZE:4}
+dagon.sandbox.pool.initialization-fail-timeout-ms=${DAGON_SANDBOX_POOL_INITIALIZATION_FAIL_TIMEOUT_MS:1}
+dagon.sandbox.statement-timeout-ms=${DAGON_SANDBOX_STATEMENT_TIMEOUT_MS:8000}
+dagon.sandbox.lock-timeout-ms=${DAGON_SANDBOX_LOCK_TIMEOUT_MS:2000}
+dagon.sandbox.idle-transaction-timeout-ms=${DAGON_SANDBOX_IDLE_TX_TIMEOUT_MS:10000}
+
+# ==============================================================
+# 5. SEGURIDAD JWT
+# ==============================================================
+dagon.jwt.secret=${DAGON_JWT_SECRET:change-me-only-local-dev-dagon-jwt-secret-min-32}
+dagon.jwt.expiration-ms=${DAGON_JWT_EXPIRATION_MS:86400000}
+dagon.jwt.issuer=${DAGON_JWT_ISSUER:dagon-backend}
+dagon.jwt.audience=${DAGON_JWT_AUDIENCE:dagon-frontend}
+
+# ==============================================================
+# 6. EXTRAS (Docentes, IA, CORS)
+# ==============================================================
+# Código de registro para docentes
+dagon.docente.registration-code=${DAGON_DOCENTE_REGISTRATION_CODE:123456}
+
+# URL del servicio MPI (opcional, solo si levantas mpi_service)
+dagon.mpi.url=${DAGON_MPI_URL:http://127.0.0.1:5001}
+
+# CORS — orígenes permitidos
+dagon.cors.allowed-origins=${DAGON_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+
+# (Opcional) API key de Gemini para el tutor IA Clawbot
+# Sin esto, Clawbot funciona con respuestas de fallback
+# gemini.api.key=TU_GEMINI_API_KEY

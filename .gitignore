@@ -1,10 +1,17 @@
-# IDE and editors
+# =============================================================
+# Dagon Project — .gitignore
+# =============================================================
+
+# ----- IDE y editores -----
 .idea/
 .vscode/
+*.iml
+*.swp
+*.swo
+*~
 
-# Dependencies
+# ----- Dependencias -----
 node_modules/
-/node_modules
 .pnp
 .pnp.js
 .yarn/install-state.gz
@@ -14,49 +21,97 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Testing
-/coverage
+# ----- Testing -----
+coverage/
+*.lcov
 
-# Next.js
-/.next/
-/out/
-next-env.d.ts
-*.tsbuildinfo
-
-# Production builds
-/build
+# ----- Builds de producción -----
+frontend/build/
+backend/target/
 dist/
+out/
+*.tsbuildinfo
+next-env.d.ts
 
-# Logs
+# ----- Logs -----
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 dump.rdb
+*.log
 
-# System files
+# ----- Sistema operativo -----
 .DS_Store
+Thumbs.db
 *.pem
 
-# Python
+# ----- Python -----
 __pycache__/
-*pyc*
+*.pyc
+*.pyo
 venv/
 .venv/
+*.egg-info/
 
-# Development tools
+# ----- Herramientas de desarrollo -----
 chainlit.md
 .chainlit
 .ipynb_checkpoints/
 .ac
+.cache/
 
-# Deployment
+# ----- Deployment -----
 .vercel
 
-# Data and databases
-agenthub/agents/youtube/db
+# =============================================================
+# 🔒 ARCHIVOS SENSIBLES — NUNCA COMMITEAR
+# =============================================================
 
-# Archive files and large assets
+# --- Variables de entorno (contienen secretos) ---
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+
+# Frontend .env (excepto el example)
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.env.*.local
+
+# Backend .env
+backend/.env
+backend/.env.*
+
+# --- Backend: application.properties con credenciales reales ---
+# SOLO commitear el .example, NUNCA el archivo real
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-dev.properties
+backend/src/main/resources/application-prod.properties
+
+# --- Archivos .example SÍ se commitean (plantillas sin secretos) ---
+!.env.example
+!frontend/.env.example
+!backend/src/main/resources/application.properties.example
+
+# --- Tokens, llaves y credenciales ---
+*token.json*
+*credentials.json*
+*.key
+*.keystore
+*.jks
+*.p12
+
+# =============================================================
+# 📦 ARCHIVOS GRANDES Y BACKUPS
+# =============================================================
+
+# Archivos comprimidos
 **/*.zip
 **/*.tar.gz
 **/*.tar
@@ -65,50 +120,27 @@ agenthub/agents/youtube/db
 *.deb
 *.dylib
 
-# Build caches
-.cache/
-
-# Environment files (NO COMMITEAR)
-*.env
-.env.local
-.env.*.local
-
-# Secrets y credentials (NO COMMITEAR)
-*token.json*
-*credentials.json*
-*.pem
-*.key
-
-# Variables locales
-.env
-.env.*
-!.env.example
-
-# Frontend env
-frontend/.env
-frontend/.env.local
-frontend/.env.production
-frontend/.env.development
-
-# Backend env/local configs
-backend/.env
-backend/src/main/resources/application-local.properties
-backend/src/main/resources/application-dev.properties
-
-# Builds
-frontend/build/
-backend/target/
-
-# Uploads locales
-uploads/
-backend/uploads/
-
-# Backups o dumps sensibles
+# Backups y dumps de BD (pueden contener datos reales)
 *.dump
 *.backup
 *backup*.sql
 *respaldo*.sql
 *dump*.sql
 
-# Sistema
-.DS_Store
+# Uploads de usuarios (fotos de perfil, etc.)
+uploads/
+backend/uploads/
+
+# Archivos PDF grandes
+para dilman/*.pdf
+
+# =============================================================
+# 📝 NOTA PARA COLABORADORES
+# =============================================================
+# Para configurar tu entorno local:
+#   1. cp frontend/.env.example frontend/.env
+#   2. cp backend/src/main/resources/application.properties.example \
+#         backend/src/main/resources/application.properties
+#   3. Edita ambos archivos con tus credenciales locales
+#   4. Consulta el README.md para instrucciones completas
+# =============================================================

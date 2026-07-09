@@ -1,402 +1,325 @@
-# Dagon - Plataforma Interactiva de Aprendizaje SQL
+# 🐉 Dagon — Plataforma Interactiva de Aprendizaje SQL
 
 <div align="center">
 
 ![Dagon](https://img.shields.io/badge/Dagon-SQL%20Learning-DC2626?style=for-the-badge&logo=postgresql&logoColor=white)
-![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-4.5-47A248?style=for-the-badge&logo=mongodb&logoColor=white)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.3-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
-Una plataforma educativa moderna e interactiva para aprender SQL y administración de bases de datos PostgreSQL.
+Plataforma educativa gamificada para aprender SQL y administración de PostgreSQL.  
+Sistema de XP, rachas, logros, certificados y un tutor IA (**Clawbot**) integrado.
 
 </div>
 
-## 📝 Notas de Actualización (Abril 2026)
-
-### 🤖 Sistema de IA - Clawbot con Qwen2.5-coder:7b (24 Abril 2026)
-
-- **Modelo**: Qwen2.5-coder:7b (Ollama local) - optimal para código SQL
-- **Respuestas extensas** con ejemplos detallados y explicaciones
-- **Fallack responses** mejorados para temas: SELECT, WHERE, JOIN, GROUP BY, ORDER BY, INSERT, UPDATE, DELETE, NULL
-- **Diseño visual mejorado** en el chatbot:
-  - Tipografía Manrope/Segoe UI
-  - Bloques SQL estilo Mac con botones de copia
-  - Esquema de colores Emerald/Cyan profesional
-  - Iconos Lucide integrados
-  - Animaciones suaves
-
-### 🔊 Sistema de Audio Mejorado
-
-- **Selección de dificultad**: Nuevo sonido de videogame al elegir nivel
-- **Timer de práctica rápida**: 
-  - Tic-tac de reloj (playClockTicking) en lugar del loop antiguo
-  - Countdown dramático en los últimos 6 segundos
-  - Sonido de警告 cuando se acaba el tiempo
-- **Música ambiental** en Dashboard (synth suave)
-- **Música de video juego** en Práctica Rápida (sawtooth épico)
-- **Sonidos de eventos**:
-  - Éxito / Error al resolver ejercicios
-  - Teoría abierta
-  - Nivel completado
-  - Nuevo día de racha
-
 ---
 
-### 🎉 Nuevas Funciones Recientes (19 Abril 2026)
+## 📐 Arquitectura
 
-1. **Sistema de Racha Mejorado**
-   - Calendario mensual completo con navegación entre meses
-   - Días de racha iluminados en dorado (estilo Duolingo)
-   - Icono de llama SVG animada (StreakFlame)
-   - Partículas de fuego flotantes
-   - DagonMascot con efecto de fuego (showFire prop)
-   - Stats Quick Bar en Dashboard
-   - Botones integrados de Perfil y Racha
+El proyecto tiene **3 servicios** que se levantan por separado:
 
-2. **Asistente de Voz Mejorado (ClawbotTeacher)**
-   - Voces en español más naturales
-   - Mensajes variados y motivadores
-   - Configuración de rate/pitch optimizada
-   - Repetición de mensajes
-   - Panel minimizable
+| Servicio | Stack | Puerto |
+|----------|-------|--------|
+| **Backend** | Java 21, Spring Boot 4.0.3, Spring Security + JWT, PostgreSQL | `localhost:8080` |
+| **Frontend** | React 19, CRACO, Tailwind CSS 3.4, Shadcn/UI, Framer Motion, Monaco Editor | `localhost:3000` |
+| **MPI Service** *(opcional)* | Python 3.10+, Flask, mpi4py | `localhost:5001` |
 
-3. **Renombrado: Clawbot → Dagonbot**
-   - Textos visibles actualizados al usuario
-   - API y endpoints sin cambios
-
-4. **Integración Perfil/Racha**
-   - Ruta /streak protegida
-   - Stats Quick Bar en Dashboard
-   - Indicador visual de racha en tarjeta de jugador
-   - Botones "Mi Perfil" y "X días" visibles
-
----
-
-### 🎉 Funciones Anteriores (17-18 Abril 2026)
-
-1. **Pantalla de Graduación "Diploma de Dagon"**
-   - Al completar el último ejercicio de un módulo, muestra una pantalla épica
-   - Certificado digital con nombre del usuario, módulo completado, XP ganada
-   - Botón para compartir en LinkedIn
-   - Diseño visual con efectos de confeti y Dagon celebration
-   - Ruta: `/graduation/:levelId`
-
-2. **DagonMascot con Expresiones Dinámicas**
-   - `happy` - rojo normal
-   - `excited` / `celebrating` - rojo brillante + brillitos + ojos grandes
-   - `angry` - rojo sangre + ceño fruncido + glow rojo
-   - `sad` / `disappointed` - gris azulado + lágrimas
-   - `nervous` - naranja + gotas de sudor
-   - `thinking` - púrpura
-   - `afraid` - azul oscuro + pupilas visibles
-
-3. **Moods Dinámicos por Página**
-   - Dashboard: según XP y racha del usuario
-   - Profile: según progreso y ejercicios completados
-   - Exercise: según intentos fallidos y éxito
-   - Login: siempre emocionado
-
-4. **Efectos Visuales Mejorados**
-   - Pantallas de carga con shimmer animado
-   - RewardAnimation corregida (evita flash inicial)
-   - Nuevas animaciones CSS: fade-in, fade-out, scale-in
-   - Transiciones suaves entre páginas
-
-5. **Sistema de Niveles Mejorado (Backend)**
-   - Nuevo campo `type` en ejercicios (drag_drop, diagram, query)
-   - Soporte para diagrama MER
-   - Teoría interactiva por nivel
-
----
-
-## ⚠️ Nota para Dilman (Base de Datos)
-
-**IMPORTANTE**: En la carpeta `para dilman/` encontrarás los backups de la base de datos:
-
-- **`para dilman/dagon_backup_completo.sql`** - Schema completo + datos
-- **`para dilman/dagon_roles_backup.sql`** - Solo roles y permisos
-
-### Para restaurar:
-```bash
-# Desde psql o DBeaver
-\i para dilman/dagon_backup_completo.sql
-
-# O si solo necesitas roles:
-\i para dilman/dagon_roles_backup.sql
+```
+Frontend (:3000)  ──Axios+JWT──▶  Backend (:8080)  ──JPA──▶  PostgreSQL (dagon_local)
+                                       │
+                                       ├──▶  MPI Service (:5001)  [opcional]
+                                       └──▶  Gemini API  [opcional, IA]
 ```
 
-El backup incluye:
-- Tablas: usuarios, cursos, modulos, ejercicios_practicos, equipamiento, aventureros
-- Vistas: v_ranking_alumnos
-- Datos de ejemplo para pruebas
-- Roles/permisos configurados
+---
 
-**Al restaurar, los efectos visuales podrían comportarse diferente en tu PC. Si ves efectos raros, avisa para ajustar.**
-
-## 🌊 Características Principales
-
-### 🎓 Sistema de Aprendizaje Progresivo
-- **3 Módulos de SQL**: Selección Básica, Funciones Agregadas, JOINs
-- **Ejercicios Interactivos**: Drag & Drop para principiantes, Monaco Editor para avanzados
-- **Sistema de XP y Rachas**: Gamificación para mantener la motivación
-- **Diploma de Graduación**: Certificado digital al completar módulos
-- **Teoría Interactiva**: Explicaciones animadas con diagramas MER
-
-### 🤖 Clawbot - Tu Tutor IA
-- Asistente inteligente con **GPT-5.2** vía Emergent LLM Key
-- Responde preguntas sobre SQL en tiempo real
-- Contexto conversacional persistente
-
-### 🎨 Diseño "Abyss & Crimson"
-- Tema oscuro inspirado en las profundidades oceánicas
-- Mascota Dagon: pulpito rojo con expresiones dinámicas
-- Efectos glassmorphism y glows neón
-- Animaciones suaves y transiciones mejoradas
-
-### ⚙️ Funcionalidades Técnicas
-- **Autenticación JWT** con bcrypt
-- **Editor Monaco** con resaltado SQL
-- **Drag & Drop** con React Beautiful DnD
-- **Validación de consultas** en tiempo real
-- **Consola de resultados** con EXPLAIN ANALYZE
-
-## 🚀 Inicio Rápido
+## 🚀 Instalación Local (paso a paso)
 
 ### Prerequisitos
-- Node.js 16+
-- Python 3.11+
-- MongoDB
-- Yarn
 
-### Instalación
+| Herramienta | Versión | Notas |
+|-------------|---------|-------|
+| **Java** | 21 | OpenJDK o similar |
+| **PostgreSQL** | 14+ | Corriendo en `localhost:5432` |
+| **Node.js** | LTS (20+) | |
+| **Yarn** | 1.22+ | ⚠️ **NO usar npm** — el proyecto usa Yarn |
+| **Python** | 3.10+ | Solo si quieres el servicio MPI |
+| **Open MPI** | Cualquier | Solo si quieres el servicio MPI |
 
-```bash
-# Backend
-cd /app/backend
-pip install -r requirements.txt
-
-# Frontend
-cd /app/frontend
-yarn install
-```
-
-### Variables de Entorno
-
-**Backend (.env)**
-```env
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=test_database
-JWT_SECRET=dagon_secret_key_abyss_2026
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_HOURS=24
-EMERGENT_LLM_KEY=sk-emergent-cC5F7BcBe42E751703
-CORS_ORIGINS=*
-```
-
-**Frontend (.env)**
-```env
-REACT_APP_BACKEND_URL=http://localhost:8001
-```
-
-### Ejecutar en Desarrollo
+### 1. Clonar el repositorio
 
 ```bash
-# Backend (puerto 8001)
-cd /app/backend
-uvicorn server:app --reload --host 0.0.0.0 --port 8001
+git clone https://github.com/tu-usuario/Dagon-Project.git
+cd Dagon-Project
+```
 
-# Frontend (puerto 3000)
-cd /app/frontend
+### 2. Base de Datos
+
+Crea la base de datos y carga el schema + datos iniciales:
+
+```bash
+# Crear la BD
+psql -U postgres -c "CREATE DATABASE dagon_local;"
+
+# Instalar schema (estructura + roles + sandbox)
+psql -U postgres -d dagon_local -f scripts/00_instalacion_limpia.sql
+
+# Cargar datos semilla (cursos, módulos, temas)
+psql -U postgres -d dagon_local -f scripts/01_datos_semilla.sql
+
+# Cargar ejercicios
+psql -U postgres -d dagon_local -f scripts/02_ejercicios_semilla.sql
+
+# Aplicar migraciones (en orden)
+psql -U postgres -d dagon_local -f scripts/migraciones/2026_05_13_fase4_indices_metadatos.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/2026_05_16_performance_seguridad.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/2026_05_17_fix_usuarios_roles_activo.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/2026_05_18_practica_rapida_niveles_progresivos.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/2026_05_18_practica_rapida_xp_racha.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/20260517_01_docente_grupos.sql
+psql -U postgres -d dagon_local -f scripts/migraciones/20260523_01_respuesta_agil_indices.sql
+```
+
+> **Importante:** Hibernate tiene `ddl-auto=none`. Java **nunca** crea ni modifica tablas — todo se maneja con estos scripts SQL.
+
+### 3. Configurar el Backend
+
+Copia la plantilla de configuración y edita tus credenciales:
+
+```bash
+cd backend/src/main/resources
+cp application.properties.example application.properties
+```
+
+Edita `application.properties` con tus datos reales:
+
+```properties
+# Tu contraseña de PostgreSQL (o déjalo vacío si no tienes)
+spring.datasource.password=TU_PASSWORD_AQUI
+
+# Sandbox (misma BD, puede usar las mismas credenciales)
+dagon.sandbox.password=TU_PASSWORD_AQUI
+
+# (Opcional) API key de Gemini para el tutor IA Clawbot
+# Sin esto, Clawbot usa respuestas de fallback — el resto funciona normal
+# gemini.api.key=TU_KEY_AQUI
+```
+
+### 4. Configurar el Frontend
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+El `.env.example` ya viene apuntando a `localhost:8080`. Si tu backend corre en otro puerto, modifícalo.
+
+### 5. Levantar los servicios
+
+Necesitas **2 terminales** (3 si usas MPI):
+
+```bash
+# Terminal 1 — Backend
+cd backend
+./mvnw spring-boot:run
+
+# Terminal 2 — Frontend
+cd frontend
+yarn install    # solo la primera vez
 yarn start
 ```
 
-Accede a: `http://localhost:3000`
+Abre `http://localhost:3000` en tu navegador.
+
+```bash
+# Terminal 3 — MPI Service (OPCIONAL — solo para /analytics)
+cd mpi_service
+pip install -r requirements.txt
+./run_mpi.sh
+```
+
+### 6. Usuario de prueba
+
+Regístrate desde la pantalla de login, o si cargaste los datos semilla:
+
+```
+Email:    demo@dagon.com
+Password: demo123
+```
+
+---
 
 ## 📁 Estructura del Proyecto
 
 ```
-/app
-├── backend/
-│   ├── server.py           # API FastAPI principal
-│   ├── requirements.txt    # Dependencias Python
-│   └── .env               # Variables de entorno
-├── frontend/
+Dagon-Project/
+├── backend/                          # API REST — Java 21 + Spring Boot
+│   ├── src/main/java/com/dagon/backend/
+│   │   ├── controller/               #   Controladores REST
+│   │   ├── service/                   #   Lógica de negocio
+│   │   │   └── validation/            #   Motor de validación SQL
+│   │   ├── model/                     #   Entidades JPA
+│   │   ├── repository/                #   Repositorios Spring Data
+│   │   ├── security/                  #   JWT + Rate Limiter
+│   │   ├── config/                    #   Security, CORS, DataSources
+│   │   └── dto/                       #   Objetos de transferencia
+│   └── src/main/resources/
+│       └── application.properties     #   Config (⚠️ NO commitear)
+│
+├── frontend/                          # UI — React 19 + CRACO
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── DagonMascot.js      # SVG animado de la mascota
-│   │   │   ├── Clawbot.js          # Chat IA tutor
-│   │   │   └── ui/                 # Componentes Shadcn
-│   │   ├── pages/
-│   │   │   ├── LoginPage.js        # Autenticación
-│   │   │   ├── DashboardPage.js    # Vista principal
-│   │   │   └── ExercisePage.js     # Ejercicios (Drag&Drop + Editor)
-│   │   ├── contexts/
-│   │   │   └── AuthContext.js      # Gestión de autenticación
-│   │   ├── services/
-│   │   │   └── apiService.js       # Cliente API
-│   │   ├── App.js                  # Router principal
-│   │   └── index.css               # Estilos globales
-│   ├── package.json
-│   └── .env
-└── design_guidelines.json  # Guías de diseño UX/UI
+│   │   ├── pages/                     #   Páginas (Dashboard, Exercise, etc.)
+│   │   ├── components/                #   Componentes + Shadcn/UI
+│   │   ├── services/                  #   Cliente API (Axios)
+│   │   ├── contexts/                  #   AuthContext, ThemeContext
+│   │   ├── config/                    #   API_BASE URL
+│   │   └── lib/                       #   Utils, SoundEngine
+│   ├── .env.example                   #   Plantilla de variables
+│   └── package.json                   #   Deps (yarn install)
+│
+├── mpi_service/                       # Analytics paralelo (opcional)
+│   ├── server.py                      #   Flask API
+│   ├── analytics_mpi.py              #   Procesamiento MPI
+│   └── run_mpi.sh                     #   Script de arranque
+│
+├── scripts/                           # SQL para setup de BD
+│   ├── 00_instalacion_limpia.sql      #   Schema completo
+│   ├── 01_datos_semilla.sql           #   Datos iniciales
+│   ├── 02_ejercicios_semilla.sql      #   Ejercicios/misiones
+│   └── migraciones/                   #   Migraciones incrementales
+│
+└── docs/                              # Documentación adicional
 ```
 
-## 🎯 API Endpoints
+---
 
-### Autenticación
-- `POST /api/auth/register` - Registrar nuevo usuario
-- `POST /api/auth/login` - Iniciar sesión (devuelve JWT)
-- `GET /api/user/profile` - Obtener perfil del usuario (requiere auth)
+## 🎯 API Endpoints Principales
 
-### Niveles y Ejercicios
-- `GET /api/levels` - Listar todos los niveles
-- `GET /api/exercises/:levelId` - Obtener ejercicios de un nivel
-- `POST /api/exercises/validate` - Validar consulta SQL
+Todos bajo `/api`. Requieren JWT salvo login/registro.
 
-### Clawbot (IA)
-- `POST /api/chat` - Enviar mensaje al tutor IA
+| Grupo | Endpoints Clave |
+|-------|----------------|
+| **Auth** | `POST /api/usuarios/registro`, `POST /api/usuarios/login` |
+| **Dashboard** | `GET /api/dashboard/resumen` |
+| **Niveles** | `GET /api/levels`, `GET /api/exercises/{levelId}` |
+| **Validación SQL** | `POST /api/exercises/{id}/validate` |
+| **Clawbot (IA)** | `POST /api/clawbot/chat`, `POST /api/clawbot/analyze` |
+| **Leaderboard** | `GET /api/leaderboard` |
+| **Módulos** | `GET /api/modulos`, `GET /api/modulos/completados` |
+| **Docente** | `GET /api/docente/resumen`, `GET /api/docente/alumnos`, ... |
+| **Analytics** | `GET /api/analytics/mpi` *(proxy al servicio Python)* |
+
+---
+
+## 🌊 Características Principales
+
+- **Sandbox SQL real** — Los estudiantes ejecutan queries contra PostgreSQL real bajo un rol restringido (`app_sandbox_user`, sin `DROP`/`TRUNCATE`)
+- **Editor Monaco** — Editor de código con resaltado SQL (el mismo de VS Code)
+- **Tutor IA Clawbot** — Chatbot impulsado por Gemini API (con fallback sin API key)
+- **Gamificación** — XP, rachas, logros, certificados, leaderboard
+- **Teoría interactiva** — Diagramas MER, Venn SQL, ejercicios drag & drop
+- **Panel docente** — Gestión de alumnos, calificaciones, grupos, exportación CSV
+- **Diseño "Abyss & Crimson"** — Tema oscuro con glassmorphism y mascota animada (Dagon)
+- **Analytics MPI** — Procesamiento paralelo con visualización de ranks (feature académico)
+
+---
+
+## 🔧 Stack Tecnológico
+
+### Backend
+| Tecnología | Uso |
+|-----------|-----|
+| Java 21 + Spring Boot 4.0.3 | Framework web y API REST |
+| Spring Security + JWT (jjwt 0.11.5) | Autenticación stateless |
+| Spring Data JPA + Hibernate | ORM con PostgreSQL |
+| Lombok | Reducción de boilerplate |
+| Google Gemini API | Tutor IA Clawbot *(opcional)* |
+
+### Frontend
+| Tecnología | Uso |
+|-----------|-----|
+| React 19 + CRACO | Framework UI (no react-scripts directo) |
+| Tailwind CSS 3.4 + Shadcn/UI | Estilos y componentes |
+| Framer Motion | Animaciones y transiciones |
+| Monaco Editor | Editor SQL interactivo |
+| Recharts | Gráficas y visualización |
+| Axios | Cliente HTTP con interceptores JWT |
+| Lucide React | Iconos |
+
+### MPI Service *(opcional)*
+| Tecnología | Uso |
+|-----------|-----|
+| Python 3.10+ + Flask | API HTTP |
+| mpi4py + Open MPI | Procesamiento paralelo |
+
+---
+
+## 🗄️ Base de Datos
+
+- **Motor:** PostgreSQL
+- **Nombre:** `dagon_local` (local) 
+- **Schemas:** `lms_core` (tablas principales), `lms_sandbox` (ejecución de queries de alumnos), `lms_sandbox_template` (plantilla para sandboxes por usuario)
+- **DDL-Auto:** `none` — Hibernate nunca modifica el schema
+- **Scripts:** Todo en `scripts/` — ejecutar en orden numérico
+
+### Tablas principales
+`usuarios`, `cursos`, `modulos`, `ejercicios_practicos`, `intentos`, `progreso`, `logros`, `usuario_logros`, `certificados`, `docentes`, `roles`
+
+---
+
+## 🔐 Seguridad
+
+- JWT stateless con expiración de 24h
+- Contraseñas hasheadas con BCrypt
+- CORS configurado para `localhost:3000` (y Vercel en producción)
+- Sandbox SQL con rol restringido (`app_sandbox_user`)
+- Rate limiting en autenticación y chat IA
+
+---
 
 ## 🎨 Paleta de Colores
 
 ```css
---background-default: #020617  /* Abyss Deep */
---background-paper: #0F172A    /* Ocean Surface */
---primary-main: #DC2626        /* Crimson Red */
---secondary-main: #06B6D4      /* Cyan Glow */
---text-primary: #F8FAFC        /* White */
---text-secondary: #94A3B8      /* Slate */
+--abyss-deep:     #020617   /* Fondo principal */
+--ocean-surface:  #0F172A   /* Fondo secundario */
+--crimson-red:    #DC2626   /* Acento principal */
+--cyan-glow:      #06B6D4   /* Acento secundario */
+--text-primary:   #F8FAFC   /* Texto claro */
+--text-secondary: #94A3B8   /* Texto atenuado */
 ```
 
-## 🔧 Tecnologías Utilizadas
+---
 
-### Backend
-- **FastAPI** - Framework web moderno
-- **Motor** - Driver async MongoDB
-- **Passlib + Bcrypt** - Hashing de contraseñas
-- **Python-JOSE** - Manejo de JWT
-- **Emergent Integrations** - Integración LLM universal
+## 🐛 Troubleshooting
 
-### Frontend
-- **React 19** - Biblioteca UI
-- **React Router v7** - Navegación
-- **Axios** - Cliente HTTP
-- **Monaco Editor** - Editor de código (VS Code)
-- **React Beautiful DnD** - Drag & Drop
-- **Tailwind CSS** - Estilos utility-first
-- **Shadcn/UI** - Componentes accesibles
-- **Sonner** - Notificaciones toast
-- **Lucide React** - Iconos
+| Problema | Solución |
+|----------|----------|
+| `yarn: command not found` | Instalar con `npm install -g yarn` |
+| Backend no conecta a BD | Verifica credenciales en `application.properties` y que PostgreSQL esté corriendo |
+| Frontend da error 401 | Tu token JWT expiró — vuelve a hacer login |
+| Clawbot no responde con IA | Normal si no configuraste `gemini.api.key` — usa respuestas de fallback |
+| Puerto 3000/8080 ocupado | Mata el proceso anterior o cambia el puerto |
+| `./mvnw: Permission denied` | Ejecuta `chmod +x backend/mvnw` |
+| MPI no arranca | Verifica que `mpirun` esté instalado (`sudo apt install openmpi-bin`) |
 
-## 📚 Niveles Disponibles
-
-| Nivel | Nombre | Tipo de Ejercicio | Contenido |
-|-------|--------|-------------------|-----------|
-| 0 | Nivel 0 - Desde Cero | Drag & Drop | Conceptos básicos de BD |
-| 1 | Básico | Drag & Drop | SELECT, WHERE, ORDER BY |
-| 2 | Medio | Code Editor | JOINs, GROUP BY, subconsultas |
-| 3 | Avanzado | Code Editor | Índices, transacciones |
-| 4 | Pro | Code Editor | Arquitectura, escalabilidad |
-
-## 🤖 Integración Clawbot
-
-Clawbot utiliza **Emergent LLM Key** (clave universal) que funciona con:
-- OpenAI (GPT-5.2 - actual)
-- Anthropic Claude
-- Google Gemini
-
-### Cambiar Backend del Chat
-
-Para apuntar Clawbot a tu propio backend en Spring Boot:
-
-1. Localiza `/app/frontend/src/services/apiService.js`
-2. Modifica la función `chat()`:
-
-```javascript
-chat: async (message, sessionId) => {
-  // Cambiar esta URL por tu backend Spring Boot
-  const response = await axios.post('http://localhost:8080/api/chat', {
-    message,
-    session_id: sessionId
-  });
-  return response.data;
-}
-```
-
-## 🐛 Problemas Conocidos
-
-### Drag & Drop
-- **Estado**: Funcional con correcciones aplicadas
-- Si no funciona, verificar que `isDropDisabled={false}` esté en todos los `<Droppable>`
-
-### Clawbot FAB
-- **Z-index**: Configurado en 9999 para evitar overlays
-- Si no se ve, verificar que no haya elementos con z-index mayor
-
-### Preview URL
-- La URL de preview pública puede tener problemas de routing
-- Usar `http://localhost:3000` para desarrollo local
-
-## 📝 Datos Mock
-
-### Usuarios de Prueba
-```javascript
-Email: demo@dagon.com
-Password: demo123
-Nombre: Usuario Demo
-```
-
-### Ejercicios Mock
-Los ejercicios están definidos en `backend/server.py` en `MOCK_EXERCISES`.
-Puedes modificarlos directamente o conectar a tu base de datos PostgreSQL.
-
-## 🔒 Seguridad
-
-- Contraseñas hasheadas con **bcrypt**
-- Tokens JWT con expiración de 24h
-- CORS configurado (ajustar en producción)
-- Variables sensibles en `.env`
-
-## 🚀 Despliegue
-
-### Consideraciones
-1. Cambiar `JWT_SECRET` a un valor seguro
-2. Configurar `CORS_ORIGINS` con dominios específicos
-3. Usar variables de entorno para `MONGO_URL`
-4. Configurar proxy inverso (Nginx) para producción
-
-### Spring Boot Backend
-Cuando tu backend en Java esté listo:
-1. Actualizar `REACT_APP_BACKEND_URL` en frontend/.env
-2. Modificar `apiService.js` si la estructura de respuesta difiere
-3. Asegurarte de que los endpoints coincidan (/api/chat, /api/evaluar, etc.)
-
-## 🎓 Próximos Pasos Sugeridos
-
-1. ✅ **Agregar más ejercicios** - Ampliar el banco de ejercicios por nivel
-2. ✅ **Conectar PostgreSQL real** - Reemplazar datos mock con BD real
-3. ✅ **Sistema de logros** - Badges y certificados
-4. ✅ **Leaderboard** - Clasificación de usuarios
-5. ✅ **Modo oscuro/claro** - Opción de tema (actualmente solo oscuro)
-6. ✅ **Soporte multiidioma** - i18n (actualmente solo español)
+---
 
 ## 📄 Licencia
 
-Este proyecto fue creado como MVP educativo. Usa las guías de diseño y arquitectura libremente.
+Proyecto educativo desarrollado como plataforma de aprendizaje SQL.
 
 ## 💡 Créditos
 
-- **Diseño**: Inspirado en Jujutsu Kaisen (Dagon)
-- **Stack**: React + FastAPI + MongoDB
-- **IA**: Emergent LLM Key (GPT-5.2)
-- **Componentes**: Shadcn/UI
-- **Editor**: Monaco Editor (VS Code)
+- **Diseño:** Inspirado en Jujutsu Kaisen (Dagon)
+- **Stack:** Spring Boot + React + PostgreSQL
+- **IA:** Google Gemini API
+- **Componentes:** Shadcn/UI + Monaco Editor
 
 ---
 
 <div align="center">
 
-**Desarrollado con 🔴 por la comunidad de Emergent**
-
-¿Preguntas? Abre un issue o contacta al soporte.
+**Desarrollado con 🔴 pasión por el equipo Dagon**
 
 </div>
