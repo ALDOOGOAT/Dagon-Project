@@ -1,5 +1,6 @@
 package com.dagon.backend.model;
 
+import java.util.UUID;
 import jakarta.persistence.*;
 
 @Entity
@@ -38,6 +39,14 @@ public class EjercicioPractico {
     @Column(name = "tipo_mision", length = 50)
     private String tipoMision;
 
+    @Column(name = "creado_por")
+    private UUID creadoPor;
+
+    @Column(name = "visibilidad")
+    private String visibilidad;
+
+    @Column(name = "id_grupo")
+    private Long idGrupo;
     // --- GETTERS Y SETTERS ---
     public Integer getIdEjercicio() { return idEjercicio; }
     public void setIdEjercicio(Integer idEjercicio) { this.idEjercicio = idEjercicio; }
@@ -68,4 +77,13 @@ public class EjercicioPractico {
 
     public String getTipoMision() { return tipoMision; }
     public void setTipoMision(String tipoMision) { this.tipoMision = tipoMision; }
+
+    public UUID getCreadoPor() { return creadoPor; }
+    public void setCreadoPor(UUID creadoPor) { this.creadoPor = creadoPor; }
+
+    public String getVisibilidad() { return visibilidad; }
+    public void setVisibilidad(String visibilidad) { this.visibilidad = visibilidad; }
+
+    public Long getIdGrupo() { return idGrupo; }
+    public void setIdGrupo(Long idGrupo) { this.idGrupo = idGrupo; }
 }

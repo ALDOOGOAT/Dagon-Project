@@ -13,12 +13,12 @@ import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Film, TrendingUp,
-  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, Clock, Gauge, Medal, Network
+  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, BadgeCheck, Copy
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import apiClient from '../services/apiClient';
+import apiClient, { cachedGet } from '../services/apiClient';
 import { formatAIMessage, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
 import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
 import { QueryResultShowcase } from '../components/QueryResultShowcase';
@@ -520,8 +520,20 @@ export const ExercisePage = () => {
   const dragEndedAtRef = useRef(0);
   const dropZoneScrollRef = useRef(null);
   const wordBankScrollRef = useRef(null);
+  const resultPanelRef = useRef(null);
   const spokenExerciseRef = useRef(null);
   const lastTypingSoundRef = useRef(0);
+
+  const managedTimeoutsRef = useRef(new Set());
+
+  const setManagedTimeout = useCallback((callback, delay) => {
+    const timeoutId = window.setTimeout(() => {
+      managedTimeoutsRef.current.delete(timeoutId);
+      callback();
+    }, delay);
+    managedTimeoutsRef.current.add(timeoutId);
+    return timeoutId;
+  }, []);
 
   useEffect(() => { 
     setIsMounted(true); 
@@ -531,6 +543,7 @@ export const ExercisePage = () => {
   }, []);
 
   useEffect(() => {
+    const managedTimeouts = managedTimeoutsRef.current;
     return () => {
       if (dagonTypingIntervalRef.current) {
         clearInterval(dagonTypingIntervalRef.current);
@@ -538,6 +551,8 @@ export const ExercisePage = () => {
       if (dagonPostMessageTimeoutRef.current) {
         clearTimeout(dagonPostMessageTimeoutRef.current);
       }
+      managedTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      managedTimeouts.clear();
       sounds.stopSpeech?.();
     };
   }, []);
@@ -590,7 +605,7 @@ export const ExercisePage = () => {
       setShowTheory(false);
 
       try {
-        const response = await apiClient.get(`/api/exercises/${levelId}`);
+        const response = await cachedGet(`/api/exercises/${levelId}`, {}, { ttl: 30_000 });
         if (!isActive) return;
 
         const data = response.data;
@@ -667,7 +682,7 @@ export const ExercisePage = () => {
 
   const releaseDragClickGuard = () => {
     dragEndedAtRef.current = Date.now();
-    window.setTimeout(() => {
+    setManagedTimeout(() => {
       dragClickGuardRef.current = false;
     }, 120);
   };
@@ -874,7 +889,7 @@ export const ExercisePage = () => {
           updateUserXP(newXP);
           setLastXPGained(gained);
           setXpPop(gained);
-          setTimeout(() => setXpPop(null), 1700);
+          setManagedTimeout(() => setXpPop(null), 1700);
           const prevLvl = Math.floor(prevXP / 100) + 1;
           const newLvl = Math.floor(newXP / 100) + 1;
           if (newLvl > prevLvl) {
@@ -901,7 +916,7 @@ export const ExercisePage = () => {
           fetchExerciseLeaderboard(exercise.id);
         }
         registerGamifiedAttempt({ exercise, success: true, attempts: intentosFallidos + 1 });
-        setBurst(true);        setTimeout(() => setBurst(false), 1300);
+        setBurst(true);        setManagedTimeout(() => setBurst(false), 1300);
         setIntentosFallidos(0);
         setCombo(c => c + 1);
         sounds.playSuccess();
@@ -925,7 +940,7 @@ export const ExercisePage = () => {
         setIsDagonIntervening(false);
         setExecutionResult({ ...result, success: false, message: result.message });
         setShake(true);
-        setTimeout(() => setShake(false), 500);
+        setManagedTimeout(() => setShake(false), 500);
         setCombo(0);
         sounds.playError();
         if (result.descripcion) {
@@ -985,6 +1000,31 @@ export const ExercisePage = () => {
     if (exercises.length === 0) return 0;
     return ((currentExerciseIndex + (executionResult?.success ? 1 : 0)) / exercises.length) * 100;
   }, [currentExerciseIndex, exercises.length, executionResult]);
+
+  useEffect(() => {
+    if (!(executionResult?.success || executionResult?.isWarning) || !resultPanelRef.current) return;
+
+    const timeout = window.setTimeout(() => {
+      const mobileResultViewport = window.matchMedia?.('(max-width: 640px)').matches;
+      resultPanelRef.current?.scrollIntoView({
+        behavior: mobileResultViewport ? 'auto' : 'smooth',
+        block: mobileResultViewport ? 'nearest' : 'center',
+      });
+      resultPanelRef.current?.focus({ preventScroll: true });
+    }, 180);
+
+    return () => window.clearTimeout(timeout);
+  }, [executionResult]);
+
+  useEffect(() => {
+    if (!executionResult?.success || currentExerciseIndex < exercises.length - 1) return;
+    const nextLevelId = Number(levelId) + 1;
+    if (!Number.isFinite(nextLevelId)) return;
+
+    cachedGet(`/api/exercises/${nextLevelId}`, {}, { ttl: 30_000 }).catch(() => {
+      // Prefetch silencioso: si no existe el siguiente modulo, no afecta la experiencia actual.
+    });
+  }, [currentExerciseIndex, executionResult?.success, exercises.length, levelId]);
 
   const handleResetSandbox = async () => {
     const confirmed = window.confirm(
@@ -1068,19 +1108,37 @@ export const ExercisePage = () => {
   useEffect(() => {
     if (!exerciseForSpeech || loading || showModuleCinematic || showTheory) return;
     const speechKey = `${exerciseForSpeech.id || currentExerciseIndex}-${exerciseForSpeech.orden || currentExerciseIndex}`;
-    if (spokenExerciseRef.current === speechKey) return;
+
+    // We remove the strict return if spokenExerciseRef.current === speechKey,
+    // to ensure it always plays on visit. We just update it to avoid rapid repeats.
     spokenExerciseRef.current = speechKey;
     if (lastAlertedExerciseKey !== speechKey) {
       setLastAlertedExerciseKey(speechKey);
       sounds.playMissionStart?.();
     }
 
+    // Always attempt to speak TTS when loading a new screen/exercise
     const timeout = window.setTimeout(() => {
-      readExerciseStatement(false);
+      // Force read by bypassing the isReadingStatement check temporarily
+      // or trusting that the cleanup in other places stopped previous readings
+      sounds.stopSpeech?.();
+      const text = buildExerciseSpeech(exerciseForSpeech, currentExerciseIndex);
+      sounds.speakTTS?.(text, {
+        rate: 0.96,
+        pitch: 1.01,
+        onStart: () => setIsReadingStatement(true),
+        onEnd: () => setIsReadingStatement(false),
+        onError: () => setIsReadingStatement(false),
+      });
     }, 650);
 
     return () => window.clearTimeout(timeout);
-  }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, readExerciseStatement, showModuleCinematic, showTheory]);
+  }, [currentExerciseIndex, exerciseForSpeech, lastAlertedExerciseKey, loading, showModuleCinematic, showTheory]);
+
+  const scrollToExerciseSection = (sectionId) => {
+    const target = document.getElementById(`exercise-${sectionId}`);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleDiagramChange = useCallback((graphData) => {
     setEditorCode(JSON.stringify(graphData));
@@ -1114,6 +1172,8 @@ export const ExercisePage = () => {
   }
 
   const exercise = exercises[currentExerciseIndex];
+  const isDocenteMode = user?.idRol === 2 || user?.idRol === 3;
+  const teacherExpectedQuery = isDocenteMode ? exercise.expectedQuery : null;
   const isDragDrop = exercise.type === 'drag_drop';
   const isDiagram = exercise.type === 'diagram'; // <-- DETECTAMOS SI ES UN DIAGRAMA
   const isModelingLab = exercise.pedagogia?.modo === 'laboratorio_modelado';
@@ -1318,7 +1378,7 @@ export const ExercisePage = () => {
         {isPlaced
           ? <ListChecks className="h-3.5 w-3.5 opacity-60" />
           : <GripHorizontal className="h-3.5 w-3.5 opacity-60" />}
-        <span className="max-w-[42vw] truncate whitespace-nowrap sm:max-w-none">{word.word}</span>
+        <span className="max-w-[56vw] whitespace-normal break-words leading-tight sm:max-w-none sm:whitespace-nowrap">{word.word}</span>
         {isPlaced && !isClone && (
           <div className="ml-1 flex shrink-0 items-center gap-1">
             <button
@@ -1503,13 +1563,35 @@ export const ExercisePage = () => {
           />
         ) : (
           <div className={`w-full max-w-[1880px] mx-auto px-4 py-5 sm:px-6 lg:px-8 grid gap-5 lg:gap-6 ${shake ? 'animate-shake-x' : ''}`}>
+            <nav className="exercise-mobile-stepper" aria-label="Secciones del ejercicio">
+              {[
+                ['reto', 'Reto'],
+                ['editor', isDragDrop ? 'Armar' : isDiagram ? 'Diagrama' : 'Editor'],
+                ['resultado', 'Resultado'],
+              ].map(([sectionId, label]) => {
+                const disabled = sectionId === 'resultado' && !executionResult;
+                return (
+                  <button
+                    key={sectionId}
+                    type="button"
+                    onClick={() => !disabled && scrollToExerciseSection(sectionId)}
+                    disabled={disabled}
+                    className="exercise-mobile-stepper__item"
+                    aria-label={`Ir a ${label.toLowerCase()}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </nav>
 
             <motion.div
               variants={motionIn}
               initial="hidden"
               animate="visible"
               transition={{ duration: 0.32, ease: 'easeOut' }}
-              className="glass-card-apple dagon-compact-card rounded-3xl border px-5 py-5 sm:px-6 lg:px-7 relative overflow-hidden"
+              id="exercise-reto"
+              className="glass-card-apple dagon-compact-card rounded-3xl border px-5 py-5 sm:px-6 lg:px-7 relative overflow-hidden scroll-mt-24"
               style={{ borderColor: colors.border }}
             >
               <div className="absolute inset-y-0 left-0 w-1.5" style={{ background: `linear-gradient(180deg, ${colors.primary}, ${colors.secondary}, ${colors.accent})` }} />
@@ -1577,6 +1659,46 @@ export const ExercisePage = () => {
                         <span className="text-xs font-gameui font-bold" style={{ color: mutedColor }}>{exercise.xpReward || 0} XP al completar</span>
                       </div>
                     </div>
+
+                    {teacherExpectedQuery && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-4 overflow-hidden rounded-3xl border"
+                        style={{
+                          borderColor: isLight ? 'rgba(124,58,237,0.28)' : 'rgba(196,181,253,0.26)',
+                          background: isLight
+                            ? 'linear-gradient(135deg, rgba(245,243,255,0.90), rgba(255,255,255,0.74))'
+                            : 'linear-gradient(135deg, rgba(46,16,101,0.32), rgba(15,23,42,0.52))'
+                        }}
+                      >
+                        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="flex items-center gap-2 text-[10px] font-display font-black uppercase tracking-[0.24em]" style={{ color: isLight ? '#6d28d9' : '#c4b5fd' }}>
+                              <BadgeCheck className="h-4 w-4" /> Vista docente
+                            </p>
+                            <p className="mt-1 text-sm font-gameui leading-relaxed" style={{ color: mutedColor }}>
+                              Respuesta esperada para guiar revisión, explicar variantes y preparar retroalimentación sin afectar el intento del alumno.
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(teacherExpectedQuery);
+                              toast.success('Query esperada copiada');
+                            }}
+                            className="min-h-10 shrink-0 rounded-xl font-display font-black"
+                            style={{ borderColor: isLight ? 'rgba(124,58,237,0.30)' : 'rgba(196,181,253,0.28)', color: isLight ? '#5b21b6' : '#ddd6fe' }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" /> Copiar
+                          </Button>
+                        </div>
+                        <pre className="mx-4 mb-4 max-h-44 overflow-auto rounded-2xl border p-4 font-mono text-xs leading-relaxed" style={{ borderColor: isLight ? 'rgba(124,58,237,0.18)' : 'rgba(196,181,253,0.16)', backgroundColor: isLight ? 'rgba(255,255,255,0.82)' : 'rgba(2,6,23,0.72)', color: isLight ? '#312e81' : '#e0e7ff' }}>
+                          {teacherExpectedQuery}
+                        </pre>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
@@ -2129,7 +2251,8 @@ export const ExercisePage = () => {
               initial="hidden"
               animate="visible"
               transition={{ delay: 0.08, duration: 0.34, ease: 'easeOut' }}
-              className="glass-card-apple dagon-compact-card rounded-3xl border overflow-hidden relative"
+              id="exercise-editor"
+              className="glass-card-apple dagon-compact-card rounded-3xl border overflow-hidden relative scroll-mt-24"
               style={{ borderColor: colors.border }}
             >
               {/* Barra superior */}
@@ -2193,7 +2316,7 @@ export const ExercisePage = () => {
               <div className="p-5 sm:p-6">
                 {isDiagram ? (
                   <>
-                    <div className="h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
+                    <div className="exercise-workbench-frame h-[420px] sm:h-[520px] xl:h-[640px] w-full rounded-2xl overflow-hidden border border-white/10 shadow-inner relative bg-[#090b10]">
                       <MerDiagramBuilder
                         onChangeData={handleDiagramChange}
                       />
@@ -2294,7 +2417,7 @@ export const ExercisePage = () => {
                                 dropZoneScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[132px] sm:min-h-[142px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all relative ${
+                              className={`exercise-drop-rail min-h-[132px] sm:min-h-[142px] rounded-2xl border-2 border-dashed p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all relative ${
                                 snapshot.isDraggingOver ? 'border-emerald-400 animate-dnd-glow' : ''
                               }`}
                               style={{
@@ -2381,7 +2504,7 @@ export const ExercisePage = () => {
                                 wordBankScrollRef.current = node;
                               }}
                               {...provided.droppableProps}
-                              className={`min-h-[128px] sm:min-h-[142px] rounded-2xl border-2 p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all duration-300 ${
+                              className={`exercise-word-rail min-h-[128px] sm:min-h-[142px] rounded-2xl border-2 p-3 sm:p-4 flex flex-nowrap sm:flex-wrap content-start gap-y-3 gap-x-2 overflow-x-auto sm:overflow-visible scroll-fancy transition-all duration-300 ${
                                 snapshot.isDraggingOver ? 'shadow-[inset_0_0_24px_rgba(34,211,238,0.14)]' : ''
                               }`}
                               style={{
@@ -2410,7 +2533,7 @@ export const ExercisePage = () => {
                   </DragDropContext>
                 ) : (
                   <>
-                    <div className="h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
+                    <div className="exercise-workbench-frame h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
                       <Editor
                         height="100%"
                         defaultLanguage="sql"
@@ -2454,11 +2577,15 @@ export const ExercisePage = () => {
             <AnimatePresence>
               {executionResult && (
                 <motion.div
+                  id="exercise-resultado"
+                  ref={resultPanelRef}
+                  tabIndex={-1}
+                  aria-live={executionResult.success || executionResult.isWarning ? 'polite' : undefined}
                   initial={{ opacity: 0, y: 18, scale: 0.985 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -10, scale: 0.99 }}
                   transition={{ duration: 0.32, ease: 'easeOut' }}
-                  className="glass-card-apple rounded-3xl border overflow-hidden relative"
+                  className="glass-card-apple rounded-3xl border overflow-hidden relative scroll-mt-24 focus:outline-none"
                   style={{
                     borderColor: resultTone.border,
                     boxShadow: `0 24px 70px -42px ${resultTone.accent}55`

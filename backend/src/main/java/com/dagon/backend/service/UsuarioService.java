@@ -11,14 +11,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -47,11 +50,17 @@ public class UsuarioService {
     @Value("${dagon.streak.zone:America/Mexico_City}")
     private String streakZone;
 
-    @Value("${dagon.teacher.master-key:DAGON_MASTER_2026}")
-    private String teacherMasterKey;
+    @Value("${dagon.docente.registration-code:}")
+    private String docenteRegistrationCode;
 
     // --- FUNCION 1: REGISTRO ---
-    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol, String codigoClase, String claveDocente) {
+    @Transactional
+    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
+        return registrarUsuario(nuevoUsuario, rol, null, null);
+    }
+
+    @Transactional
+    public Usuario registrarUsuario(Usuario nuevoUsuario, String rol, String codigoDocente, String codigoGrupo) {
         if (nuevoUsuario.getEmail() == null || nuevoUsuario.getEmail().isBlank()) {
             throw new RuntimeException("Error: El correo es obligatorio.");
         }
@@ -81,40 +90,21 @@ public class UsuarioService {
             nuevoUsuario.setActivo(true);
         }
 
-        Integer idRol = resolverIdRol(rol);
+        String rolNormalizado = normalizarRolRegistro(rol);
+        if ("docente".equals(rolNormalizado)) {
+            validarCodigoRegistroDocente(codigoDocente);
+        }
+
+        Integer idRol = resolverIdRol(rolNormalizado);
         nuevoUsuario.setIdRol(idRol);
         nuevoUsuario.setPasswordHash(passwordEncoder.encode(nuevoUsuario.getPasswordHash()));
 
-        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
-
-        // Si es alumno y tiene código, lo unimos al grupo
-        if ("alumno".equalsIgnoreCase(rol) && codigoClase != null && !codigoClase.isBlank()) {
-            vincularUsuarioAGrupo(usuarioGuardado.getIdUsuario(), codigoClase);
+        Usuario guardado = usuarioRepository.save(nuevoUsuario);
+        if ("alumno".equals(rolNormalizado) && codigoGrupo != null && !codigoGrupo.isBlank()) {
+            inscribirAlumnoPorCodigoGrupo(guardado.getIdUsuario().toString(), codigoGrupo);
         }
 
-        return usuarioGuardado;
-    }
-
-    private void validarCodigoClase(String codigo) {
-        Integer existe = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM lms_core.grupos WHERE codigo_acceso = ?",
-                Integer.class, codigo);
-        if (existe == null || existe == 0) {
-            throw new RuntimeException("Error: El código de clase '" + codigo + "' no existe.");
-        }
-    }
-
-    private void vincularUsuarioAGrupo(UUID idUsuario, String codigo) {
-        try {
-            UUID idGrupo = jdbcTemplate.queryForObject(
-                    "SELECT id_grupo FROM lms_core.grupos WHERE codigo_acceso = ?",
-                    UUID.class, codigo);
-            jdbcTemplate.update(
-                    "INSERT INTO lms_core.usuario_grupos (id_usuario, id_grupo) VALUES (?, ?) ON CONFLICT DO NOTHING",
-                    idUsuario, idGrupo);
-        } catch (Exception e) {
-            logger.error("No se pudo vincular al usuario al grupo: {}", e.getMessage());
-        }
+        return guardado;
     }
 
     public Usuario registrarUsuario(Usuario nuevoUsuario) {
@@ -133,8 +123,49 @@ public class UsuarioService {
         }
     }
 
-    public Optional<Usuario> obtenerPorEmail(String email) {
-        return usuarioRepository.findByEmailIgnoreCase(email.trim().toLowerCase());
+    private String normalizarRolRegistro(String rol) {
+        if (rol == null || rol.isBlank()) return "alumno";
+        String normalizado = rol.trim().toLowerCase();
+        if (normalizado.equals("docente")) return "docente";
+        return "alumno";
+    }
+
+    private void validarCodigoRegistroDocente(String codigoDocente) {
+        if (docenteRegistrationCode == null || docenteRegistrationCode.isBlank()) {
+            throw new RuntimeException("Error: El registro docente no esta habilitado. Define DAGON_DOCENTE_REGISTRATION_CODE.");
+        }
+        if (codigoDocente == null || codigoDocente.isBlank()) {
+            throw new RuntimeException("Error: Ingresa la clave institucional docente.");
+        }
+
+        byte[] esperado = docenteRegistrationCode.trim().getBytes(StandardCharsets.UTF_8);
+        byte[] recibido = codigoDocente.trim().getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(esperado, recibido)) {
+            throw new RuntimeException("Error: La clave institucional docente no es valida.");
+        }
+    }
+
+    private void inscribirAlumnoPorCodigoGrupo(String alumnoId, String codigoGrupo) {
+        String codigoNormalizado = codigoGrupo.trim().toUpperCase();
+        Long idGrupo;
+        try {
+            idGrupo = jdbcTemplate.queryForObject(
+                    "SELECT id_grupo FROM lms_core.grupos_docente " +
+                            "WHERE UPPER(codigo_acceso) = ? AND activo = true",
+                    Long.class,
+                    codigoNormalizado
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Error: El codigo de grupo no existe o ya no esta activo.");
+        }
+
+        jdbcTemplate.update(
+                "INSERT INTO lms_core.grupo_alumnos (id_grupo, id_alumno, activo) " +
+                        "VALUES (?, ?::uuid, true) " +
+                        "ON CONFLICT (id_grupo, id_alumno) DO UPDATE SET activo = true, fecha_asignacion = now()",
+                idGrupo,
+                alumnoId
+        );
     }
 
     // --- FUNCION 2: LOGIN ---
@@ -198,14 +229,46 @@ public class UsuarioService {
     }
 
     public Optional<UsuarioResponseDTO> obtenerPerfilSeguro(String id) {
-        return usuarioRepository.findById(UUID.fromString(id)).map(UsuarioResponseDTO::from);
+        if (id == null || id.isBlank()) {
+            return Optional.empty();
+        }
+
+        try {
+            return usuarioRepository.findById(UUID.fromString(id)).map(UsuarioResponseDTO::from);
+        } catch (IllegalArgumentException e) {
+            return usuarioRepository.findByEmailIgnoreCase(id.trim().toLowerCase()).map(UsuarioResponseDTO::from);
+        }
     }
 
-    public Map<String, Object> obtenerEstadisticas(String id) {
+    private Optional<String> resolverUsuarioId(String identificador) {
+        if (identificador == null || identificador.isBlank()) {
+            return Optional.empty();
+        }
+
+        String limpio = identificador.trim();
+        try {
+            UUID.fromString(limpio);
+            return Optional.of(limpio);
+        } catch (IllegalArgumentException ignored) {
+            try {
+                String usuarioId = jdbcTemplate.queryForObject(
+                        "SELECT id_usuario::varchar FROM lms_core.usuarios WHERE LOWER(email) = LOWER(?)",
+                        String.class,
+                        limpio
+                );
+                return Optional.ofNullable(usuarioId);
+            } catch (Exception e) {
+                return Optional.empty();
+            }
+        }
+    }
+
+    public Map<String, Object> obtenerEstadisticasResumen(String id) {
+        String usuarioId = resolverUsuarioId(id).orElse(id);
         Map<String, Object> stats = new HashMap<>();
 
         try {
-            String sqlXP = "WITH historia AS ( " +
+            String sqlBase = "WITH historia AS ( " +
                     "  SELECT COALESCE(SUM(e.dificultad * 10), 0) AS xp " +
                     "  FROM ( " +
                     "    SELECT DISTINCT i.id_ejercicio " +
@@ -223,26 +286,26 @@ public class UsuarioService {
                     "  WHERE i.id_usuario = ?::uuid " +
                     "    AND i.es_correcto = true " +
                     "    AND e.tipo_mision = 'RAPIDA' " +
-                    ") SELECT (SELECT xp FROM historia) + COALESCE((SELECT COUNT(*) * 5 FROM rapida_ordenada WHERE rn <= 5), 0)";
-            stats.put("xp", jdbcTemplate.queryForObject(sqlXP, Integer.class, id, id));
+                    "), xp_actual AS ( " +
+                    "  SELECT (SELECT xp FROM historia) + COALESCE((SELECT COUNT(*) * 5 FROM rapida_ordenada WHERE rn <= 5), 0) AS xp " +
+                    "), ranking AS ( " +
+                    "  SELECT id_usuario, RANK() OVER (ORDER BY xp_total DESC, ejercicios_resueltos DESC, nombre ASC) AS posicion " +
+                    "  FROM lms_core.v_ranking_alumnos " +
+                    ") " +
+                    "SELECT " +
+                    "  COALESCE((SELECT xp FROM xp_actual), 0) AS xp, " +
+                    "  COALESCE((SELECT posicion FROM ranking WHERE id_usuario = ?::uuid), 0) AS posicion, " +
+                    "  (SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid) AS consultas_totales, " +
+                    "  (SELECT COUNT(DISTINCT id_ejercicio) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true) AS ejercicios_completados";
 
-            String sqlRank = "SELECT posicion FROM (" +
-                    "  SELECT id_usuario, RANK() OVER (ORDER BY xp_total DESC) as posicion " +
-                    "  FROM lms_core.v_ranking_alumnos" +
-                    ") ranking_tabla WHERE id_usuario = ?::uuid";
-            try {
-                stats.put("posicion", jdbcTemplate.queryForObject(sqlRank, Integer.class, id));
-            } catch (Exception noRank) {
-                stats.put("posicion", "-");
-            }
+            Map<String, Object> base = jdbcTemplate.queryForMap(sqlBase, usuarioId, usuarioId, usuarioId, usuarioId, usuarioId);
+            stats.put("xp", ((Number) base.get("xp")).intValue());
+            int posicion = ((Number) base.get("posicion")).intValue();
+            stats.put("posicion", posicion > 0 ? posicion : "-");
+            stats.put("consultas_totales", ((Number) base.get("consultas_totales")).intValue());
+            stats.put("ejercicios_completados", ((Number) base.get("ejercicios_completados")).intValue());
 
-            String sqlConsultas = "SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid";
-            stats.put("consultas_totales", jdbcTemplate.queryForObject(sqlConsultas, Integer.class, id));
-
-            String sqlCompletados = "SELECT COUNT(DISTINCT id_ejercicio) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND es_correcto = true";
-            stats.put("ejercicios_completados", jdbcTemplate.queryForObject(sqlCompletados, Integer.class, id));
-
-            RachaSnapshot racha = normalizarRachaParaStats(id);
+            RachaSnapshot racha = normalizarRachaParaStats(usuarioId);
             stats.put("racha", racha.rachaActual());
             stats.put("mejor_racha", racha.mejorRacha());
             stats.put("ultima_practica", racha.ultimaPractica() != null ? racha.ultimaPractica().toString() : null);
@@ -253,10 +316,27 @@ public class UsuarioService {
             stats.put("racha_protegida_hoy", racha.protegidaHoy());
             stats.put("racha_expira_en_horas", racha.expiraEnHoras());
             stats.put("dias_desde_ultima_practica", racha.diasDesdeUltimaPractica());
+            stats.put("success", true);
+        } catch (Exception e) {
+            logger.warn("Error al obtener resumen de estadisticas del usuario {}: {}", id, e.getMessage());
+            stats.put("success", false);
+        }
+
+        return stats;
+    }
+
+    public Map<String, Object> obtenerEstadisticas(String id) {
+        String usuarioId = resolverUsuarioId(id).orElse(id);
+        Map<String, Object> stats = new HashMap<>(obtenerEstadisticasResumen(usuarioId));
+
+        try {
+            if (Boolean.FALSE.equals(stats.get("success"))) {
+                return stats;
+            }
 
             String sqlFechas = "SELECT DISTINCT DATE(fecha_intento) as fecha_actividad " +
                     "FROM lms_core.intentos WHERE id_usuario = ?::uuid ORDER BY fecha_actividad DESC";
-            java.util.List<java.sql.Date> fechas = jdbcTemplate.queryForList(sqlFechas, java.sql.Date.class, id);
+            java.util.List<java.sql.Date> fechas = jdbcTemplate.queryForList(sqlFechas, java.sql.Date.class, usuarioId);
             java.util.List<String> fechasStr = new java.util.ArrayList<>();
             for (java.sql.Date f : fechas) {
                 fechasStr.add(f.toString());
@@ -289,13 +369,13 @@ public class UsuarioService {
                     "FROM (SELECT * FROM historia UNION ALL SELECT * FROM rapida) base " +
                     "GROUP BY dificultad ORDER BY dificultad";
             try {
-                java.util.List<Map<String, Object>> distribucion = jdbcTemplate.queryForList(sqlDistribucion, id, id);
+                java.util.List<Map<String, Object>> distribucion = jdbcTemplate.queryForList(sqlDistribucion, usuarioId, usuarioId);
                 stats.put("distribucion_xp", distribucion);
             } catch (Exception e) {
                 stats.put("distribucion_xp", new java.util.ArrayList<>());
             }
 
-            java.util.List<Map<String, Object>> dominioConceptos = obtenerDominioConceptos(id);
+            java.util.List<Map<String, Object>> dominioConceptos = obtenerDominioConceptos(usuarioId);
             stats.put("dominio_conceptos", dominioConceptos);
             stats.put("recomendaciones_aprendizaje", construirRecomendacionesAprendizaje(dominioConceptos));
 

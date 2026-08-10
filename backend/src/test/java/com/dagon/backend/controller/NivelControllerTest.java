@@ -46,22 +46,26 @@ class NivelControllerTest {
 
     @Test
     void obtenerEjerciciosIncluyeMetadataDelModulo() {
-        when(ejercicioService.obtenerEjerciciosPorModulo(4)).thenReturn(List.of());
+        when(ejercicioService.obtenerEjerciciosPorModulo(4, null)).thenReturn(List.of());
         when(ejercicioService.obtenerMetadataModulo(4)).thenReturn(Map.of(
                 "id_modulo", 4,
                 "titulo", "Prueba de Dagon",
                 "objetivos", List.of("Integrar MER, DDL y consultas")
         ));
 
-        var response = controller.getExercisesByLevel(4);
+        var response = controller.getExercisesByLevel(4, null);
 
         assertThat(response.getBody()).isInstanceOf(Map.class);
         Map<?, ?> body = (Map<?, ?>) response.getBody();
+
         assertThat(body.get("exercises")).isEqualTo(List.of());
         assertThat(body.get("module")).isEqualTo(Map.of(
                 "id_modulo", 4,
                 "titulo", "Prueba de Dagon",
                 "objetivos", List.of("Integrar MER, DDL y consultas")
         ));
+
+        verify(ejercicioService).obtenerEjerciciosPorModulo(4, null);
+        verify(ejercicioService).obtenerMetadataModulo(4);
     }
 }

@@ -50,11 +50,16 @@ public class UsuarioController {
             nuevoUsuario.setEmail((String) body.get("email"));
             nuevoUsuario.setPasswordHash((String) body.get("password")); // React envía 'password', nosotros lo guardamos como hash después
 
-            String rol = (String) body.getOrDefault("rol", "alumno");
-            String codigoClase = (String) body.get("codigoClase");
-            String claveDocente = (String) body.get("claveDocente");
+            String rolSolicitado = body.get("rol") != null ? body.get("rol").toString() : "alumno";
+            String codigoDocente = body.get("codigoDocente") != null ? body.get("codigoDocente").toString() : null;
+            String codigoGrupo = body.get("codigoGrupo") != null ? body.get("codigoGrupo").toString() : null;
 
-            Usuario usuarioGuardado = usuarioService.registrarUsuario(nuevoUsuario, rol, codigoClase, claveDocente);
+            Usuario usuarioGuardado = usuarioService.registrarUsuario(
+                    nuevoUsuario,
+                    rolSolicitado,
+                    codigoDocente,
+                    codigoGrupo
+            );
 
             String token = jwtUtil.generarToken(usuarioGuardado.getIdUsuario().toString());
 

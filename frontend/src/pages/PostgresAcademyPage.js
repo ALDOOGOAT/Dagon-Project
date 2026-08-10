@@ -150,7 +150,7 @@ export const PostgresAcademyPage = () => {
             Volver
           </Button>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="postgres-tier-switcher flex flex-wrap items-center gap-2">
             {getTierKeys().map((key) => {
               const item = COMMAND_TIERS[key];
               const ItemIcon = item.icon;
@@ -182,7 +182,7 @@ export const PostgresAcademyPage = () => {
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[32px] border p-5 sm:p-7 lg:p-10 dagon-compact-card"
+          className="postgres-academy-hero relative overflow-hidden rounded-[32px] border p-5 sm:p-7 lg:p-10 dagon-compact-card"
           style={panelStyle}
         >
           <div

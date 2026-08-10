@@ -49,4 +49,113 @@ public class DocenteDTO {
             Double tiempoMs,
             LocalDateTime fechaIntento
     ) {}
+
+    public record GrupoDocenteDTO(
+            Long idGrupo,
+            String nombreGrupo,
+            String codigoAcceso,
+            String descripcion,
+            boolean activo,
+            LocalDateTime fechaCreacion,
+            int totalAlumnos
+    ) {}
+
+    public record CrearGrupoRequest(
+            String nombreGrupo,
+            String descripcion
+    ) {}
+
+    public record AgregarAlumnoRequest(
+            String idAlumno,
+            String emailAlumno
+    ) {}
+
+    public record EvaluacionDTO(
+            Long idEvaluacion,
+            UUID idDocente,
+            UUID idAlumno,
+            Integer idCurso,
+            Integer idModulo,
+            double calificacion,
+            String comentario,
+            LocalDateTime fechaEvaluacion
+    ) {}
+
+    public record CrearEvaluacionRequest(
+            String idAlumno,
+            Integer idCurso,
+            Integer idModulo,
+            double calificacion,
+            String comentario
+    ) {}
+    public record EjercicioDocenteDTO(
+        Integer idEjercicio,
+        Integer idModulo,
+        String titulo,
+        String enunciado,
+        String queryMaestra,
+        Integer dificultad,
+        String formato,
+        String configuracionExtra,
+        Integer orden,
+        String tipoMision,
+        UUID creadoPor,
+        String visibilidad,
+        Long idGrupo,
+        String nombreGrupo
+) {}
+
+    public record CalificacionEjercicioDTO(
+            UUID idAlumno,
+            String nombreAlumno,
+            String emailAlumno,
+            Integer idCurso,
+            String curso,
+            Integer idModulo,
+            String modulo,
+            Integer idEjercicio,
+            String ejercicio,
+            int intentos,
+            boolean resuelto,
+            double calificacion,
+            LocalDateTime fechaResuelto
+    ) {}
+
+    public record CalificacionModuloDTO(
+            UUID idAlumno,
+            String nombreAlumno,
+            String emailAlumno,
+            Integer idCurso,
+            String curso,
+            Integer idModulo,
+            String modulo,
+            int ejerciciosTotales,
+            int ejerciciosResueltos,
+            double calificacion
+    ) {}
+
+    public record CalificacionCursoDTO(
+            UUID idAlumno,
+            String nombreAlumno,
+            String emailAlumno,
+            Integer idCurso,
+            String curso,
+            int ejerciciosTotales,
+            int ejerciciosResueltos,
+            double calificacion
+    ) {}
+
+public record CrearEjercicioDocenteRequest(
+        Integer idModulo,
+        String titulo,
+        String enunciado,
+        String queryMaestra,
+        Integer dificultad,
+        String formato,
+        String configuracionExtra,
+        Integer orden,
+        String tipoMision,
+        String visibilidad,
+        Long idGrupo
+) {}
 }

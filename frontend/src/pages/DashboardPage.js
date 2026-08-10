@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,9 +7,8 @@ import { Button } from '../components/ui/button';
 import { TutorialOverlay, TourTrigger } from '../components/TutorialOverlayCinematic.jsx';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { DidacticCard } from '../components/DidacticCard';
-import { QuickPracticeMode } from '../components/QuickPracticeMode';
 import { CertificateModal, useCertificado } from '../components/CertificateModal';
-import apiClient from '../services/apiClient';
+import { cachedGet } from '../services/apiClient';
 import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
@@ -28,7 +27,50 @@ const TITLES = [
   { min: 2000, name: 'Señor del Abismo',      tier: 'abyss'  },
 ];
 
+const QuickPracticeMode = lazy(() => import('../components/QuickPracticeMode').then(module => ({ default: module.QuickPracticeMode })));
+
 const titleFor = (xp) => [...TITLES].reverse().find((t) => xp >= t.min) || TITLES[0];
+
+const toFiniteNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizeCursos = (rawCursos) => {
+  if (!Array.isArray(rawCursos)) return [];
+
+  return rawCursos.map((curso) => {
+    const idCurso = toFiniteNumber(curso?.id_curso, null);
+    const modulos = Array.isArray(curso?.modulos) ? curso.modulos : [];
+
+    return {
+      ...curso,
+      id_curso: idCurso,
+      modulos: modulos.map((modulo) => ({
+        ...modulo,
+        id_modulo: toFiniteNumber(modulo?.id_modulo, modulo?.id_modulo),
+        id_curso: toFiniteNumber(modulo?.id_curso, idCurso),
+        orden: toFiniteNumber(modulo?.orden, 0),
+        xp_requerida: toFiniteNumber(modulo?.xp_requerida, 0),
+        bloqueado: Boolean(modulo?.bloqueado),
+      })),
+    };
+  }).filter((curso) => Number.isFinite(curso.id_curso));
+};
+
+const resolveCursoActivoId = (cursos, currentId) => {
+  const parsedCurrent = toFiniteNumber(currentId, null);
+  const currentCourse = Number.isFinite(parsedCurrent)
+    ? cursos.find((curso) => curso.id_curso === parsedCurrent)
+    : null;
+
+  if (currentCourse?.modulos?.length > 0) return currentCourse.id_curso;
+
+  const firstWithModules = cursos.find((curso) => (curso.modulos || []).length > 0);
+  if (firstWithModules) return firstWithModules.id_curso;
+  if (currentCourse) return currentCourse.id_curso;
+  return cursos[0]?.id_curso ?? 1;
+};
 
 const tierRing = (tier) => ({
   bronze: 'ring-tier-bronze',
@@ -62,6 +104,26 @@ export const DashboardPage = () => {
     boxShadow: isLight ? '0 14px 32px -20px rgba(180,83,9,0.62)' : '0 16px 40px -22px rgba(34,211,238,0.62)'
   };
 
+  const [canUseHover, setCanUseHover] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.matchMedia?.('(hover: hover) and (pointer: fine)').matches ?? true;
+  });
+
+  useEffect(() => {
+    const query = window.matchMedia?.('(hover: hover) and (pointer: fine)');
+    if (!query) return undefined;
+    const syncHover = () => setCanUseHover(query.matches);
+    syncHover();
+    query.addEventListener?.('change', syncHover);
+    query.addListener?.(syncHover);
+    return () => {
+      query.removeEventListener?.('change', syncHover);
+      query.removeListener?.(syncHover);
+    };
+  }, []);
+
+  const hoverMotion = (motionValue) => (canUseHover ? motionValue : undefined);
+
   const [showTutorial, setShowTutorial] = useState(() => localStorage.getItem('dagon_tutorial_pending') === 'true' || !localStorage.getItem('dagon_tutorial_completed'));
   const [showQuickPractice, setShowQuickPractice] = useState(false);
   const [showCertificado, setShowCertificado] = useState(false);
@@ -71,6 +133,7 @@ export const DashboardPage = () => {
   const [soundEnabled, setSoundEnabled] = useState(() => sounds.isEnabled());
   const [soundVolume, setSoundVolume] = useState(() => sounds.getVolume());
   const [showRecommendedDetails, setShowRecommendedDetails] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState(null);
 
   useEffect(() => {
     const syncSoundState = (event) => {
@@ -104,7 +167,7 @@ export const DashboardPage = () => {
 
   const { cursosCompletados, generarCertificado } = useCertificado(token);
 
-  const userXP = user?.xp || 0;
+  const userXP = toFiniteNumber(dashboardStats?.xp, toFiniteNumber(user?.xp, 0));
   const xpInLevel = userXP % 100;
   const xpFaltante = 100 - xpInLevel;
   const userLevel = Math.floor(userXP / 100) + 1;
@@ -135,71 +198,85 @@ export const DashboardPage = () => {
   const [cursos, setCursos] = useState([]);
   const [cursoActivoId, setCursoActivoId] = useState(() => {
     const saved = localStorage.getItem('dagon_active_course');
-    return saved ? parseInt(saved, 10) : 1;
+    const parsed = saved ? parseInt(saved, 10) : 1;
+    return Number.isFinite(parsed) ? parsed : 1;
   });
   const [loadingModulos, setLoadingModulos] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem('dagon_active_course', cursoActivoId);
+    if (Number.isFinite(Number(cursoActivoId))) {
+      localStorage.setItem('dagon_active_course', cursoActivoId);
+    }
   }, [cursoActivoId]);
 
   useEffect(() => {
-    const fetchRealXP = async () => {
-      try {
-        const miUsuarioId = user?.idUsuario;
-        if (!miUsuarioId) return;
-        const response = await apiClient.get(`/api/usuarios/${miUsuarioId}/stats`);
-        const data = response.data;
-        if (data.success) {
-          updateUserXP(data.xp);
-          setUserRank(data.posicion);
-          setUserStreak(data.racha);
-        }
-      } catch (error) {
-        if (![401, 403].includes(error?.response?.status)) {
-          toast.error('No se pudo actualizar tu XP');
-        }
-      }
-    };
-    fetchRealXP();
-  }, [token, user?.idUsuario, updateUserXP]);
+    let isActive = true;
+    const controller = new AbortController();
 
-  useEffect(() => {
-    const fetchModulos = async () => {
+    const fetchDashboard = async () => {
+      const activeToken = token || localStorage.getItem('token');
+      if (!activeToken) return;
+      setLoadingModulos(true);
       try {
-        const response = await apiClient.get('/api/modulos');
-        const data = response.data;
-        setCursos(data);
-        
-        // Ensure the active course exists in the fetched data.
-        // If not, default to the first available course.
-        setCursoActivoId(currentId => {
-          if (data.length > 0 && !data.find(c => c.id_curso === currentId)) {
-            return data[0].id_curso;
+        let resumen;
+        try {
+          const response = await cachedGet('/api/dashboard/resumen', {
+            signal: controller.signal,
+          }, { ttl: 10_000 });
+          resumen = response.data || {};
+        } catch (endpointError) {
+          if (endpointError.name === 'CanceledError' || endpointError.code === 'ERR_CANCELED') {
+            throw endpointError;
           }
-          return currentId;
-        });
-      } catch {
-        toast.error('Error al cargar misiones');
-      } finally {
-        setLoadingModulos(false);
-      }
-    };
-    if (token) fetchModulos();
-  }, [token]);
 
-  useEffect(() => {
-    const fetchTop = async () => {
-      try {
-        const response = await apiClient.get('/api/leaderboard');
-        const data = response.data;
-        setTopPlayers(data.slice(0, 5));
-      } catch (e) {
-        // silencioso
+          const [statsRes, modulosRes, rankingRes] = await Promise.all([
+            user?.idUsuario
+              ? cachedGet(`/api/usuarios/${user.idUsuario}/stats`, { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: {} }))
+              : Promise.resolve({ data: {} }),
+            cachedGet('/api/modulos', { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: [] })),
+            cachedGet('/api/leaderboard', { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: [] }))
+          ]);
+
+          resumen = {
+            stats: statsRes.data || {},
+            modulos: modulosRes.data || [],
+            leaderboard: rankingRes.data || []
+          };
+        }
+
+        if (!isActive) return;
+
+        const stats = resumen.stats || {};
+        const modulos = normalizeCursos(resumen.modulos || []);
+        const ranking = resumen.leaderboard || [];
+
+        if (stats.success) {
+          setDashboardStats(stats);
+          updateUserXP(toFiniteNumber(stats.xp, 0));
+          setUserRank(stats.posicion ?? '-');
+          setUserStreak(toFiniteNumber(stats.racha, 0));
+        } else {
+          setDashboardStats(null);
+        }
+
+        setCursos(modulos);
+        setTopPlayers(Array.isArray(ranking) ? ranking.slice(0, 5) : []);
+        setCursoActivoId(currentId => resolveCursoActivoId(modulos, currentId));
+      } catch (error) {
+        if (error.name !== 'CanceledError' && ![401, 403].includes(error?.response?.status)) {
+          toast.error('Error al cargar el tablero');
+        }
+      } finally {
+        if (isActive) setLoadingModulos(false);
       }
     };
-    if (token) fetchTop();
-  }, [token]);
+
+    fetchDashboard();
+    return () => {
+      isActive = false;
+      controller.abort();
+    };
+  }, [token, user?.idUsuario, updateUserXP]);
 
   const handleModuloClick = (mod) => {
     if (mod.bloqueado) {
@@ -274,7 +351,12 @@ export const DashboardPage = () => {
   }
 
   // Filtrar los módulos del curso seleccionado actualmente
-  const cursoActivo = cursos.find(c => c.id_curso === cursoActivoId) || { modulos: [] };
+  const cursoActivo = cursos.find(c => c.id_curso === cursoActivoId && (c.modulos || []).length > 0)
+    || cursos.find(c => (c.modulos || []).length > 0)
+    || cursos.find(c => c.id_curso === cursoActivoId)
+    || cursos[0]
+    || { id_curso: cursoActivoId, titulo: 'Senda SQL', modulos: [] };
+  const cursoVisualActivoId = cursoActivo.id_curso ?? cursoActivoId;
   const modulos = cursoActivo.modulos || [];
   
   const completedCount = modulos.filter((m) => !m.bloqueado).length;
@@ -303,13 +385,15 @@ export const DashboardPage = () => {
       <TutorialOverlay isOpen={showTutorial} onClose={closeTutorial} />
       <WelcomeCard />
       {showQuickPractice && (
-        <QuickPracticeMode
-          userLevel={user?.level || 'nivel-0'}
-          userXP={userXP}
-          userStreak={userStreak}
-          onXPGain={(xp) => updateUserXP((currentXP) => (Number(currentXP) || 0) + xp)}
-          onClose={() => setShowQuickPractice(false)}
-        />
+        <Suspense fallback={null}>
+          <QuickPracticeMode
+            userLevel={user?.level || 'nivel-0'}
+            userXP={userXP}
+            userStreak={userStreak}
+            onXPGain={(xp) => updateUserXP((currentXP) => (Number(currentXP) || 0) + xp)}
+            onClose={() => setShowQuickPractice(false)}
+          />
+        </Suspense>
       )}
 
       <div className="dashboard-shell dagon-page-shell dagon-page-shell--wide">
@@ -331,7 +415,7 @@ export const DashboardPage = () => {
             <div className="dashboard-hud-zone dashboard-hud-zone--identity">
               <div className="relative shrink-0">
                 <div className={`absolute -inset-2 rounded-[32px] ${tierRing(title.tier)}`} />
-                <div className={`relative flex h-24 w-20 items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-br ${tierGradient(title.tier)} shadow-xl sm:h-28 sm:w-24`}>
+                <div className={`dashboard-mascot-card relative flex h-24 w-20 items-center justify-center overflow-hidden rounded-[28px] bg-gradient-to-br ${tierGradient(title.tier)} shadow-xl sm:h-28 sm:w-24`}>
                   <DagonMascot size="medium" mood={dashboardMood} />
                 </div>
               </div>
@@ -562,7 +646,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, y: 24, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: stat.delay, type: 'spring', stiffness: 300, damping: 22 }}
-              whileHover={{ y: -4, scale: 1.03, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -4, scale: 1.03, transition: { duration: 0.2 } })}
               whileTap={{ scale: 0.97 }}
               className={`glass-card-apple rounded-2xl p-4 border transition-colors group text-left ${stat.borderColor || ''}`}
               style={stat.borderStyle || {}}
@@ -571,7 +655,7 @@ export const DashboardPage = () => {
                 <motion.div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center border ${stat.iconBg || ''} ${stat.iconBorder || ''}`}
                   style={stat.iconStyle || {}}
-                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  whileHover={hoverMotion({ scale: 1.15, rotate: 5 })}
                   transition={{ type: 'spring', stiffness: 400 }}
                 >
                   {stat.icon}
@@ -589,52 +673,52 @@ export const DashboardPage = () => {
           <DidacticCard />
 
           {/* SELECTOR DE CURSOS / SENDAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
+        <div className="dashboard-course-selector grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mb-8 lg:mb-10" data-tour="courses">
             {cursos.map((curso, i) => (
                 <motion.button
                   key={curso.id_curso}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15 + i * 0.08, type: 'spring', stiffness: 250, damping: 22 }}
-                  whileHover={{ y: -3, scale: 1.015, transition: { duration: 0.2 } }}
+                  whileHover={hoverMotion({ y: -3, scale: 1.015, transition: { duration: 0.2 } })}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     sounds.playClick();
                     setCursoActivoId(curso.id_curso);
                   }}
-                  className={`p-6 rounded-2xl border-2 transition-colors flex items-center justify-between group ${
-                      cursoActivoId === curso.id_curso
+                  className={`dashboard-course-card p-6 rounded-2xl border-2 transition-colors flex items-center justify-between group ${
+                      cursoVisualActivoId === curso.id_curso
                         ? 'shadow-[0_0_20px_rgba(0,0,0,0.3)]'
                         : 'border-white/10 hover:border-slate-500'
                   }`}
                   style={{
-                    backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}20` : `${colors.surface}80`,
-                    borderColor: cursoActivoId === curso.id_curso ? colors.primary : colors.border
+                    backgroundColor: cursoVisualActivoId === curso.id_curso ? `${colors.primary}20` : `${colors.surface}80`,
+                    borderColor: cursoVisualActivoId === curso.id_curso ? colors.primary : colors.border
                   }}
                 >
                     <div className="flex items-center gap-4">
                         <motion.div
                           className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors"
-                          animate={cursoActivoId === curso.id_curso ? { rotate: [0, -5, 5, 0], scale: [1, 1.05, 1] } : {}}
+                          animate={cursoVisualActivoId === curso.id_curso ? { rotate: [0, -5, 5, 0], scale: [1, 1.05, 1] } : {}}
                           transition={{ duration: 0.5 }}
                           style={{
-                            backgroundColor: cursoActivoId === curso.id_curso ? `${colors.primary}33` : colors.surface,
-                            color: cursoActivoId === curso.id_curso ? colors.primary : colors.textMuted
+                            backgroundColor: cursoVisualActivoId === curso.id_curso ? `${colors.primary}33` : colors.surface,
+                            color: cursoVisualActivoId === curso.id_curso ? colors.primary : colors.textMuted
                           }}
                         >
                             {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
                         </motion.div>
                         <div className="text-left">
-                            <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoActivoId === curso.id_curso ? headingColor : mutedColor }}>
+                            <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoVisualActivoId === curso.id_curso ? headingColor : mutedColor }}>
                                 {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
                             </h3>
                             <p className="text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors"
-                               style={{ color: cursoActivoId === curso.id_curso ? colors.accent : colors.textMuted }}>
+                               style={{ color: cursoVisualActivoId === curso.id_curso ? colors.accent : colors.textMuted }}>
                                 {curso.titulo}
                             </p>
                         </div>
                     </div>
-                    {cursoActivoId === curso.id_curso && (
+                    {cursoVisualActivoId === curso.id_curso && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
@@ -779,7 +863,7 @@ export const DashboardPage = () => {
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${colors.primary}20`, border: `1px solid ${colors.primary}40` }}>
-                  {cursoActivoId === 1 ? <Swords className="w-5 h-5" style={{ color: colors.primary }} /> : <Hammer className="w-5 h-5" style={{ color: colors.primary }} />}
+                  {cursoVisualActivoId === 1 ? <Swords className="w-5 h-5" style={{ color: colors.primary }} /> : <Hammer className="w-5 h-5" style={{ color: colors.primary }} />}
                 </div>
                 <div>
                   <h2 className="font-display text-2xl sm:text-3xl font-black" style={{ color: headingColor }}>{cursoActivo.titulo}</h2>
@@ -788,13 +872,13 @@ export const DashboardPage = () => {
               </div>
               
               {/* BOTÓN DE CERTIFICADO */}
-              {cursosCompletados.find(c => c.id_curso === cursoActivoId) && (
+              {cursosCompletados.find(c => c.id_curso === cursoVisualActivoId) && (
                 <motion.button
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.05 }}
+                  whileHover={hoverMotion({ scale: 1.05 })}
                   onClick={async () => {
-                    const cert = await generarCertificado(cursoActivoId);
+                    const cert = await generarCertificado(cursoVisualActivoId);
                     if (cert) {
                       setCertificadoData(cert);
                       setCertificadoCurso(cursoActivo.titulo);
@@ -811,14 +895,12 @@ export const DashboardPage = () => {
               )}
             </div>
 
-            <AnimatePresence mode="wait">
-                <motion.div 
-                    key={cursoActivoId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
+            <motion.div
+              layout
+              initial={false}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.24, ease: 'easeOut' }}
+            >
                 {modulos.length === 0 ? (
                     <div className="text-center py-12 border-2 border-dashed border-slate-700/50 rounded-2xl bg-slate-900/30">
                         <Swords className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -888,7 +970,7 @@ export const DashboardPage = () => {
                             <motion.button
                             onClick={() => handleModuloClick(mod)}
                             aria-current={isCurrentMission ? 'step' : undefined}
-                            whileHover={!mod.bloqueado ? { y: -6, scale: 1.015, transition: { duration: 0.2 } } : {}}
+                            whileHover={!mod.bloqueado ? hoverMotion({ y: -6, scale: 1.015, transition: { duration: 0.2 } }) : undefined}
                             whileTap={!mod.bloqueado ? { scale: 0.98 } : {}}
 	                            className={`dagon-quest-button h-full w-full rounded-[24px] border text-left transition-all duration-300 group relative overflow-hidden ${isFinalMission ? 'dagon-quest-button--final' : ''} ${
 	                                mod.bloqueado
@@ -956,7 +1038,6 @@ export const DashboardPage = () => {
                 </div>
                 )}
                 </motion.div>
-            </AnimatePresence>
           </div>
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
@@ -965,7 +1046,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
               <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
               <div className="flex items-center gap-2 mb-3">
@@ -990,7 +1071,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.3, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border"
               data-tour="ranking"
               style={{ borderColor: colors.border }}
@@ -1050,7 +1131,7 @@ export const DashboardPage = () => {
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
               transition={{ delay: 0.4, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={{ y: -3, scale: 1.01, transition: { duration: 0.2 } }}
+              whileHover={hoverMotion({ y: -3, scale: 1.01, transition: { duration: 0.2 } })}
               className="glass-card-apple rounded-3xl p-6 xl:p-7 border cursor-pointer group"
               style={{ borderColor: colors.border }}
               onClick={() => navigate('/credits')}
@@ -1081,7 +1162,7 @@ export const DashboardPage = () => {
         isOpen={showCertificado}
         onClose={() => setShowCertificado(false)}
         certificado={certificadoData}
-        cursoId={cursoActivoId}
+        cursoId={cursoVisualActivoId}
         cursoNombre={certificadoCurso}
       />
     </div>

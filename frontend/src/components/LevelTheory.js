@@ -18,7 +18,7 @@ const VennDiagramSQL = lazy(() => import('./VennDiagramSQL'));
 const VennRelationalAlgebra = lazy(() => import('./VennRelationalAlgebra'));
 
 const CodeBox = ({ code, label }) => (
-  <div className="rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
+  <div className="theory-code-box rounded-2xl overflow-hidden border border-cyan-400/20 shadow-[0_0_30px_rgba(34,211,238,0.15)] max-w-lg mx-auto">
     <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <span className="w-2.5 h-2.5 rounded-full bg-rose-500/70" />
       <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
@@ -34,12 +34,12 @@ const CodeBox = ({ code, label }) => (
 );
 
 const DataTable = ({ title, columns, rows, highlightCols = [], highlightRows = [] }) => (
-  <div className="rounded-2xl overflow-hidden border border-white/10 bg-slate-950/80 max-w-md mx-auto shadow-xl">
+  <div className="theory-table-shell rounded-2xl border border-white/10 bg-slate-950/80 max-w-full mx-auto shadow-xl">
     <div className="bg-slate-900 px-4 py-2 flex items-center gap-2 border-b border-white/5">
       <Grid3x3 className="w-3 h-3 text-cyan-300" />
       <span className="text-[10px] font-mono text-slate-400 tracking-widest uppercase">{title}</span>
     </div>
-    <table className="w-full text-sm">
+    <table className="min-w-full text-sm">
       <thead>
         <tr className="bg-slate-900/70">
           {columns?.map((c, i) => (
@@ -1507,41 +1507,55 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
   };
 
   return (
-    <div className="w-full h-[100dvh] flex flex-col overflow-hidden bg-slate-950/20">
-      <div className="flex-1 overflow-y-auto scroll-fancy p-4 sm:p-6 lg:p-8">
-        <div className="dagon-page-shell dagon-page-shell--reading !max-w-4xl !p-0">
-          <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-            <div className="flex-1">
-              <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
-                {theory.subtitle}
-              </p>
-              <h1 className="font-display text-2xl lg:text-3xl font-black text-white">
-                {theory.title}
-              </h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={speak}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold font-display"
-              >
-                {isSpeaking ? '🛑 Detener' : '🔊 Escuchar'}
-              </button>
-              <button
-                onClick={() => {
-                  const enabled = sounds.toggleEnabled({ restart: false });
-                  setIsMuted(!enabled);
-                  if (!enabled) {
-                    window.speechSynthesis.cancel();
-                    setIsSpeaking(false);
-                  } else {
-                    sounds.init();
-                  }
-                }}
-                className="p-2 rounded-xl bg-slate-800 text-white"
-              >
-                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-              <button onClick={() => {
+    <div className="level-theory-shell w-full h-full overflow-y-auto scroll-fancy">
+      <div className="dagon-page-shell dagon-page-shell--reading">
+        <div className="level-theory-header flex items-center justify-between mb-6 gap-4 flex-wrap">
+          <div className="flex-1">
+            <p className="text-cyan-300 text-xs font-bold tracking-[0.4em] uppercase mb-2 font-display">
+              {theory.subtitle}
+            </p>
+            <h1 className="font-display text-2xl lg:text-3xl font-black text-white">
+              {theory.title}
+            </h1>
+          </div>
+          <div className="level-theory-actions flex items-center gap-3">
+            <button
+              onClick={speak}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold font-display"
+            >
+              {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {isSpeaking ? 'Detener' : 'Escuchar'}
+            </button>
+            <button
+              onClick={() => {
+                const enabled = sounds.toggleEnabled({ restart: false });
+                setIsMuted(!enabled);
+                if (!enabled) {
+                  window.speechSynthesis.cancel();
+                  setIsSpeaking(false);
+                } else {
+                  sounds.init();
+                }
+              }}
+              className="p-2 rounded-xl bg-slate-800 text-white"
+              aria-label={isMuted ? 'Activar narración' : 'Silenciar narración'}
+            >
+              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <button onClick={() => {
+              sounds.playStep();
+              onComplete?.();
+            }} className="inline-flex items-center gap-1 text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
+              Saltar teoría <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        <div className="level-theory-progress flex items-center gap-2 mb-6">
+          {theory.slides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => {
                 sounds.playStep();
                 onComplete?.();
               }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
@@ -1607,8 +1621,47 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
         </div>
       </div>
 
-      <div className="p-4 bg-black/40 backdrop-blur-xl border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${theoryKey}-${index}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="level-theory-card glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
+          >
+            <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
+            <div className="relative z-10">
+              <SlideContent slide={slide} isSpeaking={isSpeaking} onSpeak={speak} />
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {isLast && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-emerald-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.28em] font-black text-emerald-300 mb-2">
+                  Punto de control
+                </p>
+                <h3 className="font-display text-xl font-black text-white">
+                  Entra a la práctica con una idea clara
+                </h3>
+                <p className="mt-2 text-sm sm:text-base text-slate-300 font-gameui leading-relaxed">
+                  Antes de ejecutar SQL, di en voz baja que dato quieres obtener, de que tabla sale y que condicion lo limita. Ese habito evita errores de memoria y te obliga a razonar.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="level-theory-nav flex items-center justify-between">
           <Button variant="ghost" onClick={prev} disabled={index === 0} className="text-slate-300 font-display">
             Anterior
           </Button>

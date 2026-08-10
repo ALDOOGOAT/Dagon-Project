@@ -85,6 +85,7 @@ Prerequisitos MPI (macOS): `brew install open-mpi && pip install mpi4py flask ps
 | `/profile` | ProfilePage | ✅ |
 | `/streak` | StreakPage | no |
 | `/analytics` | AnalyticsPage (MPI) | ✅ |
+| `/docente` | DocentePage — inicio guiado, grupos, ejercicios, notas y analítica docente | ✅ |
 
 ## 6. Endpoints REST backend
 
@@ -104,6 +105,10 @@ Todos bajo `http://localhost:8080/api`. Todos requieren `Authorization: Bearer <
 | POST | `/modeling/ddl-to-erd` | ModelingController — convierte DDL `CREATE TABLE` en nodos/aristas ERD |
 | POST | `/modeling/erd-to-ddl` | ModelingController — genera DDL desde el diagrama ERD |
 | GET  | `/analytics/mpi` | **AnalyticsController** — proxy al servicio MPI |
+| GET/POST | `/docente/grupos` | DocenteController — grupos y códigos de acceso |
+| GET/POST | `/docente/ejercicios` | DocenteController — ejercicios creados por docente |
+| GET  | `/docente/resumen` | DocenteController — alumnos permitidos, métricas, módulos y grupos |
+| GET  | `/docente/calificaciones` | DocenteController — notas 0-10 por ejercicio, módulo y curso; excluye `tipo_mision='RAPIDA'` |
 
 ## 7. MPI (Programación Distribuida y Paralela)
 
@@ -130,6 +135,8 @@ La página `/analytics` en el frontend muestra el resultado con animaciones (Rec
 - **Idioma:** comentarios, variables de UI y commits en **español**. Respeta el tono existente.
 - **URL del backend:** `DashboardPage.js` **hardcodea** `http://localhost:8080`. `apiService.js` usa `process.env.REACT_APP_BACKEND_URL`. No existe `.env` actualmente. Si agregas llamadas nuevas, **usa `API_BASE` constante**; no repitas el hardcode.
 - **Auth:** el token JWT vive en `AuthContext`; recupera con `useAuth().token` y manda `Authorization: Bearer ${token}`.
+- **Registro docente:** las cuentas docentes públicas requieren `DAGON_DOCENTE_REGISTRATION_CODE`; alumnos de grupo usan `codigo_acceso` de `grupos_docente`.
+- **Calificaciones docentes:** `/docente/calificaciones` no requiere tabla nueva; calcula escala `0-10` desde `lms_core.intentos`, restringe alumnos por grupos del docente y excluye prácticas relámpago (`tipo_mision='RAPIDA'`).
 - **DB:** `ddl-auto=none`. **Nunca** dejes que Hibernate cree tablas — el script maestro (`BaseDeDatosZaca.sql`) es la fuente de verdad. Si necesitas una tabla nueva, añade SQL al script y documéntalo aquí.
 - **Secrets:** `application.properties` tiene password DB y API key Gemini en texto plano. **No** las saques en respuestas ni commits a repos públicos.
 - **CORS:** backend abre solo `http://localhost:3000`. Al cambiar puerto, toca `SecurityConfig.java` y cada `@CrossOrigin`.

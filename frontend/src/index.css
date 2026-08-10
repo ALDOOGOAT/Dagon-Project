@@ -21,11 +21,24 @@
   --glass-highlight: rgba(255, 255, 255, 0.15);
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --grid-opacity: 0.05;
+  --dagon-safe-top: env(safe-area-inset-top, 0px);
+  --dagon-safe-right: env(safe-area-inset-right, 0px);
+  --dagon-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --dagon-safe-left: env(safe-area-inset-left, 0px);
+  --dagon-page-padding-x: clamp(1rem, 3vw, 4rem);
+  --dagon-page-padding-y: clamp(1.25rem, 2.2vw, 2.75rem);
+  --dagon-section-gap: clamp(1rem, 1.8vw, 2.25rem);
+  --dagon-card-radius: 1.5rem;
+  --dagon-glass-blur: 24px;
+  --dagon-glass-apple-blur: 40px;
+  --dagon-glow-strength: 1;
 }
 
 html {
+    min-height: 100%;
     background: var(--color-background);
     text-rendering: optimizeLegibility;
+    scrollbar-gutter: stable;
 }
 
 body {
@@ -33,6 +46,7 @@ body {
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
     background: var(--color-background);
     color: var(--color-text);
     overflow-x: hidden;
@@ -65,6 +79,14 @@ body,
 
 code {
     font-family: var(--font-mono);
+}
+
+:where(p, li, h1, h2, h3, h4, h5, h6, button, a, span) {
+    overflow-wrap: anywhere;
+}
+
+:where(p, li) {
+    text-wrap: pretty;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -139,8 +161,8 @@ h1, h2, h3, h4, h5, h6 {
     
     .glass-card {
         background: var(--glass-surface-strong);
-        backdrop-filter: blur(24px) saturate(180%);
-        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        backdrop-filter: blur(var(--dagon-glass-blur)) saturate(180%);
+        -webkit-backdrop-filter: blur(var(--dagon-glass-blur)) saturate(180%);
         transform: translateZ(0);
         backface-visibility: hidden;
         border: 1px solid var(--glass-border);
@@ -154,8 +176,8 @@ h1, h2, h3, h4, h5, h6 {
     
     .glass-card-apple {
         background: var(--glass-surface);
-        backdrop-filter: blur(40px) saturate(200%);
-        -webkit-backdrop-filter: blur(40px) saturate(200%);
+        backdrop-filter: blur(var(--dagon-glass-apple-blur)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--dagon-glass-apple-blur)) saturate(200%);
         transform: translateZ(0);
         backface-visibility: hidden;
         border: 1px solid var(--glass-border);
@@ -2115,44 +2137,44 @@ padding-bottom: env(safe-area-inset-bottom);
     }
 }
 
-html[data-motion-safety='low'] .ambient-orb,
-html[data-motion-safety='low'] .login-orbit,
-html[data-motion-safety='low'] .login-dagon-aura,
-html[data-motion-safety='low'] .login-dagon-ring,
-html[data-motion-safety='low'] .dashboard-streak-action__flame,
-html[data-motion-safety='low'] .streak-calendar-day.is-danger,
-html[data-motion-safety='low'] .streak-calendar-day.is-complete,
-html[data-motion-safety='low'] .streak-daily-card--danger .streak-daily-card__seal,
-html[data-motion-safety='low'] .streak-status-ribbon--danger .streak-status-ribbon__icon,
-html[data-motion-safety='low'] .dagon-streak-stage--danger::before,
-html[data-motion-safety='low'] .dagon-streak-stage--powered::before,
-html[data-motion-safety='low'] [class*="animate-dagon-"],
-html[data-motion-safety='low'] .animate-breathe-slow,
-html[data-motion-safety='low'] .animate-pulse-slow,
-html[data-motion-safety='low'] .animate-pulse-slower,
-html[data-motion-safety='low'] .animate-gradient,
-html[data-motion-safety='low'] .animate-float,
-html[data-motion-safety='low'] .animate-breathe,
-html[data-motion-safety='low'] .animate-pulse-glow {
+html[data-motion-safety='reduced'] .ambient-orb,
+html[data-motion-safety='reduced'] .login-orbit,
+html[data-motion-safety='reduced'] .login-dagon-aura,
+html[data-motion-safety='reduced'] .login-dagon-ring,
+html[data-motion-safety='reduced'] .dashboard-streak-action__flame,
+html[data-motion-safety='reduced'] .streak-calendar-day.is-danger,
+html[data-motion-safety='reduced'] .streak-calendar-day.is-complete,
+html[data-motion-safety='reduced'] .streak-daily-card--danger .streak-daily-card__seal,
+html[data-motion-safety='reduced'] .streak-status-ribbon--danger .streak-status-ribbon__icon,
+html[data-motion-safety='reduced'] .dagon-streak-stage--danger::before,
+html[data-motion-safety='reduced'] .dagon-streak-stage--powered::before,
+html[data-motion-safety='reduced'] [class*="animate-dagon-"],
+html[data-motion-safety='reduced'] .animate-breathe-slow,
+html[data-motion-safety='reduced'] .animate-pulse-slow,
+html[data-motion-safety='reduced'] .animate-pulse-slower,
+html[data-motion-safety='reduced'] .animate-gradient,
+html[data-motion-safety='reduced'] .animate-float,
+html[data-motion-safety='reduced'] .animate-breathe,
+html[data-motion-safety='reduced'] .animate-pulse-glow {
     animation: none !important;
 }
 
-html[data-motion-safety='low'] .ambient-orb,
-html[data-motion-safety='low'] .login-orbit {
+html[data-motion-safety='reduced'] .ambient-orb,
+html[data-motion-safety='reduced'] .login-orbit {
     opacity: 0.24;
     filter: blur(72px);
 }
 
-html[data-motion-safety='low'] .dagon-mascot-shell,
-html[data-motion-safety='low'] .dagon-mascot-svg,
-html[data-motion-safety='low'] .page-transition-surface {
+html[data-motion-safety='reduced'] .dagon-mascot-shell,
+html[data-motion-safety='reduced'] .dagon-mascot-svg,
+html[data-motion-safety='reduced'] .page-transition-surface {
     will-change: auto;
 }
 
-html[data-motion-safety='low'] .glass-card,
-html[data-motion-safety='low'] .glass-card-apple,
-html[data-motion-safety='low'] .streak-status-ribbon,
-html[data-motion-safety='low'] .tour-overlay-shell {
+html[data-motion-safety='reduced'] .glass-card,
+html[data-motion-safety='reduced'] .glass-card-apple,
+html[data-motion-safety='reduced'] .streak-status-ribbon,
+html[data-motion-safety='reduced'] .tour-overlay-shell {
     backdrop-filter: blur(8px) saturate(130%);
     -webkit-backdrop-filter: blur(8px) saturate(130%);
 }
@@ -2370,7 +2392,7 @@ html[data-motion-safety='low'] .tour-overlay-shell {
     .dagon-page-shell {
         width: min(100%, 1760px);
         margin-inline: auto;
-        padding: clamp(1.25rem, 2.2vw, 2.75rem) clamp(1rem, 3vw, 4rem);
+        padding: calc(var(--dagon-page-padding-y) + var(--dagon-safe-top)) calc(var(--dagon-page-padding-x) + var(--dagon-safe-right)) calc(var(--dagon-page-padding-y) + var(--dagon-safe-bottom)) calc(var(--dagon-page-padding-x) + var(--dagon-safe-left));
     }
 
     .dagon-page-shell--workbench {
@@ -2380,7 +2402,8 @@ html[data-motion-safety='low'] .tour-overlay-shell {
 
     .dagon-page-shell--wide {
         width: min(100%, 1880px);
-        padding-inline: clamp(0.85rem, 2vw, 2.75rem);
+        padding-inline: calc(clamp(0.85rem, 2vw, 2.75rem) + var(--dagon-safe-left));
+        padding-right: calc(clamp(0.85rem, 2vw, 2.75rem) + var(--dagon-safe-right));
     }
 
     .dagon-page-shell--reading {
@@ -3186,4 +3209,505 @@ html[data-motion-safety='low'] .tour-overlay-shell {
     width: 100%;
     justify-content: center;
   }
+}
+
+
+/* ============================================================
+   ADAPTIVE VISUAL FIDELITY
+   ============================================================ */
+
+html[data-visual-fidelity='tablet-balanced'] {
+    --dagon-page-padding-x: clamp(1rem, 2.4vw, 2rem);
+    --dagon-page-padding-y: clamp(1rem, 2vw, 2rem);
+    --dagon-section-gap: 1rem;
+    --dagon-glass-blur: 18px;
+    --dagon-glass-apple-blur: 24px;
+    --dagon-glow-strength: 0.72;
+}
+
+html[data-visual-fidelity='mobile-premium'] {
+    --dagon-page-padding-x: clamp(0.85rem, 4vw, 1.05rem);
+    --dagon-page-padding-y: clamp(0.85rem, 3.6vw, 1.2rem);
+    --dagon-section-gap: 0.85rem;
+    --dagon-card-radius: 1.25rem;
+    --dagon-glass-blur: 12px;
+    --dagon-glass-apple-blur: 16px;
+    --dagon-glow-strength: 0.54;
+}
+
+html[data-visual-fidelity='mobile-premium'],
+html[data-visual-fidelity='mobile-premium'] body,
+html[data-visual-fidelity='mobile-premium'] #root {
+    min-height: 100dvh;
+}
+
+html[data-visual-fidelity='mobile-premium'] .ambient-orb {
+    width: min(68vw, 280px) !important;
+    height: min(68vw, 280px) !important;
+    filter: blur(64px);
+    opacity: 0.5;
+}
+
+html[data-visual-fidelity='mobile-premium'] .ambient-orb--accent {
+    width: min(80vw, 340px) !important;
+    height: min(80vw, 340px) !important;
+    opacity: 0.36;
+}
+
+html[data-visual-fidelity='tablet-balanced'] .ambient-orb {
+    filter: blur(92px);
+    opacity: 0.64;
+}
+
+html[data-motion-safety='reduced'] .ambient-orb,
+html[data-motion-safety='reduced'] .tour-particle,
+html[data-motion-safety='reduced'] .tour-mascot-float,
+html[data-motion-safety='reduced'] .dagon-quest-button--current .dagon-quest-core {
+    animation: none !important;
+}
+
+@media (max-width: 767px) {
+    .page-transition-surface {
+        min-height: 100dvh;
+    }
+
+    .dagon-page-shell,
+    .dagon-page-shell--wide,
+    .dagon-page-shell--reading,
+    .dagon-page-shell--workbench {
+        width: 100%;
+        padding-inline: calc(var(--dagon-page-padding-x) + var(--dagon-safe-left)) calc(var(--dagon-page-padding-x) + var(--dagon-safe-right));
+        padding-top: calc(var(--dagon-page-padding-y) + var(--dagon-safe-top));
+        padding-bottom: calc(var(--dagon-page-padding-y) + var(--dagon-safe-bottom));
+    }
+
+    .glass-card,
+    .glass-card-apple,
+    .glass-card-deep,
+    .dagon-compact-card {
+        border-radius: var(--dagon-card-radius) !important;
+        box-shadow:
+            0 14px 36px -28px color-mix(in srgb, var(--color-primary) 24%, transparent 76%),
+            inset 0 1px 0 0 color-mix(in srgb, var(--glass-highlight) 58%, transparent 42%);
+    }
+}
+
+/* Dashboard premium móvil */
+@keyframes dagon-current-node-pulse {
+    0%, 100% {
+        box-shadow:
+            0 0 0 5px color-mix(in srgb, var(--quest-accent, var(--color-primary)) 12%, transparent 88%),
+            0 0 24px var(--quest-glow, rgba(34, 211, 238, 0.42));
+    }
+    50% {
+        box-shadow:
+            0 0 0 8px color-mix(in srgb, var(--quest-accent, var(--color-primary)) 18%, transparent 82%),
+            0 0 34px var(--quest-glow, rgba(34, 211, 238, 0.52));
+    }
+}
+
+@media (max-width: 767px) {
+    .dashboard-shell {
+        width: 100%;
+    }
+
+    .dashboard-hud {
+        margin-bottom: 1rem !important;
+    }
+
+    .dashboard-hud-grid {
+        gap: 0.75rem;
+    }
+
+    .dashboard-hud-zone--identity {
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .dashboard-mascot-card {
+        width: 4.4rem !important;
+        height: 5rem !important;
+        border-radius: 1.25rem !important;
+    }
+
+    .dashboard-hud-zone--identity h1 {
+        font-size: 1.75rem !important;
+        line-height: 1.02 !important;
+    }
+
+    .dashboard-hud-zone--identity p,
+    .dashboard-hud-zone--progress p {
+        line-height: 1.45;
+    }
+
+    .dashboard-hud-zone--progress {
+        padding: 0.85rem;
+    }
+
+    .dashboard-control-dock {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.55rem;
+    }
+
+    .dashboard-control-dock__wide {
+        grid-column: 1 / -1;
+    }
+
+    .a11y-top-action {
+        min-height: 2.7rem;
+        padding-inline: 0.7rem !important;
+        font-size: 0.78rem !important;
+    }
+
+    .dashboard-course-selector {
+        display: flex !important;
+        overflow-x: auto;
+        padding: 0 0.1rem 0.35rem;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: thin;
+    }
+
+    .dashboard-course-card {
+        min-width: min(86vw, 24rem);
+        padding: 1rem !important;
+        scroll-snap-align: start;
+    }
+
+    .dashboard-briefing-card {
+        margin-bottom: 1rem !important;
+    }
+
+    .dashboard-briefing-orb {
+        width: 3rem;
+        height: 3rem;
+        border-radius: 1rem;
+    }
+
+    .dashboard-briefing-card h2,
+    [data-tour='modules'] h2 {
+        font-size: 1.55rem !important;
+        line-height: 1.1;
+    }
+
+    .dagon-quest-map {
+        gap: 1.05rem;
+        padding: 0.2rem 0 0.1rem;
+    }
+
+    .dagon-quest-map::after {
+        display: none;
+    }
+
+    .dagon-quest-map::before {
+        opacity: 0.38;
+        mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.62), transparent 94%);
+    }
+
+    .dagon-quest-node:not(:last-child)::after {
+        left: 1.35rem;
+        height: 1.05rem;
+        box-shadow: 0 0 10px var(--quest-glow, rgba(34, 211, 238, 0.34));
+    }
+
+    .dagon-quest-node:not(:last-child)::before {
+        left: calc(1.35rem - 4px);
+        top: calc(100% + 0.62rem);
+    }
+
+    .dagon-quest-button::after {
+        display: none;
+    }
+
+    .dagon-quest-button {
+        min-height: 0;
+    }
+
+    .dagon-quest-button:not(.dagon-quest-button--current) .dagon-quest-core::before {
+        opacity: 0.55;
+        filter: none;
+    }
+
+    .dagon-quest-button--locked .dagon-quest-core::before {
+        opacity: 0.28;
+    }
+
+    .dagon-quest-button--current .dagon-quest-core {
+        animation: dagon-current-node-pulse 2.4s ease-in-out infinite;
+    }
+
+    .dagon-flow-cap,
+    .dagon-flow-exit {
+        font-size: 0.48rem;
+        letter-spacing: 0.12em;
+    }
+
+    .dagon-quest-description {
+        -webkit-line-clamp: 3;
+    }
+}
+
+/* Tutorial cinematográfico responsive */
+.tour-panel-stage {
+    min-height: 100dvh;
+    min-height: 100svh;
+}
+
+@media (max-width: 768px) {
+    .tour-overlay-shell {
+        min-height: 100dvh;
+        overflow: hidden;
+    }
+
+    .tour-panel-stage {
+        min-height: 100dvh;
+        align-items: flex-end;
+        padding: max(0.75rem, var(--dagon-safe-top)) max(0.75rem, var(--dagon-safe-right)) max(0.75rem, var(--dagon-safe-bottom)) max(0.75rem, var(--dagon-safe-left));
+    }
+
+    .tour-bottom-sheet {
+        max-height: calc(100dvh - var(--dagon-safe-top) - var(--dagon-safe-bottom) - 1.25rem);
+        border-radius: 1.35rem 1.35rem 1rem 1rem;
+    }
+
+    .tour-panel-scroll {
+        max-height: inherit;
+        overflow-y: auto;
+        gap: 1rem;
+        padding: 1rem;
+        scrollbar-width: thin;
+    }
+
+    .tour-mascot-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        justify-items: start;
+        gap: 0.85rem;
+        padding: 0.85rem;
+        text-align: left;
+    }
+
+    .tour-mascot-card .tour-mascot-float {
+        transform: scale(0.8);
+        transform-origin: center;
+    }
+
+    .tour-step-content h2 {
+        font-size: 1.55rem !important;
+        line-height: 1.12 !important;
+    }
+
+    .tour-step-content p {
+        margin-top: 0.85rem;
+        font-size: 0.95rem !important;
+    }
+
+    .tour-particle:nth-child(n+6) {
+        display: none;
+    }
+
+    .tour-icon-button {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+}
+
+/* Ejercicios y teoría móvil */
+.exercise-mobile-stepper {
+    display: none;
+}
+
+.theory-code-box,
+.theory-table-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.theory-table-shell {
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.theory-table-shell table {
+    min-width: max-content;
+}
+
+.theory-code-box pre,
+.book-code-block pre,
+[data-testid='postgres-academy-page'] pre {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+@media (max-width: 767px) {
+    .exercise-mobile-stepper {
+        position: sticky;
+        top: max(0.5rem, var(--dagon-safe-top));
+        z-index: 30;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.45rem;
+        border: 1px solid color-mix(in srgb, var(--color-primary) 24%, transparent 76%);
+        border-radius: 1rem;
+        padding: 0.35rem;
+        background: color-mix(in srgb, var(--color-surface) 82%, transparent 18%);
+        backdrop-filter: blur(14px) saturate(150%);
+        -webkit-backdrop-filter: blur(14px) saturate(150%);
+        box-shadow: 0 18px 48px -34px rgba(2, 6, 23, 0.72);
+    }
+
+    .exercise-mobile-stepper__item {
+        min-height: 2.35rem;
+        border-radius: 0.75rem;
+        border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent 78%);
+        color: var(--color-text);
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent 90%);
+        font-family: var(--font-display);
+        font-size: 0.72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .exercise-mobile-stepper__item:disabled {
+        opacity: 0.44;
+    }
+
+    .exercise-workbench-frame {
+        height: clamp(320px, 58dvh, 420px) !important;
+    }
+
+    .exercise-drop-rail,
+    .exercise-word-rail {
+        min-height: 8rem;
+        scroll-snap-type: x proximity;
+    }
+
+    .exercise-drop-rail > *,
+    .exercise-word-rail > * {
+        scroll-snap-align: start;
+    }
+
+    .level-theory-shell {
+        max-height: 100dvh;
+    }
+
+    .level-theory-header {
+        align-items: flex-start !important;
+    }
+
+    .level-theory-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        width: 100%;
+        gap: 0.55rem;
+    }
+
+    .level-theory-actions button:first-child,
+    .level-theory-actions button:last-child {
+        justify-content: center;
+    }
+
+    .level-theory-actions button:last-child {
+        grid-column: 1 / -1;
+        min-height: 2.5rem;
+    }
+
+    .level-theory-progress {
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+        scrollbar-width: thin;
+    }
+
+    .level-theory-card {
+        padding: 1rem !important;
+    }
+
+    .level-theory-card h2 {
+        font-size: 1.7rem !important;
+        line-height: 1.12 !important;
+    }
+
+    .level-theory-card table {
+        font-size: 0.78rem;
+    }
+
+    .level-theory-nav {
+        gap: 0.75rem;
+    }
+
+    .level-theory-nav > * {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+}
+
+/* PostgreSQL Academy */
+.book-spread--single {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: min(760px, 100%);
+    margin-inline: auto;
+}
+
+.book-spread--single::before {
+    display: none;
+}
+
+.book-spread--single .book-page {
+    border-left: 0;
+    border-right: 0;
+}
+
+.book-progress-row {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 1024px) {
+    .book-spread--single .book-page {
+        min-height: min(70dvh, 620px);
+        max-height: calc(100dvh - 14rem);
+        overflow-y: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .postgres-tier-switcher {
+        flex-wrap: nowrap !important;
+        overflow-x: auto;
+        padding-bottom: 0.35rem;
+        scrollbar-width: thin;
+    }
+
+    .postgres-tier-switcher > button {
+        min-width: max-content;
+    }
+
+    .postgres-academy-hero {
+        border-radius: 1.35rem !important;
+        padding: 1rem !important;
+    }
+
+    .book-shell {
+        overflow: hidden;
+        padding: 0.85rem !important;
+    }
+
+    .book-toolbar {
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .book-spread--single .book-page {
+        min-height: clamp(420px, 68dvh, 620px);
+        max-height: calc(100dvh - 12rem);
+        overflow-y: auto;
+    }
+
+    .book-page-text,
+    .book-bullet p,
+    .book-callout p,
+    .book-quote p {
+        font-size: 0.86rem;
+        line-height: 1.62;
+    }
 }

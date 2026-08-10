@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -44,28 +43,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
         String token = null;
-        String usuarioId = null;
+        String identificadorUsuario = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
             try {
                 if (jwtUtil.validarToken(token)) {
-                    usuarioId = jwtUtil.extraerUsuarioId(token);
+                    identificadorUsuario = jwtUtil.extraerUsuarioId(token);
                 }
             } catch (Exception e) {
                 logger.debug("Token invalido o expirado");
             }
         }
 
-        if (usuarioId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            List<GrantedAuthority> authorities = cargarAuthorities(usuarioId);
-            if (authorities.isEmpty()) {
+        if (identificadorUsuario != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UsuarioAutenticado usuarioAutenticado = cargarUsuarioAutenticado(identificadorUsuario);
+            if (usuarioAutenticado == null || usuarioAutenticado.authorities().isEmpty()) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    usuarioId, null, authorities);
+                    usuarioAutenticado.idUsuario(), null, usuarioAutenticado.authorities());
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authToken);
@@ -74,22 +73,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private List<GrantedAuthority> cargarAuthorities(String usuarioId) {
+    private UsuarioAutenticado cargarUsuarioAutenticado(String identificadorUsuario) {
         try {
             Map<String, Object> usuario = jdbcTemplate.queryForMap(
-                    "SELECT id_rol, activo FROM lms_core.usuarios WHERE id_usuario = ?::uuid",
-                    usuarioId);
+                    "SELECT id_usuario::varchar AS id_usuario, id_rol, activo " +
+                            "FROM lms_core.usuarios " +
+                            "WHERE id_usuario::varchar = ? OR LOWER(email) = LOWER(?)",
+                    identificadorUsuario,
+                    identificadorUsuario);
             Boolean activo = (Boolean) usuario.get("activo");
             if (!Boolean.TRUE.equals(activo)) {
-                return List.of();
+                return null;
             }
             Object idRolRaw = usuario.get("id_rol");
             Integer idRol = idRolRaw instanceof Number ? ((Number) idRolRaw).intValue() : 1;
             String roleName = ROLES.getOrDefault(idRol, "ROLE_ALUMNO");
-            return List.of(new SimpleGrantedAuthority(roleName));
+            List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(roleName));
+            return new UsuarioAutenticado(usuario.get("id_usuario").toString(), authorities);
         } catch (Exception e) {
-            logger.debug("No se pudo cargar rol para usuario {}: {}", usuarioId, e.getMessage());
-            return List.of();
+            logger.debug("No se pudo cargar rol para usuario {}: {}", identificadorUsuario, e.getMessage());
+            return null;
         }
+    }
+
+    private record UsuarioAutenticado(String idUsuario, List<GrantedAuthority> authorities) {
     }
 }

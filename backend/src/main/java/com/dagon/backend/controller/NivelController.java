@@ -22,8 +22,9 @@ public class NivelController {
     // 1. Obtener todos los niveles/módulos
     // URL: http://localhost:8080/api/levels
     @GetMapping("/levels")
-    public ResponseEntity<?> getLevels() {
-        List<NivelDTO> niveles = ejercicioService.obtenerTodosLosNiveles();
+    public ResponseEntity<?> getLevels(Authentication authentication) {
+        String usuarioId = authentication != null ? authentication.getName() : null;
+        List<NivelDTO> niveles = ejercicioService.obtenerTodosLosNiveles(usuarioId);
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("levels", niveles);
         return ResponseEntity.ok(respuesta);
@@ -32,8 +33,9 @@ public class NivelController {
     // 2. Obtener misiones de un nivel específico
     // URL: http://localhost:8080/api/exercises/{id}
     @GetMapping("/exercises/{levelId}")
-    public ResponseEntity<?> getExercisesByLevel(@PathVariable Integer levelId) {
-        List<EjercicioDTO> ejercicios = ejercicioService.obtenerEjerciciosPorModulo(levelId);
+    public ResponseEntity<?> getExercisesByLevel(@PathVariable Integer levelId, Authentication authentication) {
+        String usuarioId = authentication != null ? authentication.getName() : null;
+        List<EjercicioDTO> ejercicios = ejercicioService.obtenerEjerciciosPorModulo(levelId, usuarioId);
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("exercises", ejercicios);
         respuesta.put("module", ejercicioService.obtenerMetadataModulo(levelId));

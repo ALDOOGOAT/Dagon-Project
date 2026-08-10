@@ -24,7 +24,7 @@ const rgba = (hex, alpha) => {
  *
  * Uso: <AbyssBackground intensity={1.2} tint="rgba(99,102,241,0.85)" />
  */
-export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)', mode = 'dark', colors = null, reduceMotion = false }) => {
+export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85)', mode = 'dark', colors = null, reduceMotion = false, visualFidelity = 'desktop-full', targetFps = 30 }) => {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
   const mouseRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
@@ -39,30 +39,49 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     let bubbles = [];
     let lastFrame = 0;
     let stopped = false;
-    const effectiveIntensity = Math.max(0.2, Math.min(1.2, reduceMotion ? Math.min(intensity, 0.4) : intensity));
-    const PARTICLE_COUNT = Math.max(8, Math.floor((reduceMotion ? 28 : 48) * effectiveIntensity));
-    const BUBBLE_COUNT = Math.max(3, Math.floor((reduceMotion ? 8 : 12) * effectiveIntensity));
-    const FRAME_MS = 1000 / 30;
+    let particleTarget = 24;
+    let bubbleTarget = 8;
+    const isMobileProfile = visualFidelity === 'mobile-premium';
+    const isTabletProfile = visualFidelity === 'tablet-balanced';
+    const effectiveIntensity = Math.max(0.2, Math.min(1.2, reduceMotion ? Math.min(intensity, 0.32) : intensity));
+    const FRAME_MS = reduceMotion ? Number.POSITIVE_INFINITY : 1000 / Math.max(18, Math.min(30, targetFps || 30));
     const tintMatch = tint.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     const tintR = tintMatch ? Number(tintMatch[1]) : 30;
     const tintG = tintMatch ? Number(tintMatch[2]) : 41;
     const tintB = tintMatch ? Number(tintMatch[3]) : 59;
     const particleColor = (alpha) => `rgba(${tintR}, ${tintG}, ${tintB}, ${alpha.toFixed(2)})`;
 
+    const getViewport = () => ({
+      width: Math.max(1, Math.ceil(window.visualViewport?.width || window.innerWidth || 1)),
+      height: Math.max(1, Math.ceil(window.visualViewport?.height || window.innerHeight || 1)),
+    });
+
+    const updateSceneDensity = () => {
+      const { width, height } = getViewport();
+      const areaFactor = (width * height) / (393 * 852);
+      const particleDensity = reduceMotion ? 18 : isMobileProfile ? 34 : isTabletProfile ? 46 : 58;
+      const bubbleDensity = reduceMotion ? 4 : isMobileProfile ? 7 : isTabletProfile ? 10 : 13;
+
+      particleTarget = Math.max(8, Math.min(isMobileProfile ? 48 : 120, Math.floor(particleDensity * areaFactor * effectiveIntensity)));
+      bubbleTarget = Math.max(2, Math.min(isMobileProfile ? 10 : 24, Math.floor(bubbleDensity * areaFactor * effectiveIntensity)));
+    };
+
     const resize = () => {
-      const pixelRatio = reduceMotion ? 1 : Math.min(window.devicePixelRatio || 1, 1.25);
-      canvas.width = Math.floor(window.innerWidth * pixelRatio);
-      canvas.height = Math.floor(window.innerHeight * pixelRatio);
-      canvas.style.width = `${window.innerWidth}px`;
-      canvas.style.height = `${window.innerHeight}px`;
+      const { width, height } = getViewport();
+      const maxPixelRatio = reduceMotion ? 1 : isMobileProfile ? 1 : isTabletProfile ? 1.15 : 1.25;
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, maxPixelRatio);
+      canvas.width = Math.floor(width * pixelRatio);
+      canvas.height = Math.floor(height * pixelRatio);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     };
-    resize();
 
     const spawnParticles = () => {
-      particles = Array.from({ length: PARTICLE_COUNT }, () => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+      const { width, height } = getViewport();
+      particles = Array.from({ length: particleTarget }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
         r: Math.random() * 1.6 + 0.3,
         vx: (Math.random() - 0.5) * 0.18,
         vy: (Math.random() - 0.5) * 0.18 - 0.05,
@@ -71,22 +90,24 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
         pulse: Math.random() * 0.025 + 0.005,
       }));
     };
-    const spawnBubble = (forceTop = false) => ({
-      x: Math.random() * window.innerWidth,
-      y: forceTop ? window.innerHeight + Math.random() * 60 : Math.random() * window.innerHeight,
+    const spawnBubble = (forceTop = false) => {
+      const { width, height } = getViewport();
+      return {
+      x: Math.random() * width,
+      y: forceTop ? height + Math.random() * 60 : Math.random() * height,
       r: Math.random() * 6 + 2,
       vy: -(Math.random() * 0.4 + 0.2),
       sway: Math.random() * Math.PI * 2,
       swayAmp: Math.random() * 0.6 + 0.2,
       depth: Math.random() * 0.8 + 0.2,
-    });
+      };
+    };
     const spawnBubbles = () => {
-      bubbles = Array.from({ length: BUBBLE_COUNT }, () => spawnBubble(false));
+      bubbles = Array.from({ length: bubbleTarget }, () => spawnBubble(false));
     };
 
     const renderScene = (advance = false) => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
+      const { width, height } = getViewport();
       ctx.clearRect(0, 0, width, height);
 
       if (advance) {
@@ -165,6 +186,7 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
     };
 
     const resetScene = () => {
+      updateSceneDensity();
       spawnParticles();
       spawnBubbles();
       renderScene(false);
@@ -178,11 +200,14 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       resetScene();
     };
     const onMouse = (e) => {
-      mouseRef.current.tx = (e.clientX / window.innerWidth - 0.5) * 30;
-      mouseRef.current.ty = (e.clientY / window.innerHeight - 0.5) * 30;
+      const { width, height } = getViewport();
+      mouseRef.current.tx = (e.clientX / width - 0.5) * 30;
+      mouseRef.current.ty = (e.clientY / height - 0.5) * 30;
     };
+    const viewport = window.visualViewport;
     window.addEventListener('resize', onResize);
-    if (!reduceMotion) {
+    viewport?.addEventListener?.('resize', onResize);
+    if (!reduceMotion && !isMobileProfile) {
       window.addEventListener('mousemove', onMouse, { passive: true });
     }
 
@@ -225,10 +250,11 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       stopped = true;
       stopAnimation();
       window.removeEventListener('resize', onResize);
+      viewport?.removeEventListener?.('resize', onResize);
       window.removeEventListener('mousemove', onMouse);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [intensity, tint, mode, reduceMotion]);
+  }, [intensity, tint, mode, reduceMotion, visualFidelity, targetFps]);
 
   const isLight = mode === 'light';
   const shellGridOpacity = isLight ? 'opacity-80' : 'opacity-50';
@@ -255,9 +281,9 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
       <div className="absolute inset-0" style={{ backgroundImage: `${radialLightA}, ${radialLightB}, ${radialLightC}` }} />
       <div className={`absolute inset-0 grid-pattern ${shellGridOpacity}`} />
       <canvas ref={canvasRef} className="absolute inset-0" aria-hidden="true" />
-      <div className="ambient-orb absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full blur-[130px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(primary, 0.18) : rgba(primary, 0.2) }} />
-      <div className="ambient-orb absolute -bottom-24 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] animate-pulse-slower" style={{ backgroundColor: isLight ? rgba(secondary, 0.16) : rgba(secondary, 0.18) }} />
-      <div className="ambient-orb absolute top-[28%] left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full blur-[150px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(accent, 0.13) : rgba(accent, 0.12) }} />
+      <div className="ambient-orb ambient-orb--primary absolute -top-24 -left-24 w-[540px] h-[540px] rounded-full blur-[130px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(primary, 0.18) : rgba(primary, 0.2) }} />
+      <div className="ambient-orb ambient-orb--secondary absolute -bottom-24 -right-24 w-[560px] h-[560px] rounded-full blur-[130px] animate-pulse-slower" style={{ backgroundColor: isLight ? rgba(secondary, 0.16) : rgba(secondary, 0.18) }} />
+      <div className="ambient-orb ambient-orb--accent absolute top-[28%] left-1/2 -translate-x-1/2 w-[680px] h-[680px] rounded-full blur-[150px] animate-pulse-slow" style={{ backgroundColor: isLight ? rgba(accent, 0.13) : rgba(accent, 0.12) }} />
       {isLight && <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 12%, rgba(255,255,255,0.48), transparent 42%)' }} />}
       <div className="absolute inset-0" style={{ background: vignette }} />
     </div>
