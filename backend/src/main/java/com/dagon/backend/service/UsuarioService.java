@@ -74,17 +74,7 @@ public class UsuarioService {
             throw new RuntimeException("Error: Este correo ya está registrado en Dagon.");
         }
 
-        // Validaciones por Rol
-        if ("docente".equalsIgnoreCase(rol)) {
-            if (claveDocente == null || !teacherMasterKey.equals(claveDocente)) {
-                throw new RuntimeException("Error: La clave de docente proporcionada no es válida.");
-            }
-        } else if ("alumno".equalsIgnoreCase(rol)) {
-            // Si viene un código de clase, validamos que exista antes de crear al usuario
-            if (codigoClase != null && !codigoClase.isBlank()) {
-                validarCodigoClase(codigoClase);
-            }
-        }
+
 
         if (nuevoUsuario.getActivo() == null) {
             nuevoUsuario.setActivo(true);
@@ -169,6 +159,13 @@ public class UsuarioService {
     }
 
     // --- FUNCION 2: LOGIN ---
+    public Optional<Usuario> obtenerPorEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return Optional.empty();
+        }
+        return usuarioRepository.findByEmailIgnoreCase(email.trim().toLowerCase());
+    }
+
     public Usuario iniciarSesion(String email, String password) {
         if (email == null || password == null) {
             throw new RuntimeException("Correo o contraseña incorrectos.");

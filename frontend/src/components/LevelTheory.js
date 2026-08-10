@@ -1552,19 +1552,6 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
         </div>
 
         <div className="level-theory-progress flex items-center gap-2 mb-6">
-          {theory.slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                sounds.playStep();
-                onComplete?.();
-              }} className="text-slate-400 uppercase text-[10px] font-bold font-display hover:text-white transition-colors">
-                Saltar teoría →
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 mb-6">
             {theory.slides.map((_, i) => (
               <button
                 key={i}
@@ -1618,48 +1605,6 @@ export const LevelTheory = ({ levelId, subTopic, onComplete }) => {
               </div>
             </motion.div>
           )}
-        </div>
-      </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={`${theoryKey}-${index}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="level-theory-card glass-card-apple dagon-compact-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 relative overflow-hidden mb-6 bg-slate-900/50"
-          >
-            <div className={`absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 bg-gradient-to-br ${theory.color}`} />
-            <div className="relative z-10">
-              <SlideContent slide={slide} isSpeaking={isSpeaking} onSpeak={speak} />
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {isLast && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-3xl border border-emerald-400/25 bg-emerald-500/10 p-5"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center shrink-0">
-                <Sparkles className="w-6 h-6 text-emerald-300" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.28em] font-black text-emerald-300 mb-2">
-                  Punto de control
-                </p>
-                <h3 className="font-display text-xl font-black text-white">
-                  Entra a la práctica con una idea clara
-                </h3>
-                <p className="mt-2 text-sm sm:text-base text-slate-300 font-gameui leading-relaxed">
-                  Antes de ejecutar SQL, di en voz baja que dato quieres obtener, de que tabla sale y que condicion lo limita. Ese habito evita errores de memoria y te obliga a razonar.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         <div className="level-theory-nav flex items-center justify-between">
           <Button variant="ghost" onClick={prev} disabled={index === 0} className="text-slate-300 font-display">

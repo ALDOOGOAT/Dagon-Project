@@ -729,6 +729,8 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             return respuesta;
         }
 
+        Integer statementTimeoutEjercicioMs = resolverStatementTimeoutEjercicio(ejercicio);
+
         if (!usuarioPuedeAccederEjercicio(ejercicio, usuarioId)) {
             respuesta.put("success", false);
             respuesta.put("message", "No tienes permiso para resolver este ejercicio.");
