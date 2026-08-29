@@ -13,7 +13,7 @@ import { sounds } from '../lib/SoundEngine';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
   Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Award, Heart, BookOpen, Terminal, Volume2, VolumeX
+  User, Award, Heart, BookOpen, Volume2, VolumeX
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -621,8 +621,7 @@ export const DashboardPage = () => {
                 </p>
               </div>
             </div>
-            <div className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl px-5 py-3 font-display font-black text-white transition-all group-hover:translate-x-1" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
-              <Terminal className="w-4 h-4" />
+            <div className="flex w-full shrink-0 sm:w-auto items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-5 py-3 font-display font-black text-white transition-all group-hover:translate-x-1" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
               Entrar a la academia
               <ChevronRight className="w-4 h-4" />
             </div>
@@ -661,7 +660,7 @@ export const DashboardPage = () => {
                   {stat.icon}
                 </motion.div>
                 <div>
-                  <p className={`font-display font-black ${stat.isText ? 'text-lg truncate max-w-[100px]' : 'text-2xl'}`} style={{ color: headingColor }}>{stat.value}</p>
+                  <p className={`font-display font-black ${stat.isText ? 'text-base leading-tight' : 'text-2xl'}`} style={{ color: headingColor }}>{stat.value}</p>
                   <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: mutedColor }}>{stat.label}</p>
                 </div>
               </div>
@@ -910,14 +909,6 @@ export const DashboardPage = () => {
                 ) : (
                 <div className="dagon-quest-map relative">
                     {modulos.map((mod, index) => {
-                        const pathColumn = [
-                          'md:col-start-1',
-                          'md:col-start-2',
-                          'md:col-start-3',
-                          'md:col-start-2',
-                          'md:col-start-1',
-                          'md:col-start-2'
-                        ][index % 6];
 	                        const isCurrentMission = recommendedMission?.id_modulo === mod.id_modulo;
 	                        const isMastered = !mod.bloqueado && recommendedMissionIndex >= 0 && index < recommendedMissionIndex;
 	                        const isFinalMission = index === modulos.length - 1;
@@ -957,7 +948,7 @@ export const DashboardPage = () => {
                           initial={{ opacity: 0, y: 24, scale: 0.96 }}
 	                          animate={{ opacity: 1, x: 0, y: 0 }}
 	                          transition={{ delay: 0.08 * index, type: 'spring', stiffness: 200, damping: 22 }}
-	                          className={`dagon-quest-node ${pathColumn} ${isFinalMission ? 'dagon-quest-node--final' : ''}`}
+	                          className={`dagon-quest-node ${isFinalMission ? 'dagon-quest-node--final' : ''}`}
 	                          style={{
                             '--quest-accent': questAccent,
                             '--quest-secondary': questSecondary,
@@ -984,7 +975,7 @@ export const DashboardPage = () => {
 	                            >
 	                            <div className="dagon-flow-cap">
 	                              <span>{index === 0 ? 'Inicio' : `Nodo ${String(index + 1).padStart(2, '0')}`}</span>
-	                              <span>{isFinalMission ? 'Fin / reto' : 'Proceso'}</span>
+	                              {isFinalMission && <span>Reto final</span>}
 	                            </div>
 	                            <div className="relative z-10 flex items-start gap-3 p-3 pt-2 sm:p-4 sm:pt-2">
 	                                <div className={`dagon-quest-core flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border font-display text-xl font-black ${isFinalMission ? 'dagon-quest-core--final' : ''} ${
@@ -1000,9 +991,6 @@ export const DashboardPage = () => {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="mb-1.5 flex flex-wrap items-center gap-2">
-                                    <span className="text-[9px] font-bold uppercase tracking-[0.24em]" style={{ color: mod.bloqueado ? mutedColor : colors.accent }}>
-                                      Módulo {String(index + 1).padStart(2, '0')}
-                                    </span>
                                     <span className={`dagon-quest-status ${mod.bloqueado ? 'dagon-quest-status--locked' : isCurrentMission ? 'dagon-quest-status--current' : isMastered ? 'dagon-quest-status--mastered' : ''}`}>
                                       {statusLabel}
                                     </span>
@@ -1028,9 +1016,6 @@ export const DashboardPage = () => {
 	                                  </div>
 	                                </div>
 	                            </div>
-	                            <div className="dagon-flow-exit">
-	                              <span>{isFinalMission ? 'Graduación' : 'Salida'}</span>
-	                            </div>
 	                            </motion.button>
                         </motion.div>
                         );
@@ -1041,7 +1026,7 @@ export const DashboardPage = () => {
           </div>
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
-          <aside className="space-y-6 xl:space-y-7">
+          <aside className="dashboard-aside space-y-6 xl:space-y-7">
             <motion.div
               initial={{ opacity: 0, x: 30, y: 10 }}
               animate={{ opacity: 1, x: 0, y: 0 }}
@@ -1083,7 +1068,7 @@ export const DashboardPage = () => {
                 </div>
                 <button
                   onClick={() => navigate('/leaderboard')}
-                  className="text-xs font-gameui font-bold flex items-center gap-1"
+                  className="-mr-2 flex items-center gap-1 rounded-lg px-2 py-2 text-xs font-gameui font-bold transition-colors hover:bg-white/5"
                   style={{ color: mutedColor }}
                 >
                   Ver todo <ChevronRight className="w-3 h-3" />

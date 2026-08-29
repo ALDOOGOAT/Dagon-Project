@@ -15,7 +15,7 @@ class EjercicioValidationRouterTest {
             new ValidadorSelect(),
             new ValidadorDml(),
             new ValidadorDdl(),
-            new ValidadorDiagrama(),
+            new ValidadorDiagrama(new com.dagon.backend.service.ModelingService()),
             new ValidadorTransaccion(),
             new ValidadorPracticaRapida(),
             new ValidadorTextual()

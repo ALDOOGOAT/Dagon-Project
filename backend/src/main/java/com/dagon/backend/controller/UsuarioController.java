@@ -129,7 +129,7 @@ public class UsuarioController {
     // PUERTA: SALÓN DE LA FAMA (Tiempo Real Optimizado)
     @GetMapping("/ranking")
     public ResponseEntity<?> obtenerRanking() {
-        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal());
+        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0));
     }
 
     @PostMapping("/{id}/foto")

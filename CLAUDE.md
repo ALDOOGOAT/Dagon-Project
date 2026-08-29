@@ -1,163 +1,156 @@
-# Dagon-Project — Guía rápida para Claude
+# CLAUDE.md
 
-> **Lee esto primero.** Resume arquitectura, rutas, comandos y convenciones para que no tengas que re-explorar el repo en cada sesión. Si algo cambia (nuevo endpoint, renombre, librería), **actualiza este archivo**.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+> **Léeme primero.** Arquitectura, comandos y convenciones para no re-explorar el repo cada sesión.
+> Si algo cambia (endpoint, renombre, migración), **actualiza este archivo**.
+> `AGENTS.md` y `GEMINI.md` son resúmenes para otros agentes; si cambias algo aquí, revísalos.
 
 ---
 
 ## 1. Qué es Dagon
 
-LMS gamificado para aprender SQL / PostgreSQL, con tutor IA (Clawbot / Gemini) y estética "Abyss & Crimson" (oscuro, glassmorphism, pulpo rojo). 5 niveles progresivos, XP, rachas, leaderboard.
+LMS gamificado para aprender SQL / PostgreSQL, con tutor IA (**Clawbot**) y estética "Abyss & Crimson".
+XP, rachas, certificados, leaderboard, panel docente y prácticas rápidas.
 
-## 2. Stack
+## 2. Servicios y comandos
 
-| Capa | Tech |
-|---|---|
-| Frontend | React 19 + Craco, React Router v7, Tailwind 3.4, Shadcn/Radix, Framer Motion, Monaco Editor, Axios, Sonner, Recharts |
-| Backend | Spring Boot 4.0.3 (Java 21), Spring Security + JWT (jjwt 0.11.5), Spring Data JPA, Lombok |
-| DB | PostgreSQL — schemas `lms_core` y `lms_sandbox` |
-| IA | Google Gemini API (key en `application.properties`) |
-| Paralelismo | **Microservicio Python con `mpi4py`** (ver §7) |
-
-## 3. Layout de carpetas
-
-```
-Dagon-Project/
-├── CLAUDE.md              ← este archivo
-├── README.md              ← README público
-├── BaseDeDatosZaca.sql    ← script maestro de la DB (22 KB)
-├── respaldo_db.sql        ← respaldo con datos
-├── backend/               ← Spring Boot
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/com/dagon/backend/
-│       │   ├── DagonBackendApplication.java
-│       │   ├── config/SecurityConfig.java
-│       │   ├── security/{JwtUtil, JwtAuthenticationFilter}.java
-│       │   ├── controller/   ← Usuario, Nivel, Clawbot, Modulo, Leaderboard, Analytics (MPI)
-│       │   ├── service/      ← lógica de negocio
-│       │   ├── model/        ← entidades JPA
-│       │   ├── dto/          ← DTOs (EjercicioDTO, NivelDTO)
-│       │   └── repository/   ← Spring Data repos
-│       └── resources/application.properties
-├── frontend/              ← React
-│   ├── package.json  (yarn)
-│   ├── craco.config.js
-│   ├── tailwind.config.js
-│   └── src/
-│       ├── App.js
-│       ├── index.css              ← utilidades Tailwind + animaciones
-│       ├── pages/                 ← Login, Dashboard, Exercise, Leaderboard, Profile, Streak, Analytics
-│       ├── components/            ← Clawbot, DagonMascot, AbyssBackground, ui/* (Shadcn)
-│       ├── data/                  ← guiones locales de cinemáticas por módulo
-│       ├── contexts/AuthContext.js
-│       ├── services/apiService.js
-│       └── hooks/ + lib/
-└── mpi_service/           ← microservicio Python MPI (ver §7)
-    ├── analytics_mpi.py
-    ├── server.py          ← HTTP wrapper Flask
-    ├── requirements.txt
-    └── run_mpi.sh
-```
-
-## 4. Comandos para correr
+| Servicio | Stack | Puerto |
+|---|---|---|
+| `backend/` | Java 21, Spring Boot 4.0.3, Spring Security + JWT (jjwt 0.11.5), Spring Data JPA + JdbcTemplate, Lombok | 8080 |
+| `frontend/` | React 19 + CRACO, React Router v7, Tailwind 3.4, Shadcn/Radix, Framer Motion, Monaco, `@xyflow/react`, Recharts, Axios, Sonner | 3000 |
+| `mpi_service/` *(opcional)* | Python 3.10+, Flask, `mpi4py` | 5001 |
 
 ```bash
-# Backend  →  http://localhost:8080
-cd backend && ./mvnw spring-boot:run
+cd backend  && ./mvnw spring-boot:run
+cd frontend && yarn install && yarn start      # yarn 1.22.22 (campo packageManager). Hay package-lock.json residual: ignóralo.
+cd mpi_service && ./run_mpi.sh                 # DAGON_MPI_PROCS=8 PORT=5050 ./run_mpi.sh
 
-# Frontend →  http://localhost:3000
-cd frontend && yarn install && yarn start
+# Tests
+cd backend  && ./mvnw test
+cd backend  && ./mvnw test -Dtest=DocenteControllerTest            # una clase
+cd backend  && ./mvnw test -Dtest=DocenteControllerTest#nombreDelTest
+cd frontend && yarn test                                           # craco test (jest watch)
+cd frontend && CI=true yarn test --testPathPattern=NombreDelTest    # una suite, sin watch
 
-# MPI service → http://localhost:5001
-cd mpi_service && ./run_mpi.sh      # lanza mpirun -np 4 python server.py
+# Build
+cd backend && ./mvnw clean package
+cd frontend && yarn build
 ```
 
-Prerequisitos MPI (macOS): `brew install open-mpi && pip install mpi4py flask psycopg2-binary`.
+## 3. Configuración (nada de valores hardcodeados)
 
-## 5. Rutas del frontend (React Router)
+- **Backend:** todo sale de `application.properties` con placeholders `${VAR:default}`. Los valores reales viven en `backend/.env` (gitignoreado); la plantilla es `backend/.env.example`. `spring.config.import` carga `backend/.env` y `.env` de la raíz.
+- **`DatabaseEnvironmentInitializer`** normaliza `DATABASE_URL` / `DATABASE_PUBLIC_URL` / `PG*` (formatos `postgres://`, `postgresql://`, `jdbc:postgresql://`) hacia `spring.datasource.*` y `dagon.sandbox.*` antes de arrancar el contexto. Si agregas una variable de conexión, va ahí.
+- **Frontend:** `frontend/src/config/api.js` exporta `API_BASE` y `apiUrl()` leyendo `REACT_APP_API_URL` → `REACT_APP_BACKEND_URL` → `http://localhost:8080`. **Nunca escribas una URL de backend a mano**; usa `apiClient` o `apiUrl()`. Craco no recarga `.env` en caliente: reinicia `yarn start`.
+- **CORS:** `dagon.cors.allowed-origins` (coma-separado, acepta patrones tipo `https://*.vercel.app`). Ya no está hardcodeado en `SecurityConfig.java`.
+- **Secretos:** DB, `DAGON_JWT_SECRET`, `GEMINI_API_KEY`, `GROQ_API_KEY`. Nunca los imprimas en respuestas ni los commitees.
+- Detalles de arranque local y diagnóstico: `docs/LOCAL_DEV.md`.
 
-| Path | Componente | Protegida |
-|---|---|---|
-| `/` | LoginPage | no (redirige a /dashboard si hay token) |
-| `/dashboard` | DashboardPage | ✅ |
-| `/exercise/:levelId` | ExercisePage | ✅ |
-| `/leaderboard` | LeaderboardPage | ✅ |
-| `/profile` | ProfilePage | ✅ |
-| `/streak` | StreakPage | no |
-| `/analytics` | AnalyticsPage (MPI) | ✅ |
-| `/docente` | DocentePage — inicio guiado, grupos, ejercicios, notas y analítica docente | ✅ |
+## 4. Base de datos
 
-## 6. Endpoints REST backend
+- `spring.jpa.hibernate.ddl-auto=none` — **Hibernate nunca crea ni altera tablas.** No lo cambies ni agregues Flyway sin preguntar.
+- Fuente de verdad, en orden: `scripts/00_instalacion_limpia.sql` → `scripts/01_datos_semilla.sql` → `scripts/02_ejercicios_semilla.sql`.
+- Cambios de esquema = **nuevo archivo en `scripts/migraciones/`** con nombre fechado (`2026_05_28_misterios_modelado.sql`), y reflejarlo en el script de instalación.
+- Guías del modelo de datos: `scripts/flujo_bd_dagon.md`, `scripts/guia_bd_fase4.md`. `dagon_backup.sql` (25 MB) es un respaldo, no lo edites.
+- Esquemas: `lms_core` (dominio) y, por alumno, `sandbox_usuario_<uuid>` (ver §6).
+- La base local corre con `lc_messages = es_ES.UTF-8`: **los errores de PostgreSQL llegan en español y con guillemets** («»). Cualquier parseo de errores debe contemplarlo (ver §9).
+- Casi toda la lectura pesada es SQL vía `JdbcTemplate`, no JPA. Solo hay dos entidades (`Usuario`, `EjercicioPractico`); no asumas que existe un repositorio JPA para lo que necesitas.
 
-Todos bajo `http://localhost:8080/api`. Todos requieren `Authorization: Bearer <JWT>` salvo `/usuarios/login` y `/usuarios/registro`.
+## 5. Auth y roles
 
-| Método | Path | Handler |
-|---|---|---|
-| POST | `/usuarios/registro` | UsuarioController |
-| POST | `/usuarios/login` | UsuarioController |
-| GET  | `/usuarios/{id}/stats` | UsuarioController — xp, racha, posición |
-| GET  | `/modulos` | ModuloController — lista de misiones con flag `bloqueado` |
-| GET  | `/levels`, `/exercises/{id}` | NivelController |
-| POST | `/exercises/validate` | NivelController — valida query SQL |
-| POST | `/clawbot` | ClawbotController — chat Gemini |
-| GET  | `/leaderboard` | LeaderboardController |
-| GET  | `/leaderboard/exercises/{exerciseId}` | LeaderboardController — ranking de eficiencia y SQL Golf por misión |
-| POST | `/modeling/ddl-to-erd` | ModelingController — convierte DDL `CREATE TABLE` en nodos/aristas ERD |
-| POST | `/modeling/erd-to-ddl` | ModelingController — genera DDL desde el diagrama ERD |
-| GET  | `/analytics/mpi` | **AnalyticsController** — proxy al servicio MPI |
-| GET/POST | `/docente/grupos` | DocenteController — grupos y códigos de acceso |
-| GET/POST | `/docente/ejercicios` | DocenteController — ejercicios creados por docente |
-| GET  | `/docente/resumen` | DocenteController — alumnos permitidos, métricas, módulos y grupos |
-| GET  | `/docente/calificaciones` | DocenteController — notas 0-10 por ejercicio, módulo y curso; excluye `tipo_mision='RAPIDA'` |
+- JWT emitido por `JwtUtil` (issuer/audience/expiración configurables). El frontend lo guarda en `localStorage.token`; `AuthContext` lo expone.
+- `JwtAuthenticationFilter` **relee el usuario en cada request** (`id_rol`, `activo`) y mapea `1 → ROLE_ALUMNO`, `2 → ROLE_DOCENTE`, `3 → ROLE_ADMIN`.
+- Público: `/api/usuarios/login`, `/api/usuarios/registro`, `/api/usuarios/imagen/**`, y todos los `OPTIONS`. Todo lo demás exige `Authorization: Bearer <JWT>`.
+- `AuthRateLimiter` limita intentos de login. `ClawbotRateLimiter` hace lo propio con la IA.
+- Alta de docentes: requiere `DAGON_DOCENTE_REGISTRATION_CODE`; los alumnos entran a un grupo con el `codigo_acceso` de `lms_core.grupos_docente`.
+- `apiClient` intercepta `401`: borra el token, emite `dagon_unauthorized` y redirige a `/`.
 
-## 7. MPI (Programación Distribuida y Paralela)
+## 6. Validación de ejercicios (el núcleo del backend)
 
-**Motivación académica:** se añadió un microservicio Python con `mpi4py` que paraleliza el cálculo de métricas del leaderboard (promedios de XP, distribución por rango, top-N) usando `MPI.COMM_WORLD`. Cada rank procesa un subconjunto de usuarios (scatter) y el rank 0 agrega (reduce).
+`POST /api/exercises/{id}/validate` → `EjercicioService.validarConsulta` (~103 KB, el archivo más denso del repo).
 
-**Flujo:**
-```
-Frontend  ──GET /analytics──►  Spring Boot AnalyticsController
-                                        │ HTTP GET (localhost:5001)
-                                        ▼
-                               Flask server.py  ──spawn──►  mpirun -np 4 analytics_mpi.py
-                                        │                         │
-                                        │  (scatter/reduce vía MPI.COMM_WORLD)
-                                        ▼
-                                    JSON con estadísticas paralelas
-```
+1. **`EjercicioValidationRouter.resolverTipo`** decide el `TipoValidacionEjercicio` a partir de `formato`, `configuracion_extra` (`tipo_validacion`, `modo`), `id_modulo` y la forma del SQL maestro: `SELECT | DML | DDL | DIAGRAMA | TRANSACCION | PRACTICA_RAPIDA | TEXTUAL`.
+2. Cada tipo tiene un `Validador*` (`ValidadorSelect`, `ValidadorDml`, `ValidadorDiagrama`, …) que prevalida; después **siempre** corre `SqlExerciseGuard` (33 KB de reglas antitrampa/didácticas).
+3. La query del alumno se ejecuta en el **datasource sandbox** (`SandboxDataSourceConfig`, rol `app_sandbox_user`) con `statement_timeout`, `lock_timeout` e `idle_in_transaction_timeout` propios.
+4. `SandboxSqlPolicy` exige el rol `app_sandbox_user` y fija `SET search_path TO sandbox_usuario_<uuid-del-alumno>` — **cada alumno tiene su propio esquema**; `POST /api/modulos/reset-sandbox` lo regenera.
+5. En SELECT correctos, `SqlPerformanceService` corre `EXPLAIN ANALYZE` y guarda métricas competitivas (`tiempo_ms`, `costo_ejecucion`, `longitud_caracteres`) en `lms_core.intentos`, que alimentan el ranking de eficiencia y SQL Golf.
 
-Archivos clave: `mpi_service/analytics_mpi.py` (lógica MPI pura), `mpi_service/server.py` (HTTP), `backend/.../controller/AnalyticsController.java` (proxy).
+`EjercicioService` orquesta; dos servicios vecinos hacen el trabajo concreto:
+- **`SandboxExecutionService`** — `ejecutarEnSandbox`, `ejecutarEnSandboxConRollback`, timeouts y `extraerNombreTablaDDL`.
+- **`RewardService`** — `registrarIntento` (con las columnas competitivas si la tabla las tiene), `contarAciertosRapidosHoy` y `calcularTiempoMs`. Un intento correcto invalida el caché del leaderboard (§7).
 
-La página `/analytics` en el frontend muestra el resultado con animaciones (Recharts + Framer Motion) e indica rank-by-rank el tiempo gastado por cada nodo MPI — útil para la materia.
+**No mockees la DB en la validación**: el contrato con los scripts maestros se rompe.
 
-## 8. Convenciones y gotchas
+## 7. Endpoints REST (`http://localhost:8080/api`)
 
-- **Idioma:** comentarios, variables de UI y commits en **español**. Respeta el tono existente.
-- **URL del backend:** `DashboardPage.js` **hardcodea** `http://localhost:8080`. `apiService.js` usa `process.env.REACT_APP_BACKEND_URL`. No existe `.env` actualmente. Si agregas llamadas nuevas, **usa `API_BASE` constante**; no repitas el hardcode.
-- **Auth:** el token JWT vive en `AuthContext`; recupera con `useAuth().token` y manda `Authorization: Bearer ${token}`.
-- **Registro docente:** las cuentas docentes públicas requieren `DAGON_DOCENTE_REGISTRATION_CODE`; alumnos de grupo usan `codigo_acceso` de `grupos_docente`.
-- **Calificaciones docentes:** `/docente/calificaciones` no requiere tabla nueva; calcula escala `0-10` desde `lms_core.intentos`, restringe alumnos por grupos del docente y excluye prácticas relámpago (`tipo_mision='RAPIDA'`).
-- **DB:** `ddl-auto=none`. **Nunca** dejes que Hibernate cree tablas — el script maestro (`BaseDeDatosZaca.sql`) es la fuente de verdad. Si necesitas una tabla nueva, añade SQL al script y documéntalo aquí.
-- **Secrets:** `application.properties` tiene password DB y API key Gemini en texto plano. **No** las saques en respuestas ni commits a repos públicos.
-- **CORS:** backend abre solo `http://localhost:3000`. Al cambiar puerto, toca `SecurityConfig.java` y cada `@CrossOrigin`.
-- **Estética:** clases custom `glass-card`, `glass-card-apple`, `neon-glow`, `neon-glow-red`, `cyber-bg`, `grid-pattern`, animaciones `animate-float`, `animate-breathe`, `animate-pulse-glow`. Reúsalas antes de crear nuevas.
-- **Fonts:** Inter (UI) + JetBrains Mono (código). Ya cargadas en `index.css`.
-- **Iconos:** `lucide-react`. Nunca uses emoji salvo que el usuario pida.
-- **Cinemáticas:** los guiones personalizados por módulo viven en `frontend/src/data/moduleCinematics.js`; los sonidos locales CC0 viven en `frontend/public/assets/sounds/` con licencia documentada.
+| Controlador | Rutas |
+|---|---|
+| `UsuarioController` | `POST /usuarios/registro`, `/usuarios/login`, `/usuarios/login-google`, `GET /usuarios/{id}/stats`, `/usuarios/{id}/profile`, `/usuarios/ranking`, `POST|GET /usuarios/{id}/foto`, `GET /usuarios/imagen/{filename}` |
+| `NivelController` | `GET /levels`, `/exercises/{levelId}`, `/practica-rapida`, `POST /exercises/{id}/validate` |
+| `ModuloController` | `GET /modulos`, `/modulos/completados`, `/modulos/cursos-completados`, `/modulos/certificado/{cursoId}`, `POST /modulos/reset-sandbox` |
+| `DashboardController` | `GET /dashboard/resumen` |
+| `LeaderboardController` | `GET /leaderboard`, `/leaderboard/exercises/{exerciseId}` |
+| `ClawbotController` | `POST /clawbot/chat`, `/clawbot/analyze`, `GET /clawbot/metrics` |
+| `ModelingController` | `POST /modeling/ddl-to-erd`, `/modeling/erd-to-ddl` |
+| `AnalyticsController` | `GET /analytics/mpi` (proxy al servicio MPI) |
+| `DocenteController` | `GET /docente/resumen`, `/tablero`, `/alumnos`, `/ejercicios-fallados`, `/abandono-modulos`, `/tiempo-promedio`, `/calificaciones{,/resumen,/ejercicios}`, `/intentos/{alumnoId}`, `/exportar/csv`, `GET|POST /grupos`, `GET|POST /grupos/{idGrupo}/alumnos`, `DELETE /grupos/{idGrupo}/alumnos/{alumnoId}`, `GET|POST /ejercicios`, `POST /evaluaciones`, `GET /evaluaciones/{alumnoId}` |
 
-## 9. Cosas que NO hacer
+`ApiExceptionHandler` normaliza los errores; `ResponseTimingFilter` añade la cabecera `x-dagon-response-time-ms` (el frontend la loguea en dev).
 
-- No mockees la DB en validación de ejercicios (cambiaría el contrato del script maestro).
+`/docente/calificaciones` calcula nota 0-10 desde `lms_core.intentos`, restringe alumnos a los grupos del docente y excluye `tipo_mision='RAPIDA'`.
+
+`LeaderboardService.obtenerRankingGlobal(limite)` va cacheado (`@EnableCaching`, caché `leaderboard`, clave = `limite`). Se invalida al registrar un intento correcto y, como red de seguridad, cada 5 min (`@Scheduled`). **No agregues una sobrecarga que llame a ese método desde dentro de la clase**: la auto-invocación se salta el proxy de Spring y el caché deja de aplicarse.
+
+## 8. Frontend
+
+Rutas (`src/App.js`, todas protegidas salvo `/`, todas cargadas con `React.lazy`):
+`/` (Login) · `/dashboard` · `/exercise/:levelId` · `/leaderboard` · `/profile` · `/streak` · `/graduation/:levelId` · `/postgres` · `/credits` · `/docente`.
+
+- **`services/apiClient.js`** es la única puerta de salida: axios con `baseURL` de `config/api.js`, inyección del `Bearer`, manejo global de 401 y **caché GET en memoria (TTL 15 s) + deduplicación de peticiones en vuelo** (`cachedGet`). Toda mutación invalida la caché; si añades un endpoint que cambia datos fuera de axios, llama `invalidateApiCache()`.
+- `AuthContext` (sesión) y `ThemeContext` (paleta por usuario) envuelven la app.
+- `App.js` calcula un **perfil visual adaptativo** (`prefers-reduced-motion`, `saveData`, núcleos, memoria, viewport) que baja intensidad de fondo y FPS en móvil; respétalo al añadir animaciones.
+- Audio: `lib/SoundEngine.js` + `hooks/useSound.js`; se inicializa con la primera interacción. Sonidos CC0 en `public/assets/sounds/`.
+- Guiones de cinemáticas por módulo: `src/data/moduleCinematics.js`. Contenido de la academia Postgres: `src/data/postgresAcademyContent.js`.
+- Archivos gigantes que dominan el frontend: `pages/ExercisePage.js` (139 KB), `pages/DocentePage.js` (77 KB), `pages/DashboardPage.js` (61 KB), `components/LevelTheory.js` (59 KB). Edítalos con búsquedas puntuales, no leyéndolos enteros.
+
+## 9. Clawbot (IA)
+
+Cadena de `ClawbotService`, **en este orden**. Los dos primeros filtros existen para no gastar tokens:
+
+1. **`ClawbotLocalResolver`** — resuelve sin IA. Para errores: mapea ~22 patrones deterministas de PostgreSQL (sintaxis, relación/columna inexistente, GROUP BY, agregación en WHERE, alias fuera del FROM, tipos, constraints, división por cero, permisos, UNION, subconsulta, timeout) a un diagnóstico socrático que **cita el identificador exacto** del error. Para chat: saludos, agradecimientos, despedidas y preguntas de identidad. Si no hay certeza devuelve vacío y deja pasar a la IA — los fallos de lógica ("tu resultado no coincide") **deben** llegar a la IA, ahí el token sí vale.
+   **Los patrones cubren inglés y español**: la base del proyecto corre con `lc_messages = es_ES.UTF-8` y devuelve `error de sintaxis en o cerca de «X»`, `no existe la relación «X»`, etc., con guillemets. Si agregas un patrón, cubre las dos variantes y verifica el mensaje real con `psql` antes.
+2. **`ClawbotCacheService`** — caché de respuestas ya pagadas. Clave = SHA-256 de (tipo + partes normalizadas); memoria (500 entradas) + tabla `lms_core.clawbot_cache`, que sobrevive a los redeploys. Se purga sola a diario (`@Scheduled`, 30 días sin uso). Si la tabla no existe, la capa persistente se apaga sola y loguea un aviso. El chat solo se cachea cuando llega sin historial.
+3. **Gemini** (`gemini-1.5-flash`, si hay `GEMINI_API_KEY`) → **Groq** (si hay `GROQ_API_KEY`) → **Ollama** local (solo si `dagon.clawbot.ollama.enabled=true`) → respuesta de fallback estática. Toda respuesta de IA que pase el guardrail se guarda en caché.
+   El modelo de Groq sale de `dagon.clawbot.groq.model` (default `openai/gpt-oss-20b`). Groq retira modelos con frecuencia: si el log dice `model_not_found`, lista los vigentes con `GET https://api.groq.com/openai/v1/models` y cambia la propiedad, no el código.
+
+`ClawbotTelemetryService` registra qué fuente respondió y calcula `ahorro` (`respuestas_sin_ia` / `respuestas_con_ia` / `porcentaje_ahorrado`), visible en `GET /clawbot/metrics`. Los prompts viven en `ClawbotPromptCatalog`: al agregar un modo de chat, añade el prompt al catálogo, no lo incrustes en el servicio.
+
+El frontend parsea las etiquetas `ERROR:`, `CONCEPTO:`, `PISTA:`, `AYUDA:`, `CIERRE:` y `MINIEJEMPLO:` en `lib/exerciseHelpers.js`. Si el backend emite una etiqueta nueva, agrégala también ahí o caerá como texto plano.
+
+## 10. MPI (materia de Programación Distribuida y Paralela)
+
+`AnalyticsController` toma el ranking de `LeaderboardService` y lo POSTea a `dagon.mpi.url` (`http://127.0.0.1:5001`). `server.py` (Flask) lanza `mpirun -np N analytics_mpi.py`: scatter del arreglo de usuarios, cálculo por rank, `reduce` (SUM/MAX) y `gather` de tiempos por rank. El resultado se pinta como panel educativo dentro de **`/leaderboard`** (no hay página `/analytics`). No cambies el contrato de `/analytics/mpi` sin tocar `LeaderboardPage.js`. Con el servicio caído, la página debe seguir funcionando.
+
+## 11. Convenciones
+
+- **Español** en comentarios, textos de UI y mensajes de commit.
+- Iconos: `lucide-react`. Sin emojis salvo que el usuario los pida.
+- Fuentes: Inter (UI) + JetBrains Mono (código), cargadas en `index.css`.
+- Clases propias antes de inventar nuevas: `glass-card`, `glass-card-apple`, `neon-glow`, `neon-glow-red`, `cyber-bg`, `grid-pattern`, `animate-float`, `animate-breathe`, `animate-pulse-glow`.
 - No reemplaces Tailwind por CSS modules o styled-components.
-- No agregues `ddl-auto=update` ni migraciones Flyway sin preguntar.
-- No cambies el contrato del endpoint `/analytics/mpi` sin actualizar el frontend.
 
-## 10. Estado actual (abril 2026)
+## 12. Estado (agosto 2026)
 
-- Branch activa: `feature/conexion-niveles`.
-- Último trabajo: integración del script DB, motor de validación nuevo, Clawbot con rachas.
-- WIP: Dagon se está especializando en SQL avanzado. El backend registra métricas competitivas por intento (`tiempo_ms`, `costo_ejecucion`, `longitud_caracteres`), ejecuta `EXPLAIN ANALYZE` para consultas SELECT correctas y expone ranking por ejercicio para eficiencia y SQL Golf. También incluye "Misterios de Dagon" con dataset masivo por usuario, timeouts didácticos e índices requeridos, más un laboratorio de modelado que convierte DDL a ERD y ERD a DDL.
+- Rama activa: `main`. Ramas vivas: `feature/conexion-niveles`, `feature/docente-grupos`, `merge/dilman-into-main`, `origin/dilman`.
+- Despliegue: backend en **Railway**, frontend en **Vercel** (`INSTRUCCIONES_DEPLOY.md`). En local el backend suele apuntar a la DB de Railway; verifica la línea `Database JDBC URL` al arrancar.
+- Última tanda (28 ago 2026): filtro local + caché de Clawbot (§9, migración `2026_08_28_clawbot_cache.sql`) y dos capas de diseño al final de `frontend/src/index.css`. **Los ajustes visuales nuevos van en esas capas, no dispersos por el archivo.**
+  - *Capa de refinamiento*: escala tipográfica fluida (`--fs-*` con `clamp`), elevación (`--elev-1..3`), movimiento (`--ease-out-quint`, `--dur-*`), mapa de campaña en grilla `auto-fit`, columna de lectura acotada a 62rem, alto del editor relativo al viewport.
+  - *Capa de sistema*: radios (`--r-*`), pesos (`--w-*`), grosor de icono por tamaño (`svg.lucide`), comportamiento común de botones/campos y jerarquía en tres niveles de la botonera del panel (se ordena por `data-tour` desde CSS, sin tocar el marcado).
+  - **`App.css` ya no encoge la raíz a 13/14px en móvil.** Lo hacía para que cupiera más contenido, pero menguaba también el texto de lectura (`text-sm` quedaba en 11.4px) y los objetivos táctiles, y pisaba la preferencia del navegador. Ese trabajo lo hacen ahora la escala fluida y los tokens de espaciado. Si vuelves a tocar el tamaño raíz, revisa antes que ninguna ruta desborde en horizontal a 390px.
+  - `DagonMascot`: el SVG lleva `overflow: visible` porque los tentáculos se dibujan hasta `y=103` con un `viewBox` que acaba en 100, y el resplandor no cabe en la caja. El contenedor usa `contain: layout style` — con `contain: paint` el `drop-shadow` se recortaba en un rectángulo de luz.
+- Notas de trabajo dispersas en la raíz: `ESTADO_PROYECTO.md` (bitácora), `REQUERIMIENTOS_TECNICOS.md`, `CAMBIOS_*.md`, `PLAN_MULTI_ACADEMIA.md`, `RESPONSIVE_MOBILE.md`, `docs/futuras-implementaciones.md`. Son históricas y se contradicen entre sí: **este archivo gana**.
 
 ---
 
-**Cuando termines una modificación no trivial, actualiza secciones §3, §6, §7 o §10 según corresponda.** Mantener este archivo al día es lo que hace que la próxima sesión sea barata.
+**Tras un cambio no trivial, actualiza §3, §4, §6, §7 o §12 según corresponda.**

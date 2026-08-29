@@ -86,6 +86,7 @@ const inferCommand = (result, diff) => {
     if (diff.added > 0 || diff.removed > 0) return 'UPDATE';
     return 'DML';
   }
+  if (result?.diagramSummary) return 'DIAGRAMA';
   if (result?.constraintsData?.length > 0) return 'DDL';
   if (result?.mockData?.length > 0) return 'SELECT';
   return result?.success === false ? 'ERROR' : 'RESULTADO';
@@ -108,6 +109,17 @@ const getCommandVisual = (command, result, diff, resultRows, constraintRows) => 
       accent: '#fb7185',
       headline: 'La consulta todavia no cumple el objetivo',
       summary: 'Usa el mensaje de error como pista: ubica si fallo la tabla, una columna, la condicion o la forma del comando.',
+    };
+  }
+
+  if (command === 'DIAGRAMA') {
+    return {
+      ...common,
+      eyebrow: 'Lectura del modelo',
+      icon: Database,
+      accent: '#a78bfa',
+      headline: 'Dagon leyo tu diagrama entidad-relacion',
+      summary: 'Cada entidad, su clave primaria y sus relaciones se comparan con lo que pide el enunciado.',
     };
   }
 
@@ -320,6 +332,99 @@ const DataChangePanel = ({ result, beforeRows, afterRows, command, colors, visua
   );
 };
 
+const DiagramPanel = ({ summary, issues, colors, visual }) => {
+  if (!summary) return null;
+  const isLight = colors.mode === 'light';
+  const nombres = Array.isArray(summary.nombres) ? summary.nombres.filter(Boolean) : [];
+  const pendientes = Array.isArray(issues) ? issues : [];
+
+  return (
+    <div className="p-5 pt-0">
+      <CompactSection
+        title={pendientes.length > 0 ? 'Lo que le falta a tu modelo' : 'Tu modelo entidad-relacion'}
+        subtitle={pendientes.length > 0
+          ? 'Corrigelos todos y vuelve a ejecutar: estan ordenados de lo estructural a lo concreto'
+          : 'Entidades, relaciones y claves que Dagon leyo del lienzo'}
+        colors={colors}
+        accentColor={visual.accent}
+        countLabel={pendientes.length > 0 ? plural(pendientes.length, 'ajuste', 'ajustes') : 'modelo valido'}
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          {[
+            { label: 'Entidades', value: summary.entidades ?? 0 },
+            { label: 'Relaciones', value: summary.relaciones ?? 0 },
+            { label: 'Atributos', value: summary.atributos ?? 0 },
+            { label: 'Claves primarias', value: summary.clavesPrimarias ?? 0 },
+          ].map((metric) => (
+            <div
+              key={metric.label}
+              className="rounded-xl border px-3 py-2"
+              style={{
+                borderColor: `${visual.accent}24`,
+                backgroundColor: isLight ? 'rgba(255,255,255,0.78)' : 'rgba(15,23,42,0.62)',
+              }}
+            >
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: colors.textMuted }}>
+                {metric.label}
+              </p>
+              <p className="text-xl font-display font-black" style={{ color: colors.text }}>{metric.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {nombres.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {nombres.map((nombre, index) => (
+              <span
+                key={`${nombre}-${index}`}
+                className="px-2.5 py-1 rounded-lg border text-[11px] font-mono"
+                style={{
+                  borderColor: nombre ? `${visual.accent}30` : 'rgba(244,63,94,0.4)',
+                  color: nombre ? colors.text : '#fb7185',
+                  backgroundColor: isLight ? 'rgba(255,255,255,0.7)' : 'rgba(2,6,23,0.5)',
+                }}
+              >
+                {nombre || 'sin nombre'}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {pendientes.length > 0 ? (
+          <ul className="space-y-2">
+            {pendientes.map((issue, index) => (
+              <motion.li
+                key={index}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="flex items-start gap-2 rounded-xl border px-3 py-2"
+                style={{
+                  borderColor: 'rgba(244,63,94,0.24)',
+                  backgroundColor: isLight ? 'rgba(255,241,242,0.7)' : 'rgba(76,5,25,0.28)',
+                }}
+              >
+                <XCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                <span className="text-sm font-gameui leading-relaxed" style={{ color: colors.text }}>
+                  {issue}
+                </span>
+              </motion.li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex items-start gap-2 rounded-xl border px-3 py-2"
+            style={{ borderColor: `${visual.accent}30`, backgroundColor: isLight ? 'rgba(236,253,245,0.7)' : 'rgba(6,78,59,0.22)' }}>
+            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: visual.accent }} />
+            <span className="text-sm font-gameui leading-relaxed" style={{ color: colors.text }}>
+              El modelo cumple todas las reglas del ejercicio.
+            </span>
+          </div>
+        )}
+      </CompactSection>
+    </div>
+  );
+};
+
 const ConstraintsPanel = ({ constraints, colors, visual }) => {
   if (!constraints.length) return null;
   const isLight = colors.mode === 'light';
@@ -420,7 +525,16 @@ export const QueryResultShowcase = ({ result, exercise, colors }) => {
   const tableName = result?.targetTable || exercise?.tablaObjetivo || exercise?.targetTable || 'No indicada';
   const metricRows = hasChangePanel ? afterRows : resultRows;
 
-  const metrics = hasChangePanel
+  const diagramSummary = result?.diagramSummary;
+
+  const metrics = diagramSummary
+    ? [
+        { label: 'Entidades', value: diagramSummary.entidades ?? 0, hint: 'Tablas del modelo' },
+        { label: 'Relaciones', value: diagramSummary.relaciones ?? 0, hint: 'Conexiones dibujadas' },
+        { label: 'Atributos', value: diagramSummary.atributos ?? 0, hint: 'Columnas con nombre' },
+        { label: 'Claves', value: diagramSummary.clavesPrimarias ?? 0, hint: 'Entidades con PK' },
+      ]
+    : hasChangePanel
     ? [
         { label: 'Operacion', value: command, hint: 'Comando detectado' },
         { label: 'Tabla', value: tableName, hint: 'Objeto afectado' },
@@ -434,7 +548,13 @@ export const QueryResultShowcase = ({ result, exercise, colors }) => {
         { label: 'Reglas', value: constraintRows.length, hint: 'Constraints' },
       ];
 
-  const evidenceSteps = hasChangePanel
+  const evidenceSteps = diagramSummary
+    ? [
+        { title: 'Modelo', detail: `Dibujaste ${plural(diagramSummary.entidades ?? 0, 'entidad', 'entidades')} y ${plural(diagramSummary.relaciones ?? 0, 'relacion', 'relaciones')}.` },
+        { title: 'Identidad', detail: `${diagramSummary.clavesPrimarias ?? 0} de ${diagramSummary.entidades ?? 0} entidades declaran clave primaria.` },
+        { title: 'Detalle', detail: `El modelo tiene ${plural(diagramSummary.atributos ?? 0, 'atributo con nombre', 'atributos con nombre')}.` },
+      ]
+    : hasChangePanel
     ? [
         { title: 'Intencion', detail: `${command} apunta a ${tableName}.` },
         { title: 'Comparacion', detail: `La tabla paso de ${diff.beforeCount} a ${diff.afterCount} filas visibles.` },
@@ -529,7 +649,7 @@ export const QueryResultShowcase = ({ result, exercise, colors }) => {
 
       <ResultRowsPanel rows={resultRows} result={result} colors={colors} visual={visual} />
 
-      {!hasChangePanel && !hasResultRows && result?.success !== false && (
+      {!hasChangePanel && !hasResultRows && !result?.diagramSummary && result?.success !== false && (
         <div className="p-5 border-t" style={{ borderColor: isLight ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)' }}>
           <div
             className="rounded-2xl border px-4 py-5 flex items-start gap-3"
@@ -550,6 +670,13 @@ export const QueryResultShowcase = ({ result, exercise, colors }) => {
           </div>
         </div>
       )}
+
+      <DiagramPanel
+        summary={result?.diagramSummary}
+        issues={result?.diagramIssues}
+        colors={colors}
+        visual={visual}
+      />
 
       <ConstraintsPanel constraints={constraintRows} colors={colors} visual={visual} />
 

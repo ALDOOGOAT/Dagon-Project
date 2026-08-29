@@ -8,13 +8,13 @@ export const SQL_LEARNING_PATTERNS = [
     correction: 'Revisa primero FROM, luego JOIN y al final la condicion que une las claves.'
   },
   {
-    pattern: /(WHERE|FILT|CONDICI|LIKE|BETWEEN| IN | IS NULL)/,
+    pattern: /(\bWHERE\b|FILT|CONDICI|\bLIKE\b|\bBETWEEN\b|\bIN\b|\bIS NULL\b)/,
     concept: 'Filtros',
     objective: 'Reduce la tabla a las filas que cumplen una condicion concreta.',
     correction: 'Asegura que el campo filtrado exista y que el operador exprese exactamente la condicion.'
   },
   {
-    pattern: /(GROUP BY|COUNT|SUM|AVG|MAX|MIN|HAVING|AGRUP)/,
+    pattern: /(\bGROUP BY\b|\bCOUNT\b|\bSUM\b|\bAVG\b|\bMAX\b|\bMIN\b|\bHAVING\b|AGRUP)/,
     concept: 'Agrupaciones',
     objective: 'Convierte muchas filas en una respuesta resumida usando grupos y funciones.',
     correction: 'Comprueba que toda columna no agregada aparezca en GROUP BY.'
@@ -73,6 +73,10 @@ if (line.match(/^(ERROR|Error|error):/i)) {
       parts.push({ type: 'ayuda', text: line.replace(/^(AYUDA|Ayuda|ayuda):\s*/i, '') });
     } else if (line.match(/^(PISTA|Pista|pista):/i)) {
       parts.push({ type: 'pista', text: line.replace(/^(PISTA|Pista|pista):\s*/i, '') });
+    } else if (line.match(/^(CIERRE|Cierre|cierre):/i)) {
+      parts.push({ type: 'cierre', text: line.replace(/^(CIERRE|Cierre|cierre):\s*/i, '') });
+    } else if (line.match(/^(MINIEJEMPLO|Miniejemplo|miniejemplo):/i)) {
+      parts.push({ type: 'heading', text: 'Miniejemplo' });
     } else if (line.match(/^(sql|SQL)/i)) {
       parts.push({ type: 'code', text: line.replace(/^(sql|SQL)\s*/i, '') });
     } else if (line.startsWith('## ') || line.startsWith('### ')) {
@@ -112,6 +116,12 @@ if (line.match(/^(ERROR|Error|error):/i)) {
       return <div key={i} className="mt-2 mb-2 px-4 py-2 rounded-lg text-sm" style={{ backgroundColor: 'rgba(34,211,238,0.1)', borderLeft: '3px solid #22d3ee', color: isLight ? '#155e75' : '#67e8f9' }}>
         <span className="text-xs uppercase tracking-wider opacity-70">💡 Pista</span>
         <p className="mt-1">{part.text}</p>
+      </div>;
+    }
+    if (part.type === 'cierre') {
+      return <div key={i} className="mt-3 mb-1 px-4 py-3 rounded-xl text-sm" style={{ backgroundColor: 'rgba(168,85,247,0.12)', borderLeft: '3px solid #c084fc', color: isLight ? '#6b21a8' : '#e9d5ff' }}>
+        <span className="text-xs uppercase tracking-wider opacity-70">🤔 Tu turno</span>
+        <p className="mt-1 font-semibold">{part.text}</p>
       </div>;
     }
     if (part.type === 'porque') {
@@ -190,7 +200,15 @@ export const isTransactionExercise = (exercise, levelId) => {
 };
 
 export const inferLearningFocus = (exercise = {}, levelId = '') => {
+  // En un ejercicio de diagrama la query maestra es {"diagrama":"validado"}, asi que ni el
+  // concepto ni el enunciado dan senal util: el foco es siempre el modelado.
+  if (exercise.type === 'diagram') {
+    return SQL_LEARNING_PATTERNS.find((item) => item.concept === 'Modelado de datos');
+  }
+
   const combined = [
+    // El concepto lo deriva el backend de la query maestra: es la senal mas fiable.
+    exercise.concept,
     exercise.title,
     exercise.description,
     exercise.hint,

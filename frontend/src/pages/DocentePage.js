@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -15,9 +15,18 @@ import {
   KeyRound, UserPlus, Clipboard, Save, Layers, ShieldCheck, HelpCircle,
   GraduationCap, ClipboardCheck, ListChecks, Sparkles, Award, Compass
 } from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
+// recharts pesa bastante: se carga solo cuando estas gráficas se muestran.
+const FallosPorEjercicioChart = lazy(() =>
+  import('../components/DocenteCharts').then(m => ({ default: m.FallosPorEjercicioChart }))
+);
+const AbandonoPorModuloChart = lazy(() =>
+  import('../components/DocenteCharts').then(m => ({ default: m.AbandonoPorModuloChart }))
+);
+const ChartFallback = () => (
+  <div className="h-64 sm:h-80 flex items-center justify-center text-sm text-slate-400">
+    Cargando gráfica...
+  </div>
+);
 
 const formatMs = (ms) => {
   if (!ms || ms <= 0) return '0 ms';
@@ -1238,45 +1247,16 @@ export const DocentePage = () => {
               Ejercicios mas fallados
             </h2>
           </div>
-          <div className="h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={data.ejercicios_fallados.slice(0, 10).map(e => ({
-                  name: e.titulo?.length > 25 ? e.titulo.slice(0, 22) + '...' : e.titulo,
-                  tasaError: e.tasaError,
-                  intentos: e.intentosTotales
-                }))}
-                layout="vertical"
-                margin={{ left: 10, right: 20, top: 5, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: mutedColor, fontSize: 11 }} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  width={160}
-                  tick={{ fill: mutedColor, fontSize: 11 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isLight ? '#fff' : '#1e293b',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 12,
-                    color: headingColor
-                  }}
-                  formatter={(val, name) => [
-                    name === 'tasaError' ? `${val}%` : val,
-                    name === 'tasaError' ? 'Tasa error' : 'Intentos'
-                  ]}
-                />
-                <Bar dataKey="tasaError" radius={[0, 6, 6, 0]}>
-                  {data.ejercicios_fallados.slice(0, 10).map((_, i) => (
-                    <Cell key={i} fill={chartColors[i % chartColors.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <Suspense fallback={<ChartFallback />}>
+            <FallosPorEjercicioChart
+              data={data}
+              borderColor={borderColor}
+              mutedColor={mutedColor}
+              headingColor={headingColor}
+              isLight={isLight}
+              chartColors={chartColors}
+            />
+          </Suspense>
         </motion.div>
       )}
 
@@ -1295,43 +1275,15 @@ export const DocentePage = () => {
               Abandono por modulo
             </h2>
           </div>
-          <div className="h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={data.abandono_modulos.map(m => ({
-                  name: m.titulo?.length > 20 ? m.titulo.slice(0, 17) + '...' : m.titulo,
-                  abandono: m.tasaAbandono,
-                  iniciaron: m.alumnosQueIniciaron,
-                  completaron: m.alumnosQueCompletaron
-                }))}
-                margin={{ left: 5, right: 20, top: 5, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={borderColor} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fill: mutedColor, fontSize: 10 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={70}
-                />
-                <YAxis domain={[0, 100]} tick={{ fill: mutedColor, fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: isLight ? '#fff' : '#1e293b',
-                    border: `1px solid ${borderColor}`,
-                    borderRadius: 12,
-                    color: headingColor
-                  }}
-                  formatter={(val, name) => {
-                    if (name === 'abandono') return [`${val}%`, 'Tasa abandono'];
-                    if (name === 'iniciaron') return [val, 'Iniciaron'];
-                    return [val, 'Completaron'];
-                  }}
-                />
-                <Bar dataKey="abandono" fill={isLight ? '#d97706' : '#fbbf24'} radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <Suspense fallback={<ChartFallback />}>
+            <AbandonoPorModuloChart
+              data={data}
+              borderColor={borderColor}
+              mutedColor={mutedColor}
+              headingColor={headingColor}
+              isLight={isLight}
+            />
+          </Suspense>
         </motion.div>
       )}
 

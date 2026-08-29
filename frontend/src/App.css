@@ -33,19 +33,15 @@
     }
 }
 
+/* Antes se encogia la raiz a 14px (<=640) y 13px (<=480) para que cupiera mas
+   contenido. El efecto colateral era que TODO menguaba a la vez: `text-sm`
+   quedaba en 11.4px y los objetivos tactiles por debajo del minimo comodo.
+   Ademas pisaba el tamano de letra que el usuario configura en su navegador.
+   Hoy ese trabajo lo hacen la escala tipografica fluida y los tokens de
+   espaciado de index.css, que encogen los titulos sin tocar el texto de lectura. */
 @media (max-width: 640px) {
-    html {
-        font-size: 14px;
-    }
-    
     .container {
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
-    }
-}
-
-@media (max-width: 480px) {
-    html {
-        font-size: 13px;
     }
 }

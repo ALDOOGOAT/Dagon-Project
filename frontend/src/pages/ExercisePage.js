@@ -9,18 +9,20 @@ import { useTheme } from '../contexts/ThemeContext';
 import { LevelTheory, getSubTopicKey } from '../components/LevelTheory';
 import { MerDiagramBuilder, generateSqlFromDiagramData } from '../components/MerDiagramBuilder';
 import { ModuleCinematic } from '../components/ModuleCinematic';
+import { CodeEditorPanel } from '../components/CodeEditorPanel';
 import { sounds } from '../lib/SoundEngine';
 import {
   ArrowLeft, CheckCircle, XCircle, Database,
   Play, Loader, GripHorizontal, Bot, Zap, Flame, Lightbulb, ChevronLeft, ChevronRight, RotateCcw, Film, TrendingUp,
-  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, BadgeCheck, Copy
+  AlertTriangle, Sparkles, Layers, Code2, ListChecks, MousePointer2, Eraser, Trophy, Volume2, BadgeCheck, Copy,
+  Clock, Gauge, Medal, Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import Editor from '@monaco-editor/react';
 import apiClient, { cachedGet } from '../services/apiClient';
 import { formatAIMessage, inferLearningFocus, buildLocalClawbotFallback, buildLearningFeedback } from '../lib/exerciseHelpers';
 import { LEARNING_CONCEPTS, inferConceptKey, recordLearningAttempt } from '../lib/learningProgress';
+import { useClawbotSupport } from '../hooks/useClawbotSupport';
 import { QueryResultShowcase } from '../components/QueryResultShowcase';
 
 const XPPop = ({ amount }) => (
@@ -437,6 +439,11 @@ const runTokenActionFromKeyboard = (event, action) => {
   action();
 };
 
+// Autoguardado: una clave de localStorage por alumno y ejercicio. El id del alumno es
+// obligatorio en la clave: sin el, en un equipo compartido el siguiente alumno abre el
+// ejercicio con el SQL del anterior (logout() no limpia estas claves).
+const getCodeBackupKey = (usuarioId, exerciseId) => `dagon_code_backup_${usuarioId}_${exerciseId}`;
+
 const buildExerciseSpeech = (exerciseToRead, exerciseIndex) => {
   if (!exerciseToRead) return '';
   const title = exerciseToRead.title ? `Misión: ${exerciseToRead.title}.` : `Misión ${exerciseIndex + 1}.`;
@@ -457,6 +464,7 @@ export const ExercisePage = () => {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user, token, updateUserXP, updateUserStreak } = useAuth();
+  const usuarioId = user?.idUsuario || null;
   const { colors } = useTheme();
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
@@ -497,9 +505,14 @@ export const ExercisePage = () => {
   const [exerciseLeaderboard, setExerciseLeaderboard] = useState(null);
   const [exerciseLeaderboardLoading, setExerciseLeaderboardLoading] = useState(false);
 
-  const [clawbotThinking, setClawbotThinking] = useState(false);
-  const [clawbotMessage, setClawbotMessage] = useState(null);
-  const [intentosFallidos, setIntentosFallidos] = useState(0);
+  const {
+    clawbotThinking,
+    clawbotMessage,
+    setClawbotMessage,
+    intentosFallidos,
+    setIntentosFallidos,
+    invokeClawbot,
+  } = useClawbotSupport(exercises, currentExerciseIndex);
   const [progressiveHint, setProgressiveHint] = useState(null);
   const [reinforcementPlan, setReinforcementPlan] = useState(null);
 
@@ -522,7 +535,6 @@ export const ExercisePage = () => {
   const wordBankScrollRef = useRef(null);
   const resultPanelRef = useRef(null);
   const spokenExerciseRef = useRef(null);
-  const lastTypingSoundRef = useRef(0);
 
   const managedTimeoutsRef = useRef(new Set());
 
@@ -635,7 +647,7 @@ export const ExercisePage = () => {
     return () => {
       isActive = false;
     };
-  }, [levelId, token]);
+  }, [levelId, token, setClawbotMessage, setIntentosFallidos]);
 
   useEffect(() => {
     if (exercises.length > 0) {
@@ -663,7 +675,15 @@ export const ExercisePage = () => {
         setAvailableWords(buildWordObjects(exercise.wordBank || [], exercise.id || currentExerciseIndex));
         setDroppedWords([]);
       } else {
-        setEditorCode(exercise.starterCode || '');
+        let backupCode = null;
+        try {
+          if (usuarioId) {
+            backupCode = localStorage.getItem(getCodeBackupKey(usuarioId, exercise.id));
+          }
+        } catch (e) {
+          // localStorage puede fallar en modo privado; seguimos sin autoguardado.
+        }
+        setEditorCode(backupCode ?? (exercise.starterCode || ''));
       }
       setExecutionResult(null);
       setClawbotMessage(null);
@@ -672,7 +692,28 @@ export const ExercisePage = () => {
       setReinforcementPlan(null);
       fetchExerciseLeaderboard(exercise.id);
     }
-  }, [currentExerciseIndex, exercises, levelId, shownSubTopics, fetchExerciseLeaderboard]);
+  }, [currentExerciseIndex, exercises, levelId, shownSubTopics, fetchExerciseLeaderboard, setClawbotMessage, usuarioId]);
+
+  // Autoguardado del editor (debounce 1s) para no perder el código ante un refresh accidental.
+  useEffect(() => {
+    const exercise = exercises[currentExerciseIndex];
+    if (!exercise || exercise.type === 'drag_drop' || !usuarioId) return;
+
+    const timeoutId = setTimeout(() => {
+      try {
+        const key = getCodeBackupKey(usuarioId, exercise.id);
+        if (editorCode) {
+          localStorage.setItem(key, editorCode);
+        } else {
+          localStorage.removeItem(key);
+        }
+      } catch (e) {
+        // localStorage puede fallar en modo privado; el autoguardado se omite.
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [editorCode, exercises, currentExerciseIndex, usuarioId]);
 
   const armDragClickGuard = () => {
     dragClickGuardRef.current = true;
@@ -782,18 +823,7 @@ export const ExercisePage = () => {
     sounds.playStep?.();
   };
 
-  const invokeClawbot = async (errorData) => {
-    setClawbotThinking(true);
-    try {
-      const response = await apiClient.post('/api/clawbot/analyze', errorData);
-      const data = response.data;
-      setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
-    } catch {
-      setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
-    } finally {
-      setClawbotThinking(false);
-    }
-  };
+  // invokeClawbot ahora viene de useClawbotSupport (arriba).
 
   const registerGamifiedAttempt = ({ exercise, success, attempts }) => {
     const focus = inferLearningFocus(exercise, levelId);
@@ -1030,7 +1060,7 @@ export const ExercisePage = () => {
     const confirmed = window.confirm(
       '🔄 ¿RESTABLECER BASE DE DATOS?\n\n' +
       'Esto hará que TODOS tus cambios se pierdan:\n' +
-      '• Los datos que hayas insertsdo\n' +
+      '• Los datos que hayas insertado\n' +
       '• Las tablas que hayas creado\n' +
       '• Los registros modificados o borrados\n\n' +
       '⚠️ IMPORTANTE: Esta acción no se puede deshacer.\n\n' +
@@ -1074,7 +1104,7 @@ export const ExercisePage = () => {
     setExecutionResult(null);
     setClawbotMessage(null);
     setCurrentExerciseIndex(index);
-    setEditorCode(targetExercise.starterCode || ''); 
+    // El contenido del editor lo fija el efecto de carga (borrador autoguardado o starterCode).
     setShowHint(false);
   };
 
@@ -1498,7 +1528,7 @@ export const ExercisePage = () => {
                     aria-label={`Ir a la misión ${i + 1}`}
                     aria-current={isCurrent ? 'step' : undefined}
                     className={`
-                      w-9 h-9 rounded-xl flex items-center justify-center font-display text-[10px] font-black transition-all duration-300 border
+                      w-9 h-9 shrink-0 rounded-xl flex items-center justify-center font-display text-[10px] font-black transition-all duration-300 border
                       ${isCurrent ? 'bg-gradient-to-br from-cyan-400 to-blue-600 text-white scale-110 shadow-[0_0_24px_rgba(34,211,238,0.62)] border-cyan-200 z-10' :
                         isCompleted ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/50 hover:bg-emerald-500 hover:text-white' :
                         'bg-slate-800/80 text-slate-300 border-slate-600 hover:bg-slate-700 hover:border-cyan-400/60 hover:text-white'}
@@ -2355,7 +2385,7 @@ export const ExercisePage = () => {
                         initial="hidden"
                         animate="visible"
                         transition={{ duration: 0.28, ease: 'easeOut' }}
-                        className="rounded-3xl border p-4 sm:p-5 flex flex-col"
+                        className="rounded-3xl border p-4 sm:p-5 flex min-w-0 flex-col"
                         style={{
                           borderColor: isLight ? 'rgba(16,185,129,0.24)' : 'rgba(16,185,129,0.18)',
                           backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(2,6,23,0.36)'
@@ -2470,7 +2500,7 @@ export const ExercisePage = () => {
                         initial="hidden"
                         animate="visible"
                         transition={{ delay: 0.06, duration: 0.28, ease: 'easeOut' }}
-                        className="rounded-3xl border p-4 sm:p-5 flex flex-col"
+                        className="rounded-3xl border p-4 sm:p-5 flex min-w-0 flex-col"
                         style={{
                           borderColor: isLight ? 'rgba(14,165,233,0.24)' : 'rgba(34,211,238,0.16)',
                           backgroundColor: isLight ? 'rgba(255,255,255,0.66)' : 'rgba(15,23,42,0.34)'
@@ -2533,30 +2563,7 @@ export const ExercisePage = () => {
                   </DragDropContext>
                 ) : (
                   <>
-                    <div className="exercise-workbench-frame h-[420px] sm:h-[500px] xl:h-[640px] rounded-2xl overflow-hidden border border-white/10">
-                      <Editor
-                        height="100%"
-                        defaultLanguage="sql"
-                        theme="vs-dark"
-                        value={editorCode}
-                        onChange={(value) => {
-                          setEditorCode(value || '');
-                          const now = Date.now();
-                          if (now - lastTypingSoundRef.current > 900) {
-                            lastTypingSoundRef.current = now;
-                            sounds.playClockTicking?.();
-                          }
-                        }}
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 16,
-                          lineNumbers: 'on',
-                          padding: { top: 16 },
-                          scrollBeyondLastLine: false,
-                          wordWrap: 'on',
-                        }}
-                      />
-                    </div>
+                    <CodeEditorPanel value={editorCode} onChange={setEditorCode} />
                     {isModelingLab && (
                       <ModelingLabPanel
                         sql={editorCode}

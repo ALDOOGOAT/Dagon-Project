@@ -555,13 +555,16 @@ h1, h2, h3, h4, h5, h6 {
 .dagon-mascot-shell {
     transform-origin: center bottom;
     backface-visibility: hidden;
-    contain: paint;
+    contain: layout style;
     will-change: transform;
 }
 
 .dagon-mascot-svg {
     transform-origin: center 82%;
     backface-visibility: hidden;
+    /* Los tentaculos llegan a y=103 y el viewBox termina en 100: sin esto se ven cortados
+       en plano. El resplandor tampoco cabia dentro de la caja. */
+    overflow: visible;
 }
 
 .animate-dagon-idle { animation: dagon-idle 5.2s ease-in-out infinite; }
@@ -3709,5 +3712,505 @@ html[data-motion-safety='reduced'] .dagon-quest-button--current .dagon-quest-cor
     .book-quote p {
         font-size: 0.86rem;
         line-height: 1.62;
+    }
+}
+
+/* ============================================================================
+   CAPA DE REFINAMIENTO VISUAL — agosto 2026
+   Va al final a proposito: ajusta la escala tipografica, el ritmo espacial y
+   los pocos layouts que se rompian, sin pelear especificidad con lo anterior.
+   Todo se apoya en las variables de paleta, asi que funciona en los 6 temas.
+   ============================================================================ */
+
+:root {
+    /* Escala tipografica fluida: un solo salto entre 390px y 1440px. */
+    --fs-micro: clamp(0.625rem, 0.60rem + 0.12vw, 0.6875rem);
+    --fs-xs:    clamp(0.75rem,  0.72rem + 0.14vw, 0.8125rem);
+    --fs-sm:    clamp(0.8125rem, 0.78rem + 0.16vw, 0.875rem);
+    --fs-base:  clamp(0.9375rem, 0.90rem + 0.20vw, 1rem);
+    --fs-lg:    clamp(1.0625rem, 1.00rem + 0.30vw, 1.1875rem);
+    --fs-xl:    clamp(1.25rem,  1.10rem + 0.60vw, 1.5rem);
+    --fs-2xl:   clamp(1.5rem,   1.25rem + 1.10vw, 2rem);
+    --fs-3xl:   clamp(1.75rem,  1.35rem + 1.90vw, 2.625rem);
+    --fs-4xl:   clamp(2.125rem, 1.45rem + 3.00vw, 3.5rem);
+
+    /* Elevacion: tres alturas y ninguna mas. */
+    --elev-1: 0 1px 2px rgba(2, 6, 23, 0.28), 0 2px 8px -4px rgba(2, 6, 23, 0.34);
+    --elev-2: 0 2px 6px rgba(2, 6, 23, 0.30), 0 14px 32px -20px rgba(2, 6, 23, 0.58);
+    --elev-3: 0 4px 12px rgba(2, 6, 23, 0.32), 0 30px 64px -34px rgba(2, 6, 23, 0.68);
+
+    /* Movimiento: una curva de salida y tres duraciones. */
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --dur-fast: 140ms;
+    --dur-base: 220ms;
+    --dur-slow: 420ms;
+
+    /* Medida de lectura comoda. */
+    --measure: 68ch;
+}
+
+/* --- Legibilidad -----------------------------------------------------------
+   `overflow-wrap: anywhere` partia palabras a la mitad en cualquier tarjeta
+   estrecha ("information_schem / a: Consultar..."). `break-word` solo parte
+   cuando la palabra de verdad no cabe. */
+:where(p, li, h1, h2, h3, h4, h5, h6, button, a, span) {
+    overflow-wrap: break-word;
+}
+
+/* El SQL y los identificadores si pueden partirse donde sea: son largos y
+   no tienen espacios donde cortar. */
+:where(code, pre, kbd, samp, .font-mono) {
+    overflow-wrap: anywhere;
+}
+
+h1 { font-size: var(--fs-3xl); line-height: 1.06; letter-spacing: -0.022em; }
+h2 { font-size: var(--fs-2xl); line-height: 1.12; letter-spacing: -0.018em; }
+h3 { font-size: var(--fs-xl);  line-height: 1.18; letter-spacing: -0.012em; }
+h4 { font-size: var(--fs-lg);  line-height: 1.24; letter-spacing: -0.008em; }
+
+/* Los parrafos sueltos no deberian cruzar toda una pantalla de 1440px. */
+.dagon-page-shell :where(p:not([class*="text-"])) {
+    max-width: var(--measure);
+}
+
+/* Las micro-etiquetas en mayusculas estaban en 9, 10, 11 y 12px con cuatro
+   tracking distintos. Una sola voz para todas. */
+:where(.dagon-eyebrow, .arcane-kicker) {
+    font-size: var(--fs-micro);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* --- Mapa de campaña -------------------------------------------------------
+   Antes: tres columnas con posiciones fijas en zigzag (col-start 1/2/3/2/1/2).
+   La grilla quedaba con huecos, las tarjetas con alturas distintas y las
+   flechas conectoras apuntaban a celdas vacias. Ahora fluye en orden de
+   lectura y se reacomoda sola: 1 columna en telefono, 2 en tablet, 3 o 4 en
+   escritorio. La secuencia la sigue contando el numero de nodo. */
+.dagon-quest-map {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14.5rem), 1fr)) !important;
+    grid-auto-rows: 1fr;
+    align-items: stretch;
+    column-gap: clamp(0.85rem, 1.6vw, 1.35rem) !important;
+    row-gap: clamp(0.85rem, 1.6vw, 1.35rem) !important;
+}
+
+/* Los rieles verticales decorativos estaban dibujados al 32% y 66% del ancho,
+   justo donde ya no hay columnas. */
+.dagon-quest-map::after {
+    content: none;
+}
+
+.dagon-quest-map::before {
+    opacity: 0.34;
+}
+
+/* Fuera los conectores huerfanos: en una grilla que envuelve, "el siguiente"
+   no siempre esta debajo. */
+.dagon-quest-node::before,
+.dagon-quest-node::after {
+    content: none !important;
+}
+
+.dagon-quest-node {
+    display: flex;
+    min-height: 0 !important;
+}
+
+.dagon-quest-button {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    transition: transform var(--dur-base) var(--ease-out-quint),
+                box-shadow var(--dur-base) var(--ease-out-quint),
+                border-color var(--dur-base) var(--ease-out-quint);
+}
+
+.dagon-quest-button > .relative {
+    flex: 1;
+}
+
+/* La descripcion se recorta por lineas completas, no a media palabra. */
+.dagon-quest-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: var(--fs-xs) !important;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+}
+
+.dagon-flow-cap {
+    font-size: var(--fs-micro);
+}
+
+/* La mision actual es lo unico que brilla en el mapa: si todo brilla, nada
+   destaca y el alumno no sabe donde continuar. */
+.dagon-quest-button--current {
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--quest-accent, var(--color-primary)) 62%, transparent 38%),
+        0 18px 48px -24px var(--quest-glow, rgba(16, 185, 129, 0.5));
+}
+
+.dagon-quest-button--mastered,
+.dagon-quest-button--open {
+    box-shadow: var(--elev-1);
+}
+
+.dagon-quest-button--locked {
+    box-shadow: none;
+    opacity: 0.62;
+}
+
+.dagon-quest-button--open:hover,
+.dagon-quest-button--mastered:hover {
+    box-shadow: var(--elev-2);
+}
+
+/* --- Cabecera del panel ----------------------------------------------------
+   Siete botones del mismo peso visual leian como barra de depuracion. Se
+   dejan en voz baja y la practica rapida, que es la accion principal, es la
+   unica con relleno solido. */
+.dashboard-control-dock .a11y-top-action {
+    font-size: var(--fs-xs);
+}
+
+.dashboard-hud-zone--actions {
+    align-content: start;
+}
+
+/* --- Tarjetas de estadistica ----------------------------------------------- */
+.dashboard-stat-card {
+    min-height: 4.5rem;
+}
+
+/* --- Superficie ------------------------------------------------------------
+   Sombras unificadas: antes cada tarjeta traia la suya. */
+:where(.glass-card, .glass-card-apple) {
+    box-shadow: var(--elev-2);
+}
+
+/* --- Objetivos tactiles ----------------------------------------------------
+   En pantalla tactil todo lo pulsable llega a 44px, el minimo comodo. */
+@media (pointer: coarse) {
+    :where(button, a[href], [role="button"], summary, select):not(.dagon-quest-button):not([class*="w-full"]) {
+        min-height: 44px;
+    }
+
+    .dagon-volume-slider {
+        height: 28px;
+    }
+}
+
+/* --- Telefono --------------------------------------------------------------
+   El mapa medía cerca de 2000px de alto en 390px de ancho. Tarjetas mas
+   compactas y una descripcion de una linea lo dejan recorrible. */
+@media (max-width: 640px) {
+    .dagon-quest-node {
+        min-height: 0 !important;
+    }
+
+    .dagon-quest-description {
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+
+    .dagon-page-shell :where(p:not([class*="text-"])) {
+        max-width: none;
+    }
+
+    /* Los selectores de senda se salian del ancho de la pantalla. */
+    .dashboard-course-card {
+        padding: 1rem !important;
+    }
+
+    .dashboard-course-card h3 {
+        font-size: var(--fs-lg);
+    }
+}
+
+/* --- Tablet ---------------------------------------------------------------- */
+@media (min-width: 641px) and (max-width: 1023px) {
+    .dagon-quest-description {
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+    }
+}
+
+/* --- Movimiento reducido ---------------------------------------------------
+   Se respeta la preferencia del sistema en toda la capa nueva. */
+@media (prefers-reduced-motion: reduce) {
+    .dagon-quest-button {
+        transition: none;
+    }
+}
+
+/* La columna lateral es corta y el mapa es largo: sin sticky quedaban ~600px
+   de vacio a la derecha en escritorio. */
+@media (min-width: 1280px) {
+    .dashboard-aside {
+        position: sticky;
+        top: clamp(1rem, 2vh, 1.75rem);
+        align-self: start;
+        max-height: calc(100dvh - 2.5rem);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        overscroll-behavior: contain;
+    }
+}
+
+/* Con solo dos sendas, un carrusel horizontal escondia la segunda opcion
+   detras de un gesto que nadie descubre. Se apilan. */
+@media (max-width: 767px) {
+    .dashboard-course-selector {
+        display: grid !important;
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+        overflow-x: visible;
+    }
+
+    .dashboard-course-card {
+        min-width: 0;
+    }
+}
+
+/* --- Columna de lectura ----------------------------------------------------
+   El shell de teoria media 1440px: las lineas cruzaban toda la pantalla y el
+   bloque de codigo flotaba solo en la mitad derecha. Una medida de lectura de
+   verdad (~62rem) centra el contenido y lo vuelve legible en cualquier ancho. */
+@media (min-width: 1024px) {
+    .dagon-page-shell--reading {
+        width: min(100%, 62rem);
+        margin-inline: auto;
+    }
+}
+
+/* Dentro de esa columna el codigo ocupa el ancho completo, no un bloque
+   suelto flotando al centro. */
+.dagon-page-shell--reading pre,
+.dagon-page-shell--reading .font-mono {
+    max-width: 100%;
+}
+
+/* --- Mesa de trabajo -------------------------------------------------------
+   El editor tenia 640px fijos en escritorio: en un portatil de 900px el
+   resultado de la consulta caia siempre bajo el pliegue. Ahora se mide contra
+   la ventana, con suelo y techo. */
+.exercise-workbench-frame {
+    height: clamp(17rem, 46vh, 34rem) !important;
+}
+
+@media (max-width: 640px) {
+    .exercise-workbench-frame {
+        height: clamp(15rem, 42vh, 22rem) !important;
+    }
+}
+
+/* ============================================================================
+   SISTEMA DE INTERFAZ — agosto 2026 (segunda pasada)
+   El problema no era la falta de estilo, era el exceso: cinco formas distintas
+   de dibujar un boton, cuatro tamanos de icono sin regla y todo el texto en el
+   mismo peso. Aqui se fija UNA escala para cada cosa. Nada de esto cambia el
+   marcado: se apoya en los elementos y en las clases que ya existen.
+   ============================================================================ */
+
+:root {
+    /* Radios: cuatro pasos, no doce. */
+    --r-xs: 0.5rem;
+    --r-sm: 0.75rem;
+    --r-md: 0.875rem;
+    --r-lg: 1.25rem;
+    --r-xl: 1.5rem;
+
+    /* Pesos: el contraste de peso es lo que crea jerarquia. Antes todo era 800. */
+    --w-body: 450;
+    --w-medium: 550;
+    --w-label: 650;
+    --w-heading: 750;
+    --w-display: 850;
+}
+
+/* --- Tipografía: contraste de peso ----------------------------------------
+   Con todo en 800 el ojo no encuentra donde posarse. El titulo pesa, el
+   subtitulo respira, la etiqueta se sostiene sin gritar. */
+h1 { font-weight: var(--w-display); }
+h2 { font-weight: var(--w-display); }
+h3 { font-weight: var(--w-heading); letter-spacing: -0.01em; }
+h4, h5, h6 { font-weight: var(--w-heading); letter-spacing: -0.005em; }
+
+body {
+    font-weight: var(--w-body);
+}
+
+/* Los numeros de dato (XP, rachas, posiciones) son el unico sitio donde el peso
+   maximo esta justificado: son la informacion, no el envoltorio. Y en cifras
+   tabulares para que no bailen al actualizarse. */
+:where(.font-display):where(.text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl) {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+/* --- Iconos ----------------------------------------------------------------
+   Sobre fondo oscuro un trazo fino se desvanece y uno grueso se empasta. El
+   grosor baja a medida que el icono crece para que el peso optico sea el mismo. */
+svg.lucide {
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    flex: none;
+}
+
+svg.lucide:where(.w-3, .w-3\.5, .h-3, .h-3\.5) { stroke-width: 2.4; }
+svg.lucide:where(.w-4, .h-4)                   { stroke-width: 2.15; }
+svg.lucide:where(.w-5, .h-5)                   { stroke-width: 2; }
+svg.lucide:where(.w-6, .h-6)                   { stroke-width: 1.85; }
+svg.lucide:where(.w-8, .w-10, .w-12, .w-16, .h-8, .h-10, .h-12, .h-16) { stroke-width: 1.6; }
+
+/* --- Botones ---------------------------------------------------------------
+   No se les impone color ni tamano (cada uno tiene su papel), si el
+   comportamiento: misma curva, misma respuesta al pulsar, mismo estado
+   deshabilitado. Es lo que hace que la app se sienta de una sola pieza. */
+button,
+[role="button"] {
+    transition:
+        transform var(--dur-fast) var(--ease-out-quint),
+        box-shadow var(--dur-base) var(--ease-out-quint),
+        background-color var(--dur-base) var(--ease-out-quint),
+        border-color var(--dur-base) var(--ease-out-quint),
+        opacity var(--dur-base) var(--ease-out-quint);
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+    transform: translateY(1px) scale(0.985);
+}
+
+button:disabled,
+button[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: saturate(0.6);
+}
+
+button:disabled:active {
+    transform: none;
+}
+
+/* El texto de un boton no se parte nunca a mitad de palabra. */
+button {
+    overflow-wrap: normal;
+}
+
+/* --- Campos de formulario --------------------------------------------------
+   Mismo radio y misma altura que los botones que van a su lado. */
+:where(input[type="text"], input[type="email"], input[type="password"],
+       input[type="search"], input[type="number"], select, textarea) {
+    transition:
+        border-color var(--dur-base) var(--ease-out-quint),
+        box-shadow var(--dur-base) var(--ease-out-quint),
+        background-color var(--dur-base) var(--ease-out-quint);
+}
+
+:where(input, select, textarea)::placeholder {
+    color: color-mix(in srgb, var(--color-text-muted) 78%, transparent 22%);
+    font-weight: var(--w-body);
+}
+
+/* --- Etiquetas en mayúsculas -----------------------------------------------
+   Estaban por toda la app en 9, 10, 11 y 12px con cuatro trackings distintos.
+   Debajo de 11px las mayusculas dejan de leerse: se les pone un suelo. */
+:where([class*="uppercase"]):where([class*="text-[9px]"], [class*="text-[10px]"], .text-\[9px\], .text-\[10px\]) {
+    font-size: 0.6875rem !important;
+    letter-spacing: 0.14em !important;
+    font-weight: var(--w-label) !important;
+}
+
+/* --- Jerarquía de la botonera del panel ------------------------------------
+   Eran seis botones del mismo peso: practicar pesaba lo mismo que cerrar
+   sesion. Se ordenan en tres niveles sin tocar el marcado, usando los
+   `data-tour` que ya existian.
+
+     [ Racha  ] [ Perfil ]     navegar
+     [  Práctica rápida  ]     la accion que importa
+     [Tutorial][Sonido][Salir] utilidades, en voz baja                        */
+.dashboard-control-dock {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.dashboard-control-dock > * {
+    grid-column: span 3;
+}
+
+.dashboard-control-dock [data-tour="streaks"]       { order: 1; grid-column: span 3; }
+.dashboard-control-dock [data-tour="profile"]       { order: 2; grid-column: span 3; }
+.dashboard-control-dock [data-tour="quick-practice"]{ order: 3; grid-column: span 6; }
+.dashboard-control-dock [aria-label="Abrir panel docente"] { order: 4; grid-column: span 6; }
+.dashboard-control-dock [data-tour="tour-button"]   { order: 5; grid-column: span 2; }
+.dashboard-control-dock [data-tour="sound-toggle"]  { order: 6; grid-column: span 2; }
+.dashboard-control-dock [aria-label="Cerrar sesión"]{ order: 7; grid-column: span 2; }
+
+/* La practica rapida es la unica que se comporta como accion principal. */
+.dashboard-control-dock [data-tour="quick-practice"] {
+    min-height: 2.9rem;
+    font-size: var(--fs-sm);
+    letter-spacing: 0.01em;
+}
+
+/* Las utilidades ceden peso: mas pequenas, sin brillo y sin competir. */
+.dashboard-control-dock :where([data-tour="tour-button"], [data-tour="sound-toggle"], [aria-label="Cerrar sesión"]) {
+    min-height: 2.25rem !important;
+    padding-inline: 0.5rem !important;
+    font-size: var(--fs-micro) !important;
+    font-weight: var(--w-label) !important;
+    box-shadow: none !important;
+    opacity: 0.82;
+}
+
+.dashboard-control-dock :where([data-tour="tour-button"], [data-tour="sound-toggle"], [aria-label="Cerrar sesión"]):hover {
+    opacity: 1;
+}
+
+/* A ese tamano el icono con margen derecho ya no cabe con la etiqueta. */
+.dashboard-control-dock :where([data-tour="tour-button"], [data-tour="sound-toggle"], [aria-label="Cerrar sesión"]) svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-right: 0.3rem;
+}
+
+/* En telefono las tres utilidades siguen cabiendo en una fila. */
+@media (max-width: 420px) {
+    .dashboard-control-dock :where([data-tour="tour-button"], [data-tour="sound-toggle"], [aria-label="Cerrar sesión"]) {
+        padding-inline: 0.25rem !important;
+    }
+}
+
+/* El nombre de la paleta se envuelve en dos lineas en vez de cortarse; la altura
+   fija mantiene la reticula pareja. */
+.profile-palette-chip__name {
+    min-height: 2.1em;
+    line-height: 1.05;
+    letter-spacing: 0.09em !important;
+    text-wrap: balance;
+}
+
+/* En pantalla tactil el paso de mision crece a un objetivo comodo; su carril ya
+   se desplaza en horizontal, asi que no estorba a nada. */
+@media (pointer: coarse) {
+    [aria-label^="Ir a la misión"] {
+        width: 2.5rem !important;
+        height: 2.5rem !important;
+    }
+}
+
+/* Con el texto ya a tamano legible, el saludo se partia en dos lineas mientras
+   sobraba ancho a los lados. Se le da a la identidad la holgura que necesita y
+   la botonera se ajusta a su contenido, que ahora es compacto. */
+@media (min-width: 1280px) {
+    .dashboard-hud-grid {
+        grid-template-columns: minmax(320px, 1.15fr) minmax(380px, 1fr) minmax(290px, 0.78fr);
     }
 }

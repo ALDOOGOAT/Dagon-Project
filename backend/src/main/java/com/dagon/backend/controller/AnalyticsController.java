@@ -41,7 +41,7 @@ public class AnalyticsController {
 
     @GetMapping("/mpi")
     public ResponseEntity<Map<String, Object>> analyticsMpi() {
-        List<Map<String, Object>> ranking = leaderboardService.obtenerRankingGlobal();
+        List<Map<String, Object>> ranking = leaderboardService.obtenerRankingGlobal(0);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("usuarios", ranking);

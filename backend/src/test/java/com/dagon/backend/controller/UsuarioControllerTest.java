@@ -108,12 +108,12 @@ class UsuarioControllerTest {
     @Test
     void rankingDuplicadoDeUsuariosUsaLeaderboardService() {
         List<Map<String, Object>> ranking = List.of(Map.of("nombre", "Aldo", "xp", 300));
-        when(leaderboardService.obtenerRankingGlobal()).thenReturn(ranking);
+        when(leaderboardService.obtenerRankingGlobal(0)).thenReturn(ranking);
 
         ResponseEntity<?> response = controller.obtenerRanking();
 
         assertThat(response.getBody()).isEqualTo(ranking);
-        verify(leaderboardService).obtenerRankingGlobal();
+        verify(leaderboardService).obtenerRankingGlobal(0);
     }
 
     private Usuario usuario(String nombre, String email, String passwordHash) {

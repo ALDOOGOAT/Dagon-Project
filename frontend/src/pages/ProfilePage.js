@@ -459,7 +459,7 @@ export const ProfilePage = () => {
 	                  aria-label={`Usar tema ${theme.name}`}
 	                >
 	                  <div className="h-8 rounded-xl" style={{ background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }} />
-	                  <span className="mt-2 block truncate text-[10px] font-bold uppercase tracking-widest" style={{ color: palette === key ? colors.primary : mutedColor }}>
+	                  <span className="profile-palette-chip__name mt-2 block text-[10px] font-bold uppercase tracking-widest" style={{ color: palette === key ? colors.primary : mutedColor }}>
 	                    {theme.name}
 	                  </span>
 	                  {palette === key && (

@@ -20,7 +20,7 @@ public class LeaderboardController {
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getLeaderboard() {
-        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal());
+        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0));
     }
 
     @GetMapping("/exercises/{exerciseId}")

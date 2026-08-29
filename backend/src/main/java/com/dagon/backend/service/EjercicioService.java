@@ -7,6 +7,7 @@ import com.dagon.backend.dto.NivelDTO;
 import com.dagon.backend.model.EjercicioPractico;
 import com.dagon.backend.repository.EjercicioPracticoRepository;
 import com.dagon.backend.service.validation.EjercicioValidationRouter;
+import com.dagon.backend.service.validation.ValidadorDiagrama;
 import com.dagon.backend.service.validation.SandboxSqlPolicy;
 import com.dagon.backend.service.validation.TipoValidacionEjercicio;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.util.*;
 
@@ -39,6 +39,9 @@ public class EjercicioService {
     private EjercicioValidationRouter validationRouter;
 
     @Autowired
+    private ValidadorDiagrama validadorDiagrama;
+
+    @Autowired
     private SandboxSqlPolicy sandboxSqlPolicy;
 
     @Autowired
@@ -47,7 +50,11 @@ public class EjercicioService {
     @Autowired
     private LeaderboardService leaderboardService;
 
-    private Boolean columnasCompetitivasIntentosDisponibles;
+    @Autowired
+    private SandboxExecutionService sandboxExecutionService;
+
+    @Autowired
+    private RewardService rewardService;
 
     @Value("${dagon.sandbox.url}")
     private String sandboxUrl;
@@ -57,9 +64,6 @@ public class EjercicioService {
 
     @Value("${dagon.sandbox.password}")
     private String sandboxPassword;
-
-    @Value("${dagon.sandbox.statement-timeout-ms:8000}")
-    private Integer sandboxStatementTimeoutMs;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
         return obtenerTodosLosNiveles(null);
@@ -494,182 +498,57 @@ public class EjercicioService {
         return "Lectura con SELECT";
     }
 
-    private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId) throws java.sql.SQLException {
-        return ejecutarEnSandboxConRollback(query, usuarioId, null);
+    // ejecutarEnSandbox*, aplicarTimeoutSandbox y extraerNombreTablaDDL viven en
+    // SandboxExecutionService (ver campo sandboxExecutionService más abajo).
+
+    /**
+     * Punto unico de entrada. Delega en ejecutarValidacion (que tiene ~16 salidas distintas)
+     * y deja constancia del intento UNA sola vez, aqui. Antes cada rama era responsable de
+     * llamar a registrarIntento y solo dos lo hacian: los fallos por error de SQL o por
+     * rechazo del SqlExerciseGuard no se registraban, y el panel docente veia 100% de acierto.
+     * Registrar fallos es puramente aditivo: XP y calificaciones se derivan de es_correcto = true.
+     */
+    public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
+        long inicioValidacion = System.nanoTime();
+        Map<String, Object> respuesta = ejecutarValidacion(ejercicioId, queryUsuario, usuarioId, inicioValidacion);
+        registrarIntentoDeEsteEnvio(ejercicioId, queryUsuario, usuarioId, respuesta, inicioValidacion);
+        respuesta.remove(SIN_REGISTRO);
+        return respuesta;
     }
 
-    private List<Map<String, Object>> ejecutarEnSandboxConRollback(String query, String usuarioId, Integer statementTimeoutMs) throws java.sql.SQLException {
-        sandboxSqlPolicy.validarRolSandbox(sandboxUser);
-        List<Map<String, Object>> resultados = new ArrayList<>();
-        String url = sandboxUrl;
-        String user = sandboxUser;
-        String password = sandboxPassword;
+    /** Marca en la respuesta las salidas que no representan un intento del alumno. */
+    private static final String SIN_REGISTRO = "__sinRegistro";
 
-        try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            conn.setAutoCommit(false); // Iniciar transacción
-            try (Statement stmt = conn.createStatement()) {
-                aplicarTimeoutSandbox(stmt, statementTimeoutMs);
-                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
-                
-                boolean tieneResultSet = stmt.execute(query);
-                if (tieneResultSet) {
-                    try (ResultSet rs = stmt.getResultSet()) {
-                        ResultSetMetaData metaData = rs.getMetaData();
-                        int columnCount = metaData.getColumnCount();
-                        while (rs.next()) {
-                            Map<String, Object> fila = new LinkedHashMap<>();
-                            for (int i = 1; i <= columnCount; i++) {
-                                fila.put(metaData.getColumnName(i).toLowerCase(), rs.getObject(i) != null ? rs.getObject(i).toString() : null);
-                            }
-                            resultados.add(fila);
-                        }
-                    }
-                }
-            } finally {
-                conn.rollback(); // Deshacer cambios siempre
-            }
-        }
-        return resultados;
-    }
-
-    private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId) throws java.sql.SQLException {
-        return ejecutarEnSandbox(queryUsuario, usuarioId, null);
-    }
-
-    private List<Map<String, Object>> ejecutarEnSandbox(String queryUsuario, String usuarioId, Integer statementTimeoutMs) throws java.sql.SQLException {
-        sandboxSqlPolicy.validarRolSandbox(sandboxUser);
-        List<Map<String, Object>> resultados = new ArrayList<>();
-        String url = sandboxUrl;
-        String user = sandboxUser;
-        String password = sandboxPassword;
-
-        String queryProcesada = queryUsuario.trim();
-        String upperQuery = queryProcesada.toUpperCase();
-
-        queryProcesada = queryProcesada.replaceAll("--.*$", "").trim();
-
-        // 🌟 LÓGICA CURADA (REGEX OPTIMIZADO)
-        // Solo será true si la consulta EMPIEZA con INSERT, UPDATE o DELETE, ignorando SELECT ... FOR UPDATE
-        boolean esDML = upperQuery.matches("^\\s*(INSERT|UPDATE|DELETE)\\b[\\s\\S]*");
-        boolean esDDL = upperQuery.matches("^\\s*(CREATE|ALTER|DROP)\\b[\\s\\S]*");
-
-        if (esDML && !upperQuery.contains("RETURNING")) {
-            queryProcesada = queryProcesada.replaceAll(";\\s*$", "");
-            queryProcesada += " RETURNING *;";
-        }
-
-        try (Connection conn = DriverManager.getConnection(url, user, password);
-             Statement stmt = conn.createStatement()) {
-
-            aplicarTimeoutSandbox(stmt, statementTimeoutMs);
-
-            if (usuarioId != null && !usuarioId.trim().isEmpty()) {
-                String searchPath = sandboxSqlPolicy.resolverSearchPath(usuarioId);
-                // Intentar crear el esquema si no existe (fail-safe)
-                try {
-                    stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + searchPath + "\";");
-                    stmt.execute("GRANT ALL ON SCHEMA \"" + searchPath + "\" TO app_sandbox_user;");
-                } catch (Exception ignored) {}
-                
-                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
-            } else {
-                stmt.execute(sandboxSqlPolicy.sentenciaSearchPath(usuarioId));
-            }
-            
-            boolean tieneResultSet = false;
-            try {
-                tieneResultSet = stmt.execute(queryProcesada);
-            } catch (java.sql.SQLException e) {
-                String sqlState = e.getSQLState();
-                // 42P07 es 'relation_already_exists' en PostgreSQL
-                if ("42P07".equals(sqlState) || e.getMessage().contains("already exists")) {
-                    // Es un DDL que ya se ejecutó antes. No es error, es éxito previo.
-                    tieneResultSet = false; 
-                } else {
-                    throw e; // Re-lanzar si es un error de sintaxis real u otro
-                }
-            }
-            
-            if ((esDDL || esDML) && !tieneResultSet) {
-                String tablaExtraida = extraerNombreTablaDDL(upperQuery, queryUsuario);
-                if (tablaExtraida != null) {
-                    // 🌟 MAGIA VISUAL: Si es un CREATE TABLE, mostramos su estructura (Blueprint)
-                    if (upperQuery.contains("CREATE TABLE")) {
-                        String consultaEstructura = "SELECT column_name AS columna, data_type AS tipo_dato, is_nullable AS permite_nulos "
-                            + "FROM information_schema.columns "
-                            + "WHERE table_name = '" + tablaExtraida + "' "
-                            + "ORDER BY ordinal_position;";
-                        try {
-                            tieneResultSet = stmt.execute(consultaEstructura);
-                        } catch (Exception ignored) {}
-                    } else {
-                        // Para INSERT, UPDATE o ALTER, mostramos los datos reales
-                        String consultaMostrar = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
-                        try {
-                            tieneResultSet = stmt.execute(consultaMostrar);
-                        } catch (Exception ignored) {}
-                    }
-                }
-            }
-            
-            if (tieneResultSet) {
-                try (ResultSet rs = stmt.getResultSet()) {
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-
-                    while (rs.next()) {
-                        Map<String, Object> fila = new LinkedHashMap<>();
-                        for (int i = 1; i <= columnCount; i++) {
-                            Object val = rs.getObject(i);
-                            fila.put(metaData.getColumnName(i).toLowerCase(), val != null ? val.toString() : null);
-                        }
-                        resultados.add(fila);
-                    }
-                }
-            }
-        }
-        return resultados;
-    }
-
-    private void aplicarTimeoutSandbox(Statement stmt, Integer statementTimeoutMs) throws java.sql.SQLException {
-        Integer timeoutSeguro = statementTimeoutMs != null ? statementTimeoutMs : sandboxStatementTimeoutMs;
-        if (timeoutSeguro == null || timeoutSeguro <= 0) {
+    private void registrarIntentoDeEsteEnvio(Integer ejercicioId, String queryUsuario, String usuarioId,
+                                             Map<String, Object> respuesta, long inicioValidacion) {
+        if (usuarioId == null || usuarioId.trim().isEmpty() || Boolean.TRUE.equals(respuesta.get(SIN_REGISTRO))) {
             return;
         }
 
-        int segundos = Math.max(1, (int) Math.ceil(timeoutSeguro / 1000.0));
-        stmt.setQueryTimeout(segundos);
-        stmt.execute("SET statement_timeout = " + Math.max(250, timeoutSeguro));
-    }
+        boolean esCorrecto = Boolean.TRUE.equals(respuesta.get("success"));
 
-    private String extraerNombreTablaDDL(String upperQuery, String queryOriginal) {
-        String tabla = null;
-        
-        if (upperQuery.contains("CREATE TABLE")) {
-            String sinCreate = queryOriginal.replaceAll("(?i)CREATE\\s+TABLE\\s+", "").trim();
-            String[] partes = sinCreate.split("[\\(,\\s]");
-            if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
-            }
-        } else if (upperQuery.contains("ALTER TABLE")) {
-            String sinAlter = queryOriginal.replaceAll("(?i)ALTER\\s+TABLE\\s+", "").trim();
-            String[] partes = sinAlter.split("\\s+");
-            if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
-            }
-        } else if (upperQuery.contains("DROP TABLE")) {
-            String sinDrop = queryOriginal.replaceAll("(?i)DROP\\s+TABLE\\s+", "").trim();
-            String[] partes = sinDrop.split("\\s+");
-            if (partes.length > 0) {
-                tabla = partes[0].replaceAll("[\\(\\)]", "").trim();
-            }
+        // Si hubo EXPLAIN ANALYZE usamos sus metricas reales; si no, el tiempo de pared.
+        Object perf = respuesta.get("performance");
+        Double tiempoMs = null;
+        Double costoEjecucion = null;
+        if (perf instanceof Map<?, ?> mapaPerf) {
+            tiempoMs = comoDouble(mapaPerf.get("executionTimeMs"));
+            costoEjecucion = comoDouble(mapaPerf.get("totalCost"));
         }
-        
-        return tabla;
+        if (tiempoMs == null) {
+            tiempoMs = rewardService.calcularTiempoMs(inicioValidacion);
+        }
+
+        try {
+            rewardService.registrarIntento(usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoMs, costoEjecucion);
+        } catch (Exception ignored) {}
     }
 
-public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
-    long inicioValidacion = System.nanoTime();
+    private Double comoDouble(Object valor) {
+        return valor instanceof Number numero ? numero.doubleValue() : null;
+    }
+
+private Map<String, Object> ejecutarValidacion(Integer ejercicioId, String queryUsuario, String usuarioId, long inicioValidacion) {
     Map<String, Object> respuesta = new HashMap<>();
 
     // --- 1. INTERCEPCIÓN ESTRATÉGICA (Antes del Escudo) ---
@@ -677,6 +556,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
     if (ejercicioActual != null && !usuarioPuedeAccederEjercicio(ejercicioActual, usuarioId)) {
         respuesta.put("success", false);
         respuesta.put("message", "No tienes permiso para resolver este ejercicio.");
+        respuesta.put(SIN_REGISTRO, true);
         return respuesta;
     }
 
@@ -726,6 +606,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         if (ejercicio == null) {
             respuesta.put("success", false);
             respuesta.put("message", "Error: Ejercicio no encontrado.");
+        respuesta.put(SIN_REGISTRO, true);
             return respuesta;
         }
 
@@ -734,6 +615,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         if (!usuarioPuedeAccederEjercicio(ejercicio, usuarioId)) {
             respuesta.put("success", false);
             respuesta.put("message", "No tienes permiso para resolver este ejercicio.");
+        respuesta.put(SIN_REGISTRO, true);
             return respuesta;
         }
 
@@ -753,159 +635,21 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
 
         try {
             if ("diagram".equals(formato)) {
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode root = mapper.readTree(queryUsuario);
-                JsonNode diagramNodes = root.get("nodes");
-                JsonNode diagramEdges = root.get("edges");
+                ValidadorDiagrama.ResultadoDiagrama analisis =
+                        validadorDiagrama.analizar(ejercicio, queryUsuario);
+                respuesta.put("diagramSummary", analisis.resumen());
 
-                if (diagramNodes == null) diagramNodes = mapper.createArrayNode();
-                if (diagramEdges == null) diagramEdges = mapper.createArrayNode();
-
-                // Leer reglas de validación desde configuracion_extra
-                int minEntidades = 2;
-                int minRelaciones = 1;
-                int minAtributos = 0;
-                List<List<String>> gruposRequeridos = new ArrayList<>();
-                String mensajeEntidades = "El diagrama está incompleto.";
-                String mensajeRelaciones = "Necesitas conectar las entidades con relaciones.";
-
-                String configExtra = ejercicio.getConfiguracionExtra();
-                if (configExtra != null && !configExtra.trim().isEmpty()) {
-                    JsonNode config = mapper.readTree(configExtra);
-                    if (config.has("min_entidades")) minEntidades = config.get("min_entidades").asInt();
-                    if (config.has("min_relaciones")) minRelaciones = config.get("min_relaciones").asInt();
-                    if (config.has("min_atributos")) minAtributos = config.get("min_atributos").asInt();
-                    if (config.has("mensaje_error")) mensajeEntidades = config.get("mensaje_error").asText();
-                    if (config.has("mensaje_relaciones")) mensajeRelaciones = config.get("mensaje_relaciones").asText();
-                    if (config.has("entidades_requeridas")) {
-                        for (JsonNode grupo : config.get("entidades_requeridas")) {
-                            List<String> opciones = new ArrayList<>();
-                            if (grupo.isArray()) {
-                                for (JsonNode op : grupo) opciones.add(op.asText().toLowerCase());
-                            } else {
-                                opciones.add(grupo.asText().toLowerCase());
-                            }
-                            gruposRequeridos.add(opciones);
-                        }
-                    }
-                }
-
-                // Validar cantidad de entidades
-                if (diagramNodes.size() < minEntidades) {
+                if (!analisis.esValido()) {
                     respuesta.put("success", false);
-                    respuesta.put("message", mensajeEntidades + " Necesitas al menos " + minEntidades + " entidad(es).");
+                    respuesta.put("message", analisis.problemas().get(0));
+                    respuesta.put("diagramIssues", analisis.problemas());
                     respuesta.put("xp_gained", 0);
                     respuesta.put("descripcion", ejercicio.getEnunciado());
-                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
+                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null
+                            ? ejercicio.getQueryMaestra() : "Diagrama ER");
                     respuesta.put("queryAlumno", queryUsuario);
-                    respuesta.put("errorDb", "El diagrama tiene menos entidades de las requeridas (" + diagramNodes.size() + "/" + minEntidades + ").");
+                    respuesta.put("errorDb", String.join(" ", analisis.problemas()));
                     return respuesta;
-                }
-
-                // Validar cantidad de relaciones
-                if (diagramEdges.size() < minRelaciones) {
-                    respuesta.put("success", false);
-                    respuesta.put("message", mensajeRelaciones + " Necesitas al menos " + minRelaciones + " relación(es).");
-                    respuesta.put("xp_gained", 0);
-                    respuesta.put("descripcion", ejercicio.getEnunciado());
-                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
-                    respuesta.put("queryAlumno", queryUsuario);
-                    respuesta.put("errorDb", "El diagrama tiene menos relaciones de las requeridas (" + diagramEdges.size() + "/" + minRelaciones + ").");
-                    return respuesta;
-                }
-
-                // Recopilar nombres de entidades y contar atributos
-                List<String> nombresEntidades = new ArrayList<>();
-                int totalAtributos = 0;
-                for (JsonNode node : diagramNodes) {
-                    JsonNode data = node.get("data");
-                    if (data != null && data.has("label")) {
-                        String nombre = data.get("label").asText().toLowerCase().trim();
-                        if (!nombre.isEmpty()) nombresEntidades.add(nombre);
-                        if (data.has("columns")) totalAtributos += data.get("columns").size();
-                    }
-                }
-
-                // Validar atributos mínimos
-                if (minAtributos > 0 && totalAtributos < minAtributos) {
-                    respuesta.put("success", false);
-                    respuesta.put("message", "Las entidades necesitan más atributos (columnas). Agrega al menos " + minAtributos + " atributo(s) en total.");
-                    respuesta.put("xp_gained", 0);
-                    respuesta.put("descripcion", ejercicio.getEnunciado());
-                    respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
-                    respuesta.put("queryAlumno", queryUsuario);
-                    respuesta.put("errorDb", "Faltan atributos en las entidades (" + totalAtributos + "/" + minAtributos + ").");
-                    return respuesta;
-                }
-
-                // Validar entidades requeridas (cada grupo = al menos una opción debe existir)
-                for (List<String> opciones : gruposRequeridos) {
-                    boolean encontrada = false;
-                    for (String opcion : opciones) {
-                        for (String nombre : nombresEntidades) {
-                            if (nombre.contains(opcion)) {
-                                encontrada = true;
-                                break;
-                            }
-                        }
-                        if (encontrada) break;
-                    }
-                    if (!encontrada) {
-                        respuesta.put("success", false);
-                        respuesta.put("message", "Tu diagrama necesita una entidad relacionada con: " + String.join(" o ", opciones) + ".");
-                        respuesta.put("xp_gained", 0);
-                        respuesta.put("descripcion", ejercicio.getEnunciado());
-                        respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
-                        respuesta.put("queryAlumno", queryUsuario);
-                        respuesta.put("errorDb", "Falta una entidad requerida: " + String.join(" o ", opciones) + ".");
-                        return respuesta;
-                    }
-                }
-
-                // Validar relaciones y cardinalidad (opcional)
-                if (configExtra != null && !configExtra.trim().isEmpty()) {
-                    JsonNode config = mapper.readTree(configExtra);
-                    if (config.has("relaciones_requeridas")) {
-                        for (JsonNode relReq : config.get("relaciones_requeridas")) {
-                            String srcReq = relReq.get("source").asText().toLowerCase();
-                            String targetReq = relReq.get("target").asText().toLowerCase();
-                            String cardReq = relReq.has("cardinality") ? relReq.get("cardinality").asText() : null;
-                            
-                            boolean relEncontrada = false;
-                            for (JsonNode edge : diagramEdges) {
-                                String sourceId = edge.get("source").asText();
-                                String targetId = edge.get("target").asText();
-                                String cardinality = (edge.has("data") && edge.get("data").has("cardinality")) 
-                                                    ? edge.get("data").get("cardinality").asText() : "1:N";
-
-                                String sourceName = "";
-                                String targetName = "";
-                                for (JsonNode node : diagramNodes) {
-                                    if (node.get("id").asText().equals(sourceId)) sourceName = node.get("data").get("label").asText().toLowerCase();
-                                    if (node.get("id").asText().equals(targetId)) targetName = node.get("data").get("label").asText().toLowerCase();
-                                }
-
-                                if (sourceName.contains(srcReq) && targetName.contains(targetReq)) {
-                                    if (cardReq == null || cardReq.equals(cardinality)) {
-                                        relEncontrada = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (!relEncontrada) {
-                                String msg = "Falta una relación entre " + srcReq + " y " + targetReq;
-                                if (cardReq != null) msg += " con cardinalidad " + cardReq;
-                                respuesta.put("success", false);
-                                respuesta.put("message", msg + ".");
-                                respuesta.put("xp_gained", 0);
-                                respuesta.put("descripcion", ejercicio.getEnunciado());
-                                respuesta.put("queryMaestra", ejercicio.getQueryMaestra() != null ? ejercicio.getQueryMaestra() : "Diagrama ER");
-                                respuesta.put("queryAlumno", queryUsuario);
-                                respuesta.put("errorDb", msg + ".");
-                                return respuesta;
-                            }
-                        }
-                    }
                 }
 
                 esCorrecto = true;
@@ -967,8 +711,6 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                         
                         try {
                             if (usuarioId != null && !usuarioId.trim().isEmpty()) {
-                                registrarIntento(usuarioId, ejercicio.getIdEjercicio(), queryUsuario, true,
-                                        calcularTiempoMs(inicioValidacion), null);
                                 usuarioService.registrarPracticaDiaria(usuarioId);
                             }
                         } catch (Exception ignored) {}
@@ -1001,18 +743,18 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                             String seqName = seqMatcher.group(1);
                             try {
                                 // 1. Garantizamos que la secuencia exista
-                                ejecutarEnSandbox("CREATE SEQUENCE IF NOT EXISTS " + seqName + " START 1;", usuarioId);
+                                sandboxExecutionService.ejecutarEnSandbox("CREATE SEQUENCE IF NOT EXISTS " + seqName + " START 1;", usuarioId);
                                 
                                 // 2. HACK DE SESIÓN: Si pide CURRVAL, forzamos un NEXTVAL previo
                                 if (upperQ.contains("CURRVAL")) {
-                                    ejecutarEnSandbox("SELECT nextval('" + seqName + "');", usuarioId);
+                                    sandboxExecutionService.ejecutarEnSandbox("SELECT nextval('" + seqName + "');", usuarioId);
                                 }
                             } catch (Exception ignored) {}
                         }
                     }
 
                     // Para secuencias o DDL, ejecutamos y si no hay error de SQL, es correcto.
-                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    datosAlumno = sandboxExecutionService.ejecutarEnSandbox(queryUsuario, usuarioId);
                     esCorrecto = true;
 
                     if (configValidacion != null && configValidacion.has("indice_requerido")) {
@@ -1030,7 +772,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     }
                     
                     // 🌟 MAGIA DIDÁCTICA: Escanear y devolver las Constraints de la tabla
-                    String tablaAfectada = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    String tablaAfectada = sandboxExecutionService.extraerNombreTablaDDL(upperQ, queryUsuario);
                     if (tablaAfectada != null) {
                         String queryConstraints = "SELECT constraint_name AS nombre_regla, constraint_type AS tipo "
                             + "FROM information_schema.table_constraints "
@@ -1038,7 +780,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                             + "AND table_schema = current_schema() "
                             + "ORDER BY constraint_type;";
                         try {
-                            List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                            List<Map<String, Object>> listaConstraints = sandboxExecutionService.ejecutarEnSandbox(queryConstraints, usuarioId);
                             respuesta.put("constraintsData", listaConstraints);
                         } catch (Exception ignored) {}
                     }
@@ -1047,15 +789,15 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     List<Map<String, Object>> beforeData = new ArrayList<>();
                     if (tablaAfectada != null) {
                         try {
-                            beforeData = ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
+                            beforeData = sandboxExecutionService.ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
                         } catch (Exception ignored) {}
                     }
 
                     // 1. Obtener qué DEBERÍA pasar (Query Maestra con Rollback)
-                    List<Map<String, Object>> datosMaestros = ejecutarEnSandboxConRollback(ejercicio.getQueryMaestra(), usuarioId);
+                    List<Map<String, Object>> datosMaestros = sandboxExecutionService.ejecutarEnSandboxConRollback(ejercicio.getQueryMaestra(), usuarioId);
                     
                     // 2. Ejecutar lo que el ALUMNO mandó (Persistente)
-                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    datosAlumno = sandboxExecutionService.ejecutarEnSandbox(queryUsuario, usuarioId);
                     
                     // 3. Comparar
                     esCorrecto = compararResultadosDML(datosAlumno, datosMaestros);
@@ -1064,7 +806,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     List<Map<String, Object>> afterData = new ArrayList<>();
                     if (tablaAfectada != null) {
                         try {
-                            afterData = ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
+                            afterData = sandboxExecutionService.ejecutarEnSandbox("SELECT * FROM \"" + tablaAfectada + "\" LIMIT 20;", usuarioId);
                         } catch (Exception ignored) {}
                     }
 
@@ -1085,18 +827,18 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     List<Map<String, Object>> beforeData = new ArrayList<>();
                     if (tablaTransaccional != null) {
                         try {
-                            beforeData = ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
+                            beforeData = sandboxExecutionService.ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
                         } catch (Exception ignored) {}
                     }
 
-                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId, statementTimeoutEjercicioMs);
-                    List<Map<String, Object>> datosMaestros = ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId, statementTimeoutEjercicioMs);
+                    datosAlumno = sandboxExecutionService.ejecutarEnSandbox(queryUsuario, usuarioId, statementTimeoutEjercicioMs);
+                    List<Map<String, Object>> datosMaestros = sandboxExecutionService.ejecutarEnSandbox(ejercicio.getQueryMaestra(), usuarioId, statementTimeoutEjercicioMs);
                     esCorrecto = datosAlumno.equals(datosMaestros);
 
                     if (tablaTransaccional != null) {
                         List<Map<String, Object>> afterData = new ArrayList<>();
                         try {
-                            afterData = ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
+                            afterData = sandboxExecutionService.ejecutarEnSandbox("SELECT * FROM \"" + tablaTransaccional + "\" LIMIT 20;", usuarioId);
                         } catch (Exception ignored) {}
 
                         respuesta.put("beforeData", beforeData);
@@ -1125,19 +867,13 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 String checkSql = "SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND id_ejercicio = ? AND es_correcto = true";
                 Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, usuarioId, ejercicioId);
                 yaResuelto = (count != null && count > 0);
-
-                Double tiempoCompetitivoMs = reporteRendimiento != null && reporteRendimiento.executionTimeMs() != null
-                        ? reporteRendimiento.executionTimeMs()
-                        : calcularTiempoMs(inicioValidacion);
-                Double costoEjecucion = reporteRendimiento != null ? reporteRendimiento.totalCost() : null;
-                registrarIntento(usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoCompetitivoMs, costoEjecucion);
             }
 
             // 🌟 MAGIA DIDÁCTICA: Escanear constraints después de ejecutar la consulta del usuario
             if (esCorrecto) {
                 String upperQ = queryUsuario.trim().toUpperCase();
                 if (upperQ.contains("ALTER TABLE") || upperQ.contains("CREATE TABLE") || upperQ.contains("ADD CONSTRAINT") || upperQ.contains("DROP CONSTRAINT")) {
-                    String tablaAfectada = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    String tablaAfectada = sandboxExecutionService.extraerNombreTablaDDL(upperQ, queryUsuario);
                     if (tablaAfectada != null) {
                         String queryConstraints = "SELECT constraint_name AS nombre_regla, constraint_type AS tipo "
                             + "FROM information_schema.table_constraints "
@@ -1145,7 +881,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                             + "AND table_schema = current_schema() "
                             + "ORDER BY constraint_type;";
                         try {
-                            List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                            List<Map<String, Object>> listaConstraints = sandboxExecutionService.ejecutarEnSandbox(queryConstraints, usuarioId);
                             if (listaConstraints != null && !listaConstraints.isEmpty()) {
                                 respuesta.put("constraintsData", listaConstraints);
                             }
@@ -1163,7 +899,9 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
 
                 String tipo = ejercicio.getTipoMision() != null ? ejercicio.getTipoMision() : "HISTORIA";
                 if ("RAPIDA".equals(tipo)) {
-                    int aciertosRapidosHoy = contarAciertosRapidosHoy(usuarioId);
+                    // El intento actual todavia no esta en la tabla (se registra al salir), asi que
+                    // lo sumamos a mano para que el cupo diario cuadre con la vista v_ranking_alumnos.
+                    int aciertosRapidosHoy = rewardService.contarAciertosRapidosHoy(usuarioId) + 1;
                     int xpRapida = aciertosRapidosHoy <= PRACTICA_RAPIDA_ACIERTOS_DIARIOS_CON_XP ? PRACTICA_RAPIDA_XP : 0;
                     int xpConsumidaHoy = Math.min(aciertosRapidosHoy, PRACTICA_RAPIDA_ACIERTOS_DIARIOS_CON_XP) * PRACTICA_RAPIDA_XP;
                     int xpRestanteHoy = Math.max(0, PRACTICA_RAPIDA_XP_DIARIA_MAX - xpConsumidaHoy);
@@ -1223,7 +961,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             // === INTERVENCIÓN PEDAGÓGICA: Primary Key Duplicada ===
             if (sqlError != null && sqlError.toLowerCase().contains("multiple primary keys")) {
                 String upperQ = queryUsuario.trim().toUpperCase();
-                String tablaObj = extraerNombreTablaDDL(upperQ, queryUsuario);
+                String tablaObj = sandboxExecutionService.extraerNombreTablaDDL(upperQ, queryUsuario);
                 String tablaNombre = tablaObj != null ? tablaObj : "la tabla";
                 
                 // Extraer nombre de columna de la query del usuario
@@ -1244,7 +982,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 
                 // Ejecutar el DROP en secreto para arreglar la base de datos
                 try {
-                    ejecutarEnSandbox(dropConstraint, usuarioId);
+                    sandboxExecutionService.ejecutarEnSandbox(dropConstraint, usuarioId);
                 } catch (Exception dropEx) {
                     // Ignorar errores del DROP - podría no existir la constraint
                 }
@@ -1264,7 +1002,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 // Obtener datos actuales de la tabla
                 try {
                     String consultaDatos = "SELECT * FROM \"" + tablaNombre + "\" LIMIT 10;";
-                    datosAlumno = ejecutarEnSandbox(consultaDatos, usuarioId);
+                    datosAlumno = sandboxExecutionService.ejecutarEnSandbox(consultaDatos, usuarioId);
                     respuesta.put("mockData", datosAlumno);
                     
                     // 🌟 MAGIA DIDÁCTICA: Escanear constraints después de DROP
@@ -1273,7 +1011,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                         + "WHERE table_name = '" + tablaNombre + "' "
                         + "AND table_schema = current_schema() "
                         + "ORDER BY constraint_type;";
-                    List<Map<String, Object>> listaConstraints = ejecutarEnSandbox(queryConstraints, usuarioId);
+                    List<Map<String, Object>> listaConstraints = sandboxExecutionService.ejecutarEnSandbox(queryConstraints, usuarioId);
                     respuesta.put("constraintsData", listaConstraints);
                 } catch (Exception ignored) {}
                 
@@ -1303,19 +1041,20 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 
                 // Intentar obtener los datos y estructura de todos modos
                 try {
-                    String tablaExtraida = extraerNombreTablaDDL(upperQ, queryUsuario);
+                    String tablaExtraida = sandboxExecutionService.extraerNombreTablaDDL(upperQ, queryUsuario);
                     if (tablaExtraida != null) {
                         // Primero ver si hay datos
                         String consultaDatos = "SELECT * FROM \"" + tablaExtraida + "\" LIMIT 100;";
-                        datosAlumno = ejecutarEnSandbox(consultaDatos, usuarioId);
+                        datosAlumno = sandboxExecutionService.ejecutarEnSandbox(consultaDatos, usuarioId);
                         
                         // Si no hay datos, mostrar la estructura de la tabla
                         if (datosAlumno.isEmpty()) {
                             String consultaEstructura = "SELECT column_name, data_type, is_nullable "
                                 + "FROM information_schema.columns "
                                 + "WHERE table_name = '" + tablaExtraida + "' "
+                                + "AND table_schema = current_schema() "
                                 + "ORDER BY ordinal_position;";
-                            datosAlumno = ejecutarEnSandbox(consultaEstructura, usuarioId);
+                            datosAlumno = sandboxExecutionService.ejecutarEnSandbox(consultaEstructura, usuarioId);
                             
                             // Añadir flag para saber que es estructura
                             respuesta.put("isStructure", true);
@@ -1333,13 +1072,14 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
                 }
             } else {
+                String mensajeAmigable = humanizarErrorSql(sqlError);
                 respuesta.put("success", false);
-                respuesta.put("message", "Error de SQL: " + sqlError);
+                respuesta.put("message", "Error de SQL: " + mensajeAmigable);
                 respuesta.put("xp_gained", 0);
                 respuesta.put("descripcion", ejercicio.getEnunciado());
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
-                respuesta.put("errorDb", sqlError);
+                respuesta.put("errorDb", mensajeAmigable);
                 if (esMisionTransaccional) {
                     anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
                 }
@@ -1351,7 +1091,7 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             if (errMsg != null && errMsg.contains("Unmatched closing")) {
                 // Intentar ejecutar la query directamente y obtener resultados
                 try {
-                    datosAlumno = ejecutarEnSandbox(queryUsuario, usuarioId);
+                    datosAlumno = sandboxExecutionService.ejecutarEnSandbox(queryUsuario, usuarioId);
                     if (!datosAlumno.isEmpty()) {
                         respuesta.put("success", true);
                         respuesta.put("message", "¡Consulta ejecutada! Pero los datos no coinciden con lo esperado.");
@@ -1364,24 +1104,26 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                     }
                 } catch (Exception ignored) {}
                 
+                String mensajeAmigable = humanizarErrorSql(errMsg);
                 respuesta.put("success", false);
-                respuesta.put("message", "Error de sintaxis: Revisa los paréntesis. " + errMsg);
+                respuesta.put("message", "Revisa los paréntesis. " + mensajeAmigable);
                 respuesta.put("xp_gained", 0);
                 respuesta.put("descripcion", ejercicio.getEnunciado());
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
-                respuesta.put("errorDb", errMsg);
+                respuesta.put("errorDb", mensajeAmigable);
                 if (esMisionTransaccional) {
                     anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
                 }
             } else {
+                String mensajeAmigable = humanizarErrorSql(errMsg);
                 respuesta.put("success", false);
-                respuesta.put("message", "Error al procesar la respuesta: " + errMsg);
+                respuesta.put("message", "Error al procesar la respuesta: " + mensajeAmigable);
                 respuesta.put("xp_gained", 0);
                 respuesta.put("descripcion", ejercicio.getEnunciado());
                 respuesta.put("queryMaestra", ejercicio.getQueryMaestra());
                 respuesta.put("queryAlumno", queryUsuario);
-                respuesta.put("errorDb", errMsg);
+                respuesta.put("errorDb", mensajeAmigable);
                 if (esMisionTransaccional) {
                     anexarSimulacionTransaccional(respuesta, ejercicio, queryUsuario, usuarioId);
                 }
@@ -1390,67 +1132,8 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
         return respuesta;
     }
 
-    private void registrarIntento(
-            String usuarioId,
-            Integer ejercicioId,
-            String queryUsuario,
-            boolean esCorrecto,
-            Double tiempoMs,
-            Double costoEjecucion
-    ) {
-        if (usuarioId == null || usuarioId.trim().isEmpty()) {
-            return;
-        }
-
-        Integer longitudCaracteres = calcularLongitudSql(queryUsuario);
-        Double tiempoSeguro = tiempoMs != null ? tiempoMs : 0.0;
-
-        if (soportaColumnasCompetitivasIntentos()) {
-            try {
-                String insertSql = "INSERT INTO lms_core.intentos " +
-                        "(id_usuario, id_ejercicio, query_enviada, es_correcto, tiempo_ms, costo_ejecucion, longitud_caracteres) " +
-                        "VALUES (?::uuid, ?, ?, ?, ?, ?, ?)";
-                jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto,
-                        tiempoSeguro, costoEjecucion, longitudCaracteres);
-                return;
-            } catch (Exception ignored) {
-                columnasCompetitivasIntentosDisponibles = false;
-            }
-        }
-
-        String insertSql = "INSERT INTO lms_core.intentos " +
-                "(id_usuario, id_ejercicio, query_enviada, es_correcto, tiempo_ms) " +
-                "VALUES (?::uuid, ?, ?, ?, ?)";
-        jdbcTemplate.update(insertSql, usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoSeguro);
-    }
-
-    private boolean soportaColumnasCompetitivasIntentos() {
-        if (columnasCompetitivasIntentosDisponibles != null) {
-            return columnasCompetitivasIntentosDisponibles;
-        }
-
-        try {
-            String sql = "SELECT COUNT(*) FROM information_schema.columns " +
-                    "WHERE table_schema = 'lms_core' " +
-                    "AND table_name = 'intentos' " +
-                    "AND column_name IN ('costo_ejecucion', 'longitud_caracteres')";
-            Integer total = jdbcTemplate.queryForObject(sql, Integer.class);
-            columnasCompetitivasIntentosDisponibles = total != null && total >= 2;
-        } catch (Exception e) {
-            columnasCompetitivasIntentosDisponibles = false;
-        }
-
-        return columnasCompetitivasIntentosDisponibles;
-    }
-
-    private Integer calcularLongitudSql(String queryUsuario) {
-        return queryUsuario != null ? queryUsuario.trim().length() : 0;
-    }
-
-    private Double calcularTiempoMs(long inicioNanos) {
-        double ms = (System.nanoTime() - inicioNanos) / 1_000_000.0;
-        return Math.round(ms * 100.0) / 100.0;
-    }
+    // registrarIntento, calcularTiempoMs y contarAciertosRapidosHoy viven en
+    // RewardService (ver campo rewardService más abajo).
 
     private Optional<Map<String, Object>> prepararDatasetDetectiveSiAplica(
             EjercicioPractico ejercicio,
@@ -1589,6 +1272,51 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
                 || message.contains("canceling statement due to");
     }
 
+    private static final java.util.regex.Pattern PATRON_SINTAXIS =
+            java.util.regex.Pattern.compile("syntax error at or near \"(.+?)\"");
+    private static final java.util.regex.Pattern PATRON_TABLA_INEXISTENTE =
+            java.util.regex.Pattern.compile("relation \"(.+?)\" does not exist");
+    private static final java.util.regex.Pattern PATRON_COLUMNA_INEXISTENTE =
+            java.util.regex.Pattern.compile("column \"(.+?)\" does not exist");
+    private static final java.util.regex.Pattern PATRON_NOT_NULL =
+            java.util.regex.Pattern.compile("null value in column \"(.+?)\"");
+
+    /**
+     * Traduce el mensaje crudo de Postgres (con "ERROR:" y "Position:" incluidos)
+     * a una frase corta que un alumno pueda entender sin leer el stacktrace.
+     */
+    String humanizarErrorSql(String rawError) {
+        if (rawError == null || rawError.trim().isEmpty()) {
+            return "Ocurrió un error al ejecutar la consulta.";
+        }
+        String limpio = rawError.replaceFirst("(?i)^ERROR:\\s*", "").split("\\r?\\n")[0].trim();
+        String lower = limpio.toLowerCase(Locale.ROOT);
+        java.util.regex.Matcher m;
+
+        if ((m = PATRON_SINTAXIS.matcher(limpio)).find()) {
+            return "Error de sintaxis cerca de \"" + m.group(1) + "\". Revisa comas, paréntesis o palabras clave.";
+        }
+        if ((m = PATRON_TABLA_INEXISTENTE.matcher(limpio)).find()) {
+            return "La tabla \"" + m.group(1) + "\" no existe. Verifica el nombre o si aún no la creaste.";
+        }
+        if ((m = PATRON_COLUMNA_INEXISTENTE.matcher(limpio)).find()) {
+            return "La columna \"" + m.group(1) + "\" no existe en esa tabla. Revisa el nombre.";
+        }
+        if ((m = PATRON_NOT_NULL.matcher(limpio)).find()) {
+            return "El campo \"" + m.group(1) + "\" no puede quedar vacío (restricción NOT NULL).";
+        }
+        if (lower.contains("duplicate key value violates unique constraint")) {
+            return "Ya existe un registro con ese valor único. No puedes repetirlo.";
+        }
+        if (lower.contains("permission denied")) {
+            return "No tienes permisos para esa operación en el sandbox.";
+        }
+        if (lower.contains("division by zero")) {
+            return "Estás dividiendo entre cero en la consulta.";
+        }
+        return limpio;
+    }
+
     private String quoteIdentifier(String identifier) {
         return "\"" + identifier.replace("\"", "\"\"") + "\"";
     }
@@ -1628,26 +1356,6 @@ public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsua
             return null;
         }
         return null;
-    }
-
-    private int contarAciertosRapidosHoy(String usuarioId) {
-        if (usuarioId == null || usuarioId.trim().isEmpty()) {
-            return 0;
-        }
-
-        try {
-            String sql = "SELECT COUNT(*) " +
-                    "FROM lms_core.intentos i " +
-                    "JOIN lms_core.ejercicios_practicos e ON e.id_ejercicio = i.id_ejercicio " +
-                    "WHERE i.id_usuario = ?::uuid " +
-                    "AND i.es_correcto = true " +
-                    "AND e.tipo_mision = 'RAPIDA' " +
-                    "AND DATE(i.fecha_intento) = CURRENT_DATE";
-            Integer total = jdbcTemplate.queryForObject(sql, Integer.class, usuarioId);
-            return total != null ? total : 0;
-        } catch (Exception ignored) {
-            return 0;
-        }
     }
 
     private boolean compararResultadosDML(List<Map<String, Object>> r1, List<Map<String, Object>> r2) {

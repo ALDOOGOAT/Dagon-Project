@@ -1,5 +1,7 @@
 package com.dagon.backend.service;
 
+import com.dagon.backend.service.clawbot.ClawbotCacheService;
+import com.dagon.backend.service.clawbot.ClawbotLocalResolver;
 import com.dagon.backend.service.clawbot.ClawbotPromptCatalog;
 import com.dagon.backend.service.clawbot.ClawbotRateLimiter;
 import com.dagon.backend.service.clawbot.ClawbotTelemetryService;
@@ -18,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class ClawbotService {
@@ -37,19 +40,29 @@ public class ClawbotService {
     @Value("${GROQ_API_KEY:}")
     private String groqApiKey;
 
+    // Groq retiro los modelos llama-3.x: el que estaba fijo aqui devolvia 404 model_not_found.
+    @Value("${dagon.clawbot.groq.model:openai/gpt-oss-20b}")
+    private String groqModel;
+
     private final RestTemplate restTemplate = new RestTemplate(requestFactory());
     private final ClawbotPromptCatalog promptCatalog;
     private final ClawbotRateLimiter rateLimiter;
     private final ClawbotTelemetryService telemetryService;
+    private final ClawbotLocalResolver localResolver;
+    private final ClawbotCacheService cacheService;
 
     public ClawbotService(
             ClawbotPromptCatalog promptCatalog,
             ClawbotRateLimiter rateLimiter,
-            ClawbotTelemetryService telemetryService
+            ClawbotTelemetryService telemetryService,
+            ClawbotLocalResolver localResolver,
+            ClawbotCacheService cacheService
     ) {
         this.promptCatalog = promptCatalog;
         this.rateLimiter = rateLimiter;
         this.telemetryService = telemetryService;
+        this.localResolver = localResolver;
+        this.cacheService = cacheService;
     }
 
     public String obtenerAyudaSocratica(
@@ -81,6 +94,22 @@ public class ClawbotService {
         String contextoNivel = promptCatalog.moduleContext(nivelId, sanitizeForPrompt(tituloEjercicio));
         String nivelAyuda = buildNivelAyuda(intentos);
 
+        // Filtro 1: el error de PostgreSQL ya dice que paso. Ninguna IA hace falta aqui.
+        Optional<ClawbotLocalResolver.Diagnostico> diagnosticoLocal = localResolver.diagnosticar(errorDb, queryAlumno);
+        if (diagnosticoLocal.isPresent()) {
+            telemetryService.recordSource("local_resolver_analysis");
+            return buildRespuestaDiagnostico(diagnosticoLocal.get(), intentos);
+        }
+
+        // Filtro 2: alguien ya pago esta misma explicacion antes.
+        String claveCache = cacheService.clave("analisis", errorType, errorDb, String.valueOf(nivelId),
+                String.valueOf(Math.min(intentos, 3)));
+        Optional<String> cacheada = cacheService.buscar(claveCache);
+        if (cacheada.isPresent()) {
+            telemetryService.recordSource("cache_analysis");
+            return cacheada.get();
+        }
+
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
             try {
                 String respuesta = callGeminiAnalysis(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda);
@@ -88,6 +117,7 @@ public class ClawbotService {
                     String segura = formatearRespuestaAnalisis(respuesta);
                     if (!revelaSolucion(segura, queryMaestra)) {
                         telemetryService.recordSource("gemini_analysis");
+                        cacheService.guardar(claveCache, segura, "gemini");
                         return segura;
                     }
                     telemetryService.recordSource("guardrail_local_analysis");
@@ -105,6 +135,7 @@ public class ClawbotService {
                     String segura = formatearRespuestaAnalisis(respuesta);
                     if (!revelaSolucion(segura, queryMaestra)) {
                         telemetryService.recordSource("groq_analysis");
+                        cacheService.guardar(claveCache, segura, "groq");
                         return segura;
                     }
                     telemetryService.recordSource("guardrail_local_analysis");
@@ -126,6 +157,24 @@ public class ClawbotService {
         rateLimiter.consume(usuarioId, "chat");
         telemetryService.recordQuestion(mensajeUsuario);
 
+        // Filtro 1: saludos, agradecimientos y preguntas de identidad no aportan aprendizaje.
+        Optional<String> respuestaLocal = localResolver.responderChat(mensajeUsuario);
+        if (respuestaLocal.isPresent()) {
+            telemetryService.recordSource("local_resolver_chat");
+            return respuestaLocal.get();
+        }
+
+        // Filtro 2: solo se cachea la pregunta suelta; con historial la respuesta depende del contexto.
+        boolean cacheable = historial == null || historial.isEmpty();
+        String claveCache = cacheable ? cacheService.clave("chat", mensajeUsuario) : null;
+        if (cacheable) {
+            Optional<String> cacheada = cacheService.buscar(claveCache);
+            if (cacheada.isPresent()) {
+                telemetryService.recordSource("cache_chat");
+                return cacheada.get();
+            }
+        }
+
         String promptChat = buildChatPrompt(mensajeUsuario, historial);
 
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
@@ -133,7 +182,7 @@ public class ClawbotService {
                 String respuesta = callGeminiChat(promptChat);
                 if (hasText(respuesta)) {
                     telemetryService.recordSource("gemini_chat");
-                    return formatearRespuestaChat(respuesta);
+                    return cachearChat(claveCache, formatearRespuestaChat(respuesta), "gemini");
                 }
             } catch (Exception e) {
                 logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
@@ -145,7 +194,7 @@ public class ClawbotService {
                 String respuesta = callGroqChat(promptChat);
                 if (hasText(respuesta)) {
                     telemetryService.recordSource("groq_chat");
-                    return formatearRespuestaChat(respuesta);
+                    return cachearChat(claveCache, formatearRespuestaChat(respuesta), "groq");
                 }
             } catch (Exception e) {
                 logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
@@ -261,7 +310,7 @@ public class ClawbotService {
             messages.add(Map.of("role", "user", "content", prompt));
 
             Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", "llama-3.1-8b-instant");
+            body.put("model", groqModel);
             body.put("messages", messages);
             body.put("temperature", 0.35);
             body.put("max_tokens", 420);
@@ -538,6 +587,26 @@ public class ClawbotService {
             return sanitized;
         }
         return sanitized.substring(0, maxChars) + "...";
+    }
+
+    private String cachearChat(String clave, String respuesta, String fuente) {
+        if (clave != null) {
+            cacheService.guardar(clave, respuesta, fuente);
+        }
+        return respuesta;
+    }
+
+    /** Da al diagnostico local el mismo formato que la respuesta de la IA para que el frontend no note la diferencia. */
+    private String buildRespuestaDiagnostico(ClawbotLocalResolver.Diagnostico diagnostico, int intentos) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ERROR: La base de datos rechazo tu consulta y el motivo es concreto.\n\n");
+        sb.append("CONCEPTO: ").append(diagnostico.concepto()).append("\n\n");
+        sb.append("PISTA: ").append(diagnostico.pista()).append("\n\n");
+        if (intentos >= 2) {
+            sb.append("MINIEJEMPLO:\n```sql\n").append(miniExampleFor(diagnostico.errorType())).append("\n```\n\n");
+        }
+        sb.append("CIERRE: ").append(diagnostico.cierre());
+        return sb.toString();
     }
 
     private String buildFallbackResponse(String error, int intentos, String errorType) {

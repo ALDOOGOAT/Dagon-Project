@@ -1,7 +1,10 @@
 package com.dagon.backend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,10 +19,10 @@ public class LeaderboardService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public List<Map<String, Object>> obtenerRankingGlobal() {
-        return obtenerRankingGlobal(0);
-    }
-
+    // Protege a Postgres de lecturas repetidas del ranking global. Ojo: NO agregues una
+    // sobrecarga que llame a este metodo desde dentro de la clase; esa auto-invocacion se
+    // salta el proxy de Spring y el cache deja de aplicarse. Llama siempre obtenerRankingGlobal(0).
+    @Cacheable(value = "leaderboard", key = "#limite")
     public List<Map<String, Object>> obtenerRankingGlobal(int limite) {
         // ¡Mira qué limpio! Java solo llama a tu vista de PostgreSQL
         String sql = "SELECT id_usuario, nombre, xp_total, ejercicios_resueltos " +
@@ -121,5 +124,14 @@ public class LeaderboardService {
             return numero.intValue();
         }
         return null;
+    }
+
+    // Red de seguridad: el cache tambien se invalida al registrar un intento correcto
+    // (RewardService.registrarIntento). Este barrido cubre cambios de XP hechos por otras
+    // vias (docente, admin) que no pasan por ahi.
+    @CacheEvict(value = "leaderboard", allEntries = true)
+    @Scheduled(fixedRate = 5 * 60 * 1000)
+    public void evictCacheLeaderboard() {
+        // Sin cuerpo: la anotación @CacheEvict hace el trabajo.
     }
 }

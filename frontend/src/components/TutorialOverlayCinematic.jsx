@@ -470,13 +470,13 @@ export const TutorialOverlay = ({ isOpen, onClose }) => {
             />
           )}
 
-          <div className="tour-panel-stage relative z-[102] flex min-h-screen items-end justify-center p-4 sm:p-6 lg:p-8">
+          <div className={`tour-panel-stage relative z-[102] flex min-h-screen justify-center p-4 sm:p-6 lg:p-8 ${targetRect ? 'items-end' : 'items-center'}`}>
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
-              className="tour-panel tour-cinematic-panel tour-bottom-sheet relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]"
+              className={`tour-panel tour-cinematic-panel ${targetRect ? 'tour-bottom-sheet' : ''} relative w-full max-w-6xl overflow-hidden rounded-[28px] border border-cyan-300/40 shadow-[0_-8px_50px_rgba(0,0,0,0.6),0_30px_120px_rgba(0,0,0,0.7)]`}
             >
               <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/90 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-fuchsia-300/60 to-transparent" />
