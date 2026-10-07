@@ -21,6 +21,7 @@ public class EjercicioDTO {
     private Long idGrupo;
     private Boolean recursoDocente;
     private List<String> wordBank;
+    private List<Map<String, Object>> campos;
     private Map<String, Object> pedagogia;
     // --- GETTERS Y SETTERS ---
     public Integer getId() { return id; }
@@ -73,6 +74,9 @@ public class EjercicioDTO {
 
     public List<String> getWordBank() { return wordBank; }
     public void setWordBank(List<String> wordBank) { this.wordBank = wordBank; }
+
+    public List<Map<String, Object>> getCampos() { return campos; }
+    public void setCampos(List<Map<String, Object>> campos) { this.campos = campos; }
 
     public Map<String, Object> getPedagogia() { return pedagogia; }
     public void setPedagogia(Map<String, Object> pedagogia) { this.pedagogia = pedagogia; }

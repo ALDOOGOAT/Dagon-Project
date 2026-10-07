@@ -21,6 +21,9 @@ const GraduationPage = lazy(() => import('./pages/GraduationPage').then(module =
 const CreditsPage = lazy(() => import('./pages/CreditsPage').then(module => ({ default: module.CreditsPage })));
 const PostgresAcademyPage = lazy(() => import('./pages/PostgresAcademyPage').then(module => ({ default: module.PostgresAcademyPage })));
 const DocentePage = lazy(() => import('./pages/DocentePage').then(module => ({ default: module.DocentePage })));
+const MateriaSelectorPage = lazy(() => import('./pages/MateriaSelectorPage').then(module => ({ default: module.MateriaSelectorPage })));
+const IoMisionPage = lazy(() => import('./pages/IoMisionPage').then(module => ({ default: module.IoMisionPage })));
+const IoCalculadoraPage = lazy(() => import('./pages/IoCalculadoraPage').then(module => ({ default: module.IoCalculadoraPage })));
 
 const MOTION_STORAGE_KEY = 'dagon_motion_mode';
 
@@ -156,7 +159,7 @@ const ProtectedRoute = ({ children }) => {
 
 const AppRoutes = () => {
   const { token, user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, materia } = useTheme();
   const location = useLocation();
   const visualProfile = useAdaptiveVisualProfile();
   const [globalStreak, setGlobalStreak] = useState(null);
@@ -190,7 +193,8 @@ const AppRoutes = () => {
         tint={bgTint}
         mode={isLightTheme ? 'light' : 'dark'}
         colors={colors}
-        reduceMotion={visualProfile.reduceMotion}
+        // En IO el fondo es papel milimetrado (CSS): el canvas animado se congela.
+        reduceMotion={visualProfile.reduceMotion || materia === 'io'}
         visualFidelity={visualProfile.visualFidelity}
         targetFps={visualProfile.targetFps}
       />
@@ -198,9 +202,33 @@ const AppRoutes = () => {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
           <Route path="/" element={
-            token ? <Navigate to="/dashboard" replace /> :
+            token ? <Navigate to={localStorage.getItem('dagon_materia') ? '/dashboard' : '/materias'} replace /> :
             <AnimatedPage><LoginPage /></AnimatedPage>
           } />
+          <Route
+            path="/materias"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><MateriaSelectorPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/io/mision/:moduloId"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><IoMisionPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/io/calculadora"
+            element={
+              <ProtectedRoute>
+                <AnimatedPage><IoCalculadoraPage /></AnimatedPage>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
@@ -273,6 +301,7 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
            </Routes>
         </AnimatePresence>
       </Suspense>

@@ -1,0 +1,1267 @@
+{
+  "type": "object",
+  "properties": {
+    "estado": {
+      "type": "string",
+      "enum": [
+        "listo",
+        "incompleto",
+        "no_soportado"
+      ]
+    },
+    "resumen": {
+      "type": "string"
+    },
+    "modelo": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "pl"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "objetivo": {
+                  "type": "string"
+                },
+                "restricciones": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "enteras": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "binarias": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "objetivo",
+                "restricciones",
+                "enteras",
+                "binarias"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "transporte"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "costos": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "oferta": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "demanda": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              },
+              "required": [
+                "costos",
+                "oferta",
+                "demanda"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "asignacion"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "matriz": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "objetivo": {
+                  "type": "string",
+                  "enum": [
+                    "min",
+                    "max"
+                  ]
+                }
+              },
+              "required": [
+                "matriz",
+                "objetivo"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "redes"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "actividades": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/actividad"
+                  }
+                },
+                "plazo": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "actividades",
+                "plazo"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "inventarios"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "D": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "S": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "H": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "p": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "P": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "i": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "d": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "L": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "sigma": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "z": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "T": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "inventario": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "tramos": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/tramo"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "D",
+                "S",
+                "H",
+                "p",
+                "P",
+                "i",
+                "d",
+                "L",
+                "sigma",
+                "z",
+                "T",
+                "inventario",
+                "tramos"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "colas"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "lambda": {
+                  "type": "number"
+                },
+                "mu": {
+                  "type": "number"
+                },
+                "s": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cs": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "cw": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "lambda",
+                "mu",
+                "s",
+                "cs",
+                "cw"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "markov"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "P": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "inicial": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "n": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "P",
+                "inicial",
+                "n"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "noLineal"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "f": {
+                  "type": "string"
+                },
+                "g": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "c": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "a": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "b": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "x0": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "objetivo": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "min",
+                        "max"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "simbolos": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "inicio": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "f",
+                "g",
+                "c",
+                "a",
+                "b",
+                "x0",
+                "objetivo",
+                "simbolos",
+                "inicio"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "cuadratica"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "objetivo": {
+                  "type": "string"
+                },
+                "restricciones": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "objetivo",
+                "restricciones"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "grafos"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "aristas": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/arista"
+                  }
+                },
+                "origen": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "destino": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "dirigido": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "aristas",
+                "origen",
+                "destino",
+                "dirigido"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "decisiones"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "pagos": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "objetivo": {
+                  "type": "string",
+                  "enum": [
+                    "min",
+                    "max"
+                  ]
+                },
+                "alternativas": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "estados": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "probabilidades": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "alfa": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "pagos",
+                "objetivo",
+                "alternativas",
+                "estados",
+                "probabilidades",
+                "alfa"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tipo": {
+              "type": "string",
+              "enum": [
+                "juegos"
+              ]
+            },
+            "metodo": {
+              "type": "string"
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/variable"
+              }
+            },
+            "datos": {
+              "type": "object",
+              "properties": {
+                "pagos": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "filas": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "columnas": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "pagos",
+                "filas",
+                "columnas"
+              ],
+              "additionalProperties": false
+            },
+            "evidencias": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/evidencia"
+              }
+            }
+          },
+          "required": [
+            "tipo",
+            "metodo",
+            "variables",
+            "datos",
+            "evidencias"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "preguntas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "advertencias": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supuestos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "estado",
+    "resumen",
+    "modelo",
+    "preguntas",
+    "advertencias",
+    "supuestos"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "variable": {
+      "type": "object",
+      "properties": {
+        "simbolo": {
+          "type": "string"
+        },
+        "nombre": {
+          "type": "string"
+        },
+        "unidad": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "simbolo",
+        "nombre",
+        "unidad"
+      ],
+      "additionalProperties": false
+    },
+    "evidencia": {
+      "type": "object",
+      "properties": {
+        "campo": {
+          "type": "string"
+        },
+        "texto": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "campo",
+        "texto"
+      ],
+      "additionalProperties": false
+    },
+    "tramo": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "precio": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "min",
+        "precio"
+      ],
+      "additionalProperties": false
+    },
+    "actividad": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "predecesoras": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "duracion": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "a": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "b": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "predecesoras",
+        "duracion",
+        "a",
+        "m",
+        "b"
+      ],
+      "additionalProperties": false
+    },
+    "arista": {
+      "type": "object",
+      "properties": {
+        "origen": {
+          "type": "string"
+        },
+        "destino": {
+          "type": "string"
+        },
+        "valor": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "origen",
+        "destino",
+        "valor"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

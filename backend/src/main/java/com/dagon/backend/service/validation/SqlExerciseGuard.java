@@ -58,7 +58,8 @@ public class SqlExerciseGuard {
 
     public Optional<Map<String, Object>> prevalidar(ContextoValidacionEjercicio contexto) {
         if (contexto.tipo() == TipoValidacionEjercicio.DIAGRAMA
-                || contexto.tipo() == TipoValidacionEjercicio.TEXTUAL) {
+                || contexto.tipo() == TipoValidacionEjercicio.TEXTUAL
+                || contexto.tipo() == TipoValidacionEjercicio.NUMERICO) {
             return Optional.empty();
         }
 

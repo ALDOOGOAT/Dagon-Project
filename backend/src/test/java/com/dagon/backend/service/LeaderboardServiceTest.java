@@ -68,10 +68,37 @@ class LeaderboardServiceTest {
         // el stub debe apuntar a esa misma sobrecarga (no a queryForList(String)).
         when(jdbcTemplate.queryForList(sql, new Object[] {})).thenReturn(List.of(filaAna), List.of(filaBeto));
 
-        List<Map<String, Object>> primera = service.obtenerRankingGlobal(0);
-        List<Map<String, Object>> segunda = service.obtenerRankingGlobal(0);
+        List<Map<String, Object>> primera = service.obtenerRankingGlobal(0, null);
+        List<Map<String, Object>> segunda = service.obtenerRankingGlobal(0, null);
 
         assertThat(segunda).isEqualTo(primera);
         assertThat(segunda.get(0).get("nombre")).isEqualTo("Ana");
+    }
+
+    @Test
+    void cacheaPorSeparadoElRankingGlobalYElDeCadaMateria() {
+        Map<String, Object> filaGlobal = Map.of("id_usuario", "u1", "nombre", "Ana", "xp_total", 50, "ejercicios_resueltos", 5);
+        Map<String, Object> filaIo = Map.of("id_usuario", "u2", "nombre", "Beto", "xp_total", 30, "ejercicios_resueltos", 3);
+        String sqlIo = "SELECT x.id_usuario, u.nombre, x.xp AS xp_total, x.ejercicios_resueltos " +
+                "FROM lms_core.v_xp_por_materia x " +
+                "JOIN lms_core.usuarios u ON u.id_usuario = x.id_usuario " +
+                "WHERE x.materia_slug = ? " +
+                "ORDER BY x.xp DESC, x.ejercicios_resueltos DESC, u.nombre ASC LIMIT ?";
+        when(jdbcTemplate.queryForList(org.mockito.ArgumentMatchers.startsWith("SELECT id_usuario, nombre, xp_total"), org.mockito.ArgumentMatchers.<Object[]>any()))
+                .thenReturn(List.of(filaGlobal));
+        when(jdbcTemplate.queryForList(sqlIo, new Object[] {"io", 5})).thenReturn(List.of(filaIo));
+
+        List<Map<String, Object>> global = service.obtenerRankingGlobal(5, null);
+        List<Map<String, Object>> io1 = service.obtenerRankingGlobal(5, "io");
+        List<Map<String, Object>> io2 = service.obtenerRankingGlobal(5, "io");
+
+        assertThat(global.get(0).get("nombre")).isEqualTo("Ana");
+        assertThat(io1.get(0).get("nombre")).isEqualTo("Beto");
+        assertThat(io1.get(0).get("xp")).isEqualTo(30);
+        // segunda llamada con la misma clave (limite + materia): sale del cache, no de la BD
+        assertThat(io2).isEqualTo(io1);
+        org.mockito.Mockito.verify(jdbcTemplate, org.mockito.Mockito.times(1)).queryForList(sqlIo, new Object[] {"io", 5});
+        // materia vacia = global (misma clave que null)
+        assertThat(service.obtenerRankingGlobal(5, "").get(0).get("nombre")).isEqualTo("Ana");
     }
 }

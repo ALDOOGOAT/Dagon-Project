@@ -8,6 +8,7 @@ import { EmptyState, LoadingBlock, MetricCard } from '../components/ui/dagon-pan
 import apiClient, { cachedGet, invalidateApiCache } from '../services/apiClient';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CreadorMisionIo, construirConfiguracionIo, misionIoInicial } from '../components/docente/CreadorMisionIo';
 import {
   ArrowLeft, Users, AlertTriangle, Clock, TrendingDown, Download,
   Search, Eye, X, ChevronDown, ChevronUp, Printer, BarChart3,
@@ -72,6 +73,7 @@ export const DocentePage = () => {
   const [guardandoGrupo, setGuardandoGrupo] = useState(false);
   const [guardandoAlumno, setGuardandoAlumno] = useState(false);
   const [guardandoEjercicio, setGuardandoEjercicio] = useState(false);
+  const [misionIo, setMisionIo] = useState(misionIoInicial);
   const [nuevoEjercicio, setNuevoEjercicio] = useState({
     idModulo: '',
     titulo: '',
@@ -327,9 +329,18 @@ export const DocentePage = () => {
 
   const crearEjercicio = async (event) => {
     event.preventDefault();
-    if (!nuevoEjercicio.idModulo || !nuevoEjercicio.titulo.trim() || !nuevoEjercicio.enunciado.trim() || !nuevoEjercicio.queryMaestra.trim()) {
-      toast.error('Completa módulo, título, enunciado y query esperada');
+    if (!nuevoEjercicio.idModulo || !nuevoEjercicio.titulo.trim() || !nuevoEjercicio.enunciado.trim() || (!moduloEsIo && !nuevoEjercicio.queryMaestra.trim())) {
+      toast.error(moduloEsIo ? 'Completa módulo, título y enunciado' : 'Completa módulo, título, enunciado y query esperada');
       return;
+    }
+    let configuracionExtra = null;
+    if (moduloEsIo) {
+      try {
+        configuracionExtra = construirConfiguracionIo(misionIo);
+      } catch (err) {
+        toast.error(err.message);
+        return;
+      }
     }
     if (nuevoEjercicio.visibilidad === 'GRUPO' && !nuevoEjercicio.idGrupo) {
       toast.error('Selecciona el grupo que recibirá el ejercicio');
@@ -342,9 +353,10 @@ export const DocentePage = () => {
         idModulo: Number(nuevoEjercicio.idModulo),
         titulo: nuevoEjercicio.titulo.trim(),
         enunciado: nuevoEjercicio.enunciado.trim(),
-        queryMaestra: nuevoEjercicio.queryMaestra.trim(),
+        queryMaestra: moduloEsIo ? '' : nuevoEjercicio.queryMaestra.trim(),
         dificultad: Number(nuevoEjercicio.dificultad),
-        formato: nuevoEjercicio.formato,
+        formato: moduloEsIo ? 'editor' : nuevoEjercicio.formato,
+        configuracionExtra,
         visibilidad: nuevoEjercicio.visibilidad,
         idGrupo: nuevoEjercicio.visibilidad === 'GRUPO' ? Number(nuevoEjercicio.idGrupo) : null,
         tipoMision: nuevoEjercicio.tipoMision || 'DOCENTE'
@@ -356,6 +368,7 @@ export const DocentePage = () => {
         queryMaestra: '',
         dificultad: 2
       }));
+      if (moduloEsIo) setMisionIo(misionIoInicial());
       invalidateApiCache('/api/docente');
       await cargarEjerciciosDocente();
       if (vistaActiva === 'calificaciones') {
@@ -455,7 +468,8 @@ export const DocentePage = () => {
   const cursoOptions = (data?.cursos || []).map(c => ({ value: c.id_curso, label: c.titulo }));
   const moduloOptions = modulosFiltro.map(m => ({ value: m.id_modulo, label: m.titulo }));
   const grupoOptions = (data?.grupos || []).map(g => ({ value: g.idGrupo, label: g.nombreGrupo }));
-  const allModuloOptions = (data?.modulos || []).map(m => ({ value: m.id_modulo, label: m.titulo }));
+  const allModuloOptions = (data?.modulos || []).map(m => ({ value: m.id_modulo, label: m.materia_slug === 'io' ? `IO · ${m.titulo}` : m.titulo }));
+  const moduloEsIo = (data?.modulos || []).some(m => String(m.id_modulo) === String(nuevoEjercicio.idModulo) && m.materia_slug === 'io');
   const docenteHeroBackground = isLight
     ? `linear-gradient(135deg, rgba(255,255,255,0.95), ${colors.primary}18 46%, rgba(14,165,233,0.16))`
     : `linear-gradient(135deg, rgba(2,6,23,0.94), ${colors.primary}26 48%, rgba(20,184,166,0.18))`;
@@ -934,7 +948,7 @@ export const DocentePage = () => {
                   contentClassName={selectContentClass}
                   contentStyle={selectContentStyle}
                 />
-                <DagonSelect
+                {!moduloEsIo && <DagonSelect
                   value={nuevoEjercicio.formato}
                   onChange={value => setNuevoEjercicio(prev => ({ ...prev, formato: value }))}
                   placeholder="Formato"
@@ -946,7 +960,7 @@ export const DocentePage = () => {
                   triggerStyle={selectStyle}
                   contentClassName={selectContentClass}
                   contentStyle={selectContentStyle}
-                />
+                />}
                 <DagonSelect
                   value={nuevoEjercicio.visibilidad}
                   onChange={value => setNuevoEjercicio(prev => ({ ...prev, visibilidad: value || 'DOCENTE' }))}
@@ -973,7 +987,11 @@ export const DocentePage = () => {
               </div>
               <input value={nuevoEjercicio.titulo} onChange={e => setNuevoEjercicio(prev => ({ ...prev, titulo: e.target.value }))} placeholder="Título del ejercicio" className="rounded-xl border px-3 py-2 text-sm" style={selectStyle} />
               <textarea value={nuevoEjercicio.enunciado} onChange={e => setNuevoEjercicio(prev => ({ ...prev, enunciado: e.target.value }))} rows={4} placeholder="Qué debe practicar el alumno" className="rounded-xl border bg-transparent px-3 py-2 text-sm resize-none" style={{ borderColor, color: headingColor }} />
-              <textarea value={nuevoEjercicio.queryMaestra} onChange={e => setNuevoEjercicio(prev => ({ ...prev, queryMaestra: e.target.value }))} rows={5} placeholder="Query esperada" className="rounded-xl border bg-transparent px-3 py-2 font-mono text-xs resize-none" style={{ borderColor, color: headingColor }} />
+              {moduloEsIo ? (
+                <CreadorMisionIo mision={misionIo} onChange={setMisionIo} estilo={{ borderColor, headingColor, mutedColor, inputStyle: selectStyle }} />
+              ) : (
+                <textarea value={nuevoEjercicio.queryMaestra} onChange={e => setNuevoEjercicio(prev => ({ ...prev, queryMaestra: e.target.value }))} rows={5} placeholder="Query esperada" className="rounded-xl border bg-transparent px-3 py-2 font-mono text-xs resize-none" style={{ borderColor, color: headingColor }} />
+              )}
               <label className="grid gap-2 text-xs font-bold uppercase tracking-widest" style={{ color: mutedColor }}>
                 Dificultad {nuevoEjercicio.dificultad}
                 <input type="range" min="1" max="5" value={nuevoEjercicio.dificultad} onChange={e => setNuevoEjercicio(prev => ({ ...prev, dificultad: e.target.value }))} />
@@ -1002,7 +1020,11 @@ export const DocentePage = () => {
                       <span className="rounded-xl border px-2 py-1 text-[10px] font-bold uppercase" style={{ borderColor, color: colors.primary }}>{ej.visibilidad}</span>
                     </div>
                     <p className="mt-3 text-sm leading-relaxed" style={{ color: mutedColor }}>{ej.enunciado}</p>
-                    <pre className="mt-3 max-h-28 overflow-auto rounded-xl border p-3 font-mono text-xs" style={{ borderColor, color: isLight ? '#312e81' : '#e0e7ff', backgroundColor: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(2,6,23,0.58)' }}>{ej.queryMaestra}</pre>
+                    {ej.queryMaestra ? (
+                      <pre className="mt-3 max-h-28 overflow-auto rounded-xl border p-3 font-mono text-xs" style={{ borderColor, color: isLight ? '#312e81' : '#e0e7ff', backgroundColor: isLight ? 'rgba(255,255,255,0.74)' : 'rgba(2,6,23,0.58)' }}>{ej.queryMaestra}</pre>
+                    ) : (
+                      <p className="mt-3 text-xs font-bold uppercase tracking-widest" style={{ color: colors.primary }}>Misión numérica de IO</p>
+                    )}
                   </div>
                 ))}
                 {ejerciciosDocente.length === 0 && (

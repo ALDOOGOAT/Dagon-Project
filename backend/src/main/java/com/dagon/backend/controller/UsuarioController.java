@@ -8,6 +8,7 @@ import com.dagon.backend.security.JwtUtil;
 import com.dagon.backend.service.LeaderboardService;
 import com.dagon.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
@@ -17,7 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -66,6 +66,8 @@ public class UsuarioController {
             return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuarioGuardado)));
         } catch (ResponseStatusException e) {
             throw e;
+        } catch (org.springframework.dao.DataAccessException e) {
+            return ResponseEntity.internalServerError().body("No se pudo completar el registro. Inténtalo de nuevo.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -93,29 +95,12 @@ public class UsuarioController {
         }
     }
 
-    // PUERTA 3: GOOGLE LOGIN (Simplificado)
+    // PUERTA 3: GOOGLE LOGIN (deshabilitada: el backend nunca verificó el token de Google,
+    // así que cualquiera podía entrar como cualquier email).
     @PostMapping("/login-google")
-    public ResponseEntity<?> loginGoogle(@RequestBody Map<String, Object> body) {
-        try {
-            String email = (String) body.get("email");
-            String nombre = (String) body.get("nombre");
-            
-            // Buscamos si el usuario ya existe
-            Usuario usuario = usuarioService.obtenerPorEmail(email).orElseGet(() -> {
-                // Si no existe, lo creamos como alumno por defecto
-                Usuario nuevo = new Usuario();
-                nuevo.setEmail(email);
-                nuevo.setNombre(nombre);
-                nuevo.setPasswordHash("GOOGLE_AUTH_" + UUID.randomUUID()); // Password dummy
-                nuevo.setMetodoAuth("google");
-                return usuarioService.registrarUsuario(nuevo, "alumno", null, null);
-            });
-
-            String token = jwtUtil.generarToken(usuario.getIdUsuario().toString());
-            return ResponseEntity.ok(new AuthResponseDTO(token, UsuarioResponseDTO.from(usuario)));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error en autenticación con Google: " + e.getMessage());
-        }
+    public ResponseEntity<?> loginGoogle(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body("Inicio con Google deshabilitado hasta tener verificación real del token");
     }
     // --- TEMPORAL: Puerta provisional para obtener el perfil ---
     @GetMapping("/{id}/profile")
@@ -129,7 +114,7 @@ public class UsuarioController {
     // PUERTA: SALÓN DE LA FAMA (Tiempo Real Optimizado)
     @GetMapping("/ranking")
     public ResponseEntity<?> obtenerRanking() {
-        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0));
+        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0, null));
     }
 
     @PostMapping("/{id}/foto")

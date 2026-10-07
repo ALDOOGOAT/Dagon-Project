@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -19,8 +20,8 @@ public class LeaderboardController {
     private LeaderboardService leaderboardService;
 
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getLeaderboard() {
-        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0));
+    public ResponseEntity<List<Map<String, Object>>> getLeaderboard(@RequestParam(required = false) String materia) {
+        return ResponseEntity.ok(leaderboardService.obtenerRankingGlobal(0, materia));
     }
 
     @GetMapping("/exercises/{exerciseId}")

@@ -49,10 +49,10 @@ class DashboardControllerTest {
 
         when(usuarioService.obtenerPerfilSeguro(usuarioId)).thenReturn(Optional.of(perfil));
         when(usuarioService.obtenerEstadisticasResumen(usuarioId)).thenReturn(stats);
-        when(moduloService.obtenerModulosConEstado(usuarioId)).thenReturn(modulos);
-        when(leaderboardService.obtenerRankingGlobal(5)).thenReturn(ranking);
+        when(moduloService.obtenerModulosConEstado(usuarioId, "io")).thenReturn(modulos);
+        when(leaderboardService.obtenerRankingGlobal(5, "io")).thenReturn(ranking);
 
-        var response = controller.obtenerResumen(auth);
+        var response = controller.obtenerResumen("io", auth);
 
         assertThat(response.getBody()).isInstanceOf(Map.class);
         Map<?, ?> body = (Map<?, ?>) response.getBody();
@@ -62,7 +62,7 @@ class DashboardControllerTest {
         assertThat(body.get("leaderboard")).isEqualTo(ranking);
 
         verify(usuarioService).obtenerEstadisticasResumen(usuarioId);
-        verify(moduloService).obtenerModulosConEstado(usuarioId);
-        verify(leaderboardService).obtenerRankingGlobal(5);
+        verify(moduloService).obtenerModulosConEstado(usuarioId, "io");
+        verify(leaderboardService).obtenerRankingGlobal(5, "io");
     }
 }

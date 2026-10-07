@@ -139,30 +139,10 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loginGoogle = async (googleData) => {
-    try {
-      const response = await apiClient.post('/api/usuarios/login-google', {
-        email: googleData.email,
-        nombre: googleData.name
-      });
-      
-      const { token: newToken, user: newUser } = response.data;
-      
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-      setUser(newUser);
-
-      return { success: true, user: newUser };
-    } catch (error) {
-      return { success: false, error: error.response?.data || 'Error al entrar con Google' };
-    }
-  };
-
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('dagon_user_cache');
     localStorage.removeItem('userAvatar');
-    localStorage.removeItem('userPalette');
     invalidateApiCache();
     setToken(null);
     setUser(null);
@@ -190,7 +170,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, loginGoogle, logout, updateUserXP, updateUserStreak }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUserXP, updateUserStreak }}>
       {children}
     </AuthContext.Provider>
   );

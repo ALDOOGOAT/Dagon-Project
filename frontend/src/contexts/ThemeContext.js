@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useLayoutEffect } from 'react';
+import { createContext, useContext, useState, useLayoutEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 const ThemeContext = createContext(null);
@@ -169,6 +169,22 @@ export const COLOR_PALETTES = {
     gradient: 'from-sky-400 via-cyan-400 to-violet-500',
     gradientAlt: 'from-sky-900/20 via-transparent to-violet-900/20',
   },
+  // Paleta fija de la materia Investigación de Operaciones (no se ofrece en el selector de paletas).
+  operaciones: {
+    name: 'Operaciones',
+    mode: 'dark',
+    primary: '#f59e0b',
+    secondary: '#8b5cf6',
+    accent: '#38bdf8',
+    background: '#0b1120',
+    surface: '#111a2e',
+    surfaceAlt: '#1a2540',
+    text: '#f8fafc',
+    textMuted: '#94a3b8',
+    border: '#2a3655',
+    gradient: 'from-amber-500 via-orange-500 to-violet-600',
+    gradientAlt: 'from-amber-900/20 via-transparent to-violet-900/20',
+  },
   obsidian: {
     name: 'Obsidian',
     mode: 'dark',
@@ -187,6 +203,23 @@ export const COLOR_PALETTES = {
 };
 
 const DEFAULT_PALETTE = 'dagon';
+const MATERIA_KEY = 'dagon_materia';
+const MATERIA_PALETTE = { io: 'operaciones' };
+// Paletas que el usuario puede elegir en su perfil (sin las ligadas a una materia).
+const USER_PALETTES = Object.fromEntries(
+  Object.entries(COLOR_PALETTES).filter(([key]) => key !== 'operaciones')
+);
+
+const getStoredMateria = () => {
+  try {
+    return localStorage.getItem(MATERIA_KEY) === 'io' ? 'io' : 'sql';
+  } catch {
+    return 'sql';
+  }
+};
+
+// Paleta efectiva: la de la materia si la tiene, si no la del usuario.
+const effectivePalette = (userPalette, materia) => MATERIA_PALETTE[materia] || userPalette;
 const THEME_ROOT_CLASSES = ['theme-dark', 'theme-light'];
 const getUserPaletteKey = (userId) => `userPalette:${userId}`;
 let themeTransitionScheduled = false;
@@ -205,6 +238,29 @@ const hexToRgb = (hex) => {
     g: parseInt(hex.slice(3, 5), 16),
     b: parseInt(hex.slice(5, 7), 16),
   };
+};
+
+// "#10b981" -> "160 84% 39%": los tokens Shadcn se leen en Tailwind como hsl(var(--x)).
+export const hexToHslTriplet = (hex) => {
+  const { r, g, b } = hexToRgb(hex);
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let h = 0;
+  let sat = 0;
+  if (d !== 0) {
+    sat = d / (1 - Math.abs(2 * l - 1));
+    if (max === rn) h = ((gn - bn) / d) % 6;
+    else if (max === gn) h = (bn - rn) / d + 2;
+    else h = (rn - gn) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return `${Math.round(h)} ${Math.round(sat * 100)}% ${Math.round(l * 100)}%`;
 };
 
 const rgba = (hex, alpha) => {
@@ -244,6 +300,7 @@ const getStoredPalette = (userId) => {
 export const ThemeProvider = ({ children }) => {
   const { user, token } = useAuth();
   const resolvedUserId = user?.idUsuario || getUserIdFromToken(token);
+  const [materia, setMateriaState] = useState(getStoredMateria);
   const [palette, setPalette] = useState(() => {
     return getStoredPalette(user?.idUsuario || getUserIdFromToken(token));
   });
@@ -253,15 +310,15 @@ export const ThemeProvider = ({ children }) => {
 
     if (resolvedPalette !== palette) {
       setPalette(resolvedPalette);
-      applyPalette(resolvedPalette);
+      applyPalette(effectivePalette(resolvedPalette, materia), materia);
       return;
     }
 
     if (resolvedUserId) {
       localStorage.setItem(getUserPaletteKey(resolvedUserId), resolvedPalette);
     }
-    applyPalette(resolvedPalette);
-  }, [palette, resolvedUserId]);
+    applyPalette(effectivePalette(resolvedPalette, materia), materia);
+  }, [palette, resolvedUserId, materia]);
 
   const changePalette = (newPalette) => {
     const safePalette = getValidPalette(newPalette);
@@ -272,17 +329,26 @@ export const ThemeProvider = ({ children }) => {
       localStorage.setItem(getUserPaletteKey(resolvedUserId), safePalette);
     }
 
-    applyPalette(safePalette);
+    applyPalette(effectivePalette(safePalette, materia), materia);
   };
 
-  const currentColors = COLOR_PALETTES[palette] || COLOR_PALETTES[DEFAULT_PALETTE];
+  const setMateria = useCallback((slug) => {
+    const safe = slug === 'io' ? 'io' : 'sql';
+    localStorage.setItem(MATERIA_KEY, safe);
+    setMateriaState(safe);
+  }, []);
+
+  const activeName = effectivePalette(palette, materia);
+  const currentColors = COLOR_PALETTES[activeName] || COLOR_PALETTES[DEFAULT_PALETTE];
 
   return (
     <ThemeContext.Provider value={{ 
       palette, 
       changePalette, 
       colors: currentColors,
-      palettes: COLOR_PALETTES 
+      palettes: USER_PALETTES,
+      materia,
+      setMateria,
     }}>
       {children}
     </ThemeContext.Provider>
@@ -296,13 +362,15 @@ export const useTheme = () => {
       palette: DEFAULT_PALETTE,
       changePalette: () => {},
       colors: COLOR_PALETTES[DEFAULT_PALETTE],
-      palettes: COLOR_PALETTES,
+      palettes: USER_PALETTES,
+      materia: 'sql',
+      setMateria: () => {},
     };
   }
   return context;
 };
 
-const applyPalette = (paletteName) => {
+const applyPalette = (paletteName, materia = 'sql') => {
   const safePalette = getValidPalette(paletteName);
   const colors = COLOR_PALETTES[safePalette] || COLOR_PALETTES[DEFAULT_PALETTE];
   const root = document.documentElement;
@@ -351,28 +419,31 @@ const applyPalette = (paletteName) => {
     : `0 24px 64px -26px ${rgba(colors.background, 0.62)}`);
   root.dataset.themeMode = isLight ? 'light' : 'dark';
   root.dataset.themePalette = safePalette;
+  root.dataset.materia = materia;
   root.classList.remove(...THEME_ROOT_CLASSES);
   root.classList.add(isLight ? 'theme-light' : 'theme-dark');
   
-  root.style.setProperty('--background', colors.background);
-  root.style.setProperty('--foreground', colors.text);
-  root.style.setProperty('--primary', colors.primary);
-  root.style.setProperty('--primary-foreground', isLight ? '#1f2937' : '#ffffff');
-  root.style.setProperty('--secondary', colors.secondary);
-  root.style.setProperty('--secondary-foreground', colors.text);
-  root.style.setProperty('--muted', colors.surfaceAlt);
-  root.style.setProperty('--muted-foreground', colors.textMuted);
-  root.style.setProperty('--accent', colors.accent);
-  root.style.setProperty('--accent-foreground', colors.text);
-  root.style.setProperty('--destructive', '#dc2626');
-  root.style.setProperty('--destructive-foreground', '#ffffff');
-  root.style.setProperty('--border', colors.border);
-  root.style.setProperty('--input', colors.border);
-  root.style.setProperty('--ring', colors.primary);
-  root.style.setProperty('--card', colors.surface);
-  root.style.setProperty('--card-foreground', colors.text);
-  root.style.setProperty('--popover', colors.surface);
-  root.style.setProperty('--popover-foreground', colors.text);
+  // Tokens Shadcn: tripletas HSL (Tailwind los envuelve en hsl(var(--x))).
+  const hsl3 = hexToHslTriplet;
+  root.style.setProperty('--background', hsl3(colors.background));
+  root.style.setProperty('--foreground', hsl3(colors.text));
+  root.style.setProperty('--primary', hsl3(colors.primary));
+  root.style.setProperty('--primary-foreground', hsl3(isLight ? '#1f2937' : '#ffffff'));
+  root.style.setProperty('--secondary', hsl3(colors.secondary));
+  root.style.setProperty('--secondary-foreground', hsl3(colors.text));
+  root.style.setProperty('--muted', hsl3(colors.surfaceAlt));
+  root.style.setProperty('--muted-foreground', hsl3(colors.textMuted));
+  root.style.setProperty('--accent', hsl3(colors.accent));
+  root.style.setProperty('--accent-foreground', hsl3(colors.text));
+  root.style.setProperty('--destructive', hsl3('#dc2626'));
+  root.style.setProperty('--destructive-foreground', hsl3('#ffffff'));
+  root.style.setProperty('--border', hsl3(colors.border));
+  root.style.setProperty('--input', hsl3(colors.border));
+  root.style.setProperty('--ring', hsl3(colors.primary));
+  root.style.setProperty('--card', hsl3(colors.surface));
+  root.style.setProperty('--card-foreground', hsl3(colors.text));
+  root.style.setProperty('--popover', hsl3(colors.surface));
+  root.style.setProperty('--popover-foreground', hsl3(colors.text));
 
   // También actualizar el color de fondo del body directamente para evitar flashes
   document.body.style.backgroundColor = colors.background;

@@ -19,20 +19,32 @@ public class LeaderboardService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // Protege a Postgres de lecturas repetidas del ranking global. Ojo: NO agregues una
-    // sobrecarga que llame a este metodo desde dentro de la clase; esa auto-invocacion se
-    // salta el proxy de Spring y el cache deja de aplicarse. Llama siempre obtenerRankingGlobal(0).
-    @Cacheable(value = "leaderboard", key = "#limite")
-    public List<Map<String, Object>> obtenerRankingGlobal(int limite) {
+    // Protege a Postgres de lecturas repetidas del ranking. materia null/vacia = ranking global;
+    // con slug ('sql', 'io') solo cuenta la XP de esa materia. Ojo: NO agregues una sobrecarga
+    // que llame a este metodo desde dentro de la clase; esa auto-invocacion se salta el proxy de
+    // Spring y el cache deja de aplicarse. Llama siempre obtenerRankingGlobal(0, null).
+    @Cacheable(value = "leaderboard", key = "#limite + ':' + (#materia ?: '')")
+    public List<Map<String, Object>> obtenerRankingGlobal(int limite, String materia) {
+        boolean porMateria = materia != null && !materia.isBlank();
         // ¡Mira qué limpio! Java solo llama a tu vista de PostgreSQL
-        String sql = "SELECT id_usuario, nombre, xp_total, ejercicios_resueltos " +
-                "FROM lms_core.v_ranking_alumnos " +
-                "ORDER BY xp_total DESC, ejercicios_resueltos DESC, nombre ASC";
-        Object[] params = new Object[] {};
+        String sql = porMateria
+                ? "SELECT x.id_usuario, u.nombre, x.xp AS xp_total, x.ejercicios_resueltos " +
+                        "FROM lms_core.v_xp_por_materia x " +
+                        "JOIN lms_core.usuarios u ON u.id_usuario = x.id_usuario " +
+                        "WHERE x.materia_slug = ? " +
+                        "ORDER BY x.xp DESC, x.ejercicios_resueltos DESC, u.nombre ASC"
+                : "SELECT id_usuario, nombre, xp_total, ejercicios_resueltos " +
+                        "FROM lms_core.v_ranking_alumnos " +
+                        "ORDER BY xp_total DESC, ejercicios_resueltos DESC, nombre ASC";
+        List<Object> parametros = new ArrayList<>();
+        if (porMateria) {
+            parametros.add(materia);
+        }
         if (limite > 0) {
             sql += " LIMIT ?";
-            params = new Object[] { limite };
+            parametros.add(limite);
         }
+        Object[] params = parametros.toArray();
 
         List<Map<String, Object>> filas = jdbcTemplate.queryForList(sql, params);
         List<Map<String, Object>> ranking = new ArrayList<>();

@@ -8,7 +8,9 @@ import {
   ArrowRight,
   AlertTriangle,
   CheckCircle2,
+  Clock,
   Code2,
+  Coins,
   Database,
   Eye,
   Film,
@@ -16,14 +18,20 @@ import {
   GitBranch,
   KeyRound,
   Layers,
+  LineChart,
   Lock,
+  Network,
   Pause,
   Play,
   RotateCcw,
+  Scale,
   Search,
   Shield,
+  Sigma,
   SkipForward,
   Sparkles,
+  Table2,
+  TrendingUp,
   Volume2,
   VolumeX
 } from 'lucide-react';
@@ -100,6 +108,15 @@ const VISUALS = {
   trigger: Sparkles,
   view: Eye,
   warning: AlertTriangle,
+  // Investigación de Operaciones
+  chart: LineChart,
+  clock: Clock,
+  coins: Coins,
+  formula: Sigma,
+  network: Network,
+  scale: Scale,
+  table: Table2,
+  trend: TrendingUp,
 };
 
 const resolveVisual = (visual) => {
@@ -211,9 +228,16 @@ const buildMetadataCheckpoint = ({ objetivos, erroresComunes, focus }) => ({
   ],
 });
 
-const buildSceneTeachingPoints = (scene = {}, focus = DEFAULT_THEME) => {
+const buildSceneTeachingPoints = (scene = {}, focus = DEFAULT_THEME, esIo = false) => {
   const hasCode = Boolean(scene.code);
   const hasInteraction = Boolean(scene.interaction?.options?.length);
+  if (esIo) {
+    return [
+      { label: 'Idea', text: scene.title || focus.title },
+      { label: 'Acción', text: hasCode ? 'Lee la fórmula término a término: qué representa cada símbolo y en qué unidad está.' : 'Separa variables, parámetros y restricciones antes de calcular.' },
+      { label: 'Verificación', text: hasInteraction ? 'Responde la mini interacción y usa la retroalimentación como pista.' : 'Estima el orden de magnitud del resultado antes de usar la calculadora.' },
+    ];
+  }
 
   return [
     {
@@ -234,6 +258,30 @@ const buildSceneTeachingPoints = (scene = {}, focus = DEFAULT_THEME) => {
     },
   ];
 };
+
+// IO: solo escenas curadas (sin textos de SQL), una mini interacción y un cierre neutro.
+const buildEscenasIo = (cinematica) => [
+  ...cinematica.scenes,
+  {
+    kicker: 'Mini interacción',
+    title: cinematica.checkpoint.question,
+    body: 'Elige una respuesta y observa la retroalimentación antes de pasar a las misiones.',
+    prompt: 'Equivocarte aquí no resta XP: sirve para detectar la idea que falta.',
+    visual: 'target',
+    mood: 'thinking',
+    duration: 11000,
+    interaction: cinematica.checkpoint,
+  },
+  {
+    kicker: 'Cierre',
+    title: 'Listo para las misiones',
+    body: `${cinematica.subtitle}. Si una misión se resiste, vuelve a la teoría o usa la calculadora para comprobar cada paso.`,
+    prompt: 'Puedes saltar, pausar o repetir esta cinemática cuando quieras.',
+    visual: 'spark',
+    mood: 'excited',
+    duration: 7600,
+  },
+];
 
 const buildPedagogicalScenes = ({ moduleId, exercises, focus, curated, moduleMetadata }) => {
   const metadata = moduleMetadata || {};
@@ -307,7 +355,8 @@ const buildPedagogicalScenes = ({ moduleId, exercises, focus, curated, moduleMet
   ];
 };
 
-export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [], onComplete }) => {
+export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [], onComplete, cinematica = null }) => {
+  const esIo = Boolean(cinematica);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [muted, setMuted] = useState(() => !sounds.isEnabled());
   const [isPlaying, setIsPlaying] = useState(true);
@@ -315,7 +364,7 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
   const [showCheckpoint, setShowCheckpoint] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [interactionOption, setInteractionOption] = useState(null);
-  const curated = useMemo(() => getModuleCinematic(moduleId), [moduleId]);
+  const curated = useMemo(() => cinematica || getModuleCinematic(moduleId), [cinematica, moduleId]);
   const fallbackFocus = useMemo(() => buildModuleFocus(exercises), [exercises]);
   const focus = useMemo(() => {
     if (!curated) return fallbackFocus;
@@ -327,8 +376,9 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
     };
   }, [curated, fallbackFocus]);
   const scenes = useMemo(() => {
+    if (esIo) return buildEscenasIo(cinematica);
     return buildPedagogicalScenes({ moduleId, exercises, focus, curated, moduleMetadata });
-  }, [curated, moduleId, moduleMetadata, exercises, focus]);
+  }, [esIo, cinematica, curated, moduleId, moduleMetadata, exercises, focus]);
   const metadataObjetivos = useMemo(() => asArray(moduleMetadata?.objetivos), [moduleMetadata]);
   const metadataErrores = useMemo(() => asArray(moduleMetadata?.errores_comunes), [moduleMetadata]);
   const checkpoint = useMemo(() => curated?.checkpoint || buildMetadataCheckpoint({
@@ -340,7 +390,7 @@ export const ModuleCinematic = ({ moduleId, moduleMetadata = null, exercises = [
   const isLast = sceneIndex === scenes.length - 1;
   const VisualIcon = resolveVisual(scene?.visual || focus.visual);
   const sceneDuration = scene?.duration || 7600;
-  const teachingPoints = useMemo(() => buildSceneTeachingPoints(scene, focus), [scene, focus]);
+  const teachingPoints = useMemo(() => buildSceneTeachingPoints(scene, focus, esIo), [scene, focus, esIo]);
 
   useEffect(() => {
     setSceneIndex(0);

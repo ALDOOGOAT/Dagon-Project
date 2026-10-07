@@ -1,0 +1,8 @@
+import { mm1, mms, costoColas } from './colas';
+test('M/M/1 lambda=2 mu=3', () => { const s = mm1({ lambda: 2, mu: 3 }); expect(s.rho).toBeCloseTo(2 / 3); expect(s.L).toBeCloseTo(2); expect(s.Lq).toBeCloseTo(4 / 3); expect(s.W).toBe(1); expect(s.Wq).toBeCloseTo(2 / 3); expect(s.Pn).toHaveLength(16); expect(s.Pn[0].p).toBeCloseTo(1 / 3); expect(s.estable).toBe(true); });
+test('M/M/2 Erlang C', () => { const s = mms({ lambda: 2, mu: 3, s: 2 }); expect(s.P0).toBeCloseTo(0.5); expect(s.Pw).toBeCloseTo(1 / 6); expect(s.Lq).toBeCloseTo(1 / 12); expect(s.Wq).toBeCloseTo(1 / 24); expect(s.L).toBeCloseTo(0.75); expect(s.Pn[2].p).toBeCloseTo(1 / 9); });
+test('un servidor coincide con M/M/1', () => { const a = mm1({ lambda: 2, mu: 3 }), b = mms({ lambda: 2, mu: 3, s: 1 }); ['rho', 'P0', 'L', 'Lq', 'W', 'Wq'].forEach(k => expect(b[k]).toBeCloseTo(a[k])); });
+test('sin llegadas', () => { expect(mm1({ lambda: 0, mu: 3 }).W).toBeCloseTo(1 / 3); const s = mms({ lambda: 0, mu: 3, s: 2 }); expect(s.P0).toBe(1); expect(s.L).toBe(0); expect(s.Pn[1].p).toBe(0); });
+test('muchos servidores sin factoriales desbordados', () => { const s = mms({ lambda: 900, mu: 1, s: 1000 }); expect(Number.isFinite(s.W)).toBe(true); expect(s.Pw).toBeGreaterThan(0); });
+test('costo por servidor y cliente en sistema', () => expect(costoColas({ ...mm1({ lambda: 2, mu: 3 }), cs: 10, cw: 5, s: 1 })).toBeCloseTo(20));
+test.each([() => mm1({ lambda: 3, mu: 3 }), () => mm1({ lambda: -1, mu: 2 }), () => mms({ lambda: 6, mu: 3, s: 2 }), () => mms({ lambda: 1, mu: 3, s: 1.5 }), () => costoColas({ cs: -1, cw: 1, L: 1, s: 1 })])('rechaza datos inválidos o cola inestable', f => expect(f).toThrow(Error));

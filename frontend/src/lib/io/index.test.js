@@ -1,0 +1,4 @@
+import * as io from './index';
+test('API completa y estable para la interfaz', () => {
+  expect(Object.keys(io).sort()).toEqual(['parseModeloPL', 'resolverSimplex', 'resolverGrafico', 'resolverTransporte', 'resolverAsignacion', 'resolverCPM', 'resolverPERT', 'eoq', 'eoqFaltantes', 'epq', 'descuentos', 'puntoReorden', 'periodoFijo', 'mm1', 'mms', 'costoColas', 'pasos', 'estable', 'seccionDorada', 'newton', 'lagrange2', 'muestrearFuncion', 'aFraccion', 'redondear', 'resolverEntero', 'puntosEnterosFactibles', 'MAX_NODOS_BB', 'parseModeloCuadratico', 'resolverCuadratica', 'MAX_VARIABLES_QP', 'newtonMultivariable', 'evaluadorDosVariables', 'MAX_VARIABLES_MULTI', 'rutaMasCorta', 'arbolExpansionMinima', 'flujoMaximo', 'MAX_ARISTAS', 'criteriosIncertidumbre', 'decisionRiesgo', 'juegoSumaCero'].sort());
+});

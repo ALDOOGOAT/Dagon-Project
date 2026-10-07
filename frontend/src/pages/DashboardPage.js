@@ -10,26 +10,18 @@ import { DidacticCard } from '../components/DidacticCard';
 import { CertificateModal, useCertificado } from '../components/CertificateModal';
 import { cachedGet } from '../services/apiClient';
 import { sounds } from '../lib/SoundEngine';
+import { getMateria, getSenda } from '../config/materias';
 import {
   Zap, Flame, Lock, Trophy, LogOut, Target, Play, Sparkles, Crown,
-  Star, ChevronRight, CalendarDays, Database, Shield, Hammer, Swords,
-  User, Award, Heart, BookOpen, Volume2, VolumeX
+  Star, ChevronRight, CalendarDays, Database, Shield, Swords,
+  User, Award, Heart, BookOpen, Volume2, VolumeX, Repeat, Calculator
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const TITLES = [
-  { min: 0,    name: 'Novato del SELECT',     tier: 'bronze' },
-  { min: 100,  name: 'Explorador de Tablas',  tier: 'bronze' },
-  { min: 300,  name: 'Guerrero de los JOINs', tier: 'silver' },
-  { min: 600,  name: 'Caballero de Datos',    tier: 'silver' },
-  { min: 1000, name: 'Maestro Arquitecto SQL', tier: 'gold'  },
-  { min: 2000, name: 'Señor del Abismo',      tier: 'abyss'  },
-];
-
 const QuickPracticeMode = lazy(() => import('../components/QuickPracticeMode').then(module => ({ default: module.QuickPracticeMode })));
 
-const titleFor = (xp) => [...TITLES].reverse().find((t) => xp >= t.min) || TITLES[0];
+const titleFor = (xp, titulos) => [...titulos].reverse().find((t) => xp >= t.min) || titulos[0];
 
 const toFiniteNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -89,7 +81,9 @@ const tierGradient = (tier) => ({
 export const DashboardPage = () => {
   const { user, token, logout, updateUserXP } = useAuth();
   const navigate = useNavigate();
-  const { colors } = useTheme();
+  const { colors, materia } = useTheme();
+  const esIo = materia === 'io';
+  const cfgMateria = getMateria(materia);
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
   const mutedColor = colors.textMuted;
@@ -171,7 +165,7 @@ export const DashboardPage = () => {
   const xpInLevel = userXP % 100;
   const xpFaltante = 100 - xpInLevel;
   const userLevel = Math.floor(userXP / 100) + 1;
-  const title = titleFor(userXP);
+  const title = titleFor(userXP, cfgMateria.titulos);
   const [userStreak, setUserStreak] = useState(0);
 
   const dashboardMood = useMemo(() => {
@@ -222,6 +216,7 @@ export const DashboardPage = () => {
         try {
           const response = await cachedGet('/api/dashboard/resumen', {
             signal: controller.signal,
+            params: { materia },
           }, { ttl: 10_000 });
           resumen = response.data || {};
         } catch (endpointError) {
@@ -233,8 +228,8 @@ export const DashboardPage = () => {
             user?.idUsuario
               ? cachedGet(`/api/usuarios/${user.idUsuario}/stats`, { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: {} }))
               : Promise.resolve({ data: {} }),
-            cachedGet('/api/modulos', { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: [] })),
-            cachedGet('/api/leaderboard', { signal: controller.signal }, { ttl: 10_000 }).catch(() => ({ data: [] }))
+            cachedGet('/api/modulos', { signal: controller.signal, params: { materia } }, { ttl: 10_000 }).catch(() => ({ data: [] })),
+            cachedGet('/api/leaderboard', { signal: controller.signal, params: { materia } }, { ttl: 10_000 }).catch(() => ({ data: [] }))
           ]);
 
           resumen = {
@@ -276,7 +271,7 @@ export const DashboardPage = () => {
       isActive = false;
       controller.abort();
     };
-  }, [token, user?.idUsuario, updateUserXP]);
+  }, [token, user?.idUsuario, updateUserXP, materia]);
 
   const handleModuloClick = (mod) => {
     if (mod.bloqueado) {
@@ -286,7 +281,7 @@ export const DashboardPage = () => {
       return;
     }
     sounds.playMissionStart?.();
-    navigate(`/exercise/${mod.id_modulo}`);
+    navigate(esIo ? `/io/mision/${mod.id_modulo}` : `/exercise/${mod.id_modulo}`);
   };
 
   const handleToggleSound = async () => {
@@ -355,7 +350,7 @@ export const DashboardPage = () => {
     || cursos.find(c => (c.modulos || []).length > 0)
     || cursos.find(c => c.id_curso === cursoActivoId)
     || cursos[0]
-    || { id_curso: cursoActivoId, titulo: 'Senda SQL', modulos: [] };
+    || { id_curso: cursoActivoId, titulo: cfgMateria.cursoPorDefecto, modulos: [] };
   const cursoVisualActivoId = cursoActivo.id_curso ?? cursoActivoId;
   const modulos = cursoActivo.modulos || [];
   
@@ -371,20 +366,14 @@ export const DashboardPage = () => {
   const xpToUnlockNext = nextLockedMission
     ? Math.max((nextLockedMission.xp_requerida || 0) - userXP, 0)
     : 0;
-  const missionFocuses = [
-    'Leer datos con calma antes de escribir SQL completo.',
-    'Filtrar informacion con condiciones simples y verificables.',
-    'Conectar tablas para responder preguntas reales.',
-    'Modificar datos con seguridad y entender sus consecuencias.',
-    'Modelar reglas para proteger la informacion.'
-  ];
+  const missionFocuses = cfgMateria.missionFocuses;
   const recommendedFocus = missionFocuses[Math.max(0, recommendedMissionIndex) % missionFocuses.length] || missionFocuses[0];
 
   return (
     <div className="min-h-screen" data-testid="dashboard-page">
       <TutorialOverlay isOpen={showTutorial} onClose={closeTutorial} />
       <WelcomeCard />
-      {showQuickPractice && (
+      {showQuickPractice && !esIo && (
         <Suspense fallback={null}>
           <QuickPracticeMode
             userLevel={user?.level || 'nivel-0'}
@@ -427,7 +416,7 @@ export const DashboardPage = () => {
                   Hola, <span className="text-gradient-abyss">{user?.nombre || 'aventurero'}</span>
                 </h1>
                 <p className="text-arcane-body mt-3 max-w-xl font-gameui text-sm leading-relaxed" style={{ color: mutedColor }}>
-                  Avanza por SQL como un flujo de decisiones: aprende, valida y desbloquea la siguiente zona.
+                  {cfgMateria.hudTexto}
                 </p>
               </div>
             </div>
@@ -531,15 +520,27 @@ export const DashboardPage = () => {
                   <User className="w-4 h-4 mr-2" />
                   Perfil
                 </Button>
+                {!esIo && (
+                    <Button
+                      data-tour="quick-practice"
+                      onClick={() => setShowQuickPractice(true)}
+                      className={`${topActionClass} dashboard-control-dock__wide tracking-wide hover:scale-[1.02]`}
+                      style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, borderColor: isLight ? 'rgba(251,146,60,0.72)' : 'rgba(34,211,238,0.72)', color: isLight ? '#1f2937' : '#ffffff' }}
+                      aria-label="Abrir práctica rápida"
+                    >
+                      <Target className="w-4 h-4 mr-2" />
+                      Práctica rápida
+                    </Button>
+                )}
                 <Button
-                  data-tour="quick-practice"
-                  onClick={() => setShowQuickPractice(true)}
-                  className={`${topActionClass} dashboard-control-dock__wide tracking-wide hover:scale-[1.02]`}
-                  style={{ ...topActionStyle, background: isLight ? 'linear-gradient(90deg, #f59e0b, #fb923c)' : `linear-gradient(90deg, ${colors.primary}, ${colors.secondary})`, borderColor: isLight ? 'rgba(251,146,60,0.72)' : 'rgba(34,211,238,0.72)', color: isLight ? '#1f2937' : '#ffffff' }}
-                  aria-label="Abrir práctica rápida"
+                  data-tour="switch-materia"
+                  onClick={() => { sounds.playClick(); navigate('/materias'); }}
+                  className={`${topActionClass} dashboard-control-dock__wide`}
+                  style={topActionStyle}
+                  aria-label="Cambiar materia"
                 >
-                  <Target className="w-4 h-4 mr-2" />
-                  Práctica rápida
+                  <Repeat className="w-4 h-4 mr-2" />
+                  Cambiar materia
                 </Button>
                 {(user?.idRol === 2 || user?.idRol === 3) && (
                   <Button
@@ -577,13 +578,13 @@ export const DashboardPage = () => {
           </div>
         </motion.section>
 
-        {/* ACADEMIA POSTGRESQL */}
+        {/* ACADEMIA POSTGRESQL (SQL) / CALCULADORA IO (IO) */}
         <motion.button
-          data-tour="postgres-academy"
+          data-tour={esIo ? 'calculadora-io' : 'postgres-academy'}
           type="button"
           onClick={() => {
             sounds.playClick();
-            navigate('/postgres');
+            navigate(esIo ? '/io/calculadora' : '/postgres');
           }}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -601,28 +602,32 @@ export const DashboardPage = () => {
                   background: `linear-gradient(135deg, ${colors.primary}22, ${colors.secondary}18)`
                 }}
               >
-                <Database className="w-7 h-7" style={{ color: colors.primary }} />
+                {esIo
+                  ? <Calculator className="w-7 h-7" style={{ color: colors.primary }} />
+                  : <Database className="w-7 h-7" style={{ color: colors.primary }} />}
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="text-[10px] font-black uppercase tracking-[0.32em]" style={{ color: colors.primary }}>
-                    Nuevo modulo teorico
+                    {esIo ? 'Herramienta de la materia' : 'Nuevo modulo teorico'}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-widest" style={{ color: mutedColor, borderColor: `${colors.primary}26` }}>
                     <BookOpen className="w-3 h-3" />
-                    PostgreSQL
+                    {esIo ? 'Calculadora IO' : 'PostgreSQL'}
                   </span>
                 </div>
                 <h2 className="font-display text-2xl sm:text-3xl font-black" style={{ color: headingColor }}>
-                  Aprende PostgreSQL con Dagon
+                  {esIo ? 'CALCULADORA IO' : 'Aprende PostgreSQL con Dagon'}
                 </h2>
                 <p className="mt-2 max-w-3xl text-sm sm:text-base font-gameui" style={{ color: mutedColor }}>
-                  Historia, usos reales y comandos basicos, medios y avanzados en una experiencia cinematica e interactiva.
+                  {esIo
+                    ? 'Simplex, método gráfico, transporte, redes, inventarios, colas y Markov: escribe el modelo y obtén el procedimiento paso a paso con sus gráficas.'
+                    : 'Historia, usos reales y comandos basicos, medios y avanzados en una experiencia cinematica e interactiva.'}
                 </p>
               </div>
             </div>
             <div className="flex w-full shrink-0 sm:w-auto items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-5 py-3 font-display font-black text-white transition-all group-hover:translate-x-1" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}>
-              Entrar a la academia
+              {esIo ? 'Abrir calculadora' : 'Entrar a la academia'}
               <ChevronRight className="w-4 h-4" />
             </div>
           </div>
@@ -705,11 +710,11 @@ export const DashboardPage = () => {
                             color: cursoVisualActivoId === curso.id_curso ? colors.primary : colors.textMuted
                           }}
                         >
-                            {curso.id_curso === 1 ? <Swords className="w-6 h-6" /> : <Hammer className="w-6 h-6" />}
+                            {(() => { const SendaIcon = getSenda(materia, curso.id_curso, cursos.indexOf(curso)).icono; return <SendaIcon className="w-6 h-6" />; })()}
                         </motion.div>
                         <div className="text-left">
                             <h3 className="font-display font-black text-xl transition-colors" style={{ color: cursoVisualActivoId === curso.id_curso ? headingColor : mutedColor }}>
-                                {curso.id_curso === 1 ? 'Senda del Guerrero' : 'Senda del Arquitecto'}
+                                {getSenda(materia, curso.id_curso, cursos.indexOf(curso)).nombre}
                             </h3>
                             <p className="text-[10px] uppercase tracking-[0.2em] font-bold mt-1 transition-colors"
                                style={{ color: cursoVisualActivoId === curso.id_curso ? colors.accent : colors.textMuted }}>
@@ -796,15 +801,17 @@ export const DashboardPage = () => {
                   <Play className="w-4 h-4 mr-2 fill-current" />
                   Entrar ahora
                 </Button>
-                <Button
-                  onClick={() => setShowQuickPractice(true)}
-                  variant="outline"
-                  className="w-full justify-center border font-display font-black rounded-2xl"
-                  style={{ borderColor: `${colors.primary}40`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.50)' }}
-                >
-                  <Shield className="w-4 h-4 mr-2" />
-                  Entrenar primero
-                </Button>
+                {!esIo && (
+                  <Button
+                    onClick={() => setShowQuickPractice(true)}
+                    variant="outline"
+                    className="w-full justify-center border font-display font-black rounded-2xl"
+                    style={{ borderColor: `${colors.primary}40`, color: headingColor, backgroundColor: isLight ? 'rgba(255,255,255,0.70)' : 'rgba(15,23,42,0.50)' }}
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Entrenar primero
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -862,7 +869,7 @@ export const DashboardPage = () => {
             <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${colors.primary}20`, border: `1px solid ${colors.primary}40` }}>
-                  {cursoVisualActivoId === 1 ? <Swords className="w-5 h-5" style={{ color: colors.primary }} /> : <Hammer className="w-5 h-5" style={{ color: colors.primary }} />}
+                  {(() => { const SendaIcon = getSenda(materia, cursoVisualActivoId, cursos.findIndex((c) => c.id_curso === cursoVisualActivoId)).icono; return <SendaIcon className="w-5 h-5" style={{ color: colors.primary }} />; })()}
                 </div>
                 <div>
                   <h2 className="font-display text-2xl sm:text-3xl font-black" style={{ color: headingColor }}>{cursoActivo.titulo}</h2>
@@ -1027,29 +1034,31 @@ export const DashboardPage = () => {
 
           {/* SIDEBAR (Práctica Rápida y Top) */}
           <aside className="dashboard-aside space-y-6 xl:space-y-7">
-            <motion.div
-              initial={{ opacity: 0, x: 30, y: 10 }}
-              animate={{ opacity: 1, x: 0, y: 0 }}
-              transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 22 }}
-              whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
-              className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
-              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
-              <div className="flex items-center gap-2 mb-3">
-                <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
-                <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: colors.primary }}>Reto del día</span>
-              </div>
-              <h3 className="font-display text-xl font-black mb-2" style={{ color: headingColor }}>Práctica Relámpago</h3>
-              <p className="text-sm font-gameui mb-4" style={{ color: mutedColor }}>
-                Resuelve 3 ejercicios rápidos antes de acabar el día y gana XP bonus.
-              </p>
-              <Button
-                onClick={() => setShowQuickPractice(true)}
-                className="w-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(168,85,247,0.4)]"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Empezar reto
-              </Button>
-            </motion.div>
+            {!esIo && (
+              <motion.div
+                initial={{ opacity: 0, x: 30, y: 10 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 22 }}
+                whileHover={hoverMotion({ y: -3, transition: { duration: 0.2 } })}
+                className="glass-card-apple rounded-3xl p-6 xl:p-7 border border-white/10 relative overflow-hidden holo-border" data-tour="daily-challenge">
+                <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: isLight ? 'rgba(251,146,60,0.14)' : 'rgba(217,70,239,0.15)' }} />
+                <div className="flex items-center gap-2 mb-3">
+                  <CalendarDays className="w-4 h-4" style={{ color: colors.primary }} />
+                  <span className="text-xs font-bold uppercase tracking-[0.3em]" style={{ color: colors.primary }}>Reto del día</span>
+                </div>
+                <h3 className="font-display text-xl font-black mb-2" style={{ color: headingColor }}>Práctica Relámpago</h3>
+                <p className="text-sm font-gameui mb-4" style={{ color: mutedColor }}>
+                  Resuelve 3 ejercicios rápidos antes de acabar el día y gana XP bonus.
+                </p>
+                <Button
+                  onClick={() => setShowQuickPractice(true)}
+                  className="w-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-display font-black tracking-wide shadow-[0_10px_30px_rgba(168,85,247,0.4)]"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Empezar reto
+                </Button>
+              </motion.div>
+            )}
             
             {/* Mini leaderboard (RESTAURADO) */}
             <motion.div

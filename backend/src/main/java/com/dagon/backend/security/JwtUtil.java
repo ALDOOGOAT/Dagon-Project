@@ -30,10 +30,13 @@ public class JwtUtil {
 
     @PostConstruct
     void init() {
-        if (jwtSecret == null || jwtSecret.length() < 32) {
-            throw new IllegalStateException("Configura dagon.jwt.secret con al menos 32 caracteres.");
+        byte[] secreto = jwtSecret == null ? new byte[0] : jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (secreto.length < 32) {
+            throw new IllegalStateException(
+                    "Falta DAGON_JWT_SECRET (dagon.jwt.secret) o mide menos de 32 bytes. "
+                            + "Defínela en backend/.env o en las variables del servidor; no tiene valor por defecto.");
         }
-        signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        signingKey = Keys.hmacShaKeyFor(secreto);
     }
 
     public String generarToken(String idUsuario) {

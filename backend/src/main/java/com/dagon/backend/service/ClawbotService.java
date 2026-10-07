@@ -19,8 +19,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Service
 public class ClawbotService {
@@ -43,6 +45,17 @@ public class ClawbotService {
     // Groq retiro los modelos llama-3.x: el que estaba fijo aqui devolvia 404 model_not_found.
     @Value("${dagon.clawbot.groq.model:openai/gpt-oss-20b}")
     private String groqModel;
+
+    // gemini-1.5/2.5-flash ya devuelven 404; el alias -latest lo mantiene Google al dia.
+    @Value("${dagon.clawbot.gemini.model:gemini-flash-lite-latest}")
+    private String geminiModel;
+
+    @Value("${dagon.clawbot.ollama.model:qwen2.5-coder:7b}")
+    private String ollamaModel;
+
+    // Orden de proveedores: Groq principal; si falla, Gemini; Ollama solo si esta habilitado.
+    @Value("${dagon.clawbot.providers:groq,gemini,ollama}")
+    private String ordenProveedores = "groq,gemini,ollama";
 
     private final RestTemplate restTemplate = new RestTemplate(requestFactory());
     private final ClawbotPromptCatalog promptCatalog;
@@ -74,7 +87,7 @@ public class ClawbotService {
             int nivelId,
             String tituloEjercicio
     ) {
-        return obtenerAyudaSocratica("sistema", descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
+        return obtenerAyudaSocratica("sistema", descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio, null);
     }
 
     public String obtenerAyudaSocratica(
@@ -87,66 +100,71 @@ public class ClawbotService {
             int nivelId,
             String tituloEjercicio
     ) {
+        return obtenerAyudaSocratica(usuarioId, descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio, null);
+    }
+
+    /** materia 'io' = Investigacion de Operaciones: sin resolver de PostgreSQL y con prompts propios. */
+    public String obtenerAyudaSocratica(
+            String usuarioId,
+            String descripcion,
+            String queryMaestra,
+            String queryAlumno,
+            String errorDb,
+            int intentos,
+            int nivelId,
+            String tituloEjercicio,
+            String materia
+    ) {
         rateLimiter.consume(usuarioId, "analysis");
 
-        String errorType = detectarTipoError(errorDb, queryAlumno, descripcion, nivelId);
+        boolean io = esMateriaIo(materia);
+        // En IO el tipo de error SQL no aplica (y los ids 15/16 de "transaction" son de otra materia).
+        String errorType = io ? "io" : detectarTipoError(errorDb, queryAlumno, descripcion, nivelId);
         telemetryService.recordAnalysis(nivelId, errorType);
-        String contextoNivel = promptCatalog.moduleContext(nivelId, sanitizeForPrompt(tituloEjercicio));
+        String contextoNivel = io
+                ? "Investigacion de Operaciones. Ejercicio actual: " + sanitizeForPrompt(tituloEjercicio)
+                : promptCatalog.moduleContext(nivelId, sanitizeForPrompt(tituloEjercicio));
         String nivelAyuda = buildNivelAyuda(intentos);
 
         // Filtro 1: el error de PostgreSQL ya dice que paso. Ninguna IA hace falta aqui.
-        Optional<ClawbotLocalResolver.Diagnostico> diagnosticoLocal = localResolver.diagnosticar(errorDb, queryAlumno);
-        if (diagnosticoLocal.isPresent()) {
-            telemetryService.recordSource("local_resolver_analysis");
-            return buildRespuestaDiagnostico(diagnosticoLocal.get(), intentos);
+        // (Sus patrones son de PostgreSQL: en IO se salta.)
+        if (!io) {
+            Optional<ClawbotLocalResolver.Diagnostico> diagnosticoLocal = localResolver.diagnosticar(errorDb, queryAlumno);
+            if (diagnosticoLocal.isPresent()) {
+                telemetryService.recordSource("local_resolver_analysis");
+                return buildRespuestaDiagnostico(diagnosticoLocal.get(), intentos);
+            }
         }
 
-        // Filtro 2: alguien ya pago esta misma explicacion antes.
-        String claveCache = cacheService.clave("analisis", errorType, errorDb, String.valueOf(nivelId),
-                String.valueOf(Math.min(intentos, 3)));
+        // Filtro 2: alguien ya pago esta misma explicacion antes. Las claves SQL no cambian;
+        // en IO la clave lleva la materia ("analisis_io") y el ejercicio y la respuesta del alumno,
+        // porque ahi la explicacion depende de los valores enviados, no solo del tipo de error.
+        String claveCache = io
+                ? cacheService.clave("analisis_io", errorDb, descripcion, queryAlumno, String.valueOf(Math.min(intentos, 3)))
+                : cacheService.clave("analisis", errorType, errorDb, String.valueOf(nivelId),
+                        String.valueOf(Math.min(intentos, 3)));
         Optional<String> cacheada = cacheService.buscar(claveCache);
         if (cacheada.isPresent()) {
             telemetryService.recordSource("cache_analysis");
             return cacheada.get();
         }
 
-        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            try {
-                String respuesta = callGeminiAnalysis(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda);
-                if (hasText(respuesta)) {
-                    String segura = formatearRespuestaAnalisis(respuesta);
-                    if (!revelaSolucion(segura, queryMaestra)) {
-                        telemetryService.recordSource("gemini_analysis");
-                        cacheService.guardar(claveCache, segura, "gemini");
-                        return segura;
-                    }
-                    telemetryService.recordSource("guardrail_local_analysis");
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
-            }
-        }
-
-        if (groqApiKey != null && !groqApiKey.isBlank()) {
-            try {
-                String prompt = buildAnalysisPrompt(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda);
-                String respuesta = callGroqChat(prompt);
-                if (hasText(respuesta)) {
-                    String segura = formatearRespuestaAnalisis(respuesta);
-                    if (!revelaSolucion(segura, queryMaestra)) {
-                        telemetryService.recordSource("groq_analysis");
-                        cacheService.guardar(claveCache, segura, "groq");
-                        return segura;
-                    }
-                    telemetryService.recordSource("guardrail_local_analysis");
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
-            }
+        String prompt = buildAnalysisPrompt(descripcion, queryAlumno, errorDb, intentos, contextoNivel, errorType, nivelAyuda, io);
+        // Una respuesta que filtra la solucion se descarta y se prueba el siguiente proveedor.
+        Optional<RespuestaIa> ia = consultarIa(prompt, 0.25, 520, texto -> {
+            if (!revelaSolucion(formatearRespuestaAnalisis(texto), queryMaestra)) return true;
+            telemetryService.recordSource("guardrail_local_analysis");
+            return false;
+        });
+        if (ia.isPresent()) {
+            String segura = formatearRespuestaAnalisis(ia.get().texto());
+            telemetryService.recordSource(ia.get().fuente() + "_analysis");
+            cacheService.guardar(claveCache, segura, ia.get().fuente());
+            return segura;
         }
 
         telemetryService.recordSource("local_analysis");
-        return buildFallbackResponse(errorDb, intentos, errorType);
+        return io ? buildFallbackResponseIo(intentos) : buildFallbackResponse(errorDb, intentos, errorType);
     }
 
     public String obtenerRespuestaClawbot(String mensajeUsuario, List<Map<String, String>> historial) {
@@ -154,19 +172,28 @@ public class ClawbotService {
     }
 
     public String obtenerRespuestaClawbot(String usuarioId, String mensajeUsuario, List<Map<String, String>> historial) {
+        return obtenerRespuestaClawbot(usuarioId, mensajeUsuario, historial, null);
+    }
+
+    /** materia 'io' = Investigacion de Operaciones: prompt propio y clave de cache separada. */
+    public String obtenerRespuestaClawbot(String usuarioId, String mensajeUsuario, List<Map<String, String>> historial, String materia) {
         rateLimiter.consume(usuarioId, "chat");
         telemetryService.recordQuestion(mensajeUsuario);
+        boolean io = esMateriaIo(materia);
 
         // Filtro 1: saludos, agradecimientos y preguntas de identidad no aportan aprendizaje.
-        Optional<String> respuestaLocal = localResolver.responderChat(mensajeUsuario);
-        if (respuestaLocal.isPresent()) {
-            telemetryService.recordSource("local_resolver_chat");
-            return respuestaLocal.get();
+        // (Las respuestas locales hablan de SQL: en IO se salta.)
+        if (!io) {
+            Optional<String> respuestaLocal = localResolver.responderChat(mensajeUsuario);
+            if (respuestaLocal.isPresent()) {
+                telemetryService.recordSource("local_resolver_chat");
+                return respuestaLocal.get();
+            }
         }
 
         // Filtro 2: solo se cachea la pregunta suelta; con historial la respuesta depende del contexto.
         boolean cacheable = historial == null || historial.isEmpty();
-        String claveCache = cacheable ? cacheService.clave("chat", mensajeUsuario) : null;
+        String claveCache = cacheable ? cacheService.clave(io ? "chat_io" : "chat", mensajeUsuario) : null;
         if (cacheable) {
             Optional<String> cacheada = cacheService.buscar(claveCache);
             if (cacheada.isPresent()) {
@@ -175,42 +202,16 @@ public class ClawbotService {
             }
         }
 
-        String promptChat = buildChatPrompt(mensajeUsuario, historial);
+        String promptChat = buildChatPrompt(mensajeUsuario, historial, io);
 
-        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            try {
-                String respuesta = callGeminiChat(promptChat);
-                if (hasText(respuesta)) {
-                    telemetryService.recordSource("gemini_chat");
-                    return cachearChat(claveCache, formatearRespuestaChat(respuesta), "gemini");
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error con Gemini: {}", e.getMessage());
-            }
-        }
-
-        if (groqApiKey != null && !groqApiKey.isBlank()) {
-            try {
-                String respuesta = callGroqChat(promptChat);
-                if (hasText(respuesta)) {
-                    telemetryService.recordSource("groq_chat");
-                    return cachearChat(claveCache, formatearRespuestaChat(respuesta), "groq");
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error con Groq: {}", e.getMessage());
-            }
-        }
-
-        if (ollamaEnabled) {
-            String respuesta = callOllamaChat(promptChat);
-            if (hasText(respuesta)) {
-                telemetryService.recordSource("ollama_chat");
-                return formatearRespuestaChat(respuesta);
-            }
+        Optional<RespuestaIa> ia = consultarIa(promptChat, 0.55, 700, texto -> true);
+        if (ia.isPresent()) {
+            telemetryService.recordSource(ia.get().fuente() + "_chat");
+            return cachearChat(claveCache, formatearRespuestaChat(ia.get().texto()), ia.get().fuente());
         }
 
         telemetryService.recordSource("local_chat");
-        return helpForQuestion(mensajeUsuario);
+        return io ? buildFallbackChatIo() : helpForQuestion(mensajeUsuario);
     }
 
     public Map<String, Object> obtenerMetricas() {
@@ -224,132 +225,94 @@ public class ClawbotService {
             Map<String, Object> resumenMetricas
     ) {
         String prompt = buildPerformancePrompt(descripcion, queryAlumno, planJson, resumenMetricas);
-
-        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            try {
-                String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
-                Map<String, Object> body = buildGeminiBody(prompt, 0.2, 520);
-                ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, jsonHeaders()), Map.class);
-                String respuesta = extractGeminiText(response.getBody());
-                if (hasText(respuesta)) {
-                    telemetryService.recordSource("gemini_performance");
-                    return formatearRespuestaAnalisis(respuesta);
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error analizando plan con Gemini: {}", e.getMessage());
-            }
-        }
-
-        if (groqApiKey != null && !groqApiKey.isBlank()) {
-            try {
-                String respuesta = callGroqChat(prompt);
-                if (hasText(respuesta)) {
-                    telemetryService.recordSource("groq_performance");
-                    return formatearRespuestaAnalisis(respuesta);
-                }
-            } catch (Exception e) {
-                logger.warn("Clawbot: Error analizando plan con Groq: {}", e.getMessage());
-            }
+        Optional<RespuestaIa> ia = consultarIa(prompt, 0.2, 520, texto -> true);
+        if (ia.isPresent()) {
+            telemetryService.recordSource(ia.get().fuente() + "_performance");
+            return formatearRespuestaAnalisis(ia.get().texto());
         }
 
         telemetryService.recordSource("local_performance");
         return buildPerformanceFallback(resumenMetricas);
     }
 
-    private String callGeminiChat(String prompt) {
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            return null;
-        }
+    private record RespuestaIa(String fuente, String texto) {}
 
-        try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
-            Map<String, Object> body = buildGeminiBody(prompt, 0.55, 700);
-            HttpHeaders headers = jsonHeaders();
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
-            return extractGeminiText(response.getBody());
-        } catch (Exception e) {
-            logger.warn("Clawbot: Gemini API error: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    private String callGeminiAnalysis(
-            String descripcion,
-            String queryAlumno,
-            String error,
-            int intentos,
-            String contextoNivel,
-            String errorType,
-            String nivelAyuda
-    ) {
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            return null;
-        }
-
-        try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + geminiApiKey;
-            String prompt = buildAnalysisPrompt(descripcion, queryAlumno, error, intentos, contextoNivel, errorType, nivelAyuda);
-            Map<String, Object> body = buildGeminiBody(prompt, 0.25, 520);
-            HttpHeaders headers = jsonHeaders();
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
-            return extractGeminiText(response.getBody());
-        } catch (Exception e) {
-            logger.warn("Clawbot: Gemini Analysis error: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    private String callGroqChat(String prompt) {
-        if (groqApiKey == null || groqApiKey.isBlank()) {
-            return null;
-        }
-
-        try {
-            String url = "https://api.groq.com/openai/v1/chat/completions";
-            List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "user", "content", prompt));
-
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", groqModel);
-            body.put("messages", messages);
-            body.put("temperature", 0.35);
-            body.put("max_tokens", 420);
-            body.put("top_p", 0.9);
-
-            HttpHeaders headers = jsonHeaders();
-            headers.set("Authorization", "Bearer " + groqApiKey);
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), Map.class);
-            return extractGroqText(response.getBody());
-        } catch (Exception e) {
-            logger.warn("Groq API error: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    private String callOllamaChat(String prompt) {
-        try {
-            String url = ollamaUrl + "/api/chat";
-            List<Map<String, Object>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "user", "content", prompt));
-
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", "qwen2.5-coder:7b");
-            body.put("messages", messages);
-            body.put("stream", false);
-            body.put("options", Map.of(
-                    "temperature", 0.4,
-                    "num_predict", 650,
-                    "top_p", 0.9
-            ));
-
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, new HttpEntity<>(body, jsonHeaders()), Map.class);
-            Map<String, Object> resp = response.getBody();
-            if (resp != null && resp.containsKey("message")) {
-                Map<String, Object> message = asMap(resp.get("message"));
-                return String.valueOf(message.getOrDefault("content", ""));
+    /**
+     * Recorre los proveedores en el orden de dagon.clawbot.providers (Groq primero por defecto)
+     * y devuelve la primera respuesta con texto que el filtro acepte. Un proveedor sin clave,
+     * caido o con modelo retirado simplemente cede el turno al siguiente.
+     */
+    private Optional<RespuestaIa> consultarIa(String prompt, double temperatura, int maxTokens, Predicate<String> aceptable) {
+        for (String valor : ordenProveedores.split(",")) {
+            String fuente = valor.trim().toLowerCase(Locale.ROOT);
+            String texto;
+            try {
+                texto = switch (fuente) {
+                    case "groq" -> callGroq(prompt, temperatura, maxTokens);
+                    case "gemini" -> callGemini(prompt, temperatura, maxTokens);
+                    case "ollama" -> ollamaEnabled ? callOllama(prompt, temperatura, maxTokens) : null;
+                    default -> null;
+                };
+            } catch (Exception e) {
+                // Solo el tipo: el mensaje de RestTemplate puede incluir la URL o el cuerpo remoto.
+                logger.warn("Clawbot: {} no respondio ({})", fuente, e.getClass().getSimpleName());
+                continue;
             }
-        } catch (Exception e) {
-            logger.warn("Ollama API error: {}", e.getMessage());
+            if (hasText(texto) && aceptable.test(texto)) {
+                return Optional.of(new RespuestaIa(fuente, texto));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private String callGroq(String prompt, double temperatura, int maxTokens) {
+        if (!hasText(groqApiKey)) {
+            return null;
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", groqModel);
+        body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
+        body.put("temperature", temperatura);
+        body.put("top_p", 0.9);
+        if (groqModel.startsWith("openai/gpt-oss")) {
+            // Modelo de razonamiento: el razonamiento consume max_tokens; se acota y se deja margen.
+            body.put("reasoning_effort", "low");
+            body.put("max_tokens", maxTokens + 1024);
+        } else {
+            body.put("max_tokens", maxTokens);
+        }
+        HttpHeaders headers = jsonHeaders();
+        headers.setBearerAuth(groqApiKey);
+        headers.set(HttpHeaders.USER_AGENT, "DagonClawbot/1.0");
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                "https://api.groq.com/openai/v1/chat/completions", new HttpEntity<>(body, headers), Map.class);
+        return extractGroqText(response.getBody());
+    }
+
+    private String callGemini(String prompt, double temperatura, int maxTokens) {
+        if (!hasText(geminiApiKey) || !geminiModel.matches("[a-zA-Z0-9._-]+")) {
+            return null;
+        }
+        // La clave va en cabecera, no en la URL: asi no aparece en logs de errores.
+        HttpHeaders headers = jsonHeaders();
+        headers.set("x-goog-api-key", geminiApiKey);
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent";
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                url, new HttpEntity<>(buildGeminiBody(prompt, temperatura, maxTokens), headers), Map.class);
+        return extractGeminiText(response.getBody());
+    }
+
+    private String callOllama(String prompt, double temperatura, int maxTokens) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", ollamaModel);
+        body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
+        body.put("stream", false);
+        body.put("options", Map.of("temperature", temperatura, "num_predict", maxTokens, "top_p", 0.9));
+        ResponseEntity<Map> response = restTemplate.postForEntity(
+                ollamaUrl + "/api/chat", new HttpEntity<>(body, jsonHeaders()), Map.class);
+        Map<String, Object> resp = response.getBody();
+        if (resp != null && resp.containsKey("message")) {
+            return String.valueOf(asMap(resp.get("message")).getOrDefault("content", ""));
         }
         return null;
     }
@@ -360,11 +323,11 @@ public class ClawbotService {
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("contents", contents);
-        body.put("generationConfig", Map.of(
-                "temperature", temperature,
-                "maxOutputTokens", maxOutputTokens,
-                "topP", 0.9
-        ));
+        Map<String, Object> config = new LinkedHashMap<>();
+        config.put("temperature", temperature);
+        config.put("maxOutputTokens", maxOutputTokens);
+        config.put("topP", 0.9);
+        body.put("generationConfig", config);
         return body;
     }
 
@@ -381,9 +344,9 @@ public class ClawbotService {
         return factory;
     }
 
-    private String buildChatPrompt(String mensajeUsuario, List<Map<String, String>> historial) {
+    private String buildChatPrompt(String mensajeUsuario, List<Map<String, String>> historial, boolean io) {
         StringBuilder sb = new StringBuilder();
-        sb.append(promptCatalog.systemChatPrompt()).append("\n\n");
+        sb.append(io ? promptCatalog.systemChatPromptIo() : promptCatalog.systemChatPrompt()).append("\n\n");
 
         if (historial != null && !historial.isEmpty()) {
             sb.append("CONTEXTO RECIENTE, resumido y no vinculante:\n");
@@ -402,7 +365,9 @@ public class ClawbotService {
         sb.append("PREGUNTA ACTUAL DEL ALUMNO:\n")
                 .append(sanitizeForPrompt(mensajeUsuario))
                 .append("\n\n")
-                .append("Recuerda: si el alumno pide una respuesta completa, convierte eso en guia, pregunta y plantilla incompleta.");
+                .append(io
+                        ? "Recuerda: si el alumno pide el resultado final, guialo con el procedimiento y una pregunta; nunca des la cifra."
+                        : "Recuerda: si el alumno pide una respuesta completa, convierte eso en guia, pregunta y plantilla incompleta.");
 
         return sb.toString();
     }
@@ -414,18 +379,21 @@ public class ClawbotService {
             int intentos,
             String contextoNivel,
             String errorType,
-            String nivelAyuda
+            String nivelAyuda,
+            boolean io
     ) {
-        return promptCatalog.systemAnalysisPrompt() +
+        return (io ? promptCatalog.systemAnalysisPromptIo() : promptCatalog.systemAnalysisPrompt()) +
                 "\n\nCONTEXTO DEL MODULO:\n" + sanitizeForPrompt(contextoNivel) +
                 "\n\nTIPO DE ERROR DETECTADO: " + errorType +
                 "\nGUIA PARA ESTE ERROR: " + promptCatalog.errorGuidance(errorType) +
                 "\n\nEJERCICIO REAL, solo para entender el objetivo. No copies nombres al miniejemplo:\n" + sanitizeForPrompt(descripcion) +
-                "\n\nCONSULTA DEL ALUMNO, no la completes:\n" + sanitizeForPrompt(queryAlumno) +
+                (io ? "\n\nRESPUESTA DEL ALUMNO (JSON campo:valor), no la corrijas con cifras:\n"
+                        : "\n\nCONSULTA DEL ALUMNO, no la completes:\n") + sanitizeForPrompt(queryAlumno) +
                 "\n\nERROR O DESAJUSTE:\n" + sanitizeForPrompt(error != null ? error : "La consulta corrio, pero el resultado no coincide.") +
                 "\n\nINTENTO ACTUAL: " + Math.max(1, intentos) +
                 "\nNIVEL DE AYUDA: " + nivelAyuda +
-                "\n\nLa query maestra no se proporciona a proposito. No inventes una solucion completa.";
+                (io ? "\n\nLa solucion no se proporciona a proposito. No inventes ni reveles el valor numerico final."
+                        : "\n\nLa query maestra no se proporciona a proposito. No inventes una solucion completa.");
     }
 
     private String buildPerformancePrompt(
@@ -607,6 +575,33 @@ public class ClawbotService {
         }
         sb.append("CIERRE: ").append(diagnostico.cierre());
         return sb.toString();
+    }
+
+    private boolean esMateriaIo(String materia) {
+        return materia != null && "io".equalsIgnoreCase(materia.trim());
+    }
+
+    /** Respuesta sin IA para IO: guia generica por intento, sin cifras ni SQL. */
+    private String buildFallbackResponseIo(int intentos) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ERROR: Alguno de los valores que enviaste no coincide con el procedimiento del ejercicio.\n\n");
+        sb.append("CONCEPTO: En Investigacion de Operaciones cada resultado sale de un paso anterior: si un campo intermedio falla, los siguientes tambien.\n\n");
+        if (intentos <= 1) {
+            sb.append("PISTA: Revisa primero los campos marcados en rojo, empezando por el que se calcula antes. ¿Que dato del enunciado usa ese paso?\n\n");
+            sb.append("CIERRE: ¿Cual fue el primer valor de tu procedimiento del que no estas completamente seguro?");
+        } else {
+            sb.append("PISTA: Repite el calculo del campo fallido con calma, anotando cada operacion, y verifica unidades, signos y redondeo.\n\n");
+            sb.append("CIERRE: Al rehacer solo ese paso, ¿que operacion cambia respecto a tu primer intento?");
+        }
+        return sb.toString();
+    }
+
+    private String buildFallbackChatIo() {
+        return """
+                IDEA: En Investigacion de Operaciones se modela el problema, se elige el metodo y se interpreta la solucion.
+                PISTA: Escribe con tus palabras cual es la decision, que se quiere maximizar o minimizar y que limita esa decision.
+                CIERRE: ¿Cuales son tus variables de decision y que representa cada una?
+                """;
     }
 
     private String buildFallbackResponse(String error, int intentos, String errorType) {
@@ -796,8 +791,13 @@ public class ClawbotService {
         if (parts == null || parts.isEmpty()) {
             return null;
         }
-        Object text = parts.get(0).get("text");
-        return text != null ? text.toString() : null;
+        StringBuilder texto = new StringBuilder();
+        for (Map<String, Object> parte : parts) {
+            if (!Boolean.TRUE.equals(parte.get("thought")) && parte.get("text") != null) {
+                texto.append(parte.get("text"));
+            }
+        }
+        return texto.toString();
     }
 
     @SuppressWarnings("unchecked")

@@ -1,7 +1,14 @@
 package com.dagon.backend.controller;
 
 import com.dagon.backend.service.ClawbotService;
+import com.dagon.backend.service.EjercicioService;
+import com.dagon.backend.model.EjercicioPractico;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import com.dagon.backend.repository.EjercicioPracticoRepository;
+import com.dagon.backend.service.validation.EjercicioValidationRouter;
+import com.dagon.backend.service.validation.TipoValidacionEjercicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,6 +28,15 @@ public class ClawbotController {
     @Autowired
     private EjercicioPracticoRepository ejercicioRepository;
 
+    @Autowired
+    private EjercicioValidationRouter validationRouter;
+
+    @Autowired
+    private EjercicioService ejercicioService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     // ==========================================
     // ENDPOINT 1: EL CHAT NORMAL
     // ==========================================
@@ -36,7 +52,8 @@ public class ClawbotController {
         }
 
         String usuarioId = authentication != null ? authentication.getName() : "anonimo";
-        String respuestaIa = clawbotService.obtenerRespuestaClawbot(usuarioId, mensaje, historial);
+        String materia = payload.get("materia") != null ? payload.get("materia").toString() : null;
+        String respuestaIa = clawbotService.obtenerRespuestaClawbot(usuarioId, mensaje, historial, materia);
 
         Map<String, String> respuesta = new HashMap<>();
         respuesta.put("response", respuestaIa);
@@ -52,7 +69,14 @@ public class ClawbotController {
 
         // 1. Extraemos los textos
         String descripcion = (String) payload.get("descripcion");
-        String queryMaestra = resolverQueryMaestraServidor(payload);
+        String usuarioId = authentication != null ? authentication.getName() : "anonimo";
+        EjercicioPractico ejercicio = resolverEjercicioServidor(payload, usuarioId);
+        String queryMaestra = ejercicio != null
+                && validationRouter.resolverTipo(ejercicio, null) != TipoValidacionEjercicio.NUMERICO
+                ? ejercicio.getQueryMaestra() : null;
+        if (ejercicio != null) {
+            descripcion = ejercicio.getEnunciado();
+        }
         String queryAlumno = (String) payload.get("queryAlumno");
         String errorDb = (String) payload.get("errorDb");
 
@@ -70,8 +94,12 @@ public class ClawbotController {
         String tituloEjercicio = payload.get("tituloEjercicio") != null ? payload.get("tituloEjercicio").toString() : "";
 
         // 4. Llamamos al servicio con contexto completo
-        String usuarioId = authentication != null ? authentication.getName() : "anonimo";
-        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(usuarioId, descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio);
+        String materia = ejercicio != null ? resolverMateriaServidor(ejercicio) : "sql";
+        if (ejercicio != null) {
+            nivelId = ejercicio.getIdModulo();
+            tituloEjercicio = ejercicio.getTitulo();
+        }
+        String respuestaClawbot = clawbotService.obtenerAyudaSocratica(usuarioId, descripcion, queryMaestra, queryAlumno, errorDb, intentos, nivelId, tituloEjercicio, materia);
 
         Map<String, String> respuesta = new HashMap<>();
         respuesta.put("mensaje", respuestaClawbot);
@@ -79,19 +107,27 @@ public class ClawbotController {
         return ResponseEntity.ok(respuesta);
     }
 
-    private String resolverQueryMaestraServidor(Map<String, Object> payload) {
-        Object ejercicioIdRaw = payload.get("ejercicioId");
-        if (ejercicioIdRaw == null) {
-            return null;
-        }
+    private EjercicioPractico resolverEjercicioServidor(Map<String, Object> payload, String usuarioId) {
+        Object id = payload.get("ejercicioId");
+        if (id == null) return null;
+        final Integer ejercicioId;
         try {
-            Integer ejercicioId = Integer.parseInt(ejercicioIdRaw.toString());
-            return ejercicioRepository.findById(ejercicioId)
-                    .map(ejercicio -> ejercicio.getQueryMaestra())
-                    .orElse(null);
-        } catch (NumberFormatException ignored) {
-            return null;
+            ejercicioId = Integer.valueOf(id.toString());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador de ejercicio inválido");
         }
+        EjercicioPractico ejercicio = ejercicioRepository.findById(ejercicioId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ejercicio no encontrado"));
+        if (!ejercicioService.usuarioPuedeAccederEjercicio(ejercicio, usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No tienes acceso a este ejercicio");
+        }
+        return ejercicio;
+    }
+
+    private String resolverMateriaServidor(EjercicioPractico ejercicio) {
+        return jdbcTemplate.queryForObject("SELECT c.materia_slug FROM lms_core.cursos c "
+                + "JOIN lms_core.modulos m ON m.id_curso = c.id_curso WHERE m.id_modulo = ?",
+                String.class, ejercicio.getIdModulo());
     }
 
     @GetMapping("/metrics")

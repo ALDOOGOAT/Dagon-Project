@@ -22,9 +22,9 @@ public class NivelController {
     // 1. Obtener todos los niveles/módulos
     // URL: http://localhost:8080/api/levels
     @GetMapping("/levels")
-    public ResponseEntity<?> getLevels(Authentication authentication) {
+    public ResponseEntity<?> getLevels(@RequestParam(defaultValue = "sql") String materia, Authentication authentication) {
         String usuarioId = authentication != null ? authentication.getName() : null;
-        List<NivelDTO> niveles = ejercicioService.obtenerTodosLosNiveles(usuarioId);
+        List<NivelDTO> niveles = ejercicioService.obtenerTodosLosNiveles(usuarioId, materia);
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("levels", niveles);
         return ResponseEntity.ok(respuesta);

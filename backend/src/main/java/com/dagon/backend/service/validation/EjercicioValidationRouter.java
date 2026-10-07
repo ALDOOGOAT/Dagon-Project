@@ -32,8 +32,12 @@ public class EjercicioValidationRouter {
         if ("diagram".equalsIgnoreCase(ejercicio.getFormato())) {
             return TipoValidacionEjercicio.DIAGRAMA;
         }
-        if (esTextual(ejercicio)) {
+        if (tieneTipoValidacion(ejercicio, "TEXTUAL")) {
             return TipoValidacionEjercicio.TEXTUAL;
+        }
+        // Materias no SQL (IO): se valida contra respuestas de configuracion_extra, sin query_maestra.
+        if (tieneTipoValidacion(ejercicio, "NUMERICO")) {
+            return TipoValidacionEjercicio.NUMERICO;
         }
         if (esTransaccional(ejercicio)) {
             return TipoValidacionEjercicio.TRANSACCION;
@@ -74,16 +78,16 @@ public class EjercicioValidationRouter {
         return sqlExerciseGuard.prevalidar(contexto);
     }
 
-    private boolean esTextual(EjercicioPractico ejercicio) {
+    private boolean tieneTipoValidacion(EjercicioPractico ejercicio, String tipo) {
         String configExtra = ejercicio.getConfiguracionExtra();
         if (configExtra == null || configExtra.trim().isEmpty()) {
             return false;
         }
         try {
             JsonNode config = mapper.readTree(configExtra);
-            return config.has("tipo_validacion") && "TEXTUAL".equalsIgnoreCase(config.get("tipo_validacion").asText());
+            return config.has("tipo_validacion") && tipo.equalsIgnoreCase(config.get("tipo_validacion").asText());
         } catch (Exception e) {
-            return configExtra.contains("\"tipo_validacion\":\"TEXTUAL\"");
+            return configExtra.contains("\"tipo_validacion\":\"" + tipo + "\"");
         }
     }
 

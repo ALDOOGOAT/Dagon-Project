@@ -7,5 +7,6 @@ public enum TipoValidacionEjercicio {
     DIAGRAMA,
     TRANSACCION,
     PRACTICA_RAPIDA,
-    TEXTUAL
+    TEXTUAL,
+    NUMERICO
 }

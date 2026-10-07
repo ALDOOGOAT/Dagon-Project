@@ -76,6 +76,11 @@ chainlit.md
 .env.production
 .env.staging
 
+# Cualquier *.env (p. ej. VARIABLES_PRODUCCION.env), salvo las plantillas
+*.env
+!*.env.example
+VARIABLES_PRODUCCION.env
+
 # Frontend .env (excepto el example)
 frontend/.env
 frontend/.env.local
@@ -126,10 +131,14 @@ backend/src/main/resources/application-prod.properties
 *backup*.sql
 *respaldo*.sql
 *dump*.sql
+dagon_railway_*.sql
 
 # Uploads de usuarios (fotos de perfil, etc.)
 uploads/
 backend/uploads/
+
+# Material interno con hashes/hosts (ya salio del indice; no se reescribe el historial)
+para dilman/
 
 # Archivos PDF grandes
 para dilman/*.pdf

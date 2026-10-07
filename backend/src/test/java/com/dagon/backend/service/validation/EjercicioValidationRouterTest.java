@@ -18,7 +18,8 @@ class EjercicioValidationRouterTest {
             new ValidadorDiagrama(new com.dagon.backend.service.ModelingService()),
             new ValidadorTransaccion(),
             new ValidadorPracticaRapida(),
-            new ValidadorTextual()
+            new ValidadorTextual(),
+            new ValidadorNumerico()
     ));
 
     @Test
@@ -37,6 +38,30 @@ class EjercicioValidationRouterTest {
                 .isEqualTo(TipoValidacionEjercicio.DML);
         assertThat(router.resolverTipo(ejercicio(null, null, "{\"tipo_validacion\":\"TEXTUAL\"}", "DROP TABLE demo;"), "DROP TABLE demo;"))
                 .isEqualTo(TipoValidacionEjercicio.TEXTUAL);
+    }
+
+    @Test
+    void resuelveNumericoAntesQueElSqlDeLaMaestra() {
+        String config = "{\"tipo_validacion\":\"NUMERICO\",\"respuestas\":{\"z\":36}}";
+
+        // query_maestra vacia (como en IO) y formato 'editor': solo la config decide el tipo
+        assertThat(router.resolverTipo(ejercicio("editor", null, config, ""), "{\"z\":36}"))
+                .isEqualTo(TipoValidacionEjercicio.NUMERICO);
+        // aunque la maestra parezca DML, gana NUMERICO
+        assertThat(router.resolverTipo(ejercicio("editor", null, config, "DELETE FROM x;"), "{\"z\":36}"))
+                .isEqualTo(TipoValidacionEjercicio.NUMERICO);
+    }
+
+    @Test
+    void prevalidacionNumericaNoPasaPorElGuardSqlYExigeJsonObjeto() {
+        String config = "{\"tipo_validacion\":\"NUMERICO\",\"respuestas\":{\"z\":36}}";
+        String usuario = UUID.randomUUID().toString();
+
+        // El JSON no es SQL: el guard SQL (que exige query_maestra) no debe intervenir
+        assertThat(router.prevalidar(ejercicio("editor", null, config, ""), "{\"z\":\"36\"}", usuario)).isEmpty();
+        assertThat(router.prevalidar(ejercicio("editor", null, config, ""), "{}", usuario)).isPresent();
+        assertThat(router.prevalidar(ejercicio("editor", null, config, ""), "36", usuario)).isPresent();
+        assertThat(router.prevalidar(ejercicio("editor", null, config, ""), null, usuario)).isPresent();
     }
 
     @Test

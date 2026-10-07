@@ -1,7 +1,7 @@
 # GEMINI.md - Dagon Project Contexto sjsjsj
 
 ## Project Overview
-Dagon is a modern, interactive educational platform designed for learning SQL and PostgreSQL database administration. It features a gamified experience with XP, streaks, and certificates, supported by an AI tutor named **Clawbot** (or Dagonbot).
+Dagon es una plataforma multimateria: SQL/PostgreSQL e Investigación de Operaciones. Comparte XP global, racha, certificados y tutor Clawbot; el desbloqueo y ranking se filtran por materia. Consulta `CLAUDE.md` como fuente de arquitectura vigente y `docs/CHECKPOINT_IO.md` para la retoma.
 
 ### Key Technologies
 - **Backend:** Java 21, Spring Boot 4.0.3, PostgreSQL.
@@ -17,7 +17,7 @@ The project follows a microservices-like architecture with three main components
 2.  `frontend/`: Interactive UI for exercises, theory, and dashboard.
 3.  `mpi_service/`: Specialized service for parallel analytical tasks.
 
-**Note:** The root `README.md` is currently outdated (describing a FastAPI/MongoDB stack). Refer to `REQUERIMIENTOS_TECNICOS.md` for the most accurate technical specifications.
+**Fuente de verdad:** `CLAUDE.md`. Los documentos históricos pueden contradecir el estado actual.
 
 ---
 
@@ -61,8 +61,9 @@ pip install -r requirements.txt
 
 ### Database Management
 - The system uses a real PostgreSQL database with a sandbox environment for user queries.
-- SQL scripts for database structure and migration are located in the root (`dagon_db_estructura.sql`, `migracion_dagon.sql`).
-- **DDL Auto:** Set to `none` in production to prevent schema modification from JPA.
+- Instalación: scripts 00 → 01 → 02 → 03_io_semilla.sql. BD previa: migraciones multimateria y aprovisionamiento del 2026_10_05; este último requiere administrador.
+- **DDL Auto:** `none` en todos los entornos. En esta retoma solo se autorizaron migraciones locales, nunca Railway.
+- NUMERICO valida JSON por campo sin ejecutar SQL ni exponer respuestas. El backend verifica permisos y XP por materia. Aprovisionador NOLOGIN dedicado crea/restaura sandboxes mediante UUID.
 
 ### Testing
 - Backend tests are located in `backend/src/test`.
@@ -71,8 +72,9 @@ pip install -r requirements.txt
 ---
 
 ## Important Files
-- `REQUERIMIENTOS_TECNICOS.md`: Primary source of technical truth.
+- `CLAUDE.md`: fuente técnica vigente.
 - `ESTADO_PROYECTO.md`: Recent updates and pending tasks.
-- `backend/src/main/resources/application.properties`: Backend configuration and secrets.
-- `frontend/src/services/apiService.js`: API client configuration.
+- `backend/src/main/resources/application.properties`: placeholders; credenciales en entorno/.env, sin defaults reales.
+- `frontend/src/services/apiClient.js`: cliente API, token y caché.
+- `frontend/src/lib/io/`: solvers y pruebas; `docs/IO_TEMARIO_UNACH.md`: fuentes y alcance pedagógico.
 - `para dilman/`: Directory containing database backups and specialized scripts.

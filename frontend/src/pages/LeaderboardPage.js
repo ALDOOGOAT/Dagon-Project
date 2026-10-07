@@ -261,7 +261,7 @@ const MpiAnalyticsPanel = ({
 export const LeaderboardPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const { colors } = useTheme();
+  const { colors, materia } = useTheme();
   const isLight = colors.mode === 'light';
   const headingColor = colors.text;
   const mutedColor = colors.textMuted;
@@ -276,7 +276,7 @@ export const LeaderboardPage = () => {
     if (!token) return;
     setMpiLoading(true);
     try {
-      const response = await apiClient.get('/api/analytics/mpi');
+      const response = await apiClient.get('/api/analytics/mpi', { params: { materia } });
       setMpiAnalytics(response.data);
     } catch {
       setMpiAnalytics({
@@ -287,12 +287,12 @@ export const LeaderboardPage = () => {
     } finally {
       setMpiLoading(false);
     }
-  }, [token]);
+  }, [token, materia]);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await apiClient.get('/api/leaderboard');
+        const response = await apiClient.get('/api/leaderboard', { params: { materia } });
         setLeaderboardData(response.data);
       } catch {
         toast.error("Error de conexión con el servidor");
@@ -304,7 +304,7 @@ export const LeaderboardPage = () => {
       fetchLeaderboard();
       fetchMpiAnalytics();
     }
-  }, [token, fetchMpiAnalytics]);
+  }, [token, materia, fetchMpiAnalytics]);
 
   if (loading) {
     return (

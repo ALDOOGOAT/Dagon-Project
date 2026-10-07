@@ -20,7 +20,7 @@ export const useClawbotSupport = (exercises, currentExerciseIndex) => {
       const data = response.data;
       setClawbotMessage(data.mensaje || data.response || "No tengo pistas en este momento.");
     } catch {
-      setClawbotMessage(buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
+      setClawbotMessage(errorData.materia === 'io' ? 'Revisa las unidades, los supuestos y cada paso del procedimiento. Compara tus campos con la teoría y usa la calculadora para verificar tus operaciones.' : buildLocalClawbotFallback(errorData, exercises[currentExerciseIndex]));
     } finally {
       setClawbotThinking(false);
     }

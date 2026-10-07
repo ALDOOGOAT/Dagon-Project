@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
+import { getMateria } from '../config/materias';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import {
@@ -9,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiClient from '../services/apiClient';
+import { leerResumenIo } from '../services/ioProgress';
 import { getModuleLearningSummary } from '../lib/learningProgress';
 
 const Confetti = () => {
@@ -136,6 +139,8 @@ const CertificatePreview = ({ userName, moduleTitle, xpGained, date }) => (
 
 export const GraduationPage = () => {
   const { levelId } = useParams();
+  const { materia } = useTheme();
+  const cfgMateria = getMateria(materia);
   const navigate = useNavigate();
   const { user, token, updateUserXP } = useAuth();
 
@@ -166,8 +171,8 @@ export const GraduationPage = () => {
   const handleShareLinkedIn = () => {
     const text = encodeURIComponent(
       `¡He completado "${moduleTitle}" en Dagon's Academy! 🐲\n\n` +
-      `Aprendí SQL dominando consultas, joins y más. ¡Únete al viaje!\n\n` +
-      `#SQL #Aprendizaje #DagonAcademy #Programación`
+      `Aprendí ${cfgMateria.nombre} resolviendo misiones paso a paso. ¡Únete al viaje!\n\n` +
+      `#${cfgMateria.corto} #Aprendizaje #DagonAcademy`
     );
     window.open(`https://www.linkedin.com/feed/?shareActive=true&text=${text}`, '_blank');
   };
@@ -191,8 +196,10 @@ export const GraduationPage = () => {
     });
   };
 
-  const xpGained = moduleData?.exercises?.reduce((acc, ex) => acc + (ex.dificultad || 1) * 10, 0) || 40;
-  const moduleSummary = getModuleLearningSummary(user?.idUsuario || 'local', levelId);
+  const xpGained = moduleData?.exercises?.reduce((acc, ex) => acc + (ex.xpReward || (ex.difficulty || 1) * 10), 0) || 40;
+  const moduleSummary = materia === 'io'
+    ? leerResumenIo(user?.idUsuario || 'local', levelId)
+    : getModuleLearningSummary(user?.idUsuario || 'local', levelId);
   const moduleTitle = moduleData?.module?.titulo || moduleData?.moduleName || 'Módulo completado';
   const moduleRecommendations = moduleSummary.recommendations?.length > 0
     ? moduleSummary.recommendations
@@ -274,7 +281,7 @@ export const GraduationPage = () => {
               >
                 <span className="text-gradient-gold">Tu Diploma</span>
               </motion.h2>
-              <p className="text-cyan-300">Competencias SQL Dominadas</p>
+              <p className="text-cyan-300">Competencias de {cfgMateria.corto} dominadas</p>
             </div>
 
             <CertificatePreview

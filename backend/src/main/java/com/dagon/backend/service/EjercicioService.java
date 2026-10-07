@@ -8,11 +8,15 @@ import com.dagon.backend.model.EjercicioPractico;
 import com.dagon.backend.repository.EjercicioPracticoRepository;
 import com.dagon.backend.service.validation.EjercicioValidationRouter;
 import com.dagon.backend.service.validation.ValidadorDiagrama;
+import com.dagon.backend.service.validation.ValidadorNumerico;
 import com.dagon.backend.service.validation.SandboxSqlPolicy;
 import com.dagon.backend.service.validation.TipoValidacionEjercicio;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -66,17 +70,20 @@ public class EjercicioService {
     private String sandboxPassword;
 
     public List<NivelDTO> obtenerTodosLosNiveles() {
-        return obtenerTodosLosNiveles(null);
+        return obtenerTodosLosNiveles(null, null);
     }
 
-    public List<NivelDTO> obtenerTodosLosNiveles(String usuarioId) {
-        Integer xpUsuario = obtenerXpUsuario(usuarioId);
+    public List<NivelDTO> obtenerTodosLosNiveles(String usuarioId, String materia) {
+        String materiaSlug = (materia == null || materia.isBlank()) ? "sql" : materia.trim().toLowerCase();
+        Integer xpUsuario = obtenerXpUsuario(usuarioId, materiaSlug);
         boolean accesoDocente = usuarioEsDocenteOAdmin(usuarioId);
 
-        String sql = "SELECT id_modulo, titulo, descripcion, xp_requerida " +
-                "FROM lms_core.modulos ORDER BY id_curso ASC, orden ASC, id_modulo ASC";
+        String sql = "SELECT m.id_modulo, m.titulo, m.descripcion, m.xp_requerida " +
+                "FROM lms_core.modulos m JOIN lms_core.cursos c ON c.id_curso = m.id_curso " +
+                "WHERE c.materia_slug = ? " +
+                "ORDER BY m.id_curso ASC, m.orden ASC, m.id_modulo ASC";
 
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, materiaSlug);
         List<NivelDTO> modulos = new ArrayList<>();
 
         for (Map<String, Object> row : rows) {
@@ -93,14 +100,18 @@ public class EjercicioService {
         return modulos;
     }
 
-    private Integer obtenerXpUsuario(String usuarioId) {
+    // XP del alumno en una materia (v_xp_por_materia); el desbloqueo de niveles ya no usa la XP global.
+    private Integer obtenerXpUsuario(String usuarioId, String materia) {
         if (usuarioId == null || usuarioId.isBlank()) return 0;
         try {
             Number xp = jdbcTemplate.queryForObject(
-                    "SELECT xp_total FROM lms_core.v_ranking_alumnos WHERE id_usuario::varchar = ? OR email = ?",
+                    "SELECT COALESCE(SUM(x.xp), 0) FROM lms_core.v_xp_por_materia x " +
+                            "JOIN lms_core.usuarios u ON u.id_usuario = x.id_usuario " +
+                            "WHERE (u.id_usuario::varchar = ? OR u.email = ?) AND x.materia_slug = ?",
                     Number.class,
                     usuarioId,
-                    usuarioId
+                    usuarioId,
+                    materia
             );
             return xp != null ? xp.intValue() : 0;
         } catch (Exception e) {
@@ -116,6 +127,9 @@ public class EjercicioService {
         return obtenerEjerciciosPorModulo(moduloId, null);
     }
     public List<EjercicioDTO> obtenerEjerciciosPorModulo(Integer moduloId, String usuarioId) {
+        if (!usuarioPuedeAccederModulo(moduloId, usuarioId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Este módulo aún está bloqueado");
+        }
         List<EjercicioPractico> crudos = repository.findDisponiblesPorModulo(moduloId, usuarioId);
         List<EjercicioDTO> dtos = new ArrayList<>();
         boolean mostrarRespuestaEsperada = usuarioPuedeVerSoluciones(usuarioId);
@@ -131,11 +145,13 @@ public class EjercicioService {
             dto.setDifficulty(ej.getDificultad() != null ? ej.getDificultad() : 1);
             dto.setXpReward("RAPIDA".equals(ej.getTipoMision()) ? PRACTICA_RAPIDA_XP : dto.getDifficulty() * 10);
             dto.setTimeLimitSeconds(calcularTiempoPractica(ej.getQueryMaestra(), dto.getDifficulty()));
-            dto.setConcept(construirConceptoPractica(ej.getQueryMaestra(), ej.getIdModulo()));
+            boolean esNumerico = validationRouter.resolverTipo(ej, null) == TipoValidacionEjercicio.NUMERICO;
+            dto.setConcept(esNumerico ? "Cálculo numérico" : construirConceptoPractica(ej.getQueryMaestra(), ej.getIdModulo()));
             dto.setVisibilidad(ej.getVisibilidad() != null ? ej.getVisibilidad() : "GLOBAL");
             dto.setIdGrupo(ej.getIdGrupo());
             dto.setRecursoDocente(!"GLOBAL".equalsIgnoreCase(dto.getVisibilidad()));
-            if (mostrarRespuestaEsperada) {
+            // En NUMERICO la solución vive en configuracion_extra.respuestas y nunca sale al cliente.
+            if (mostrarRespuestaEsperada && !esNumerico) {
                 dto.setExpectedQuery(ej.getQueryMaestra());
             }
 
@@ -155,7 +171,11 @@ public class EjercicioService {
 
             dto.setType(formato);
 
-            if ("drag_drop".equals(formato)) {
+            if (esNumerico) {
+                // Formulario de campos en vez de editor SQL: sin banco de palabras ni starter code.
+                dto.setType("numerico");
+                dto.setCampos(extraerCamposNumericos(ej));
+            } else if ("drag_drop".equals(formato)) {
                 dto.setHint("Pista: Arrastra las palabras azules al área de armado. No olvides el punto y coma (;)");
                 String queryReal = ej.getQueryMaestra();
                     if (queryReal != null) {
@@ -196,6 +216,18 @@ public class EjercicioService {
         return dtos;
     }
 
+    /** configuracion_extra.campos tal cual ({clave, etiqueta, tipo, opciones?, unidad?}); lista vacía si no hay. */
+    private List<Map<String, Object>> extraerCamposNumericos(EjercicioPractico ejercicio) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode campos = mapper.readTree(ejercicio.getConfiguracionExtra()).path("campos");
+            if (campos.isArray()) {
+                return mapper.convertValue(campos, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+            }
+        } catch (Exception ignored) {}
+        return new ArrayList<>();
+    }
+
     private boolean usuarioPuedeVerSoluciones(String usuarioId) {
         Integer rol = obtenerRolUsuario(usuarioId);
         return rol != null && (rol == 2 || rol == 3);
@@ -221,8 +253,25 @@ public class EjercicioService {
         }
     }
 
-    private boolean usuarioPuedeAccederEjercicio(EjercicioPractico ejercicio, String usuarioId) {
-        if (ejercicio == null) return false;
+    public boolean usuarioPuedeAccederModulo(Integer moduloId, String usuarioId) {
+        Integer rol = obtenerRolUsuario(usuarioId);
+        if (rol == null) return false;
+        if (rol == 2 || rol == 3) return true;
+        try {
+            Map<String, Object> modulo = jdbcTemplate.queryForMap(
+                    "SELECT m.xp_requerida, c.materia_slug FROM lms_core.modulos m " +
+                            "JOIN lms_core.cursos c ON c.id_curso = m.id_curso WHERE m.id_modulo = ?", moduloId);
+            if (modulo.get("materia_slug") == null) return false;
+            Number requerida = (Number) modulo.get("xp_requerida");
+            return obtenerXpUsuario(usuarioId, modulo.get("materia_slug").toString())
+                    >= (requerida == null ? 0 : requerida.intValue());
+        } catch (Exception error) {
+            return false; // Sin contexto de materia no se autoriza el acceso.
+        }
+    }
+
+    public boolean usuarioPuedeAccederEjercicio(EjercicioPractico ejercicio, String usuarioId) {
+        if (ejercicio == null || !usuarioPuedeAccederModulo(ejercicio.getIdModulo(), usuarioId)) return false;
         String visibilidad = ejercicio.getVisibilidad() != null ? ejercicio.getVisibilidad().trim().toUpperCase(Locale.ROOT) : "GLOBAL";
         if ("GLOBAL".equals(visibilidad)) return true;
         if (usuarioId == null || usuarioId.isBlank()) return false;
@@ -247,17 +296,19 @@ public class EjercicioService {
     }
 
     public Map<String, Object> obtenerMetadataModulo(Integer moduloId) {
-        String sql = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida, " +
-                "objetivos::text AS objetivos, prerequisitos::text AS prerequisitos, " +
-                "errores_comunes::text AS errores_comunes, cinematica_config::text AS cinematica_config " +
-                "FROM lms_core.modulos WHERE id_modulo = ?";
+        String sql = "SELECT m.id_modulo, m.id_curso, m.titulo, m.descripcion, m.orden, m.xp_requerida, " +
+                "m.objetivos::text AS objetivos, m.prerequisitos::text AS prerequisitos, " +
+                "m.errores_comunes::text AS errores_comunes, m.cinematica_config::text AS cinematica_config, " +
+                "c.titulo AS nombre_curso, c.materia_slug FROM lms_core.modulos m " +
+                "JOIN lms_core.cursos c ON c.id_curso = m.id_curso WHERE m.id_modulo = ?";
 
         try {
             Map<String, Object> row = jdbcTemplate.queryForMap(sql, moduloId);
             return construirMetadataModulo(row);
         } catch (Exception e) {
-            String fallbackSql = "SELECT id_modulo, id_curso, titulo, descripcion, orden, xp_requerida " +
-                    "FROM lms_core.modulos WHERE id_modulo = ?";
+            String fallbackSql = "SELECT m.id_modulo, m.id_curso, m.titulo, m.descripcion, m.orden, m.xp_requerida, " +
+                    "c.titulo AS nombre_curso, c.materia_slug FROM lms_core.modulos m " +
+                    "JOIN lms_core.cursos c ON c.id_curso = m.id_curso WHERE m.id_modulo = ?";
             try {
                 Map<String, Object> row = jdbcTemplate.queryForMap(fallbackSql, moduloId);
                 return construirMetadataModulo(row);
@@ -272,6 +323,8 @@ public class EjercicioService {
         metadata.put("id_modulo", row.get("id_modulo"));
         metadata.put("id_curso", row.get("id_curso"));
         metadata.put("titulo", row.get("titulo"));
+        metadata.put("nombre_curso", row.get("nombre_curso"));
+        metadata.put("materia_slug", row.get("materia_slug"));
         metadata.put("descripcion", row.get("descripcion"));
         metadata.put("orden", row.get("orden"));
         metadata.put("xp_requerida", row.get("xp_requerida"));
@@ -498,6 +551,50 @@ public class EjercicioService {
         return "Lectura con SELECT";
     }
 
+    /**
+     * IO: la respuesta del alumno es un JSON {campo: valor}; se compara contra
+     * configuracion_extra.respuestas. En fallo solo se informa QUÉ campos fallaron: nunca las
+     * respuestas esperadas ni query_maestra. El intento lo registra validarConsulta (query_enviada = el JSON).
+     */
+    private Map<String, Object> validarRespuestaNumerica(EjercicioPractico ejercicio, String queryUsuario,
+                                                          String usuarioId, Map<String, Object> respuesta) {
+        ValidadorNumerico.Resultado resultado;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            resultado = ValidadorNumerico.evaluar(
+                    mapper.readTree(ejercicio.getConfiguracionExtra()), mapper.readTree(queryUsuario));
+        } catch (Exception e) {
+            resultado = new ValidadorNumerico.Resultado(false, Collections.emptyMap());
+        }
+        respuesta.put("campos", resultado.campos());
+
+        if (!resultado.correcto()) {
+            respuesta.put("success", false);
+            respuesta.put("message", "Revisa los campos marcados");
+            respuesta.put("xp_gained", 0);
+            respuesta.put("descripcion", ejercicio.getEnunciado());
+            respuesta.put("queryAlumno", queryUsuario);
+            respuesta.put("errorDb", "Campos que requieren revisión: " + resultado.campos().entrySet().stream()
+                    .filter(campo -> !campo.getValue()).map(Map.Entry::getKey).toList());
+            return respuesta;
+        }
+
+        boolean yaResuelto = false;
+        if (usuarioId != null && !usuarioId.trim().isEmpty()) {
+            Integer count = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM lms_core.intentos WHERE id_usuario = ?::uuid AND id_ejercicio = ? AND es_correcto = true",
+                    Integer.class, usuarioId, ejercicio.getIdEjercicio());
+            yaResuelto = count != null && count > 0;
+            usuarioService.registrarPracticaDiaria(usuarioId);
+        }
+        respuesta.put("success", true);
+        respuesta.put("message", yaResuelto
+                ? "¡Perfecto! (Pero ya habías resuelto esta misión. 0 extra)"
+                : "¡Excelente! Has dominado esta misión.");
+        respuesta.put("xp_gained", yaResuelto ? 0 : (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10);
+        return respuesta;
+    }
+
     // ejecutarEnSandbox*, aplicarTimeoutSandbox y extraerNombreTablaDDL viven en
     // SandboxExecutionService (ver campo sandboxExecutionService más abajo).
 
@@ -508,8 +605,20 @@ public class EjercicioService {
      * rechazo del SqlExerciseGuard no se registraban, y el panel docente veia 100% de acierto.
      * Registrar fallos es puramente aditivo: XP y calificaciones se derivan de es_correcto = true.
      */
+    @Transactional
     public Map<String, Object> validarConsulta(Integer ejercicioId, String queryUsuario, String usuarioId) {
         long inicioValidacion = System.nanoTime();
+        // Un envío sin cuerpo se trata como vacío (antes daba NPE al normalizar la consulta).
+        if (queryUsuario == null) {
+            queryUsuario = "";
+        }
+        EjercicioPractico objetivo = repository.findById(ejercicioId).orElse(null);
+        if (objetivo != null && usuarioId != null
+                && validationRouter.resolverTipo(objetivo, queryUsuario) == TipoValidacionEjercicio.NUMERICO) {
+            // Serializa envíos de la misma misión/usuario hasta persistir el intento: evita doble XP.
+            jdbcTemplate.queryForList("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                    usuarioId + ":" + ejercicioId);
+        }
         Map<String, Object> respuesta = ejecutarValidacion(ejercicioId, queryUsuario, usuarioId, inicioValidacion);
         registrarIntentoDeEsteEnvio(ejercicioId, queryUsuario, usuarioId, respuesta, inicioValidacion);
         respuesta.remove(SIN_REGISTRO);
@@ -541,7 +650,11 @@ public class EjercicioService {
 
         try {
             rewardService.registrarIntento(usuarioId, ejercicioId, queryUsuario, esCorrecto, tiempoMs, costoEjecucion);
-        } catch (Exception ignored) {}
+        } catch (Exception error) {
+            if ("NUMERICO".equals(respuesta.get("validationType"))) {
+                throw error; // No confirmar XP si no se pudo guardar el intento numérico.
+            }
+        }
     }
 
     private Double comoDouble(Object valor) {
@@ -560,31 +673,13 @@ private Map<String, Object> ejecutarValidacion(Integer ejercicioId, String query
         return respuesta;
     }
 
-    // Verificamos si este ejercicio tiene el pase VIP (Validación Textual)
-    if (ejercicioActual != null && ejercicioActual.getConfiguracionExtra() != null) {
-        String configExtra = ejercicioActual.getConfiguracionExtra().toString(); // O el método que uses para leer ese JSON
-        
-        if (configExtra.contains("\"tipo_validacion\":\"TEXTUAL\"")) {
-            // Limpiamos espacios extra para no castigar por un doble espacio accidental
-            String queryMaestra = ejercicioActual.getQueryMaestra().trim().toLowerCase().replaceAll("\\s+", " ");
-            String cleanUsuario = queryUsuario.trim().toLowerCase().replaceAll("\\s+", " ");
-
-            if (cleanUsuario.equals(queryMaestra)) {
-                respuesta.put("success", true);
-                respuesta.put("message", "¡Excelente! Has destruido la tabla correctamente sin dañar el reino.");
-                // Aquí podrías agregar la lógica de XP si la manejas en este punto
-            } else {
-                respuesta.put("success", false);
-                respuesta.put("message", "La sintaxis no coincide con el comando destructor esperado. Revisa tu DROP.");
-            }
-            
-            // ¡HUIDA TEMPRANA! Retornamos aquí y el Escudo de Dagon de abajo NUNCA se ejecuta.
-            return respuesta; 
-        }
-    }// Elimina comentarios de una línea (-- ...) y saltos de línea al inicio, luego quita espacios
+        // Elimina comentarios de una línea (-- ...) y saltos de línea al inicio, luego quita espacios
         String queryClean = queryUsuario.replaceAll("(?m)^--.*", "").trim().toLowerCase();
         // 2. Prevenir que intenten acceder a esquemas internos
-        if (queryClean.contains("lms_core") || queryClean.contains("information_schema") || queryClean.contains("pg_catalog")) {
+        // Las respuestas NUMERICO son JSON, no SQL: nunca se ejecutan, así que no pasan por este filtro.
+        boolean esRespuestaNumerica = ejercicioActual != null
+                && validationRouter.resolverTipo(ejercicioActual, queryUsuario) == TipoValidacionEjercicio.NUMERICO;
+        if (!esRespuestaNumerica && (queryClean.contains("lms_core") || queryClean.contains("information_schema") || queryClean.contains("pg_catalog"))) {
             if (!queryClean.startsWith("select")) { // Permitir solo lectura si es necesario para el juego
                 respuesta.put("success", false);
                 respuesta.put("message", "🛡️ ¡Interferencia Detectada! No tienes permiso para modificar el núcleo de Dagon.");
@@ -625,6 +720,10 @@ private Map<String, Object> ejecutarValidacion(Integer ejercicioId, String query
         }
         TipoValidacionEjercicio tipoValidacion = validationRouter.resolverTipo(ejercicio, queryUsuario);
         respuesta.put("validationType", tipoValidacion.name());
+
+        if (tipoValidacion == TipoValidacionEjercicio.NUMERICO) {
+            return validarRespuestaNumerica(ejercicio, queryUsuario, usuarioId, respuesta);
+        }
 
         int xpGanada = (ejercicio.getDificultad() != null ? ejercicio.getDificultad() : 1) * 10;
         String formato = ejercicio.getFormato();
@@ -1393,6 +1492,8 @@ private Map<String, Object> ejecutarValidacion(Integer ejercicioId, String query
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode config = mapper.readTree(ejercicio.getConfiguracionExtra());
                 pedagogia.putAll(mapper.convertValue(config, LinkedHashMap.class));
+                // Soluciones de ejercicios NUMERICO: jamás al cliente (ni a docentes por esta vía).
+                pedagogia.remove("respuestas");
             } catch (Exception ignored) {}
         }
 

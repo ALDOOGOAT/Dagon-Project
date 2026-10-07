@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(properties = {
+		"dagon.jwt.secret=secreto-solo-para-tests-de-dagon-0123456789",
 		"spring.datasource.url=jdbc:postgresql://127.0.0.1:1/dagon_test",
 		"spring.datasource.username=test",
 		"spring.datasource.password=test",

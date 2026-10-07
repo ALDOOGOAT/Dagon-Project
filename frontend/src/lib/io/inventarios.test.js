@@ -1,0 +1,9 @@
+import { eoq, eoqFaltantes, epq, descuentos, puntoReorden, periodoFijo } from './inventarios';
+const base = { D: 1000, S: 10, H: 0.5 };
+test('EOQ de libro: Q=200', () => { const s = eoq(base); expect(s.Q).toBe(200); expect(s.N).toBe(5); expect(s.T).toBeCloseTo(0.2); expect(s.costoTotal).toBe(100); expect(s.curva).toHaveLength(41); expect(s.pasos[0].formula).toContain('sqrt'); });
+test('faltantes planeados', () => { const s = eoqFaltantes({ ...base, p: 2 }); expect(s.Q).toBeCloseTo(Math.sqrt(50000)); expect(s.inventarioMaximo + s.faltanteMaximo).toBeCloseTo(s.Q); expect(s.costoTotal).toBeCloseTo(89.442719); });
+test('EPQ', () => { const s = epq({ ...base, P: 2000 }); expect(s.Q).toBeCloseTo(Math.sqrt(80000)); expect(s.inventarioMaximo).toBeCloseTo(s.Q / 2); });
+test('descuento en todas las unidades', () => { const s = descuentos({ D: 1000, S: 10, i: 0.1, tramos: [{ min: 0, precio: 10 }, { min: 500, precio: 9 }] }); expect(s.Q).toBe(500); expect(s.precio).toBe(9); expect(s.costoTotal).toBe(9245); expect(s.candidatos.length).toBe(2); });
+test('reorden con y sin stock de seguridad', () => { expect(puntoReorden({ d: 10, L: 4 }).R).toBe(40); expect(puntoReorden({ d: 10, L: 4, sigma: 3, z: 2 }).R).toBe(52); });
+test('período fijo y posición de inventario', () => { const s = periodoFijo({ d: 10, T: 5, L: 4, sigma: 3, z: 2, inventario: 40 }); expect(s.stockSeguridad).toBe(18); expect(s.nivelObjetivo).toBe(108); expect(s.Q).toBe(68); expect(periodoFijo({ d: 1, T: 1, L: 0, sigma: 0, z: 0, inventario: 10 }).Q).toBe(0); });
+test.each([() => eoq({ ...base, H: 0 }), () => epq({ ...base, P: 500 }), () => eoqFaltantes({ ...base, p: -1 }), () => descuentos({ D: 1, S: 1, i: 1, tramos: [] }), () => puntoReorden({ d: -1, L: 2 }), () => periodoFijo({})])('rechaza parámetros inválidos', f => expect(f).toThrow(Error));

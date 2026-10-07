@@ -275,7 +275,7 @@ export const AbyssBackground = ({ intensity = 1, tint = 'rgba(99, 102, 241, 0.85
   const radialLightC = `radial-gradient(circle_at_50%_78%, ${rgba(accent, isLight ? 0.14 : 0.1)}, transparent 34%)`;
 
   return (
-    <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+    <div className="abyss-root fixed inset-0 -z-10 pointer-events-none overflow-hidden">
       <div className="absolute inset-0" style={{ background: backgroundShell }} />
       <div className="absolute inset-0" style={{ background: overlayWash }} />
       <div className="absolute inset-0" style={{ backgroundImage: `${radialLightA}, ${radialLightB}, ${radialLightC}` }} />

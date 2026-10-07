@@ -1,0 +1,10 @@
+import { pasos, estable } from './markov';
+const P = [[0.8, 0.2], [0.3, 0.7]];
+test('lealtad de marcas: pi=(0.6,0.4)', () => { const s = estable(P); expect(s.pi[0]).toBeCloseTo(0.6); expect(s.pi[1]).toBeCloseTo(0.4); expect(s.pasos.length).toBeGreaterThan(1); });
+test('historial completo desde distribución inicial', () => { const s = pasos({ P, inicial: [1, 0], n: 2 }); expect(s.historial).toHaveLength(3); expect(s.historial[0]).toEqual([1, 0]); expect(s.historial[1]).toEqual([0.8, 0.2]); expect(s.historial[2][0]).toBeCloseTo(0.7); });
+test('cadena periódica también tiene distribución estacionaria', () => expect(estable([[0, 1], [1, 0]]).pi).toEqual([0.5, 0.5]));
+test('reducible: entrega una estacionaria y explica la no unicidad', () => { const s = estable([[1, 0], [0, 1]]); expect(s.pi.reduce((a, x) => a + x, 0)).toBe(1); expect(s.pasos.at(-1).texto).toContain('varias'); });
+test('estado absorbente', () => { const s = estable([[1, 0], [0.3, 0.7]]); expect(s.pi).toEqual([1, 0]); });
+test('normaliza redondeo permitido de las filas', () => expect(estable([[0.8, 0.2000001], [0.3, 0.7]]).pi[0]).toBeCloseTo(0.6));
+test.each([{ P: [[0.8, 0.3], [0.3, 0.7]] }, { P: [[1, 0, 0], [0, 1, 0]] }, { P: [[-0.1, 1.1], [0.3, 0.7]] }])('rechaza transición inválida', ({ P }) => expect(() => estable(P)).toThrow(Error));
+test('valida distribución y número de pasos', () => { expect(() => pasos({ P, inicial: [0.5, 0.3], n: 1 })).toThrow(/sumar/); expect(() => pasos({ P, inicial: [1, 0], n: -1 })).toThrow(/entero/); });

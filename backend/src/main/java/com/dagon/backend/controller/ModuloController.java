@@ -17,9 +17,9 @@ public class ModuloController {
     private ModuloService moduloService;
 
     @GetMapping
-    public ResponseEntity<?> obtenerModulos(Authentication authentication) {
+    public ResponseEntity<?> obtenerModulos(@RequestParam(defaultValue = "sql") String materia, Authentication authentication) {
         String emailUsuario = authentication.getName();
-        List<Map<String, Object>> modulos = moduloService.obtenerModulosConEstado(emailUsuario);
+        List<Map<String, Object>> modulos = moduloService.obtenerModulosConEstado(emailUsuario, materia);
         return ResponseEntity.ok(modulos);
     }
 
@@ -50,11 +50,7 @@ public class ModuloController {
     @PostMapping("/reset-sandbox")
     public ResponseEntity<?> resetSandbox(Authentication authentication) {
         String emailUsuario = authentication.getName();
-        // Usar el email para obtener el ID real desde el servicio
-        List<Map<String, Object>> modulos = moduloService.obtenerModulosConEstado(emailUsuario);
-        // El servicio ya tiene lógica para manejar el reinicio
-        // pero necesitamos el ID de usuario real (UUID). 
-        // Por simplicidad, voy a pasar el email al servicio y dejar que él resuelva el esquema.
+        // El servicio resuelve el UUID real a partir del identificador y regenera el esquema.
         moduloService.reiniciarDatosPorEmail(emailUsuario);
         return ResponseEntity.ok(Map.of("message", "Sandbox restaurado con éxito"));
     }

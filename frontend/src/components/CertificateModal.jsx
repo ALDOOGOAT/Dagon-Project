@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Award, Download, CheckCircle, X } from 'lucide-react';
 import { Button } from './ui/button';
 import apiClient from '../services/apiClient';
+import { useTheme } from '../contexts/ThemeContext';
+import { getMateria } from '../config/materias';
 import { toast } from 'sonner';
 
-const generarCertificadoPNG = (datos, cursoId) => {
+const generarCertificadoPNG = (datos, cursoId, textos = getMateria('sql').certificado) => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
@@ -51,7 +53,7 @@ const generarCertificadoPNG = (datos, cursoId) => {
   
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 28px sans-serif';
-  ctx.fillText('Academia Dagon - Escuela de Sql', 600, 190);
+  ctx.fillText(`Academia Dagon - ${textos.escuela}`, 600, 190);
   
   ctx.fillStyle = '#94a3b8';
   ctx.font = '20px sans-serif';
@@ -93,7 +95,7 @@ const generarCertificadoPNG = (datos, cursoId) => {
   
   ctx.fillStyle = '#78350f';
   ctx.font = 'italic 18px serif';
-  ctx.fillText('✦ Dagon - La Academia del Guerrero SQL ✦', 600, 750);
+  ctx.fillText(`✦ Dagon - ${textos.pie} ✦`, 600, 750);
   
   ctx.fillStyle = '#475569';
   ctx.font = '12px sans-serif';
@@ -106,14 +108,16 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
   const [loading, setLoading] = useState(false);
   const [datosCertificado, setDatosCertificado] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const { materia } = useTheme();
+  const textos = getMateria(materia).certificado;
 
   useEffect(() => {
     if (isOpen && certificado) {
       setDatosCertificado(certificado);
-      const url = generarCertificadoPNG(certificado, cursoId);
+      const url = generarCertificadoPNG(certificado, cursoId, textos);
       setPreviewUrl(url);
     }
-  }, [isOpen, certificado, cursoId]);
+  }, [isOpen, certificado, cursoId, textos]);
 
   const handleDescargar = async () => {
     if (!datosCertificado) return;
@@ -121,7 +125,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
     setLoading(true);
     
     try {
-      const dataUrl = generarCertificadoPNG(datosCertificado, cursoId);
+      const dataUrl = generarCertificadoPNG(datosCertificado, cursoId, textos);
       
       const link = document.createElement('a');
       link.download = `Certificado_Dagon_${datosCertificado.curso.replace(/\s+/g, '_')}.png`;
@@ -192,7 +196,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
             animate={{ y: 0, opacity: 1 }}
             className={`text-2xl font-display font-black mb-2 ${esGuerrero ? 'text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-500' : 'text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-500'}`}
           >
-            ¡CERTIFICADO DE {esGuerrero ? 'GUERRERO' : 'ARQUITECTO'} SQL!
+            ¡CERTIFICADO DE {textos.rol(esGuerrero)}!
           </motion.h2>
 
           <motion.p 
@@ -201,7 +205,7 @@ export const CertificateModal = ({ isOpen, onClose, certificado, cursoId, cursoN
             transition={{ delay: 0.3 }}
             className="text-slate-400 text-sm mb-4"
           >
-            Academia Dagon - La Escuela del Guerrero SQL
+            Academia Dagon - {textos.escuelaLarga}
           </motion.p>
         </div>
 

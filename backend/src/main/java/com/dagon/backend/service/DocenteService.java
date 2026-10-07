@@ -474,7 +474,8 @@ public class DocenteService {
                 "SELECT id_curso, titulo FROM lms_core.cursos ORDER BY id_curso"));
 
         resumen.put("modulos", jdbcTemplate.queryForList(
-                "SELECT id_modulo, titulo, id_curso FROM lms_core.modulos ORDER BY orden"));
+                "SELECT m.id_modulo, m.titulo, m.id_curso, COALESCE(c.materia_slug, 'sql') AS materia_slug " +
+                        "FROM lms_core.modulos m LEFT JOIN lms_core.cursos c ON c.id_curso = m.id_curso ORDER BY m.orden"));
 
         resumen.put("grupos", listarGrupos(docenteId, esAdmin));
 
@@ -1171,7 +1172,20 @@ public EjercicioDocenteDTO crearEjercicioDocente(
         throw new IllegalArgumentException("El enunciado es obligatorio");
     }
 
-    if (request.queryMaestra() == null || request.queryMaestra().isBlank()) {
+    // IO solo admite misiones NUMERICO (sin SQL); SQL sigue exigiendo su query maestra.
+    String materia = jdbcTemplate.query(
+            "SELECT COALESCE(c.materia_slug, 'sql') FROM lms_core.modulos m " +
+                    "LEFT JOIN lms_core.cursos c ON c.id_curso = m.id_curso WHERE m.id_modulo = ?",
+            rs -> rs.next() ? rs.getString(1) : null, request.idModulo());
+    if (materia == null) {
+        throw new IllegalArgumentException("El modulo no existe");
+    }
+    boolean esIo = "io".equals(materia);
+    String configuracionNumerica = esIo ? normalizarMisionNumerica(request.configuracionExtra()) : null;
+    if (!esIo && esConfiguracionNumerica(request.configuracionExtra())) {
+        throw new IllegalArgumentException("Las misiones numericas solo se publican en modulos de Investigacion de Operaciones");
+    }
+    if (!esIo && (request.queryMaestra() == null || request.queryMaestra().isBlank())) {
         throw new IllegalArgumentException("La query maestra es obligatoria");
     }
 
@@ -1235,7 +1249,7 @@ public EjercicioDocenteDTO crearEjercicioDocente(
         );
     }
 
-    String configuracionExtra = request.configuracionExtra();
+    String configuracionExtra = esIo ? configuracionNumerica : request.configuracionExtra();
 
     if (configuracionExtra != null && configuracionExtra.isBlank()) {
         configuracionExtra = null;
@@ -1254,7 +1268,7 @@ public EjercicioDocenteDTO crearEjercicioDocente(
             request.idModulo(),
             request.titulo(),
             request.enunciado(),
-            request.queryMaestra(),
+            esIo ? "" : request.queryMaestra(),
             dificultad,
             formato,
             configuracionExtra,
@@ -1264,6 +1278,86 @@ public EjercicioDocenteDTO crearEjercicioDocente(
             visibilidad,
             idGrupo
     );
+}
+
+private static final com.fasterxml.jackson.databind.ObjectMapper JSON_MISION = new com.fasterxml.jackson.databind.ObjectMapper();
+
+private static boolean esConfiguracionNumerica(String json) {
+    if (json == null || json.isBlank()) return false;
+    try {
+        return "NUMERICO".equalsIgnoreCase(JSON_MISION.readTree(json).path("tipo_validacion").asText());
+    } catch (Exception e) {
+        return false;
+    }
+}
+
+/**
+ * Valida y normaliza una mision NUMERICO de IO creada por un docente: campos numero/opcion,
+ * respuestas para cada campo (numeros finitos o fracciones a/b) y tolerancias acotadas.
+ * Devuelve el JSON que se guarda; las respuestas nunca viajan al alumno (ver EjercicioDTO).
+ */
+static String normalizarMisionNumerica(String json) {
+    if (json == null || json.isBlank()) throw new IllegalArgumentException("Define los campos y las respuestas de la mision");
+    com.fasterxml.jackson.databind.JsonNode raiz;
+    try {
+        raiz = JSON_MISION.readTree(json);
+    } catch (Exception e) {
+        throw new IllegalArgumentException("La configuracion de la mision no es JSON valido");
+    }
+    var campos = raiz.path("campos");
+    if (!campos.isArray() || campos.isEmpty() || campos.size() > 10) throw new IllegalArgumentException("La mision necesita de 1 a 10 campos");
+    var respuestas = raiz.path("respuestas");
+    if (!respuestas.isObject()) throw new IllegalArgumentException("Faltan las respuestas esperadas");
+    var salida = JSON_MISION.createObjectNode().put("tipo_validacion", "NUMERICO");
+    var camposSalida = salida.putArray("campos");
+    var respuestasSalida = salida.putObject("respuestas");
+    Set<String> claves = new HashSet<>();
+    for (var campo : campos) {
+        String clave = campo.path("clave").asText("");
+        String etiqueta = campo.path("etiqueta").asText("").trim();
+        String tipo = campo.path("tipo").asText("numero");
+        if (!clave.matches("[a-zA-Z][a-zA-Z0-9_]{0,29}") || !claves.add(clave)) throw new IllegalArgumentException("Cada campo necesita una clave unica (letras, numeros y _)");
+        if (etiqueta.isEmpty() || etiqueta.length() > 80) throw new IllegalArgumentException("Cada campo necesita una etiqueta de hasta 80 caracteres");
+        if (!tipo.equals("numero") && !tipo.equals("opcion")) throw new IllegalArgumentException("El tipo de campo debe ser numero u opcion");
+        var esperado = respuestas.get(clave);
+        if (esperado == null || esperado.isNull()) throw new IllegalArgumentException("Falta la respuesta del campo " + clave);
+        var salidaCampo = camposSalida.addObject().put("clave", clave).put("etiqueta", etiqueta).put("tipo", tipo);
+        if (campo.hasNonNull("unidad")) salidaCampo.put("unidad", campo.path("unidad").asText("").trim());
+        if (tipo.equals("opcion")) {
+            var opciones = campo.path("opciones");
+            if (!opciones.isArray() || opciones.size() < 2 || opciones.size() > 8) throw new IllegalArgumentException("Un campo de opcion necesita de 2 a 8 opciones");
+            var lista = salidaCampo.putArray("opciones");
+            boolean contiene = false;
+            for (var o : opciones) {
+                String opcion = o.asText("").trim();
+                if (opcion.isEmpty() || opcion.length() > 80) throw new IllegalArgumentException("Las opciones deben tener texto de hasta 80 caracteres");
+                lista.add(opcion);
+                contiene |= opcion.equals(esperado.asText().trim());
+            }
+            if (!contiene) throw new IllegalArgumentException("La respuesta de " + clave + " debe ser una de sus opciones");
+            respuestasSalida.put(clave, esperado.asText().trim());
+        } else {
+            double valor;
+            if (esperado.isNumber()) valor = esperado.asDouble();
+            else {
+                String texto = esperado.asText("").trim().replace(',', '.');
+                var fraccion = java.util.regex.Pattern.compile("^([-+]?\\d+(?:\\.\\d+)?)\\s*/\\s*([-+]?\\d+(?:\\.\\d+)?)$").matcher(texto);
+                try {
+                    valor = fraccion.matches() ? Double.parseDouble(fraccion.group(1)) / Double.parseDouble(fraccion.group(2)) : Double.parseDouble(texto);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("La respuesta de " + clave + " debe ser un numero o una fraccion a/b");
+                }
+            }
+            if (!Double.isFinite(valor) || Math.abs(valor) > 1e12) throw new IllegalArgumentException("La respuesta de " + clave + " debe ser un numero finito");
+            respuestasSalida.put(clave, valor);
+        }
+    }
+    if (respuestas.size() != claves.size()) throw new IllegalArgumentException("Hay respuestas sin campo correspondiente");
+    var tolerancia = raiz.path("tolerancia");
+    double abs = tolerancia.path("abs").asDouble(0.001), rel = tolerancia.path("rel").asDouble(0.001);
+    if (!(abs >= 0 && abs <= 1e6) || !(rel >= 0 && rel <= 1)) throw new IllegalArgumentException("Tolerancia fuera de rango (abs 0..1e6, rel 0..1)");
+    salida.putObject("tolerancia").put("abs", abs).put("rel", rel);
+    return salida.toString();
 }
 
 private EjercicioDocenteDTO mapEjercicioDocente(java.sql.ResultSet rs) throws java.sql.SQLException {

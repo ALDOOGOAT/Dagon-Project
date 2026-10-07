@@ -111,7 +111,7 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('userAvatar');
-      localStorage.removeItem('userPalette');
+      localStorage.removeItem('dagon_user_cache');
 
       window.dispatchEvent(new Event('dagon_unauthorized'));
 

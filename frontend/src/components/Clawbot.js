@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { X, Send, Code, Sparkles, BookOpen, Database, HelpCircle, Copy, Check, ChevronRight, FileCode, Lightbulb, AlertCircle } from 'lucide-react';
 import { DagonMascot } from './DagonMascot';
 import apiClient from '../services/apiClient';
+import { getMateria } from '../config/materias';
 
 export const Clawbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,9 +15,10 @@ export const Clawbot = () => {
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const messagesEndRef = useRef(null);
-  
-  const { token } = useAuth(); 
-  const { colors } = useTheme(); 
+
+  const { token } = useAuth();
+  const { colors, materia } = useTheme();
+  const tutorTextos = getMateria(materia).tutor;
   const isLight = colors.mode === 'light';
 
   const scrollToBottom = () => {
@@ -27,14 +29,16 @@ export const Clawbot = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Al cambiar de materia la conversación anterior ya no aplica.
+  useEffect(() => {
+    setMessages([]);
+  }, [materia]);
+
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      setMessages([{
-        role: 'assistant',
-        content: '¡Hola! Soy Dagonbot, tu tutor interactivo de SQL 🌟\n\nEstoy aqui para ayudarte a:\n🔍 Resolver dudas sobre consultas\n💡 Entender errores y darte pistas\n📋 Ver ejemplos de codigo SQL\n🎯 Dominar PostgreSQL\n\n¿Sobre que quieres aprender hoy?'
-      }]);
+      setMessages([{ role: 'assistant', content: tutorTextos.saludo }]);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, tutorTextos]);
 
   const copyToClipboard = async (text, index) => {
     try {
@@ -71,7 +75,7 @@ export const Clawbot = () => {
 
   const renderFormattedText = (text, index) => {
     if (!text) return null;
-    
+
     let cleanMessage = text
       .replace(/```sql\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
       .replace(/```\n([\s\S]*?)```/g, '___SQL_BLOCK___$1___END_SQL___')
@@ -83,7 +87,7 @@ export const Clawbot = () => {
 
     const sqlBlockRegex = /___SQL_BLOCK___([\s\S]*?)___END_SQL___/g;
     const parts = cleanMessage.split(sqlBlockRegex);
-    
+
     return parts.map((part, i) => {
       if (i % 2 === 1) {
         const codeContent = part.trim();
@@ -117,12 +121,12 @@ export const Clawbot = () => {
           </div>
         );
       }
-      
+
       const lines = part.split('\n');
       return lines.map((line, lineIdx) => {
         line = line.trim();
         if (!line) return <br key={`${index}-line-${lineIdx}`} />;
-        
+
         if (line.startsWith('## ')) {
           return (
             <h4 key={`${index}-h-${lineIdx}`} className="mt-5 mb-2 text-base font-bold text-emerald-400 flex items-center gap-2">
@@ -131,7 +135,7 @@ export const Clawbot = () => {
             </h4>
           );
         }
-        
+
         if (line.includes('SQL') && (line.length < 30)) {
           return (
             <div key={`${index}-sql-${lineIdx}`} className="mt-3 mb-1 flex items-center gap-2 text-xs font-medium text-cyan-400">
@@ -140,7 +144,7 @@ export const Clawbot = () => {
             </div>
           );
         }
-        
+
         if (line.includes('Ejemplo') || line.includes('ejemplo')) {
           return (
             <div key={`${index}-ex-${lineIdx}`} className="mt-4 mb-2 flex items-center gap-2 text-sm font-semibold text-amber-400">
@@ -149,7 +153,7 @@ export const Clawbot = () => {
             </div>
           );
         }
-        
+
         if (line.includes('Aviso') || line.includes('Avisos') || line.includes('ERROR') || line.includes('PISTA')) {
           return (
             <div key={`${index}-tip-${lineIdx}`} className="mt-3 mb-2 px-3 py-2 bg-amber-500/10 border-l-2 border-amber-400 rounded-r flex items-start gap-2 text-amber-300 text-sm">
@@ -158,7 +162,7 @@ export const Clawbot = () => {
             </div>
           );
         }
-        
+
         if (line.length < 50 && (line.includes('¿') || line.includes('?'))) {
           return (
             <div key={`${index}-q-${lineIdx}`} className="mt-3 mb-2 flex items-start gap-2 text-purple-300 font-medium">
@@ -167,7 +171,7 @@ export const Clawbot = () => {
             </div>
           );
         }
-        
+
         if (line.includes('Con') && line.includes(':')) {
           return (
             <div key={`${index}-c-${lineIdx}`} className="mt-2 mb-1 flex items-start gap-2 text-slate-300 text-sm">
@@ -184,7 +188,7 @@ export const Clawbot = () => {
             </p>
           );
         }
-        
+
         return line ? (
           <span key={`${index}-s-${lineIdx}`} className="block text-slate-300 text-sm mb-1">{line}</span>
         ) : <br key={lineIdx} />;
@@ -192,19 +196,30 @@ export const Clawbot = () => {
     });
   };
 
-  const suggestedQuestions = [
-    { icon: Database, text: 'Como funciona JOIN?', topic: 'join' },
-    { icon: Code, text: 'Ejemplo de SELECT', topic: 'select' },
-    { icon: Lightbulb, text: 'ORDER BY vs GROUP BY', topic: 'group vs order' },
-    { icon: HelpCircle, text: 'Que es NULL?', topic: 'null' },
-  ];
+  const suggestedQuestions = materia === 'io'
+    ? [
+      { icon: Database, text: 'Como planteo un modelo de PL?', topic: 'modelo' },
+      { icon: Code, text: 'Como elijo el pivote?', topic: 'pivote' },
+      { icon: Lightbulb, text: 'Que es un precio sombra?', topic: 'sombra' },
+      { icon: HelpCircle, text: 'Ruta critica vs PERT', topic: 'cpm' },
+    ]
+    : [
+      { icon: Database, text: 'Como funciona JOIN?', topic: 'join' },
+      { icon: Code, text: 'Ejemplo de SELECT', topic: 'select' },
+      { icon: Lightbulb, text: 'ORDER BY vs GROUP BY', topic: 'group vs order' },
+      { icon: HelpCircle, text: 'Que es NULL?', topic: 'null' },
+    ];
 
   const handleSuggestedQuestion = (topic) => {
     const questions = {
       'join': '¿Como funciona el JOIN en SQL? Dame un ejemplo.',
       'select': '¿Como uso SELECT con WHERE?',
       'group vs order': '¿Cual es la diferencia entre ORDER BY y GROUP BY?',
-      'null': '¿Como trabajar con valores NULL?'
+      'null': '¿Como trabajar con valores NULL?',
+      'modelo': '¿Como planteo un modelo de programación lineal a partir de un enunciado?',
+      'pivote': '¿Como elijo la variable que entra, la que sale y el pivote en el simplex?',
+      'sombra': '¿Que es un precio sombra y como se interpreta?',
+      'cpm': '¿Cual es la diferencia entre CPM y PERT?'
     };
     setInputMessage(questions[topic]);
   };
@@ -218,11 +233,12 @@ export const Clawbot = () => {
     setInputMessage('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setLoading(true);
-    
+
     try {
       const response = await apiClient.post('/api/clawbot/chat', {
         mensaje: userMessage,
-        historial: messages
+        historial: messages,
+        materia
       });
 
       const data = response.data;
@@ -297,15 +313,15 @@ export const Clawbot = () => {
               : undefined
           }}
         >
-          <div className="absolute inset-0 pointer-events-none" style={{ 
+          <div className="absolute inset-0 pointer-events-none" style={{
             background: isLight
               ? 'linear-gradient(180deg, rgba(198,122,29,0.12) 0%, rgba(255,255,255,0) 24%, rgba(217,154,78,0.08) 100%)'
-              : `linear-gradient(to bottom, ${colors.primary}20, transparent, ${colors.secondary}20)` 
+              : `linear-gradient(to bottom, ${colors.primary}20, transparent, ${colors.secondary}20)`
           }} />
-          
-          <div className="relative z-10 p-3 sm:p-4 flex items-center gap-3 sm:gap-4 border-b" style={{ 
-            background: isLight ? 'linear-gradient(180deg, rgba(255,248,238,0.98), rgba(255,244,227,0.9))' : colors.surface, 
-            borderColor: colors.border 
+
+          <div className="relative z-10 p-3 sm:p-4 flex items-center gap-3 sm:gap-4 border-b" style={{
+            background: isLight ? 'linear-gradient(180deg, rgba(255,248,238,0.98), rgba(255,244,227,0.9))' : colors.surface,
+            borderColor: colors.border
           }}>
             <div className="relative">
               <div
@@ -334,7 +350,7 @@ export const Clawbot = () => {
               </h3>
               <p className="text-xs font-semibold flex items-center gap-2" style={{ color: isLight ? '#8b6f4e' : '#94a3b8' }}>
                 <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: isLight ? '#c67a1d' : '#34d399' }}></span>
-                Tutor de SQL
+                {tutorTextos.nombre}
               </p>
             </div>
           </div>
@@ -352,7 +368,7 @@ export const Clawbot = () => {
                       : 'border rounded-bl-md'
                   }`}
                   style={{
-                    background: msg.role === 'user' 
+                    background: msg.role === 'user'
                       ? (isLight
                         ? 'linear-gradient(135deg, #b8731d 0%, #d6b45a 100%)'
                         : `linear-gradient(135deg, ${colors.primary} 0%, ${colors.secondary} 100%)`)
@@ -370,7 +386,7 @@ export const Clawbot = () => {
                 </div>
               </div>
             ))}
-            
+
             {loading && (
               <div className="flex justify-start animate-in fade-in duration-200">
                 <div
@@ -423,7 +439,7 @@ export const Clawbot = () => {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Preguntame sobre SQL..."
+                placeholder={tutorTextos.placeholder}
                 className="h-12 flex-1 rounded-xl shadow-inner font-medium"
                 style={{
                   backgroundColor: isLight ? 'rgba(255,255,255,0.8)' : colors.surface,

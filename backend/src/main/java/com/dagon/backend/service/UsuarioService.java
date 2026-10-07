@@ -53,6 +53,10 @@ public class UsuarioService {
     @Value("${dagon.docente.registration-code:}")
     private String docenteRegistrationCode;
 
+    // En Railway apunta a un volumen montado (p. ej. /data/uploads); relativo = bajo user.dir.
+    @Value("${dagon.uploads.dir:uploads}")
+    private String uploadsDirConfig = "uploads";
+
     // --- FUNCION 1: REGISTRO ---
     @Transactional
     public Usuario registrarUsuario(Usuario nuevoUsuario, String rol) {
@@ -616,7 +620,7 @@ public class UsuarioService {
 
     private Path obtenerDirectorioUploads() {
         try {
-            Path uploadsDir = Paths.get(System.getProperty("user.dir"), "uploads").toAbsolutePath().normalize();
+            Path uploadsDir = Paths.get(System.getProperty("user.dir")).resolve(uploadsDirConfig).toAbsolutePath().normalize();
             Files.createDirectories(uploadsDir);
             return uploadsDir;
         } catch (IOException e) {

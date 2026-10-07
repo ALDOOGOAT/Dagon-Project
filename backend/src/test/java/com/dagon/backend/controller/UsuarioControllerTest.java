@@ -23,6 +23,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +46,15 @@ class UsuarioControllerTest {
         ReflectionTestUtils.setField(controller, "leaderboardService", leaderboardService);
         ReflectionTestUtils.setField(controller, "jwtUtil", jwtUtil);
         ReflectionTestUtils.setField(controller, "authRateLimiter", new AuthRateLimiter());
+    }
+
+    @Test
+    void registroNoExponeDetalleDeErroresDeBaseDeDatos() {
+        when(usuarioService.registrarUsuario(any(Usuario.class), eq("alumno"), isNull(), isNull()))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("SQL interno y credenciales"));
+        var respuesta = controller.registrarUsuario(Map.of("nombre", "Ana", "email", "ana@example.com", "password", "test"));
+        assertThat(respuesta.getStatusCode().value()).isEqualTo(500);
+        assertThat(respuesta.getBody().toString()).doesNotContain("SQL", "credenciales");
     }
 
     @Test
@@ -108,12 +119,22 @@ class UsuarioControllerTest {
     @Test
     void rankingDuplicadoDeUsuariosUsaLeaderboardService() {
         List<Map<String, Object>> ranking = List.of(Map.of("nombre", "Aldo", "xp", 300));
-        when(leaderboardService.obtenerRankingGlobal(0)).thenReturn(ranking);
+        when(leaderboardService.obtenerRankingGlobal(0, null)).thenReturn(ranking);
 
         ResponseEntity<?> response = controller.obtenerRanking();
 
         assertThat(response.getBody()).isEqualTo(ranking);
-        verify(leaderboardService).obtenerRankingGlobal(0);
+        verify(leaderboardService).obtenerRankingGlobal(0, null);
+    }
+
+    @Test
+    void loginGoogleEstaDeshabilitadoYNoEmiteToken() {
+        ResponseEntity<?> response = controller.loginGoogle(Map.of("email", "victima@example.com", "nombre", "X"));
+
+        assertThat(response.getStatusCode().value()).isEqualTo(410);
+        assertThat(response.getBody()).isEqualTo("Inicio con Google deshabilitado hasta tener verificación real del token");
+        verify(jwtUtil, never()).generarToken(any());
+        verifyNoInteractions(usuarioService);
     }
 
     private Usuario usuario(String nombre, String email, String passwordHash) {
