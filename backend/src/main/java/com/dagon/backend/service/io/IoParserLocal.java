@@ -19,6 +19,14 @@ public class IoParserLocal {
             "\\b(?:enteros?|enteras?|binari[oa]s?|indivisibles?|unidades completas|piezas completas|numero entero)\\b"
             + "|\\b0 o 1\\b|\\bsi o no\\b|\\bse (?:acepta|elige|selecciona|toma|abre|instala)\\b[^.;?]{0,40}\\bo se (?:rechaza|descarta|omite|deja)\\b"
             + "|\\b(?:completo|completa) o se (?:rechaza|descarta)\\b");
+    private static final Pattern BINARIEDAD = Pattern.compile(
+            "\\bbinari[oa]s?\\b|\\b0 o 1\\b|\\bsi o no\\b"
+            + "|\\bse (?:acepta|elige|selecciona|toma|abre|instala)\\b[^.;?]{0,40}\\bo se (?:rechaza|descarta|omite|deja)\\b"
+            + "|\\b(?:completo|completa) o se (?:rechaza|descarta)\\b");
+    /** Decisión 0/1: con solo "enteras" una variable podría valer 2 o más y el óptimo sería otro. */
+    public static boolean exigeBinarias(String texto) {
+        return BINARIEDAD.matcher(normalizar(texto)).find();
+    }
     /** El enunciado exige variables enteras o de decisión 0/1: un modelo continuo daría un resultado distinto. */
     public static boolean exigeEnteros(String texto) {
         return INTEGRALIDAD.matcher(normalizar(texto)).find();

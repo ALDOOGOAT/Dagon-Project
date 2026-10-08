@@ -56,4 +56,18 @@ class IoInterpretacionServiceTest {
         assertThat(IoParserLocal.exigeEnteros("Solo se fabrican unidades completas.")).isTrue();
         assertThat(IoParserLocal.exigeEnteros(SI_NO)).isTrue();
     }
+    @Test void soloEnterasNoBastaCuandoElTextoEsDeSiONo() throws Exception {
+        var proveedor = mock(IoProveedorClient.class); when(proveedor.fuentesDisponibles()).thenReturn(List.of("groq", "gemini"));
+        when(proveedor.extraer("groq", SI_NO)).thenReturn(pl(",\"enteras\":[\"x1\",\"x2\",\"x3\"]"));
+        when(proveedor.extraer("gemini", SI_NO)).thenReturn(pl(",\"binarias\":[\"x1\",\"x2\",\"x3\"]"));
+        var r = new IoInterpretacionService(new IoParserLocal(), proveedor, new IoModeloValidator()).interpretar(SI_NO);
+        assertThat(r.fuente()).isEqualTo("gemini");
+        assertThat(r.modelo().path("datos").path("binarias").size()).isEqualTo(3);
+    }
+    @Test void enterasBastanCuandoElTextoNoEsBinario() throws Exception {
+        var proveedor = mock(IoProveedorClient.class); when(proveedor.fuentesDisponibles()).thenReturn(List.of("groq"));
+        String texto = SI_NO.replace("(decisión de sí o no)", "").replace("se acepta completo o se rechaza", "se fabrica en unidades completas");
+        when(proveedor.extraer("groq", texto)).thenReturn(pl(",\"enteras\":[\"x1\",\"x2\",\"x3\"]"));
+        assertThat(new IoInterpretacionService(new IoParserLocal(), proveedor, new IoModeloValidator()).interpretar(texto).estado()).isEqualTo("listo");
+    }
 }

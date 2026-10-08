@@ -26,7 +26,7 @@ public class IoInterpretacionService {
             try {
                 IoInterpretacion resultado = validator.desdeProveedor(proveedor.extraer(fuente, enunciado), fuente, enunciado);
                 // Guarda determinista: el texto pide enteros/sí-no y el modelo continuo lo ignora -> otra fuente.
-                if ("listo".equals(resultado.estado()) && IoParserLocal.exigeEnteros(enunciado) && omiteIntegralidad(resultado)) {
+                if ("listo".equals(resultado.estado()) && omiteIntegralidad(resultado, enunciado)) {
                     integralidadOmitida = true;
                     LOGGER.warn("Modelado IO: proveedor={} categoria=integralidad_omitida status=0", fuente);
                     continue;
@@ -47,13 +47,22 @@ public class IoInterpretacionService {
         advertencias.add("El reconocimiento local tiene alcance limitado. Si faltan datos o no se reconoce la redacción, completa el modelo manualmente.");
         return new IoInterpretacion(local.estado(), "local", local.resumen(), null, local.preguntas(), advertencias, local.supuestos());
     }
-    /** PL sin ninguna declaración de variables enteras o binarias (ni lista ni línea "x1, x2 enteras"). */
-    private static boolean omiteIntegralidad(IoInterpretacion r) {
+    /**
+     * PL que no declara la integralidad que el texto exige. Si el texto es de sí/no (binario) se exige
+     * declarar binarias: "enteras" a secas permitiría usar un proyecto más de una vez.
+     */
+    private static boolean omiteIntegralidad(IoInterpretacion r, String enunciado) {
         var modelo = r.modelo();
         if (modelo == null || !"pl".equals(modelo.path("tipo").asText())) return false;
+        boolean binario = IoParserLocal.exigeBinarias(enunciado);
+        if (!binario && !IoParserLocal.exigeEnteros(enunciado)) return false;
         var datos = modelo.path("datos");
-        if (datos.path("enteras").size() > 0 || datos.path("binarias").size() > 0) return false;
-        for (var restriccion : datos.path("restricciones")) if (IoModeloValidator.DECLARACION.matcher(restriccion.asText()).matches()) return false;
+        if (datos.path("binarias").size() > 0) return false;
+        if (!binario && datos.path("enteras").size() > 0) return false;
+        for (var restriccion : datos.path("restricciones")) {
+            var m = IoModeloValidator.DECLARACION.matcher(restriccion.asText());
+            if (m.matches() && (!binario || m.group(2).toLowerCase().matches("binari.*|bin|∈.*"))) return false;
+        }
         return true;
     }
 }
