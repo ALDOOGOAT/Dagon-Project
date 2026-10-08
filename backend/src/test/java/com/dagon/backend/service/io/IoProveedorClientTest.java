@@ -36,7 +36,7 @@ class IoProveedorClientTest {
             cuerpo.set(new String(intercambio.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             if (demora > 0) try { Thread.sleep(demora); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
             byte[] bytes = respuesta.getBytes(StandardCharsets.UTF_8);
-            int estado = modeloSinCuota != null && cuerpo.get().contains("\"" + modeloSinCuota + "\"") ? 429 : primerError && llamada == 1 ? 503 : codigo;
+            int estado = modeloSinCuota != null && (intercambio.getRequestURI() + cuerpo.get()).contains(modeloSinCuota) ? 429 : primerError && llamada == 1 ? 503 : codigo;
             try { intercambio.sendResponseHeaders(estado, bytes.length); intercambio.getResponseBody().write(bytes); }
             catch (java.io.IOException ignored) {} finally { intercambio.close(); }
         });
@@ -125,5 +125,17 @@ class IoProveedorClientTest {
         modeloSinCuota = "openai/gpt-oss-20b";
         assertThatThrownBy(() -> client.extraer("groq", "Enunciado de prueba suficientemente largo."))
                 .isInstanceOf(IoProveedorClient.ErrorProveedor.class);
+    }
+    @Test void geminiConDemandaAltaPruebaElModeloDeRespaldo() throws Exception {
+        modeloSinCuota = "gemini-principal";
+        ReflectionTestUtils.setField(client, "orden", "gemini");
+        ReflectionTestUtils.setField(client, "geminiKey", "clave-sintetica-solo-test");
+        ReflectionTestUtils.setField(client, "geminiUrl", "http://127.0.0.1:" + server.getAddress().getPort() + "/gemini/");
+        ReflectionTestUtils.setField(client, "geminiModel", "gemini-principal");
+        ReflectionTestUtils.setField(client, "geminiRespaldo", "gemini-respaldo");
+        respuesta = json.writeValueAsString(Map.of("candidates", java.util.List.of(Map.of("content", Map.of("parts", java.util.List.of(Map.of("text", "{\"estado\":\"incompleto\",\"preguntas\":[\"Falta\"]}")))))));
+        var r = client.extraer("gemini", "Enunciado de prueba suficientemente largo.");
+        assertThat(r.path("estado").asText()).isEqualTo("incompleto");
+        assertThat(solicitudes.get()).isEqualTo(2);
     }
 }

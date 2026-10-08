@@ -42,7 +42,9 @@ public class IoParserLocal {
         while (moneda.find()) monedas.add(moneda.group(1).replaceFirst("s$", ""));
         if (monedas.size() > 1) return IoInterpretacion.incompleto("Hay monedas diferentes en el enunciado.", List.of("Expresa todos los costos y beneficios en la misma moneda o indica la conversión."));
         if (n.contains("mesa") && n.contains("silla")) return produccion(enunciado, n);
-        if (n.contains("inventario") || n.contains("lote economico") || n.contains("eoq") || n.contains("demanda anual")) return inventario(enunciado, n);
+        if (n.contains("lote economico") || n.contains("eoq") || n.contains("demanda anual")
+                || (n.contains("inventario") && n.matches("(?s).*(costo (?:por|de cada|de realizar un) pedido|costo de mantener|costo de mantenimiento|punto de reorden|periodo fijo).*")))
+            return inventario(enunciado, n);
         if (n.contains("llegan") || n.contains("cola") || n.contains("clientes por") || n.contains("lambda")) return colas(enunciado, n);
         IoInterpretacion explicito = modeloExplicito(enunciado, n);
         return explicito != null ? explicito : IoInterpretacion.noSoportado("No hay suficientes patrones explícitos para convertir este enunciado con el reconocimiento local.");

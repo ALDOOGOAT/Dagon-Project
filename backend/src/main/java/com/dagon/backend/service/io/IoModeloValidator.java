@@ -97,8 +97,12 @@ public class IoModeloValidator {
                 String fragmento = texto(cita.path("texto"), 12000), campo = texto(cita.path("campo"), 100);
                 boolean literal = !fragmento.isBlank() && normalizarCita(enunciado).contains(normalizarCita(fragmento));
                 // Una cita con cifras debe ser literal (protege contra datos inventados); una paráfrasis sin cifras se omite.
-                if (!literal && !fragmento.matches("(?s).*\\d.*")) { citaOmitida = true; continue; }
-                exigir(literal, "Una evidencia no aparece literalmente en el enunciado.");
+                // Una cita parafraseada se conserva (con aviso) si TODAS sus cifras están en el enunciado;
+                // una cifra inventada sigue rechazando el modelo.
+                boolean conCifras = fragmento.matches("(?s).*\\d.*");
+                if (!literal && !conCifras) { citaOmitida = true; continue; }          // paráfrasis sin cifras: no sustenta nada
+                if (!literal && cifrasContenidas(fragmento, enunciado)) citaOmitida = true; // se conserva: sus cifras sí están
+                else exigir(literal, "Una evidencia no aparece literalmente en el enunciado.");
                 exigir(campo.equals("datos") || campo.startsWith("datos.") || campo.equals("variables") || campo.equals("tipo") || campo.equals("metodo") || campo.equals("objetivo"), "El campo de evidencia no corresponde al modelo.");
                 evidencias.add(JSON.createObjectNode().put("campo", campo).put("texto", fragmento));
             }
@@ -106,7 +110,7 @@ public class IoModeloValidator {
             ObjectNode modelo = JSON.createObjectNode().put("tipo", tipo).put("metodo", metodo);
             modelo.set("datos", seguros); modelo.set("variables", variables); modelo.set("evidencias", evidencias);
             var advertencias = new ArrayList<>(respuesta.advertencias());
-            if (citaOmitida) advertencias.add("Se omitió una cita parafraseada; revisa que el modelo corresponda al enunciado.");
+            if (citaOmitida) advertencias.add("Algunas citas de evidencia están parafraseadas (sus cifras coinciden con el enunciado); revisa que el modelo corresponda al problema.");
             if (tipo.equals("pl") && !metodo.equals("branch_bound")) advertencias.add("Se resuelve un modelo continuo. Si las cantidades deben ser enteras, decláralas como enteras: se resolverá por branch & bound, sin redondear.");
             if (tipo.equals("noLineal")) advertencias.add("El resultado puede ser local y depende del intervalo/punto inicial; revisa dominio y supuestos.");
             return new IoInterpretacion("listo", respuesta.fuente(), respuesta.resumen(), modelo, List.of(), advertencias, respuesta.supuestos());
@@ -314,6 +318,14 @@ public class IoModeloValidator {
     private static List<String> textos(JsonNode n) { if (!n.isArray()) return List.of(); exigir(n.size() <= 16, "Demasiados mensajes del proveedor."); List<String> r = new ArrayList<>(); for (JsonNode s : n) r.add(texto(s, 500)); return r; }
     private static void exigir(boolean ok, String mensaje) { if (!ok) throw new IllegalArgumentException(mensaje); }
     /** Cita comparable: sin distinguir mayúsculas, espacios repetidos ni puntuación en los extremos. Las cifras y su orden se conservan. */
+    static boolean cifrasContenidas(String fragmento, String enunciado) {
+        var enEnunciado = new HashSet<String>();
+        var m = Pattern.compile("[0-9]+(?:[.,][0-9]+)?").matcher(enunciado);
+        while (m.find()) enEnunciado.add(m.group().replace(',', '.'));
+        var c = Pattern.compile("[0-9]+(?:[.,][0-9]+)?").matcher(fragmento);
+        while (c.find()) if (!enEnunciado.contains(c.group().replace(',', '.'))) return false;
+        return true;
+    }
     static String normalizarCita(String texto) {
         return texto.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim().replaceAll("^[\\p{Punct}¿¡«»“”\\s]+|[\\p{Punct}¿¡«»“”\\s]+$", "");
     }

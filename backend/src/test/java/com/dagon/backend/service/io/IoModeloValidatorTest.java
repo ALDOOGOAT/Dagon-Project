@@ -122,4 +122,20 @@ class IoModeloValidatorTest {
         ((ObjectNode) m.modelo()).set("evidencias", json.readTree("[{\"campo\":\"datos\",\"texto\":\"Los pagos son 2 y -3\"}]"));
         assertThat(validator.validar(m, enunciado).estado()).isEqualTo("incompleto");
     }
+    @Test void citaParafraseadaConCifrasDelEnunciadoSeAcepta_perolaCifraInventadaSeRechaza() {
+        String e = "Cada Frappuccino genera una utilidad de $50 y requiere 4 onzas de jarabe. Hay 120 onzas de jarabe.";
+        assertThat(IoModeloValidator.cifrasContenidas("utilidad de 50 pesos por Frappuccino y 4 onzas", e)).isTrue();
+        assertThat(IoModeloValidator.cifrasContenidas("hay un máximo de 120 onzas", e)).isTrue();
+        assertThat(IoModeloValidator.cifrasContenidas("utilidad de 55 pesos", e)).isFalse();
+    }
+    @Test void citaParafraseadaConCifrasVerificadasSeConservaYSinCifrasNoSustenta() throws Exception {
+        String e = "Cada Frappuccino genera una utilidad de $50 y requiere 4 onzas de jarabe. Hay 120 onzas de jarabe.";
+        var m = modelo("pl", "simplex", "{\"objetivo\":\"max z=50x1\",\"restricciones\":[\"4x1<=120\",\"x1>=0\"]}");
+        ((ObjectNode) m.modelo()).set("evidencias", json.readTree("[{\"campo\":\"datos.objetivo\",\"texto\":\"utilidad de 50 pesos por Frappuccino\"}]"));
+        var r = validator.validar(m, e);
+        assertThat(r.estado()).isEqualTo("listo");
+        assertThat(r.modelo().path("evidencias").size()).isEqualTo(1);
+        ((ObjectNode) m.modelo()).set("evidencias", json.readTree("[{\"campo\":\"datos.objetivo\",\"texto\":\"utilidad de 55 pesos por Frappuccino\"}]"));
+        assertThat(validator.validar(m, e).estado()).isEqualTo("incompleto");
+    }
 }
