@@ -15,9 +15,13 @@ public class IoParserLocal {
     static String normalizar(String texto) {
         return Normalizer.normalize(texto.toLowerCase(Locale.ROOT), Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
+    private static final Pattern INTEGRALIDAD = Pattern.compile(
+            "\\b(?:enteros?|enteras?|binari[oa]s?|indivisibles?|unidades completas|piezas completas|numero entero)\\b"
+            + "|\\b0 o 1\\b|\\bsi o no\\b|\\bse (?:acepta|elige|selecciona|toma|abre|instala)\\b[^.;?]{0,40}\\bo se (?:rechaza|descarta|omite|deja)\\b"
+            + "|\\b(?:completo|completa) o se (?:rechaza|descarta)\\b");
+    /** El enunciado exige variables enteras o de decisión 0/1: un modelo continuo daría un resultado distinto. */
     public static boolean exigeEnteros(String texto) {
-        return Pattern.compile("\\b(?:enteros|enteras|binarias|binarios)\\b").matcher(normalizar(texto)).find()
-                || normalizar(texto).contains("0 o 1");
+        return INTEGRALIDAD.matcher(normalizar(texto)).find();
     }
     public IoInterpretacion interpretar(String enunciado) {
         String n = normalizar(enunciado);
