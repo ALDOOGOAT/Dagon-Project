@@ -93,9 +93,10 @@ public class IoModeloValidator {
             var evidencias = JSON.createArrayNode();
             JsonNode citas = raw.path("evidencias"); exigir(citas.isArray() && citas.size() > 0 && citas.size() <= 16, "Faltan las citas del enunciado que sustentan el modelo.");
             boolean citaOmitida = false;
+            String enunciadoNormalizado = normalizarCita(enunciado);
             for (JsonNode cita : citas) {
                 String fragmento = texto(cita.path("texto"), 12000), campo = texto(cita.path("campo"), 100);
-                boolean literal = !fragmento.isBlank() && normalizarCita(enunciado).contains(normalizarCita(fragmento));
+                boolean literal = !fragmento.isBlank() && enunciadoNormalizado.contains(normalizarCita(fragmento));
                 // Una cita con cifras debe ser literal (protege contra datos inventados); una paráfrasis sin cifras se omite.
                 // Una cita parafraseada se conserva (con aviso) si TODAS sus cifras están en el enunciado;
                 // una cifra inventada sigue rechazando el modelo.
@@ -103,7 +104,8 @@ public class IoModeloValidator {
                 if (!literal && !conCifras) { citaOmitida = true; continue; }          // paráfrasis sin cifras: no sustenta nada
                 if (!literal && cifrasContenidas(fragmento, enunciado)) citaOmitida = true; // se conserva: sus cifras sí están
                 else exigir(literal, "Una evidencia no aparece literalmente en el enunciado.");
-                exigir(campo.equals("datos") || campo.startsWith("datos.") || campo.equals("variables") || campo.equals("tipo") || campo.equals("metodo") || campo.equals("objetivo"), "El campo de evidencia no corresponde al modelo.");
+                // El campo es solo una etiqueta: uno desconocido ("binarias", "restricciones"…) se atribuye a los datos; lo que protege es la cita literal.
+                if (!(campo.equals("datos") || campo.startsWith("datos.") || campo.equals("variables") || campo.equals("tipo") || campo.equals("metodo") || campo.equals("objetivo"))) campo = "datos";
                 evidencias.add(JSON.createObjectNode().put("campo", campo).put("texto", fragmento));
             }
             exigir(!evidencias.isEmpty(), "Faltan las citas del enunciado que sustentan el modelo.");
@@ -257,13 +259,14 @@ public class IoModeloValidator {
             for (JsonNode t : tramos) { double min = numero(t.path("min"), 0, false), precio = numero(t.path("precio"), 0, true); exigir(min > anterior && precio <= precioAnterior, "Los tramos deben tener mínimos crecientes y precios no crecientes."); anterior = min; precioAnterior = precio; }
         }
         if (Set.of("reorden", "periodo_fijo").contains(metodo)) {
-            for (String k : List.of("d", "L", "sigma", "z")) numero(d.path(k), 0, false);
+            // En reorden sigma y z son opcionales (sin ellos no hay stock de seguridad), como en el frontend.
+            for (String k : List.of("d", "L", "sigma", "z")) if (metodo.equals("periodo_fijo") || !List.of("sigma", "z").contains(k) || d.has(k)) numero(d.path(k), 0, false);
             if (metodo.equals("periodo_fijo")) { numero(d.path("T"), 0, true); numero(d.path("inventario"), -1e12, false); }
         }
     }
     private static void colas(JsonNode d, String metodo) {
         double l = numero(d.path("lambda"), 0, true), m = numero(d.path("mu"), 0, true);
-        int s = metodo.equals("mm1") ? 1 : entero(d.path("s"), 1, 100);
+        int s = metodo.equals("mm1") ? 1 : entero(d.path("s"), 1, 1000);
         exigir(l < s * m, "La cola no es estable: λ debe ser menor que s·μ. No existe solución estacionaria finita.");
         exigir(d.has("cs") == d.has("cw"), "Indica ambos costos cs y cw para calcular el costo total.");
         for (String k : List.of("cs", "cw")) if (d.has(k)) numero(d.get(k), 0, false);
@@ -327,6 +330,14 @@ public class IoModeloValidator {
         return true;
     }
     static String normalizarCita(String texto) {
-        return texto.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim().replaceAll("^[\\p{Punct}¿¡«»“”\\s]+|[\\p{Punct}¿¡«»“”\\s]+$", "");
+        String t = texto.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        // Recorte lineal de puntuación en los extremos: la regex anclada al final era cuadrática con corridas largas de puntos.
+        int inicio = 0, fin = t.length();
+        while (inicio < fin && extremo(t.charAt(inicio))) inicio++;
+        while (fin > inicio && extremo(t.charAt(fin - 1))) fin--;
+        return t.substring(inicio, fin);
+    }
+    private static boolean extremo(char c) {
+        return Character.isWhitespace(c) || "¿¡«»“”".indexOf(c) >= 0 || (c < 128 && "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~".indexOf(c) >= 0);
     }
 }

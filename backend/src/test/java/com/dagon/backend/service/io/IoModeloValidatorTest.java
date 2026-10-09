@@ -16,6 +16,15 @@ class IoModeloValidatorTest {
         m.set("evidencias", json.readTree("[{\"campo\":\"datos\",\"texto\":\"Datos proporcionados por el alumno\"}]"));
         return new IoInterpretacion("listo", "groq", "Modelo", m, List.of(), List.of(), List.of());
     }
+    @Test void unCampoDeEvidenciaDesconocidoSeAtribuyeALosDatosSiLaCitaEsLiteral() throws Exception {
+        var m = modelo("colas", "mm1", "{\"lambda\":2,\"mu\":3}");
+        ((ObjectNode) m.modelo()).set("evidencias", json.readTree("[{\"campo\":\"binarias\",\"texto\":\"Datos proporcionados por el alumno\"}]"));
+        var r = validator.validar(m, enunciado);
+        assertThat(r.estado()).isEqualTo("listo");
+        assertThat(r.modelo().path("evidencias").get(0).path("campo").asText()).isEqualTo("datos");
+        ((ObjectNode) m.modelo()).set("evidencias", json.readTree("[{\"campo\":\"binarias\",\"texto\":\"cifra 77 inventada\"}]"));
+        assertThat(validator.validar(m, enunciado).estado()).isEqualTo("incompleto");
+    }
     @Test void validaLosOchoTiposYEliminaCamposAjenoAlContrato() throws Exception {
         var casos = List.of(
                 modelo("pl", "simplex", "{\"objetivo\":\"max z=3x1+5x2\",\"restricciones\":[\"x1<=4\",\"x1,x2>=0\"]}"),

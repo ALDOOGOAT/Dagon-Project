@@ -4,14 +4,14 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /** Parser aritmético simbólico; nunca evalúa código, funciones ni instrucciones del alumno. */
-final class IoExpresionLineal {
-    record Forma(double constante, Map<String, Double> coeficientes) {}
+public final class IoExpresionLineal {
+    public record Forma(double constante, Map<String, Double> coeficientes) {}
     private static final Pattern NUMERO = Pattern.compile("(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?");
     private final String texto;
     private int posicion;
     private int profundidad;
     private IoExpresionLineal(String texto) { this.texto = texto.replaceAll("\\s+", ""); }
-    static Forma parsear(String texto) {
+    public static Forma parsear(String texto) {
         var parser = new IoExpresionLineal(texto);
         Forma f = parser.suma();
         if (parser.posicion != parser.texto.length()) throw new IllegalArgumentException("Expresión PL inválida o no lineal.");

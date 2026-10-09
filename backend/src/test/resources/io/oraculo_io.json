@@ -1,0 +1,2067 @@
+[
+ {
+  "nombre": "pl Wyndor",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=3x1+5x2",
+    "restricciones": [
+     "x1<=4",
+     "2x2<=12",
+     "3x1+2x2<=18",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 36,
+   "x.x1": 2,
+   "x.x2": 6
+  }
+ },
+ {
+  "nombre": "pl dieta minimizacion",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "min z=2x1+3x2",
+    "restricciones": [
+     "x1+x2>=4",
+     "x1+3x2>=6",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 9,
+   "x.x1": 3,
+   "x.x2": 1
+  }
+ },
+ {
+  "nombre": "pl igualdad",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=2x1+3x2",
+    "restricciones": [
+     "x1+x2=10",
+     "x1<=6",
+     "x2<=8",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 28,
+   "x.x1": 2,
+   "x.x2": 8
+  }
+ },
+ {
+  "nombre": "pl infactible",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=x1+x2",
+    "restricciones": [
+     "x1+x2<=2",
+     "x1+x2>=5",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "infactible",
+  "esperado": {}
+ },
+ {
+  "nombre": "pl no acotado",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=x1+x2",
+    "restricciones": [
+     "x1-x2<=1",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "no_acotado",
+  "esperado": {}
+ },
+ {
+  "nombre": "pl optimos multiples",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=2x1+4x2",
+    "restricciones": [
+     "x1+2x2<=5",
+     "x1+x2<=4",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 10
+  }
+ },
+ {
+  "nombre": "pl tres variables",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=5x1+4x2+3x3",
+    "restricciones": [
+     "2x1+3x2+x3<=5",
+     "4x1+x2+2x3<=11",
+     "3x1+4x2+2x3<=8",
+     "x1,x2,x3>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 13,
+   "x.x1": 2,
+   "x.x2": 0,
+   "x.x3": 1
+  }
+ },
+ {
+  "nombre": "pl Beale degenerado",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=0.75x4-20x5+0.5x6-6x7",
+    "restricciones": [
+     "0.25x4-8x5-x6+9x7<=0",
+     "0.5x4-12x5-0.5x6+3x7<=0",
+     "x6<=1",
+     "x4,x5,x6,x7>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 1.2500000000000002
+  }
+ },
+ {
+  "nombre": "pl min mixta",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "min z=4x1+x2",
+    "restricciones": [
+     "3x1+x2=3",
+     "4x1+3x2>=6",
+     "x1+2x2<=4",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 3.4000000000000004,
+   "x.x1": 0.40000000000000013,
+   "x.x2": 1.7999999999999998
+  }
+ },
+ {
+  "nombre": "pl variable a la derecha",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=3x1+2x2",
+    "restricciones": [
+     "x1<=2x2",
+     "x1+x2<=9",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 24,
+   "x.x1": 6,
+   "x.x2": 3
+  }
+ },
+ {
+  "nombre": "pl lado derecho negativo",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=x1+2x2",
+    "restricciones": [
+     "x1-x2>=-3",
+     "x1+x2<=7",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 12,
+   "x.x1": 2,
+   "x.x2": 5
+  }
+ },
+ {
+  "nombre": "pl cuatro variables",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "max z=10x1+6x2+8x3+5x4",
+    "restricciones": [
+     "x1+x2+x3+x4<=20",
+     "2x1+x2+3x3+x4<=40",
+     "x1+3x2+x3+2x4<=30",
+     "x1,x2,x3,x4>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 200
+  }
+ },
+ {
+  "nombre": "pl minimizacion cuatro restricciones",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "simplex",
+   "datos": {
+    "objetivo": "min z=0.12x1+0.15x2",
+    "restricciones": [
+     "60x1+60x2>=300",
+     "12x1+6x2>=36",
+     "10x1+30x2>=90",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 0.6599999999999999,
+   "x.x1": 3,
+   "x.x2": 2
+  }
+ },
+ {
+  "nombre": "bb clasico",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "max z=5x1+8x2",
+    "restricciones": [
+     "x1+x2<=6",
+     "5x1+9x2<=45",
+     "x1,x2>=0"
+    ],
+    "enteras": [
+     "x1",
+     "x2"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 40,
+   "x.x1": 0,
+   "x.x2": 5
+  }
+ },
+ {
+  "nombre": "bb mochila binaria",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "max z=14x1+10x2+15x3",
+    "restricciones": [
+     "9x1+6x2+2x3<=14",
+     "x1,x2,x3>=0"
+    ],
+    "binarias": [
+     "x1",
+     "x2",
+     "x3"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 29,
+   "x.x1": 1,
+   "x.x2": 0,
+   "x.x3": 1
+  }
+ },
+ {
+  "nombre": "bb redondeo no optimo",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "max z=x1+5x2",
+    "restricciones": [
+     "x1+10x2<=20",
+     "x1<=2",
+     "x1,x2>=0"
+    ],
+    "enteras": [
+     "x1",
+     "x2"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 10,
+   "x.x1": 0,
+   "x.x2": 2
+  }
+ },
+ {
+  "nombre": "bb mixta",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "max z=4x1+3x2+x3",
+    "restricciones": [
+     "3x1+2x2+x3<=10.5",
+     "x1+x2+2x3<=6",
+     "x1,x2,x3>=0"
+    ],
+    "enteras": [
+     "x1"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 15.75
+  }
+ },
+ {
+  "nombre": "bb minimizacion",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "min z=3x1+2x2",
+    "restricciones": [
+     "x1+x2>=3.5",
+     "x1>=1",
+     "x1,x2>=0"
+    ],
+    "enteras": [
+     "x1",
+     "x2"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 9
+  }
+ },
+ {
+  "nombre": "bb declarada en restricciones",
+  "modelo": {
+   "tipo": "pl",
+   "metodo": "branch_bound",
+   "datos": {
+    "objetivo": "max z=3x1+2x2",
+    "restricciones": [
+     "2x1+2x2<=9",
+     "3x1+x2<=11",
+     "x1,x2>=0",
+     "x1,x2 enteras"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 11
+  }
+ },
+ {
+  "nombre": "qp Hillier",
+  "modelo": {
+   "tipo": "cuadratica",
+   "metodo": "kkt",
+   "datos": {
+    "objetivo": "max z=15x1+30x2+4x1*x2-2x1^2-4x2^2",
+    "restricciones": [
+     "x1+2x2<=30",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": 270,
+   "x.x1": 12,
+   "x.x2": 9
+  }
+ },
+ {
+  "nombre": "qp min proyectada",
+  "modelo": {
+   "tipo": "cuadratica",
+   "metodo": "kkt",
+   "datos": {
+    "objetivo": "min z=x1^2+x2^2-4x1-6x2",
+    "restricciones": [
+     "x1+x2<=4",
+     "x1,x2>=0"
+    ]
+   }
+  },
+  "estado": "optimo",
+  "esperado": {
+   "z": -12.5,
+   "x.x1": 1.5,
+   "x.x2": 2.5
+  }
+ },
+ {
+  "nombre": "transporte Winston vogel",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "vogel",
+   "datos": {
+    "costos": [
+     [
+      8,
+      6,
+      10,
+      9
+     ],
+     [
+      9,
+      12,
+      13,
+      7
+     ],
+     [
+      14,
+      9,
+      16,
+      5
+     ]
+    ],
+    "oferta": [
+     35,
+     50,
+     40
+    ],
+    "demanda": [
+     45,
+     20,
+     30,
+     30
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 1020
+  }
+ },
+ {
+  "nombre": "transporte Winston noroeste",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "noroeste",
+   "datos": {
+    "costos": [
+     [
+      8,
+      6,
+      10,
+      9
+     ],
+     [
+      9,
+      12,
+      13,
+      7
+     ],
+     [
+      14,
+      9,
+      16,
+      5
+     ]
+    ],
+    "oferta": [
+     35,
+     50,
+     40
+    ],
+    "demanda": [
+     45,
+     20,
+     30,
+     30
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 1020
+  }
+ },
+ {
+  "nombre": "transporte Winston costo_minimo",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "costo_minimo",
+   "datos": {
+    "costos": [
+     [
+      8,
+      6,
+      10,
+      9
+     ],
+     [
+      9,
+      12,
+      13,
+      7
+     ],
+     [
+      14,
+      9,
+      16,
+      5
+     ]
+    ],
+    "oferta": [
+     35,
+     50,
+     40
+    ],
+    "demanda": [
+     45,
+     20,
+     30,
+     30
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 1020
+  }
+ },
+ {
+  "nombre": "transporte 3x3",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "vogel",
+   "datos": {
+    "costos": [
+     [
+      4,
+      8,
+      8
+     ],
+     [
+      16,
+      24,
+      16
+     ],
+     [
+      8,
+      16,
+      24
+     ]
+    ],
+    "oferta": [
+     76,
+     82,
+     77
+    ],
+    "demanda": [
+     72,
+     102,
+     41
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 2424
+  }
+ },
+ {
+  "nombre": "transporte desbalanceado",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "costo_minimo",
+   "datos": {
+    "costos": [
+     [
+      2,
+      3,
+      5
+     ],
+     [
+      4,
+      1,
+      6
+     ]
+    ],
+    "oferta": [
+     50,
+     60
+    ],
+    "demanda": [
+     30,
+     40,
+     20
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 200
+  }
+ },
+ {
+  "nombre": "transporte degenerado",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "noroeste",
+   "datos": {
+    "costos": [
+     [
+      3,
+      1,
+      7
+     ],
+     [
+      2,
+      6,
+      5
+     ],
+     [
+      8,
+      3,
+      4
+     ]
+    ],
+    "oferta": [
+     20,
+     30,
+     50
+    ],
+    "demanda": [
+     20,
+     30,
+     50
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "optimo.costo": 300
+  }
+ },
+ {
+  "nombre": "asignacion 4x4",
+  "modelo": {
+   "tipo": "asignacion",
+   "metodo": "hungaro",
+   "datos": {
+    "matriz": [
+     [
+      15,
+      13,
+      14,
+      17
+     ],
+     [
+      11,
+      12,
+      15,
+      13
+     ],
+     [
+      13,
+      12,
+      10,
+      11
+     ],
+     [
+      15,
+      17,
+      14,
+      16
+     ]
+    ],
+    "objetivo": "min"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "total": 49
+  }
+ },
+ {
+  "nombre": "asignacion maximizacion",
+  "modelo": {
+   "tipo": "asignacion",
+   "metodo": "hungaro",
+   "datos": {
+    "matriz": [
+     [
+      7,
+      5,
+      3
+     ],
+     [
+      9,
+      8,
+      6
+     ],
+     [
+      4,
+      2,
+      1
+     ]
+    ],
+    "objetivo": "max"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "total": 16
+  }
+ },
+ {
+  "nombre": "asignacion rectangular",
+  "modelo": {
+   "tipo": "asignacion",
+   "metodo": "hungaro",
+   "datos": {
+    "matriz": [
+     [
+      9,
+      2,
+      7,
+      8
+     ],
+     [
+      6,
+      4,
+      3,
+      7
+     ],
+     [
+      5,
+      8,
+      1,
+      8
+     ]
+    ],
+    "objetivo": "min"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "total": 9
+  }
+ },
+ {
+  "nombre": "asignacion 5x5",
+  "modelo": {
+   "tipo": "asignacion",
+   "metodo": "hungaro",
+   "datos": {
+    "matriz": [
+     [
+      10,
+      5,
+      13,
+      15,
+      16
+     ],
+     [
+      3,
+      9,
+      18,
+      13,
+      6
+     ],
+     [
+      10,
+      7,
+      2,
+      2,
+      2
+     ],
+     [
+      7,
+      11,
+      9,
+      7,
+      12
+     ],
+     [
+      7,
+      9,
+      10,
+      4,
+      12
+     ]
+    ],
+    "objetivo": "min"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "total": 23
+  }
+ },
+ {
+  "nombre": "cpm",
+  "modelo": {
+   "tipo": "redes",
+   "metodo": "cpm",
+   "datos": {
+    "actividades": [
+     {
+      "id": "A",
+      "predecesoras": [],
+      "duracion": 3
+     },
+     {
+      "id": "B",
+      "predecesoras": [
+       "A"
+      ],
+      "duracion": 4
+     },
+     {
+      "id": "C",
+      "predecesoras": [
+       "A"
+      ],
+      "duracion": 2
+     },
+     {
+      "id": "D",
+      "predecesoras": [
+       "B"
+      ],
+      "duracion": 5
+     },
+     {
+      "id": "E",
+      "predecesoras": [
+       "C"
+      ],
+      "duracion": 3
+     },
+     {
+      "id": "F",
+      "predecesoras": [
+       "D",
+       "E"
+      ],
+      "duracion": 2
+     }
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "duracion": 14
+  }
+ },
+ {
+  "nombre": "cpm paralelas",
+  "modelo": {
+   "tipo": "redes",
+   "metodo": "cpm",
+   "datos": {
+    "actividades": [
+     {
+      "id": "A",
+      "predecesoras": [],
+      "duracion": 6
+     },
+     {
+      "id": "B",
+      "predecesoras": [],
+      "duracion": 4
+     },
+     {
+      "id": "C",
+      "predecesoras": [
+       "A"
+      ],
+      "duracion": 3
+     },
+     {
+      "id": "D",
+      "predecesoras": [
+       "B"
+      ],
+      "duracion": 7
+     },
+     {
+      "id": "E",
+      "predecesoras": [
+       "C",
+       "D"
+      ],
+      "duracion": 2
+     }
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "duracion": 13
+  }
+ },
+ {
+  "nombre": "pert con plazo",
+  "modelo": {
+   "tipo": "redes",
+   "metodo": "pert",
+   "datos": {
+    "actividades": [
+     {
+      "id": "A",
+      "predecesoras": [],
+      "a": 2,
+      "m": 4,
+      "b": 6
+     },
+     {
+      "id": "B",
+      "predecesoras": [
+       "A"
+      ],
+      "a": 3,
+      "m": 5,
+      "b": 9
+     },
+     {
+      "id": "C",
+      "predecesoras": [
+       "A"
+      ],
+      "a": 4,
+      "m": 6,
+      "b": 8
+     },
+     {
+      "id": "D",
+      "predecesoras": [
+       "B",
+       "C"
+      ],
+      "a": 2,
+      "m": 3,
+      "b": 4
+     }
+    ],
+    "plazo": 14
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "duracion": 13,
+   "varianzaRuta": 1,
+   "probabilidad": 0.8413447361676363
+  }
+ },
+ {
+  "nombre": "pert sin plazo",
+  "modelo": {
+   "tipo": "redes",
+   "metodo": "pert",
+   "datos": {
+    "actividades": [
+     {
+      "id": "A",
+      "predecesoras": [],
+      "a": 1,
+      "m": 2,
+      "b": 3
+     },
+     {
+      "id": "B",
+      "predecesoras": [
+       "A"
+      ],
+      "a": 2,
+      "m": 3,
+      "b": 10
+     }
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "duracion": 6,
+   "varianzaRuta": 1.8888888888888888
+  }
+ },
+ {
+  "nombre": "ruta corta Seervada",
+  "modelo": {
+   "tipo": "grafos",
+   "metodo": "ruta_corta",
+   "datos": {
+    "aristas": [
+     {
+      "origen": "O",
+      "destino": "A",
+      "valor": 2
+     },
+     {
+      "origen": "O",
+      "destino": "B",
+      "valor": 5
+     },
+     {
+      "origen": "O",
+      "destino": "C",
+      "valor": 4
+     },
+     {
+      "origen": "A",
+      "destino": "B",
+      "valor": 2
+     },
+     {
+      "origen": "A",
+      "destino": "D",
+      "valor": 7
+     },
+     {
+      "origen": "B",
+      "destino": "C",
+      "valor": 1
+     },
+     {
+      "origen": "B",
+      "destino": "D",
+      "valor": 4
+     },
+     {
+      "origen": "B",
+      "destino": "E",
+      "valor": 3
+     },
+     {
+      "origen": "C",
+      "destino": "E",
+      "valor": 4
+     },
+     {
+      "origen": "D",
+      "destino": "E",
+      "valor": 1
+     },
+     {
+      "origen": "D",
+      "destino": "T",
+      "valor": 5
+     },
+     {
+      "origen": "E",
+      "destino": "T",
+      "valor": 7
+     }
+    ],
+    "origen": "O",
+    "destino": "T"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "distancia": 13
+  }
+ },
+ {
+  "nombre": "arbol minimo Seervada",
+  "modelo": {
+   "tipo": "grafos",
+   "metodo": "arbol_minimo",
+   "datos": {
+    "aristas": [
+     {
+      "origen": "O",
+      "destino": "A",
+      "valor": 2
+     },
+     {
+      "origen": "O",
+      "destino": "B",
+      "valor": 5
+     },
+     {
+      "origen": "O",
+      "destino": "C",
+      "valor": 4
+     },
+     {
+      "origen": "A",
+      "destino": "B",
+      "valor": 2
+     },
+     {
+      "origen": "A",
+      "destino": "D",
+      "valor": 7
+     },
+     {
+      "origen": "B",
+      "destino": "C",
+      "valor": 1
+     },
+     {
+      "origen": "B",
+      "destino": "D",
+      "valor": 4
+     },
+     {
+      "origen": "B",
+      "destino": "E",
+      "valor": 3
+     },
+     {
+      "origen": "C",
+      "destino": "E",
+      "valor": 4
+     },
+     {
+      "origen": "D",
+      "destino": "E",
+      "valor": 1
+     },
+     {
+      "origen": "D",
+      "destino": "T",
+      "valor": 5
+     },
+     {
+      "origen": "E",
+      "destino": "T",
+      "valor": 7
+     }
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "total": 14
+  }
+ },
+ {
+  "nombre": "flujo maximo CLRS",
+  "modelo": {
+   "tipo": "grafos",
+   "metodo": "flujo_maximo",
+   "datos": {
+    "aristas": [
+     {
+      "origen": "s",
+      "destino": "v1",
+      "valor": 16
+     },
+     {
+      "origen": "s",
+      "destino": "v2",
+      "valor": 13
+     },
+     {
+      "origen": "v2",
+      "destino": "v1",
+      "valor": 4
+     },
+     {
+      "origen": "v1",
+      "destino": "v3",
+      "valor": 12
+     },
+     {
+      "origen": "v3",
+      "destino": "v2",
+      "valor": 9
+     },
+     {
+      "origen": "v2",
+      "destino": "v4",
+      "valor": 14
+     },
+     {
+      "origen": "v4",
+      "destino": "v3",
+      "valor": 7
+     },
+     {
+      "origen": "v3",
+      "destino": "t",
+      "valor": 20
+     },
+     {
+      "origen": "v4",
+      "destino": "t",
+      "valor": 4
+     }
+    ],
+    "origen": "s",
+    "destino": "t"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "flujoMaximo": 23
+  }
+ },
+ {
+  "nombre": "ruta corta dirigida",
+  "modelo": {
+   "tipo": "grafos",
+   "metodo": "ruta_corta",
+   "datos": {
+    "aristas": [
+     {
+      "origen": "1",
+      "destino": "2",
+      "valor": 4
+     },
+     {
+      "origen": "1",
+      "destino": "3",
+      "valor": 2
+     },
+     {
+      "origen": "3",
+      "destino": "2",
+      "valor": 1
+     },
+     {
+      "origen": "2",
+      "destino": "4",
+      "valor": 5
+     },
+     {
+      "origen": "3",
+      "destino": "4",
+      "valor": 8
+     },
+     {
+      "origen": "4",
+      "destino": "5",
+      "valor": 3
+     }
+    ],
+    "origen": "1",
+    "destino": "5",
+    "dirigido": true
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "distancia": 11
+  }
+ },
+ {
+  "nombre": "eoq basico",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "eoq",
+   "datos": {
+    "D": 1000,
+    "S": 10,
+    "H": 0.5
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "Q": 200,
+   "costoTotal": 100,
+   "N": 5
+  }
+ },
+ {
+  "nombre": "eoq grande",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "eoq",
+   "datos": {
+    "D": 12000,
+    "S": 100,
+    "H": 2.4
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "Q": 1000,
+   "costoTotal": 2400,
+   "N": 12,
+   "T": 0.08333333333333333
+  }
+ },
+ {
+  "nombre": "eoq faltantes",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "faltantes",
+   "datos": {
+    "D": 1000,
+    "S": 10,
+    "H": 0.5,
+    "p": 2
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "Q": 223.60679774997897,
+   "costoTotal": 89.44271909999159,
+   "inventarioMaximo": 178.88543819998318,
+   "faltanteMaximo": 44.721359549995796
+  }
+ },
+ {
+  "nombre": "epq",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "epq",
+   "datos": {
+    "D": 1000,
+    "S": 10,
+    "H": 0.5,
+    "P": 4000
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "Q": 230.9401076758503,
+   "costoTotal": 86.60254037844386,
+   "inventarioMaximo": 173.20508075688772
+  }
+ },
+ {
+  "nombre": "descuentos Heizer",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "descuentos",
+   "datos": {
+    "D": 5000,
+    "S": 49,
+    "i": 0.2,
+    "tramos": [
+     {
+      "min": 0,
+      "precio": 5
+     },
+     {
+      "min": 1000,
+      "precio": 4.8
+     },
+     {
+      "min": 2000,
+      "precio": 4.75
+     }
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "Q": 1000,
+   "costoTotal": 24725
+  }
+ },
+ {
+  "nombre": "reorden simple",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "reorden",
+   "datos": {
+    "d": 20,
+    "L": 5
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "R": 100
+  }
+ },
+ {
+  "nombre": "reorden con seguridad",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "reorden",
+   "datos": {
+    "d": 20,
+    "L": 4,
+    "sigma": 3,
+    "z": 1.65
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "R": 89.9,
+   "stockSeguridad": 9.899999999999999
+  }
+ },
+ {
+  "nombre": "periodo fijo",
+  "modelo": {
+   "tipo": "inventarios",
+   "metodo": "periodo_fijo",
+   "datos": {
+    "d": 10,
+    "T": 7,
+    "L": 3,
+    "sigma": 2,
+    "z": 1.96,
+    "inventario": 25
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "nivelObjetivo": 112.39612842786005,
+   "stockSeguridad": 12.396128427860047
+  }
+ },
+ {
+  "nombre": "mm1 basica",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mm1",
+   "datos": {
+    "lambda": 2,
+    "mu": 3
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "rho": 0.6666666666666666,
+   "P0": 0.33333333333333337,
+   "L": 1.9999999999999998,
+   "Lq": 1.333333333333333,
+   "W": 1,
+   "Wq": 0.6666666666666666
+  }
+ },
+ {
+  "nombre": "mm1 con costos",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mm1",
+   "datos": {
+    "lambda": 4,
+    "mu": 6,
+    "cs": 10,
+    "cw": 20
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "L": 1.9999999999999998,
+   "Lq": 1.333333333333333,
+   "W": 0.5,
+   "Wq": 0.3333333333333333,
+   "costoTotal": 49.99999999999999
+  }
+ },
+ {
+  "nombre": "mms dos servidores",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mms",
+   "datos": {
+    "lambda": 10,
+    "mu": 6,
+    "s": 2
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "rho": 0.8333333333333334,
+   "P0": 0.0909090909090909,
+   "L": 5.454545454545456,
+   "Lq": 3.787878787878789,
+   "W": 0.5454545454545455,
+   "Wq": 0.3787878787878789
+  }
+ },
+ {
+  "nombre": "mms grande",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mms",
+   "datos": {
+    "lambda": 100,
+    "mu": 1,
+    "s": 120
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "P0": 0,
+   "L": 100.16597947677378,
+   "Lq": 0.1659794767737854,
+   "Wq": 0.0016597947677378542
+  }
+ },
+ {
+  "nombre": "mms con costos",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mms",
+   "datos": {
+    "lambda": 15,
+    "mu": 6,
+    "s": 3,
+    "cs": 12,
+    "cw": 30
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "L": 6.011235955056181,
+   "Lq": 3.511235955056181,
+   "costoTotal": 216.33707865168543
+  }
+ },
+ {
+  "nombre": "markov dos estados",
+  "modelo": {
+   "tipo": "markov",
+   "metodo": "discreto",
+   "datos": {
+    "P": [
+     [
+      0.9,
+      0.1
+     ],
+     [
+      0.2,
+      0.8
+     ]
+    ],
+    "inicial": [
+     1,
+     0
+    ],
+    "n": 3
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "estacionaria.0": 0.6666666666666667,
+   "estacionaria.1": 0.33333333333333326,
+   "historial.-1.0": 0.7810000000000001,
+   "historial.-1.1": 0.21900000000000006
+  }
+ },
+ {
+  "nombre": "markov tres estados",
+  "modelo": {
+   "tipo": "markov",
+   "metodo": "discreto",
+   "datos": {
+    "P": [
+     [
+      0.7,
+      0.2,
+      0.1
+     ],
+     [
+      0.3,
+      0.5,
+      0.2
+     ],
+     [
+      0.2,
+      0.3,
+      0.5
+     ]
+    ],
+    "inicial": [
+     0.5,
+     0.3,
+     0.2
+    ],
+    "n": 5
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "estacionaria.0": 0.4634146341463414,
+   "estacionaria.1": 0.3170731707317073,
+   "estacionaria.2": 0.21951219512195125,
+   "historial.-1.0": 0.4641550000000002,
+   "historial.-1.2": 0.21905700000000006
+  }
+ },
+ {
+  "nombre": "markov absorbente",
+  "modelo": {
+   "tipo": "markov",
+   "metodo": "discreto",
+   "datos": {
+    "P": [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0.3,
+      0.4,
+      0.3
+     ],
+     [
+      0,
+      0,
+      1
+     ]
+    ],
+    "inicial": [
+     0,
+     1,
+     0
+    ],
+    "n": 4
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "historial.-1.0": 0.48719999999999997,
+   "historial.-1.1": 0.025600000000000008,
+   "historial.-1.2": 0.48719999999999997
+  }
+ },
+ {
+  "nombre": "dorada maximo",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "dorada",
+   "datos": {
+    "f": "x*(5-x)",
+    "a": 0,
+    "b": 5,
+    "objetivo": "max"
+   }
+  },
+  "estado": "aproximado",
+  "esperado": {
+   "x": 2.499985097847534,
+   "fx": 6.249999999777926
+  }
+ },
+ {
+  "nombre": "dorada minimo",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "dorada",
+   "datos": {
+    "f": "(x-2)^2+1",
+    "a": 0,
+    "b": 5,
+    "objetivo": "min"
+   }
+  },
+  "estado": "aproximado",
+  "esperado": {
+   "x": 1.9999848291022835,
+   "fx": 1.0000000002301561
+  }
+ },
+ {
+  "nombre": "newton cubica",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "newton",
+   "datos": {
+    "f": "x^3-6*x^2+9*x+1",
+    "x0": 4
+   }
+  },
+  "estado": "estacionario",
+  "esperado": {
+   "x": 3.0000000464611474,
+   "fx": 1.0000000000000036,
+   "tipo": "minimo"
+  }
+ },
+ {
+  "nombre": "newton exponencial",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "newton",
+   "datos": {
+    "f": "exp(x)-2*x",
+    "x0": 0
+   }
+  },
+  "estado": "estacionario",
+  "esperado": {
+   "x": 0.6931475810597714,
+   "fx": 0.61370563888027,
+   "tipo": "minimo"
+  }
+ },
+ {
+  "nombre": "lagrange xy",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "lagrange",
+   "datos": {
+    "f": "x*y",
+    "g": "x+y",
+    "c": 10
+   }
+  },
+  "estado": "estacionario",
+  "esperado": {
+   "x": 5,
+   "y": 5,
+   "lambda": 5,
+   "fxy": 25
+  }
+ },
+ {
+  "nombre": "multivariable minimo",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "multivariable",
+   "datos": {
+    "f": "x^2+y^2-4*x-6*y",
+    "simbolos": [
+     "x",
+     "y"
+    ],
+    "inicio": [
+     0,
+     0
+    ]
+   }
+  },
+  "estado": "estacionario",
+  "esperado": {
+   "punto.x": 2,
+   "punto.y": 3,
+   "fx": -13,
+   "tipo": "minimo"
+  }
+ },
+ {
+  "nombre": "multivariable silla",
+  "modelo": {
+   "tipo": "noLineal",
+   "metodo": "multivariable",
+   "datos": {
+    "f": "x^2-y^2",
+    "simbolos": [
+     "x",
+     "y"
+    ],
+    "inicio": [
+     1,
+     1
+    ]
+   }
+  },
+  "estado": "estacionario",
+  "esperado": {
+   "punto.x": 0,
+   "punto.y": 0,
+   "tipo": "silla"
+  }
+ },
+ {
+  "nombre": "decisiones incertidumbre",
+  "modelo": {
+   "tipo": "decisiones",
+   "metodo": "incertidumbre",
+   "datos": {
+    "pagos": [
+     [
+      200,
+      100,
+      -20
+     ],
+     [
+      150,
+      120,
+      60
+     ],
+     [
+      100,
+      80,
+      70
+     ]
+    ],
+    "objetivo": "max",
+    "alfa": 0.6
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "criterios.0.decision": "A1",
+   "criterios.1.decision": "A3",
+   "criterios.2.decision": "A2",
+   "criterios.3.decision": "A2",
+   "criterios.4.decision": "A2"
+  }
+ },
+ {
+  "nombre": "decisiones riesgo Thompson",
+  "modelo": {
+   "tipo": "decisiones",
+   "metodo": "riesgo",
+   "datos": {
+    "pagos": [
+     [
+      200000,
+      -180000
+     ],
+     [
+      100000,
+      -20000
+     ],
+     [
+      0,
+      0
+     ]
+    ],
+    "probabilidades": [
+     0.5,
+     0.5
+    ],
+    "objetivo": "max"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valorEsperado": 40000,
+   "valorConInformacionPerfecta": 100000,
+   "veip": 60000,
+   "decision": "A2"
+  }
+ },
+ {
+  "nombre": "decisiones riesgo costos",
+  "modelo": {
+   "tipo": "decisiones",
+   "metodo": "riesgo",
+   "datos": {
+    "pagos": [
+     [
+      10,
+      30,
+      50
+     ],
+     [
+      20,
+      25,
+      30
+     ],
+     [
+      40,
+      20,
+      10
+     ]
+    ],
+    "probabilidades": [
+     0.2,
+     0.5,
+     0.3
+    ],
+    "objetivo": "min"
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valorEsperado": 21,
+   "veip": 6,
+   "decision": "A3"
+  }
+ },
+ {
+  "nombre": "juego piedra papel tijera",
+  "modelo": {
+   "tipo": "juegos",
+   "metodo": "suma_cero",
+   "datos": {
+    "pagos": [
+     [
+      0,
+      -1,
+      1
+     ],
+     [
+      1,
+      0,
+      -1
+     ],
+     [
+      -1,
+      1,
+      0
+     ]
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valor": 0
+  }
+ },
+ {
+  "nombre": "juego punto silla",
+  "modelo": {
+   "tipo": "juegos",
+   "metodo": "suma_cero",
+   "datos": {
+    "pagos": [
+     [
+      3,
+      2,
+      4
+     ],
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      5,
+      1,
+      3
+     ]
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valor": 2
+  }
+ },
+ {
+  "nombre": "juego mixto 2x2",
+  "modelo": {
+   "tipo": "juegos",
+   "metodo": "suma_cero",
+   "datos": {
+    "pagos": [
+     [
+      3,
+      -1
+     ],
+     [
+      -2,
+      1
+     ]
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valor": 0.14285714285714235
+  }
+ },
+ {
+  "nombre": "juego 2x3 dominancia",
+  "modelo": {
+   "tipo": "juegos",
+   "metodo": "suma_cero",
+   "datos": {
+    "pagos": [
+     [
+      2,
+      3,
+      11
+     ],
+     [
+      7,
+      5,
+      2
+     ]
+    ]
+   }
+  },
+  "estado": "resuelto",
+  "esperado": {
+   "valor": 4.454545454545454
+  }
+ },
+ {
+  "nombre": "invalido transporte dimensiones",
+  "modelo": {
+   "tipo": "transporte",
+   "metodo": "vogel",
+   "datos": {
+    "costos": [
+     [
+      1,
+      2
+     ],
+     [
+      3,
+      4
+     ]
+    ],
+    "oferta": [
+     10,
+     20,
+     30
+    ],
+    "demanda": [
+     30,
+     30
+    ]
+   }
+  },
+  "error": "Los costos deben coincidir con oferta y demanda."
+ },
+ {
+  "nombre": "invalido cola inestable",
+  "modelo": {
+   "tipo": "colas",
+   "metodo": "mm1",
+   "datos": {
+    "lambda": 5,
+    "mu": 4
+   }
+  },
+  "error": "La cola es inestable: las llegadas deben ser menores que la capacidad."
+ }
+]

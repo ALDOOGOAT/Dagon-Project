@@ -33,8 +33,13 @@ class IoParserLocalTest {
         assertThat(extraer(COLAS.replace("15 clientes por hora", "15 clientes por minuto")).estado()).isEqualTo("incompleto");
         assertThat(extraer(COLAS.replace("un servidor", "1.5 servidores")).estado()).isEqualTo("incompleto");
     }
+    @Test void demandaMinimaPorProductoYaSeModelaEnVezDePreguntarse() {
+        // Antes se pedía aclarar "al menos 3 mesas"; ahora es una cota inferior explícita (x1>=3), estrictamente mejor.
+        var r = extraer(PL + " Se deben fabricar al menos 3 mesas.");
+        assertThat(r.estado()).isEqualTo("listo");
+        assertThat(r.modelo().path("datos").path("restricciones").toString()).contains("x1>=3.0", "3.0x1+2.0x2<=18.0");
+    }
     @Test void nuncaDescartaRestriccionesNiProductosAdicionales() {
-        assertThat(extraer(PL + " Se deben fabricar al menos 3 mesas.").estado()).isEqualTo("incompleto");
         assertThat(extraer(PL + " Hay un presupuesto de 100 pesos.").estado()).isEqualTo("incompleto");
         assertThat(extraer(PL + " Se necesitan 25 unidades de material.").estado()).isEqualTo("incompleto");
         assertThat(extraer(PL.replace("produce mesas y sillas", "produce mesas, sillas y bancos")).estado()).isEqualTo("incompleto");

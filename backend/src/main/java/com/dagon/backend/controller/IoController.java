@@ -28,4 +28,28 @@ public class IoController {
         limiter.consume(authentication.getName(), "analysis");
         return service.interpretar(enunciado.trim()).contratoHttp();
     }
+    /** Interpreta (IA primero, servidor de respaldo) y resuelve en el servidor; o resuelve directamente un modelo ya escrito. */
+    @PostMapping("/resolver")
+    public Object resolver(@RequestBody Map<String, Object> entrada, Authentication authentication, jakarta.servlet.http.HttpServletRequest peticion) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Inicia sesión para resolver el problema.");
+        }
+        // Un modelo del contrato cabe de sobra en 64 KB; más es abuso, no un problema de IO.
+        if (peticion.getContentLengthLong() > 65_536) throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "El problema enviado es demasiado grande.");
+        if (entrada.get("modelo") instanceof Map<?, ?> modelo) {
+            // Branch & bound puede costar CPU: mismo límite por usuario que el análisis.
+            limiter.consume(authentication.getName(), "analysis");
+            try {
+                return service.resolverModelo(new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(modelo)).contratoHttp();
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            }
+        }
+        Object texto = entrada.get("enunciado");
+        if (!(texto instanceof String enunciado) || enunciado.trim().length() < 20 || enunciado.length() > 12000) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Envía un enunciado de 20 a 12000 caracteres o un modelo.");
+        }
+        limiter.consume(authentication.getName(), "analysis");
+        return service.resolver(enunciado.trim()).contratoHttp();
+    }
 }
