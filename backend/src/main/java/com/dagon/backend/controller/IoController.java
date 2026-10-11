@@ -35,7 +35,9 @@ public class IoController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Inicia sesión para resolver el problema.");
         }
         // Un modelo del contrato cabe de sobra en 64 KB; más es abuso, no un problema de IO.
-        if (peticion.getContentLengthLong() > 65_536) throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "El problema enviado es demasiado grande.");
+        long largo = peticion.getContentLengthLong();
+        // Sin Content-Length (chunked) no se puede acotar antes de procesar: se rechaza; axios y los navegadores siempre lo envían.
+        if (largo < 0 || largo > 65_536) throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "El problema enviado es demasiado grande.");
         if (entrada.get("modelo") instanceof Map<?, ?> modelo) {
             // Branch & bound puede costar CPU: mismo límite por usuario que el análisis.
             limiter.consume(authentication.getName(), "analysis");
