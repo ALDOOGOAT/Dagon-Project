@@ -19,6 +19,7 @@ test('igualdad redundante y término independiente negativo', () => {
 });
 test('infactible', () => { const s = solve('max z=x', ['x<=1', 'x>=2']); expect(s.estado).toBe('infactible'); expect(s.z).toBeNull(); });
 test('igualdad infactible', () => expect(solve('max z=x', ['0x=1']).estado).toBe('infactible'));
+test('no acotado con artificial: la parte M se anula antes que la real', () => { const s = solve('max z=x1', ['x2>=1']); expect(s.estado).toBe('no_acotado'); expect(s.z).toBeNull(); });
 test('no acotado', () => { const s = solve('max z=x+y', ['x-y>=1']); expect(s.estado).toBe('no_acotado'); expect(s.z).toBeNull(); });
 test('sin restricciones', () => { expect(solve('max z=x', []).estado).toBe('no_acotado'); expect(solve('min z=x', []).z).toBe(0); });
 test('soluciones múltiples', () => expect(solve('max z=x+y', ['x+y<=4']).multiple).toBe(true));

@@ -45,8 +45,10 @@ function resolverSimplexInterno(modelo) {
   while (true) {
     exigir(contador++ < 10000, 'El simplex excedió el límite de iteraciones. Revise la escala del modelo.');
     const zr = objetivo(reales).fila, zm = objetivo(grandes).fila;
-    // Bland: primer índice elegible; en empate sale la variable básica de menor índice.
-    const j = nombres.findIndex((_, k) => !base.includes(k) && (zm[k] < -EPS || (Math.abs(zm[k]) <= EPS && zr[k] < -EPS)));
+    // Big-M lexicográfico: primero se anula la parte M; la parte real solo decide cuando ninguna columna mejora M.
+    // Dentro de cada parte, Bland: primer índice elegible; en empate sale la variable básica de menor índice.
+    let j = nombres.findIndex((_, k) => !base.includes(k) && zm[k] < -EPS);
+    if (j < 0) j = nombres.findIndex((_, k) => !base.includes(k) && Math.abs(zm[k]) <= EPS && zr[k] < -EPS);
     if (j < 0) break;
     const razones = filas.map((r, i) => r[j] > EPS ? limpiar(rhs[i] / r[j]) : null);
     let i = -1;
